@@ -443,6 +443,7 @@ h2 {
 }
 
 .task-buttons {
+    cursor: default;
     padding-left: 5px;
     padding-right: 5px;
     padding: 10px;

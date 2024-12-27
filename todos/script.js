@@ -839,12 +839,26 @@ importTitleButton.addEventListener('click', () => {
     }
 });
 
+let isDragAllowed = false; // ドラッグが許可されるかを管理
 
-
+// mousedownイベントをタスクリストに限定
+taskList.addEventListener('mousedown', (event) => {
+    // クリックされた場所がtask-buttons内ならドラッグを禁止
+    if (event.target.closest('.task-buttons')) {
+        isDragAllowed = false;
+    } else {
+        isDragAllowed = true;
+    }
+});
 
 let draggedTask = null; // ドラッグ中のタスク要素
 let placeholder = null; // プレースホルダー要素
 function handleDragStart(event) {
+    // ドラッグが許可されていない場合、キャンセル
+    if (!isDragAllowed) {
+        event.preventDefault();
+        return;
+    }
     draggedTask = event.target; // ドラッグする要素を保持
     draggedTask.classList.add('dragging'); // スタイル変更
 
