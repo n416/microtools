@@ -142,7 +142,17 @@
             </div>
         </div>
     </div>
-
+    
+    <div id="editTaskModalOverlay" class="modal-overlay">
+        <div id="editTaskModal" class="modal">
+            <div class="modal-content">
+                <h2>タスクを編集</h2>
+                <input type="text" id="editTaskInput" />
+                <button id="saveEditTaskButton" class="modal-btn save-btn">保存</button>
+                <button id="cancelEditTaskButton" class="modal-btn cancel-btn">キャンセル</button>
+            </div>
+        </div>
+    </div>
     <script type="module" src="script.js" defer></script>
     <script type="module" src="storage.js" defer></script>
 </body>
