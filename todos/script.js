@@ -841,6 +841,9 @@ importTitleButton.addEventListener('click', () => {
 
 let isDragAllowed = false; // ドラッグが許可されるかを管理
 
+let longPressTimeout;
+let isLongPress = false; 
+
 // mousedownイベント
 taskList.addEventListener('mousedown', (event) => {
     // クリックされた場所がtask-buttons内ならドラッグを禁止
@@ -850,22 +853,27 @@ taskList.addEventListener('mousedown', (event) => {
         isDragAllowed = true;
     }
 
-    const span = event.target.closest('span'); // span部分をクリックしたか確認
-    if (!span) return; // span部分以外は無視
+    const span = event.target.closest('span');
+    if (!span) return;
 
-    let pressTimer = null;
+    const li = span.closest('li');
+    const taskIndex = Array.from(taskList.children).indexOf(li);
 
-    // 長押しを開始する
-    pressTimer = setTimeout(() => {
-        // 長押しイベントを実行
-        handleLongPress(span);
-    }, 500); // 500ms以上押されたら長押しとみなす
+    isLongPress = false;
 
-    // マウスが離れた場合にタイマーを解除
+    // 長押しタイマーを開始
+    longPressTimeout = setTimeout(() => {
+        isLongPress = true;
+        handleLongPress(taskIndex);
+    }, 500); // 500ms以上押し続けると長押しと判定
+
+    // キャンセル条件
     const cancel = () => {
-        clearTimeout(pressTimer);
-        document.removeEventListener('mouseup', cancel);
-        document.removeEventListener('mousemove', cancel);
+        clearTimeout(longPressTimeout);
+        if (!isLongPress) {
+            document.removeEventListener('mouseup', cancel);
+            document.removeEventListener('mousemove', cancel);
+        }
     };
 
     document.addEventListener('mouseup', cancel);
@@ -873,9 +881,34 @@ taskList.addEventListener('mousedown', (event) => {
 });
 
 
-function handleLongPress(target) {
-    // 長押し時の処理
-    alert(`長押しされました: ${target.textContent}`);
+// 長押し処理
+function handleLongPress(taskIndex) {
+    const editTaskModalOverlay = document.getElementById('editTaskModalOverlay');
+    const editTaskModal = document.getElementById('editTaskModal');
+    const editTaskInput = document.getElementById('editTaskInput');
+
+    // 現在のタスク内容を入力欄に設定
+    editTaskInput.value = data.tasks[taskIndex].text;
+
+    // モーダルを表示
+    editTaskModalOverlay.classList.add('active');
+    editTaskModal.style.display = 'block';
+
+    // 保存ボタンの動作
+    const saveEditTaskButton = document.getElementById('saveEditTaskButton');
+    saveEditTaskButton.onclick = () => {
+        data.tasks[taskIndex].text = editTaskInput.value.trim();
+        saveToLocalStorage();
+        renderTasks();
+        closeModal(editTaskModalOverlay);
+        showToast('タスクを編集しました');
+    };
+
+    // キャンセルボタンの動作
+    const cancelEditTaskButton = document.getElementById('cancelEditTaskButton');
+    cancelEditTaskButton.onclick = () => {
+        closeModal(editTaskModalOverlay);
+    };
 }
 
 let draggedTask = null; // ドラッグ中のタスク要素
