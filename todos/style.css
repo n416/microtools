@@ -131,9 +131,16 @@ h2 {
     cursor: grab;
 }
 
-#task-list li span{
+#task-list li .task-caption {
     flex:1;
 }
+.task-index,
+#task-list li .task-caption span {
+    cursor: pointer;
+    display: inline-block;
+    padding: 5px 5px 5px 5px;
+}
+
 /* タスク完了時のスタイル */
 #task-list li.completed span{
     text-decoration: line-through;
@@ -428,11 +435,6 @@ h2 {
     font-size: 0;
     padding: 0 !important;
     margin: 0px -5px;
-}
-
-.task-index {
-    flex: 0 !important;
-    padding-right: 10px;
 }
 
 
