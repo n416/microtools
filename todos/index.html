@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODOアプリ</title>
+    <link href="./fontawesome/css/fontawesome.css" rel="stylesheet" />
+    <link href="./fontawesome/css/solid.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- アプリケーションバー -->
+    <header class="toolbar">
+        <div class="toolbar-left">
+            <button id="resetButton" class="toolbar-btn"><i class="fas fa-trash"></i></button>
+            <button id="undoButton" class="toolbar-btn">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button id="redoButton" class="toolbar-btn">
+                <i class="fas fa-redo"></i>
+            </button>
+            <button id="shareButton" class="toolbar-btn" title="シェア">
+                <i class="fas fa-share-alt"></i>
+            </button>
+        </div>
+        <h1 class="app-title" id="appTitle">やることリスト</h1>
+        <div class="toolbar-right">
+            <button class="toolbar-btn settings-btn" id="settingsButton">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <div class="app-container">
+        <header class="header">
+
+        </header>
+        <main>
+            <div class="progress-container">
+                <span id="progress-text">進捗: 0%</span>
+                <div id="progress-clear" style="display: none;">進捗を0%にする</div>
+            </div>
+            <div class="task-input">
+                <input type="text" id="task-input" placeholder="新しいタスクを入力してください">
+                <button id="add-task-button">追加</button>
+            </div>
+
+            <ul id="task-list" class="task-list"></ul>
+        </main>
+        <footer>
+            <div id="toast" class="toast">操作完了</div>
+        </footer>
+        <div class="viewconfig-container">
+            <div class="viewconfig">
+                <input type="checkbox" id="index-number-invisible"><label for="index-number-invisible">連番を表示しない</label>
+            </div>
+            <div class="viewconfig">
+                <input type="checkbox" id="move-task-to-Bottom-disabled"><label for="move-task-to-Bottom-disabled">完了時を最下部に移動しない</label>
+            </div>
+        </div>
+    </div>
+    <!-- 設定モーダル -->
+    <div id="settingsOverlay" class="modal-overlay">
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <h2>ボタン</h2>
+                <div id="memberList"></div>
+                <button id="addMemberButton" class="modal-btn">追加</button>
+                <button id="saveSettingsButton" class="modal-btn save-btn">保存</button>
+                <button id="closeSettingsButton" class="modal-btn cancel-btn">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- アイコン選択モーダル -->
+    <div id="iconPickerOverlay" class="modal-overlay">
+        <div id="iconPickerModal" class="modal">
+            <div class="modal-content">
+                <h3>アイコンを選択</h3>
+                <div id="iconList">
+                    <button class="icon-option" data-icon="fas fa-user"><i class="fas fa-user"></i></button>
+                    <button class="icon-option" data-icon="fas fa-heart"><i class="fas fa-heart"></i></button>
+                    <button class="icon-option" data-icon="fas fa-star"><i class="fas fa-star"></i></button>
+                    <button class="icon-option" data-icon="fas fa-bell"><i class="fas fa-bell"></i></button>
+                    <button class="icon-option" data-icon="fas fa-check"><i class="fas fa-check"></i></button>
+                </div>
+                <button id="closeIconPickerButton" class="modal-btn cancel-btn">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- インポートモーダル -->
+    <div id="importModalOverlay" class="modal-overlay">
+        <div id="importModal" class="modal">
+            <div class="modal-content">
+                <h2>シェアされたURLです</h2>
+
+                <div id="importAllSection">
+                    <button id="importAllButton" class="modal-btn save-btn">すべて取り込む</button>
+                    <button id="closeImportModalButton1" class="modal-btn cancel-btn">無視する</button>
+                    <label>
+                        <input type="checkbox" id="openAdvancedCheckbox" class="modal-btn"> 一部取り込む
+                    </label>
+                </div>
+                <div class="advanced">
+                    <div id="importTitleSections">
+                        <h3>タイトル</h3>
+                        <div id="importTitleSection">
+                            <p>タイトルが表示されます</p>
+                        </div>
+                        <button id="importTitleButton" class="modal-btn save-btn">入れ替え</button>
+                    </div>
+
+                    <div id="importTasksSection">
+                        <h3>タスク一覧</h3>
+                        <ul id="importTasksList"></ul>
+                        <button id="importTasksButton" class="modal-btn save-btn">入れ替え</button>
+                    </div>
+                    <div id="importMembersSection">
+                        <h3>ボタン一覧</h3>
+                        <ul id="importMembersList"></ul>
+                        <button id="importMembersButton" class="modal-btn save-btn">入れ替え</button>
+                    </div>
+                    <button id="closeImportModalButton2" class="modal-btn cancel-btn">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- タイトル編集モーダル -->
+    <div id="titleModalOverlay" class="modal-overlay">
+        <div id="titleModal" class="modal">
+            <div class="modal-content">
+                <h2>タイトル編集</h2>
+                <input type="text" id="titleInput" value="やること" />
+                <button id="saveTitleButton" class="modal-btn save-btn">保存</button>
+                <button id="closeTitleModalButton" class="modal-btn cancel-btn">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js" defer></script>
+    <script type="module" src="storage.js" defer></script>
+</body>
+
+</html>
