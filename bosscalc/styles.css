@@ -1,0 +1,235 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f0f0f5;
+  color: #333;
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  max-width: 600px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
+  margin-top: 70px;
+}
+
+.flat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+label {
+  position: relative;
+  flex: 1;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+label:last-child {
+  margin-right: 0;
+}
+
+label input[type="text"],
+label input[type="number"],
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  padding: 15px;
+  margin-top: 0;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 1.2em;
+}
+
+label span {
+  position: absolute;
+  top: -10px;
+  left: 15px;
+  background-color: #ffffff;
+  padding: 0 5px;
+  font-size: 0.7em;
+  color: #6c757d;
+}
+
+.separator {
+  margin: 0 10px;
+  font-size: 1.5em;
+  color: #6c757d;
+}
+
+button.btn-primary, button.btn-secondary, button.btn-stops {
+  padding: 15px 20px;
+  font-size: 1em;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.3s ease;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+button.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+button.btn-primary:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+button.btn-primary:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+button.btn-secondary {
+  background-color: #dc3545;
+  color: white;
+  margin-top: 30px;
+}
+
+button.btn-secondary:hover {
+  background-color: #c82333;
+}
+
+button.btn-stops {
+  background-color: #FFFFFF;
+  color: #444;
+  box-shadow: 0 0 10px -3px #AAA;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #AAA;
+}
+
+button.btn-stops.active {
+  box-shadow: inset 0px 2px 2px 0 #868686;
+  background-color: #eee;
+  border: none;
+}
+
+button.btn-primary.active {
+  background-color: #0056b3;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.2);
+  border: 1px solid #004494;
+}
+
+.item-entry {
+  display: flex;
+  padding-top: 10px;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.item-entry:first-child {
+  padding-top: 20px;
+}
+
+.item-entry label input[type="number"] {
+  font-size: 1em;
+  padding: 10px;
+}
+
+.item-entry label {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  font-size: 1.2em;
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.item-entry label span {
+  font-size: 0.5em;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.item-entry button {
+  width: 20%;
+  height: 2.7rem;
+  padding: 0;
+  min-width: 5.4rem;
+}
+
+.status {
+  width: 10%;
+  text-align: center;
+  line-height: 2.7rem;
+  margin-left: 5px;
+}
+
+#result {
+  text-align: center;
+  font-size: 1.2em;
+  margin-top: 20px;
+}
+
+.header {
+  background-color: #f8f8f8;
+  border-bottom: 1px solid #dee2e6;
+  padding: 10px 0;
+  text-align: center;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  min-height: 70px;
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header .title {
+  font-size: 1.2em;
+  font-weight: bold;
+  flex-grow: 1;
+  text-align: center;
+}
+
+.header .settings-btn {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 0 15px;
+  color: #007bff;
+  position: absolute;
+  right: 0;
+}
+
+.gameboy-screen {
+  background-color: #9bbc0f;
+  border: 2px solid #0f380f;
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  text-align: center;
+  max-width: 600px;
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+  margin: 0 auto 20px auto;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 1.2em;
+  color: #0f380f;
+  text-shadow: 1px 1px #3f7d3f;
+}

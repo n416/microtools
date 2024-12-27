@@ -1,0 +1,413 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f5;
+    color: #333;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    max-width: 1000px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+    margin-top: 70px;
+}
+
+.flat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+label {
+    position: relative;
+    flex: 1;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+label:last-child {
+    margin-right: 0;
+}
+
+label input[type="text"],
+label input[type="number"],
+input[type="text"],
+input[type="number"] {
+    width: 100%;
+    padding: 15px;
+    margin-top: 0;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    box-sizing: border-box;
+    text-align: center;
+    font-size: 1.2em;
+}
+
+label span {
+    position: absolute;
+    top: -10px;
+    left: 15px;
+    background-color: #ffffff;
+    padding: 0 5px;
+    font-size: 0.7em;
+    color: #6c757d;
+}
+
+.separator {
+    margin: 0 10px;
+    font-size: 1.5em;
+    color: #6c757d;
+}
+
+button.btn-primary, button.btn-secondary, button.btn-stops {
+    padding: 15px 20px;
+    font-size: 1em;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.3s ease;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+button.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+button.btn-primary:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+button.btn-primary:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+button.btn-secondary {
+    background-color: #dc3545;
+    color: white;
+    margin-top: 30px;
+}
+
+button.btn-secondary:hover {
+    background-color: #c82333;
+}
+
+button.btn-stops {
+    background-color: #FFFFFF;
+    color: #444;
+    box-shadow: 0 0 10px -3px #AAA;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #AAA;
+}
+button.btn-stops.active {
+    box-shadow: inset 0px 2px 2px 0 #868686;
+    background-color: #eee;
+    border: none;
+}
+
+button.btn-primary.active {
+    background-color: #0056b3;
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.2);
+    border: 1px solid #004494;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+table th, table td {
+    border: 1px solid #dee2e6;
+    padding: 10px;
+    font-size: 0.9em;
+}
+
+table th {
+    background-color: #f8f9fa;
+}
+
+table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+table td button {
+    display: block;
+    margin: 0 auto;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+#screen {
+    background-color: #9bbc0f;
+    border: 2px solid #0f380f;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    text-align: center;
+    max-width: 600px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+    margin: 0 auto 20px auto;
+}
+
+#screen hr {
+    border-style: dashed;
+    width: 80%;
+}
+
+#estimatedEndTime, #speed {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1.2em;
+    margin: 5px 0;
+    color: #0f380f;
+    text-shadow: 1px 1px #3f7d3f;
+}
+
+/* アコーディオンのスタイル */
+details summary {
+    font-size: 1em;
+    cursor: pointer;
+    padding: 10px;
+    background-color: #f8f9fa;
+    color: #333;
+    border-radius: 8px;
+    text-align: center;
+    list-style: none;
+    outline: none;
+    margin: 20px 0 0 0;
+    user-select: none;
+}
+
+details summary:hover {
+    background-color: #e2e3e5;
+}
+
+details summary::marker {
+    display: none;
+}
+
+details[open] summary {
+    background-color: #e2e3e5;
+}
+
+details[open] summary::after {
+    content: 'ログを畳む▲';
+}
+
+details:not([open]) summary::after {
+    content: 'ログを確認▼';
+}
+
+details table {
+    display: table;
+    margin-top: 10px;
+}
+
+/* iPhone風のアプリケーションのバー */
+.header {
+    background-color: #f8f8f8;
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px 0;
+    text-align: center;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    min-height: 70px;
+    z-index: 4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header .title {
+    font-size: 1.2em;
+    font-weight: bold;
+    flex-grow: 1;
+    text-align: center;
+}
+
+.header .settings-btn {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 0 15px;
+    color: #007bff;
+    position: absolute;
+    right: 0;
+}
+
+/* サイドペイン */
+.side-pane {
+    position: fixed;
+    left: calc(100vw - 5px); /* 畳んでいる時に5px見えるように調整 */
+    top: 0;
+    width: calc(100vw - 20px); /* 開いている時に、左20PX余るように*/
+    height: 100%;
+    background-color: #ffffff;
+    box-sizing: border-box; /* paddingも含めた幅で計算 */
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+    transition: left 0.3s ease;
+    z-index: 5; /* headerのz-indexより低くする */
+    padding: 20px;
+}
+
+.side-pane.open {
+    left: 20px;
+}
+
+.side-pane .close-btn {
+    display: block;
+    text-align: right;
+    margin-bottom: 10px;
+    font-size: 1.5em;
+    cursor: pointer;
+}
+
+.side-pane .content {
+    font-size: 1em;
+}
+
+.side-pane .content button {
+    width: 100%;
+    padding: 10px;
+    font-size: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.side-pane .item-setting {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.side-pane .item-setting input {
+    width: calc(50% - 10px);
+    padding: 5px;
+    font-size: 1em;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.side-pane .item-setting button {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* サイドペインのマスク */
+.mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 4; /* サイドペインより上に配置 */
+    display: none;
+}
+
+.mask.show {
+    display: block;
+}
+
+/* Responsive styles */
+@media (max-width: 600px) {
+    button.btn-primary, button.btn-secondary {
+        width: 100%;
+    }
+
+    .header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .header .settings-btn {
+        position: absolute;
+        right: 10px;
+    }
+}
+
+.item-entry {
+    display: flex;
+    padding-top: 10px;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.item-entry:first-child {
+    padding-top: 20px;
+}
+
+.item-entry  label input[type="number"] {
+    font-size: 1em;
+    padding: 10px;
+}
+
+.item-entry label {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.item-entry label span {
+    font-size: 0.5em;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.item-entry button {
+    width: 20%;
+    height: 2.7rem;
+    padding: 0;
+    min-width: 5.4rem;
+}
+.error-message {
+    color: red;
+    font-size: 0.9em;
+    margin-top: 5px;
+}
