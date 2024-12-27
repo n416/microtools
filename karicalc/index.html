@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="calc.css" rel="stylesheet">
+  <script src="storage.js" defer></script>
+  <script src="log.js" defer></script>
+  <script src="ui.js" defer></script>
+  <script src="calculation.js" defer></script>
+  <script src="mains.js" defer></script>
+  <title>calc</title>
+</head>
+<body>
+  <!-- iPhone風のアプリケーションのバー -->
+  <div class="header">
+    <div class="title">
+      <button class="btn btn-stops" type="button" id="startPauseBtn" disabled>一時停止</button>
+    </div>
+    <button class="settings-btn" onclick="toggleSettingsPane()">⚙️</button>
+  </div>
+  
+  <div class="container">
+    <div id="screen">
+      <div id="estimatedEndTime">終了時刻：</div>
+      <div id="speed">速度：</div>
+      <div id="itemConsumptionDisplay"></div>
+    </div>
+    <div class="flat">
+      <label><span>現在値</span><input type="text" id="countInput" autocomplete="off"></label>
+      <div class="separator">/</div>
+      <label><span>目標値</span><input type="text" id="countMax"></label>
+    </div>
+    <button class="btn btn-primary" type="button" id="setBtn">記録</button>
+    <div id="itemTableContainer">
+      <div id="itemEntries"></div>
+    </div>
+    <details id="logAccordion">
+      <summary class="accordion-summary"></summary>
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th>削除</th>
+            <th>記録された時刻</th>
+            <th>記録された現在値/イベント</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- ログデータがここに挿入されます -->
+        </tbody>
+      </table>
+    </details>
+    <button class="btn btn-secondary" type="button" id="clearAllBtn">全クリア</button>
+  </div>
+  
+  <!-- サイドペイン -->
+  <div class="side-pane" id="sidePane">
+    <div class="close-btn" onclick="toggleSettingsPane()">×</div>
+    <div class="content">
+      <button id="addItemBtn">アイテム追加</button>
+      <table id="itemTableSettings">
+        <thead>
+          <tr>
+            <th>削除</th>
+            <th>アイテム名</th>
+            <th>初期数</th>
+          </tr>
+        </thead>
+        <tbody id="itemList">
+          <!-- アイテムデータがここに挿入されます -->
+        </tbody>
+      </table>
+      <button onclick="saveSettings()">設定を保存する</button>
+      <button onclick="cancelSettings()">キャンセル</button>
+    </div>
+  </div>
+
+  <!-- マスク -->
+  <div class="mask" id="mask" onclick="toggleSettingsPane()"></div>
+</body>
+</html>

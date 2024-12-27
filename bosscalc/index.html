@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="styles.css" rel="stylesheet">
+  <script src="script.js" defer></script>
+  <title>Boss HP Calculator</title>
+</head>
+<body>
+  <div class="header">
+    <div class="title">Boss HP Calculator</div>
+  </div>
+  
+  <div class="container">
+    <div id="screen" class="gameboy-screen">
+      <p>ボスの残りHP: <span id="bossHP">--</span>%</p>
+      <p>計算式: <span id="calculation">--</span></p>
+    </div>
+
+    <div class="flat">
+      <label><span>参加人数</span><input type="number" id="participants" value="200" min="1"></label>
+    </div>
+
+    <div id="contributionInputs"></div>
+
+    <div class="item-entry">
+      <label><span>自分の順位</span><input type="number" id="myRank" value="100" min="1"></label>
+      <label><span>自分の貢献度 (%)</span><input type="number" step="0.1" id="myContribution" value="0.1"></label>
+    </div>
+
+    <button class="btn btn-secondary" onclick="clearAll()">全クリア</button>
+  </div>
+</body>
+</html>
