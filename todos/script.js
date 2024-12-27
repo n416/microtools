@@ -196,7 +196,7 @@ function createTaskElement(task, index, hideIndex) {
     const indexSpan = hideIndex ? '' : `<span class="task-index">${index + 1}. </span>`;
 
     li.innerHTML = `
-      ${indexSpan}<span>${task.text}</span>
+      ${indexSpan}<div class="task-caption"><span>${task.text}</span></div>
       <div class="task-buttons"></div>
       <button class="delete-task-btn">削除</button>
     `;
@@ -841,7 +841,7 @@ importTitleButton.addEventListener('click', () => {
 
 let isDragAllowed = false; // ドラッグが許可されるかを管理
 
-// mousedownイベントをタスクリストに限定
+// mousedownイベント
 taskList.addEventListener('mousedown', (event) => {
     // クリックされた場所がtask-buttons内ならドラッグを禁止
     if (event.target.closest('.task-buttons')) {
@@ -849,7 +849,34 @@ taskList.addEventListener('mousedown', (event) => {
     } else {
         isDragAllowed = true;
     }
+
+    const span = event.target.closest('span'); // span部分をクリックしたか確認
+    if (!span) return; // span部分以外は無視
+
+    let pressTimer = null;
+
+    // 長押しを開始する
+    pressTimer = setTimeout(() => {
+        // 長押しイベントを実行
+        handleLongPress(span);
+    }, 500); // 500ms以上押されたら長押しとみなす
+
+    // マウスが離れた場合にタイマーを解除
+    const cancel = () => {
+        clearTimeout(pressTimer);
+        document.removeEventListener('mouseup', cancel);
+        document.removeEventListener('mousemove', cancel);
+    };
+
+    document.addEventListener('mouseup', cancel);
+    document.addEventListener('mousemove', cancel);
 });
+
+
+function handleLongPress(target) {
+    // 長押し時の処理
+    alert(`長押しされました: ${target.textContent}`);
+}
 
 let draggedTask = null; // ドラッグ中のタスク要素
 let placeholder = null; // プレースホルダー要素
