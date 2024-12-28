@@ -198,7 +198,7 @@ function createTaskElement(task, index, hideIndex) {
     li.innerHTML = `
       ${indexSpan}<div class="task-caption"><span>${task.text}</span></div>
       <div class="task-buttons"></div>
-      <button class="delete-task-btn">削除</button>
+      <div class="task-delete-buttons"><button class="delete-task-btn">削除</button></div>
     `;
     const buttonsContainer = li.querySelector('.task-buttons');
 
