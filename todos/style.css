@@ -129,6 +129,7 @@ h2 {
     position: relative;
     list-style: none;
     cursor: grab;
+    flex-wrap:wrap;
 }
 
 #task-list li .task-caption {
@@ -446,12 +447,18 @@ h2 {
 
 .task-buttons {
     cursor: default;
-    padding-left: 5px;
-    padding-right: 5px;
     padding: 10px;
     display: flex;
     gap: 5px;
 }
+
+.task-delete-buttons {
+    cursor: default;
+    padding: 10px;
+    display: flex;
+    gap: 5px;
+}
+
 .delete-task-btn {
     padding: 10px;
 }
@@ -502,3 +509,24 @@ label{
 .advanced.show {
     display: block;
 }
+
+@media (max-width: 501px) {
+    #task-list li{
+        flex-direction: row-reverse;
+    }
+    .app-title {
+        font-size: 0;
+        color: transparent;
+        height: 2rem;
+    }
+    .task-caption{
+        min-width: calc(100% - 4rem);
+    }
+}
+
+@media (max-width: 356px) {
+    .task-delete-buttons {
+        padding-top: 0;
+    }
+}
+
