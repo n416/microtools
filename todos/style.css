@@ -198,7 +198,9 @@ h2 {
 }
 
 .modal-content {
+    display: flex;
     text-align: center;
+    flex-wrap: wrap;
 }
 
 .modal-btn {
@@ -522,11 +524,30 @@ label{
     .task-caption{
         min-width: calc(100% - 4rem);
     }
+    .modal-content {
+        flex-direction: column;
+    }
 }
 
 @media (max-width: 356px) {
     .task-delete-buttons {
         padding-top: 0;
+        width: 100%;
     }
 }
+#memberList{
+    width: 100%;
+}
 
+.member-row{
+    display: flex;
+    justify-content: center;
+}
+
+.modal-content h2{
+    width: 100%;
+}
+
+#editTaskInput {
+    width: 100%;
+}
