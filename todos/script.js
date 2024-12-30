@@ -845,7 +845,7 @@ let longPressTimeout;
 let isLongPress = false; 
 
 // mousedownイベント
-taskList.addEventListener('mousedown', (event) => {
+taskList.addEventListener('pointerdown', (event) => {
     // クリックされた場所がtask-buttons内ならドラッグを禁止
     if (event.target.closest('.task-buttons')) {
         isDragAllowed = false;
