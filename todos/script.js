@@ -19,9 +19,53 @@ const iconPickerModal = document.getElementById('iconPickerModal');
 const closeIconPickerButton = document.getElementById('closeIconPickerButton');
 const iconList = document.getElementById('iconList');
 const shareButton = document.getElementById('shareButton');
+
 let selectedIconButton = null; // 選択中のアイコンボタン
 
-// トースト通知の表示
+/***************************************************
+ * ★追加：キュー方式による「逐次処理」を実現するための変数と関数
+ *    - 複数の状態変更が一気に押下された場合でも、
+ *      1つずつ順番に処理するようにすることでデグレを防ぐ
+ ***************************************************/
+let actionQueue = [];   // 実行待ちの「状態更新」アクションをためておくキュー
+let isProcessing = false; // 現在アクションを処理中かどうか
+
+/**
+ * アクションをキューに積む
+ * @param {Function} action - 同期的に実行する処理
+ */
+function enqueueAction(action) {
+    actionQueue.push(action);
+    processQueue();  // キューを回し始める
+}
+
+/**
+ * キューの先頭から順にアクションを1つずつ実行する
+ */
+function processQueue() {
+    // すでに処理中 or キューが空なら何もしない
+    if (isProcessing) return;
+    if (actionQueue.length === 0) return;
+
+    isProcessing = true;
+    try {
+        // 先頭のアクションを取り出して実行
+        const nextAction = actionQueue.shift();
+        nextAction();
+    } catch (error) {
+        console.error('Action Error:', error);
+    } finally {
+        // 処理が終わったらフラグを下ろし、まだアクションが残っていれば再実行
+        isProcessing = false;
+        if (actionQueue.length > 0) {
+            processQueue();
+        }
+    }
+}
+
+/**
+ * トースト通知の表示
+ */
 export function showToast(message) {
     toast.textContent = message;
     toast.classList.add('show');
@@ -30,7 +74,9 @@ export function showToast(message) {
     }, 3000);
 }
 
-// 状態の保存
+/**
+ * 状態の保存（Undoスタック用）
+ */
 export function saveState() {
     console.log("コール！");
     console.log("Saving state:", JSON.stringify(data.tasks));
@@ -44,9 +90,11 @@ export function saveState() {
     if (data.undoStack.length > 20) data.undoStack.shift(); // 履歴を20件に制限
 
     data.redoStack = []; // 新しい操作後はリドゥスタックをクリア
-    // console.log("Undo Stack after save:", undoStack);
 }
 
+/**
+ * タスクリストを描画する
+ */
 export function renderTasks() {
     const taskList = document.querySelector('#task-list');
     const hideIndex = document.querySelector('#index-number-invisible').checked; // チェックボックスの状態を取得
@@ -60,7 +108,9 @@ export function renderTasks() {
     updateProgress();
 }
 
-// メンバーリストを描画
+/**
+ * メンバーリストを描画
+ */
 export function renderMembers() {
     // 既存のリストをクリア
     memberList.innerHTML = '';
@@ -89,9 +139,9 @@ export function renderMembers() {
         iconElement.className = member.icon || 'fas fa-user'; // デフォルトアイコン
         iconButton.appendChild(iconElement);
 
-        // renderMembers 内の iconButton.addEventListener
+        // アイコンボタンがクリックされたとき
         iconButton.addEventListener('click', () => {
-            openIconPickerModal(iconButton); // 共通関数を呼び出し
+            openIconPickerModal(iconButton);
         });
 
         // アイコン選択モーダルでのアイコン選択
@@ -121,9 +171,9 @@ export function renderMembers() {
                     const memberName = nameInput ? nameInput.value.trim() : null;
 
                     if (memberName) {
-                        const member = data.members.find((m) => m.name === memberName);
-                        if (member) {
-                            member.icon = iconClass; // メンバー情報を更新
+                        const foundMember = data.members.find((m) => m.name === memberName);
+                        if (foundMember) {
+                            foundMember.icon = iconClass; // メンバー情報を更新
                         } else {
                             console.warn('No member found with name:', memberName);
                         }
@@ -138,15 +188,13 @@ export function renderMembers() {
             }
         });
 
-        // アイコンボタンがクリックされたときに選択状態を設定
+        // グローバルでクリックを監視して、選択中アイコンボタンを更新
         document.addEventListener('click', (event) => {
             const button = event.target.closest('.icon-button');
             if (button) {
                 selectedIconButton = button;
-                // console.log('Selected Icon Button:', selectedIconButton);
             }
         });
-
 
         // 削除ボタン
         const deleteButton = document.createElement('button');
@@ -170,8 +218,9 @@ export function renderMembers() {
     });
 }
 
-
-// 進捗の更新
+/**
+ * 進捗の更新（パーセンテージ計算）
+ */
 function updateProgress() {
     const totalButtons = data.tasks.reduce((sum, task) => sum + Object.keys(task.buttons).length, 0);
     const completedButtons = data.tasks.reduce(
@@ -182,12 +231,15 @@ function updateProgress() {
     progressText.textContent = `${progress}%`;
 }
 
+/**
+ * 1つのタスク要素(li)を作成する
+ */
 function createTaskElement(task, index, hideIndex) {
     const li = document.createElement('li');
     li.className = task.completed ? 'completed' : '';
-    li.draggable = true; // 追加
+    li.draggable = true; // ドラッグ＆ドロップ対応
 
-
+    // イベントリスナーを設定
     li.addEventListener('dragstart', handleDragStart);
     li.addEventListener('dragover', handleDragOver);
     li.addEventListener('dragend', handleDragEnd);
@@ -202,6 +254,7 @@ function createTaskElement(task, index, hideIndex) {
     `;
     const buttonsContainer = li.querySelector('.task-buttons');
 
+    // メンバーごとにボタンを作成
     data.members.forEach((member) => {
         const iconClass = member.icon || 'fas fa-user'; // デフォルトアイコン
 
@@ -213,24 +266,34 @@ function createTaskElement(task, index, hideIndex) {
         const button = document.createElement('button');
         button.innerHTML = task.buttons[member.name] ? '完了' : `<i class="${iconClass}"></i>`;
         button.className = task.buttons[member.name] ? 'completed-button' : '';
+
+        // ★キューに積むよう変更（押下→enqueueAction）
         button.addEventListener('click', () => {
-            saveState(); // 状態を保存
-            task.buttons[member.name] = !task.buttons[member.name];
-            button.innerHTML = task.buttons[member.name] ? '完了' : `<i class="${iconClass}"></i>`;
-            button.className = task.buttons[member.name] ? 'completed-button' : '';
-            checkTaskCompletion(task, index); // 完了状態を確認
+            enqueueAction(() => {
+                saveState(); // 状態を保存（アンドゥ用）
+                task.buttons[member.name] = !task.buttons[member.name];
+                button.innerHTML = task.buttons[member.name] ? '完了' : `<i class="${iconClass}"></i>`;
+                button.className = task.buttons[member.name] ? 'completed-button' : '';
+                checkTaskCompletion(task, index); // 完了状態を確認
+            });
         });
+
         buttonsContainer.appendChild(button);
     });
 
+    // 削除ボタン
     li.querySelector('.delete-task-btn').addEventListener('click', () => {
-        deleteTask(index);
+        enqueueAction(() => {
+            deleteTask(index);
+        });
     });
 
     return li;
 }
 
-
+/**
+ * タスク完了をチェックし、全メンバー分完了なら「completed」扱いにする
+ */
 function checkTaskCompletion(task, index) {
     // すべてのボタンが「完了」かどうかをチェック
     const allCompleted = Object.values(task.buttons).every((state) => state);
@@ -252,16 +315,16 @@ function checkTaskCompletion(task, index) {
     } else if (!allCompleted && task.completed) {
         // タスクを未完了状態に戻す
         task.completed = false;
-        showToast('タスクが未完了に戻りました');
+        showToast('タスクを未完了に戻りました');
         renderTasks(); // 即時再描画
     }
 
     saveToLocalStorage();
-
 }
 
-
-// タスクの追加
+/**
+ * タスクの追加
+ */
 function addTask(taskText) {
     const newTask = {
         text: taskText,
@@ -280,7 +343,9 @@ function addTask(taskText) {
     showToast('タスクを追加しました');
 }
 
-
+/**
+ * タスクを最下部に移動させるアニメーション処理
+ */
 const moveTaskToBottom = (clickedIndex) => {
     const taskItems = Array.from(taskList.children);
     const movedTask = data.tasks[clickedIndex];
@@ -327,7 +392,9 @@ const moveTaskToBottom = (clickedIndex) => {
     );
 };
 
-// タスクを削除
+/**
+ * タスクを削除
+ */
 function deleteTask(index) {
     saveState(); // 現在の状態をアンドゥ用に保存
     data.tasks.splice(index, 1); // 指定したタスクを削除
@@ -336,46 +403,50 @@ function deleteTask(index) {
     showToast('タスクを削除しました'); // トースト通知を表示
 }
 
+/**
+ * Undo処理
+ */
 function undo() {
-    if (data.undoStack.length === 0) {
-        showToast('アンドゥできる操作がありません');
-        return;
-    }
-    const tasksString = data.tasks;
-    const membersString = data.members;
-    data.redoStack.push(JSON.stringify({ tasks: data.tasks, members: data.members })); // 現在の状態を保存
+    enqueueAction(() => {
+        if (data.undoStack.length === 0) {
+            showToast('アンドゥできる操作がありません');
+            return;
+        }
+        data.redoStack.push(JSON.stringify({ tasks: data.tasks, members: data.members })); // 現在の状態を保存
 
-    const prevState = JSON.parse(data.undoStack.pop()); // 前の状態を復元
-    data.tasks = prevState.tasks;
-    data.members = prevState.members;
+        const prevState = JSON.parse(data.undoStack.pop()); // 前の状態を復元
+        data.tasks = prevState.tasks;
+        data.members = prevState.members;
 
-    saveToLocalStorage(); // ローカルストレージを更新
-    renderTasks(); // タスクリストを再描画
-    renderMembers(); // メンバーリストを再描画
+        saveToLocalStorage(); // ローカルストレージを更新
+        renderTasks(); // タスクリストを再描画
+        renderMembers(); // メンバーリストを再描画
 
-    showToast('アンドゥしました');
-    // console.log("Undo completed. Current state:", { tasks, members });
+        showToast('アンドゥしました');
+    });
 }
 
+/**
+ * Redo処理
+ */
 function redo() {
-    if (data.redoStack.length === 0) {
-        showToast('リドゥできる操作がありません');
-        return;
-    }
-    const tasksString = data.tasks;
-    const membersString = data.members;
-    data.undoStack.push(JSON.stringify({ tasks: data.tasks, members: data.members })); // 現在の状態を保存
+    enqueueAction(() => {
+        if (data.redoStack.length === 0) {
+            showToast('リドゥできる操作がありません');
+            return;
+        }
+        data.undoStack.push(JSON.stringify({ tasks: data.tasks, members: data.members })); // 現在の状態を保存
 
-    const nextState = JSON.parse(data.redoStack.pop()); // 次の状態を復元
-    data.tasks = nextState.tasks;
-    data.members = nextState.members;
+        const nextState = JSON.parse(data.redoStack.pop()); // 次の状態を復元
+        data.tasks = nextState.tasks;
+        data.members = nextState.members;
 
-    saveToLocalStorage(); // ローカルストレージを更新
-    renderTasks(); // タスクリストを再描画
-    renderMembers(); // メンバーリストを再描画
+        saveToLocalStorage(); // ローカルストレージを更新
+        renderTasks(); // タスクリストを再描画
+        renderMembers(); // メンバーリストを再描画
 
-    showToast('リドゥしました');
-    // console.log("Redo completed. Current state:", { tasks, members });
+        showToast('リドゥしました');
+    });
 }
 
 // 設定モーダルの表示
@@ -387,8 +458,6 @@ settingsButton.addEventListener('click', () => {
 closeSettingsButton.addEventListener('click', () => {
     settingsModal.style.display = 'none';
 });
-
-
 
 // 設定モーダルの「追加」ボタンの動作修正
 addMemberButton.addEventListener('click', () => {
@@ -414,33 +483,37 @@ addMemberButton.addEventListener('click', () => {
     memberList.appendChild(row);
 });
 
-
 // アイコン選択モーダルを閉じる
 closeIconPickerButton.addEventListener('click', () => {
     iconPickerModal.style.display = 'none';
     selectedIconButton = null;
 });
 
-
-// 設定モーダルの「保存」ボタンの動作
+/**
+ * 設定モーダルの「保存」ボタンの動作
+ */
 saveSettingsButton.addEventListener('click', () => {
-    saveState(); // 現在の状態を保存
-    const updatedMembers = getMembers();
-    const deletedMembers = getDeletedMembers();
+    enqueueAction(() => {
+        saveState(); // 現在の状態を保存
+        const updatedMembers = getMembers();
+        const deletedMembers = getDeletedMembers();
 
-    if (updatedMembers.length === 0) {
-        showToast('メンバー情報を確認してください');
-        return;
-    }
+        if (updatedMembers.length === 0) {
+            showToast('メンバー情報を確認してください');
+            return;
+        }
 
-    updateTasksAndMembers(updatedMembers, deletedMembers);
-    renderTasks();
-    renderMembers();
-    showToast('設定を保存しました');
+        updateTasksAndMembers(updatedMembers, deletedMembers);
+        renderTasks();
+        renderMembers();
+        showToast('設定を保存しました');
+    });
 });
 
+/**
+ * 設定モーダルのメンバー情報をタスクに反映
+ */
 function updateTasksAndMembers(updatedMembers, deletedMembers) {
-
     // 削除されたメンバーをmembersから削除
     data.members = data.members.filter((member) =>
         !deletedMembers.some((deletedMember) => deletedMember.name === member.name)
@@ -463,7 +536,6 @@ function updateTasksAndMembers(updatedMembers, deletedMembers) {
                 const normalizedDeletedName = deletedMember.name.trim().toLowerCase();
                 Object.keys(task.buttons).forEach((key) => {
                     if (key.trim().toLowerCase() === normalizedDeletedName) {
-                        // console.log(`Deleting button for member: ${key} in task: ${task.text}`);
                         delete task.buttons[key]; // 確実に削除
                     }
                 });
@@ -480,8 +552,6 @@ function updateTasksAndMembers(updatedMembers, deletedMembers) {
         });
     });
 
-
-
     // 完了状態を再計算
     data.tasks.forEach((task) => {
         const allCompleted = Object.values(task.buttons).every((state) => state);
@@ -492,9 +562,6 @@ function updateTasksAndMembers(updatedMembers, deletedMembers) {
     saveToLocalStorage();
 }
 
-
-
-
 // ページロード時にデータを復元
 document.addEventListener('DOMContentLoaded', () => {
     loadCheckboxState(); // チェックボックスの状態を復元
@@ -504,6 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data.members.push({ name: 'A', icon: 'fas fa-user' });
     }
 
+    // URLクエリパラメータ経由のインポート時処理
     if (new URLSearchParams(window.location.search).has('data')) {
         const advancedSection = document.querySelector(".advanced");
         const openAdvancedCheckbox = document.getElementById("openAdvancedCheckbox");
@@ -552,9 +620,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderMembers();
 
         removeHistoryGetData();
-    }
-    else {
-
+    } else {
+        // 通常時ロード
         loadFromLocalStorage();
         renderTasks();
 
@@ -562,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
         undoButton.addEventListener('click', undo);
         redoButton.addEventListener('click', redo);
 
-        // ショートカットキー
+        // ショートカットキー(Ctrl+Z / Ctrl+Y)
         document.addEventListener('keydown', (event) => {
             if (event.ctrlKey && event.key === 'z') {
                 undo();
@@ -576,26 +643,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// URLのクエリパラメータからdataを削除
+/**
+ * URLのクエリパラメータからdataを削除
+ */
 function removeHistoryGetData() {
     const url = new URL(window.location);
     url.searchParams.delete('data');
     history.replaceState(null, '', url);  // ブラウザ履歴を更新し、URLからdataパラメータを削除
 }
 
+/**
+ * タスク追加ボタン
+ */
 addTaskButton.addEventListener('click', () => {
     const taskInput = document.querySelector('#task-input');
     const taskText = taskInput.value.trim();
 
     if (taskText) {
-        saveState(); // 状態をアンドゥ用に保存
-        addTask(taskText);
-        taskInput.value = ''; // 入力欄をクリア
+        // ★enqueueActionを使う
+        enqueueAction(() => {
+            saveState(); // 状態をアンドゥ用に保存
+            addTask(taskText);
+            taskInput.value = ''; // 入力欄をクリア
+        });
     } else {
         showToast('タスク名を入力してください');
     }
 });
 
+/**
+ * メンバー（ボタン）の入力情報を取得
+ */
 function getMembers() {
     const memberElements = document.querySelectorAll('.member-row'); // メンバー行を取得
 
@@ -616,14 +694,12 @@ function getMembers() {
     return updatedMembers;
 }
 
-
-
-
-
+/**
+ * 削除されたメンバー情報を取得
+ */
 function getDeletedMembers() {
     const deletedMembers = [];
     const deletedMemberElements = document.querySelectorAll('.deleted-member-row');
-    // console.log("deletedMemberElements！", deletedMemberElements);
 
     deletedMemberElements.forEach((memberRow) => {
         const nameInput = memberRow.querySelector('.member-name-input');
@@ -634,8 +710,9 @@ function getDeletedMembers() {
     return deletedMembers;
 }
 
-
-// シェアボタンの機能
+/**
+ * シェアボタンの機能
+ */
 shareButton.addEventListener('click', async () => {
     const shareUrl = generateShareableUrl();  // storage.jsからURLを生成
 
@@ -644,21 +721,17 @@ shareButton.addEventListener('click', async () => {
             {
                 title: 'シェア',
                 url: shareUrl
-            });
+            }
+        );
     } catch (error) {
         console.error(error);
     }
-    showToast("シェアします");  // ui.jsのトースト表示
+    showToast("シェアします");
 });
 
-
-
-
-// 背景要素とモーダル要素を取得
-const settingsOverlay = document.getElementById('settingsOverlay');
-const iconPickerOverlay = document.getElementById('iconPickerOverlay');
-
-// モーダルを閉じる共通関数
+/**
+ * モーダルを閉じる共通関数
+ */
 export function closeModal(overlay) {
     overlay.classList.remove('active');
     const modal = overlay.querySelector('.modal');
@@ -668,6 +741,7 @@ export function closeModal(overlay) {
 }
 
 // 設定モーダル背景のクリックで閉じる
+const settingsOverlay = document.getElementById('settingsOverlay');
 settingsOverlay.addEventListener('click', (event) => {
     if (event.target === settingsOverlay) {
         closeModal(settingsOverlay);
@@ -675,6 +749,7 @@ settingsOverlay.addEventListener('click', (event) => {
 });
 
 // アイコン選択モーダル背景のクリックで閉じる
+const iconPickerOverlay = document.getElementById('iconPickerOverlay');
 iconPickerOverlay.addEventListener('click', (event) => {
     if (event.target === iconPickerOverlay) {
         closeModal(iconPickerOverlay);
@@ -686,7 +761,6 @@ settingsButton.addEventListener('click', () => {
     settingsOverlay.classList.add('active');
     settingsModal.style.display = 'block';
 });
-
 closeSettingsButton.addEventListener('click', () => {
     closeModal(settingsOverlay);
 });
@@ -696,7 +770,9 @@ closeIconPickerButton.addEventListener('click', () => {
     closeModal(iconPickerOverlay);
 });
 
-
+/**
+ * アイコン選択モーダルを開く
+ */
 function openIconPickerModal(iconButton) {
     selectedIconButton = iconButton; // 選択中のボタンを記録
 
@@ -706,7 +782,7 @@ function openIconPickerModal(iconButton) {
 
     if (iconPickerOverlay && iconPickerModal) {
         iconPickerOverlay.classList.add('active'); // 背景を表示
-        iconPickerModal.style.display = 'block'; // モーダルを表示
+        iconPickerModal.style.display = 'block';    // モーダルを表示
 
         // アイコン選択モーダル内で現在のアイコンを選択済みに設定
         const currentIcon = iconButton.querySelector('i')?.className;
@@ -723,8 +799,7 @@ function openIconPickerModal(iconButton) {
     }
 }
 
-
-
+// インポート関連の要素取得
 const importTitleSection = document.getElementById('importTitleSection');
 const importModalOverlay = document.getElementById('importModalOverlay');
 const importTasksList = document.getElementById('importTasksList');
@@ -734,13 +809,15 @@ const importMembersButton = document.getElementById('importMembersButton');
 const closeImportModalButton1 = document.getElementById('closeImportModalButton1');
 const closeImportModalButton2 = document.getElementById('closeImportModalButton2');
 
+/**
+ * インポートモーダルを開く
+ */
 export function openImportModal(data) {
     // タイトルをモーダルに表示
     if (data.title) {
         importTitleSection.innerHTML = `
             <p>${data.title}</p>
         `;
-
         // タイトルを一時保存
         localStorage.setItem('importedTitle', data.title);
     } else {
@@ -770,6 +847,7 @@ export function openImportModal(data) {
     }
 }
 
+// インポートモーダルを閉じるボタン
 closeImportModalButton1.addEventListener('click', () => {
     importModalOverlay.classList.remove('active');
 });
@@ -777,7 +855,9 @@ closeImportModalButton2.addEventListener('click', () => {
     importModalOverlay.classList.remove('active');
 });
 
-// タスクのインポート
+/**
+ * タスクのインポート
+ */
 importTasksButton.addEventListener('click', () => {
     const tasksToImport = JSON.parse(localStorage.getItem('importedTasks')); // 一時保存されたタスクを取得
     if (tasksToImport && tasksToImport.length > 0) {
@@ -796,9 +876,9 @@ importTasksButton.addEventListener('click', () => {
     }
 });
 
-
-
-// メンバーのインポート
+/**
+ * メンバーのインポート
+ */
 importMembersButton.addEventListener('click', () => {
     const membersToImport = JSON.parse(localStorage.getItem('importedMembers')); // 一時保存されたメンバーを取得
     if (membersToImport && membersToImport.length > 0) {
@@ -818,9 +898,10 @@ importMembersButton.addEventListener('click', () => {
     }
 });
 
-// タイトルのインポート
+/**
+ * タイトルのインポート
+ */
 const importTitleButton = document.getElementById('importTitleButton');
-
 importTitleButton.addEventListener('click', () => {
     const importedTitle = localStorage.getItem('importedTitle'); // 一時保存されたタイトルを取得
 
@@ -839,12 +920,15 @@ importTitleButton.addEventListener('click', () => {
     }
 });
 
-let isDragAllowed = false; // ドラッグが許可されるかを管理
+/*****************************************
+ * 以下、ドラッグ＆ドロップ・長押し編集等
+ *****************************************/
 
+let isDragAllowed = false; // ドラッグが許可されるかを管理
 let longPressTimeout;
 let isLongPress = false; 
 
-// mousedownイベント
+// pointerdown(タップ/クリック)イベント
 taskList.addEventListener('pointerdown', (event) => {
     // クリックされた場所がtask-buttons内ならドラッグを禁止
     if (event.target.closest('.task-buttons')) {
@@ -861,13 +945,13 @@ taskList.addEventListener('pointerdown', (event) => {
 
     isLongPress = false;
 
-    // 長押しタイマーを開始
+    // 長押しタイマーを開始（500ms以上押し続けると長押しと判定）
     longPressTimeout = setTimeout(() => {
         isLongPress = true;
         handleLongPress(taskIndex);
-    }, 500); // 500ms以上押し続けると長押しと判定
+    }, 500);
 
-    // キャンセル条件
+    // マウスアップ/マウス移動でキャンセル
     const cancel = () => {
         clearTimeout(longPressTimeout);
         if (!isLongPress) {
@@ -875,13 +959,13 @@ taskList.addEventListener('pointerdown', (event) => {
             document.removeEventListener('mousemove', cancel);
         }
     };
-
     document.addEventListener('mouseup', cancel);
     document.addEventListener('mousemove', cancel);
 });
 
-
-// 長押し処理
+/**
+ * 長押し時のタスク編集処理
+ */
 function handleLongPress(taskIndex) {
     const editTaskModalOverlay = document.getElementById('editTaskModalOverlay');
     const editTaskModal = document.getElementById('editTaskModal');
@@ -913,15 +997,17 @@ function handleLongPress(taskIndex) {
 
 let draggedTask = null; // ドラッグ中のタスク要素
 let placeholder = null; // プレースホルダー要素
+
+/**
+ * ドラッグ開始イベント
+ */
 function handleDragStart(event) {
-    // ドラッグが許可されていない場合、キャンセル
     if (!isDragAllowed) {
         event.preventDefault();
         return;
     }
     draggedTask = event.target; // ドラッグする要素を保持
     draggedTask.classList.add('dragging'); // スタイル変更
-
 
     // プレースホルダー作成
     placeholder = document.createElement('li');
@@ -931,6 +1017,9 @@ function handleDragStart(event) {
     draggedTask.parentNode.insertBefore(placeholder, draggedTask.nextSibling);
 }
 
+/**
+ * ドラッグ要素がほかの要素上に来たときの処理
+ */
 function handleDragOver(event) {
     event.preventDefault(); // デフォルト動作を無効化
 
@@ -945,6 +1034,9 @@ function handleDragOver(event) {
     }
 }
 
+/**
+ * ドラッグ終了（ドロップ）時の処理
+ */
 function handleDragEnd() {
     if (placeholder && draggedTask) {
         placeholder.parentNode.insertBefore(draggedTask, placeholder);
@@ -953,7 +1045,8 @@ function handleDragEnd() {
 
     if (placeholder) placeholder.remove();
 
-    saveState();      // 状態を保存
+    // 並び替え後の状態を保存（Undo用）
+    saveState();
     updateIndexes();  // 並び替え後の順序を反映
     saveToLocalStorage(); // 永続化
 
@@ -961,6 +1054,9 @@ function handleDragEnd() {
     placeholder = null;
 }
 
+/**
+ * ドラッグ位置から挿入先要素を計算
+ */
 function getDragAfterElement(list, y) {
     const draggableElements = [...list.children].filter(
         (child) => child !== placeholder && child !== draggedTask
@@ -977,6 +1073,10 @@ function getDragAfterElement(list, y) {
         }
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
+
+/**
+ * 並び替え後のインデックスを data.tasks に反映
+ */
 function updateIndexes() {
     const taskList = document.getElementById('task-list'); // タスクリストの親要素を取得
     const updatedTasks = Array.from(taskList.children).map((taskElement) => {
@@ -995,39 +1095,49 @@ function updateIndexes() {
     console.log('タスクの順序が更新されました', data.tasks);
 }
 
+/**
+ * リセットボタン
+ */
 const resetButton = document.getElementById('resetButton');
 
 // resetButtonのクリックイベントを追加
 resetButton.addEventListener('click', () => {
-    const confirmation = confirm("すべてのデータをリセットしますか？");
-    if (confirmation) {
-        localStorage.clear(); // ローカルストレージをクリア
+    enqueueAction(() => {
+        const confirmation = confirm("すべてのデータをリセットしますか？");
+        if (confirmation) {
+            localStorage.clear(); // ローカルストレージをクリア
 
-        // dataオブジェクト内のプロパティを初期化
-        data.title = 'やること';
-        data.tasks = [];
-        data.undoStack = [];
-        data.redoStack = [];
-        data.members = [];
+            // dataオブジェクト内のプロパティを初期化
+            data.title = 'やること';
+            data.tasks = [];
+            data.undoStack = [];
+            data.redoStack = [];
+            data.members = [];
 
-        // デフォルトメンバーを追加
-        data.members.push({ name: 'A', icon: 'fas fa-user' });
+            // デフォルトメンバーを追加
+            data.members.push({ name: 'A', icon: 'fas fa-user' });
 
-        renderTasks(); // タスクリストをリセット
-        renderMembers(); // メンバーリストをリセット
-        document.getElementById('appTitle').textContent = data.title; // タイトルも初期化
-        loadCheckboxState();
-        showToast("データをリセットしました");
-    }
+            renderTasks(); // タスクリストをリセット
+            renderMembers(); // メンバーリストをリセット
+            document.getElementById('appTitle').textContent = data.title; // タイトルも初期化
+            loadCheckboxState();
+            showToast("データをリセットしました");
+        }
+    });
 });
 
+/**
+ * チェックボックスの状態を保存/復元
+ */
 document.querySelector('#index-number-invisible').addEventListener('change', () => {
     saveCheckboxState();
     renderTasks(); // チェックボックスの変更でタスクリストを再描画
 });
 document.getElementById('move-task-to-Bottom-disabled').addEventListener('change', saveCheckboxState);
 
-// チェックボックスの状態を保存
+/**
+ * チェックボックスの状態を保存
+ */
 function saveCheckboxState() {
     const indexNumberInvisible = document.getElementById('index-number-invisible').checked;
     const moveTaskToBottomDisabled = document.getElementById('move-task-to-Bottom-disabled').checked;
@@ -1040,7 +1150,9 @@ function saveCheckboxState() {
     localStorage.setItem('checkboxState', JSON.stringify(checkboxState));
 }
 
-// チェックボックスの状態を復元
+/**
+ * チェックボックスの状態を復元
+ */
 function loadCheckboxState() {
     const savedState = localStorage.getItem('checkboxState');
     if (savedState) {
@@ -1053,6 +1165,10 @@ function loadCheckboxState() {
         document.getElementById('move-task-to-Bottom-disabled').checked = false;
     }
 }
+
+/**
+ * 進捗リセットボタン
+ */
 const progressContainer = document.querySelector('.progress-container');
 const progressClearButton = document.getElementById('progress-clear');
 
