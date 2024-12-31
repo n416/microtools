@@ -1,5 +1,6 @@
-import { renderMembers, renderTasks,saveState } from './script.js';
-import { showToast, openImportModal,closeModal } from './script.js';
+import { renderMembers, renderTasks, saveState } from './script.js';
+import { showToast, openImportModal, closeModal } from './script.js';
+
 const TASKS_STORAGE_KEY = 'tasks';
 const UNDO_STACK_STORAGE_KEY = 'undoStack';
 const REDO_STACK_STORAGE_KEY = 'redoStack';
@@ -11,26 +12,22 @@ export let data = {
     undoStack: [],
     redoStack: [],
     members: []
-}
+};
 data.title = 'やること';
 
 export function generateShareableUrl() {
     loadFromLocalStorage();
-
     // LZStringで圧縮
     const compressedData = LZString.compressToEncodedURIComponent(
         JSON.stringify({
-            title: data.title, // タイトルも含める
+            title: data.title,
             tasks: data.tasks,
             members: data.members,
         })
     );
     const baseUrl = window.location.origin + window.location.pathname;
-
-    // 圧縮したデータをURLに追加
     return `${baseUrl}?data=${compressedData}`;
 }
-
 
 // GETパラメータ読み込み
 export function loadFromUrlParams() {
@@ -48,21 +45,20 @@ export function loadFromUrlParams() {
 
         // タイトル、タスク、ボタンを一時保存
         if (parsedData.title) {
-            localStorage.setItem('importedTitle', parsedData.title); // 一時保存
+            localStorage.setItem('importedTitle', parsedData.title);
         }
         localStorage.setItem('importedTasks', JSON.stringify(parsedData.tasks || []));
         localStorage.setItem('importedMembers', JSON.stringify(parsedData.members || []));
         
-        openImportModal(parsedData); // モーダルを表示
+        openImportModal(parsedData);
     }
 }
-
 
 // タスクとスタックをローカルストレージに保存
 export function saveToLocalStorage() {
     console.log("セーブコール");
     try {
-        localStorage.setItem('title', data.title); // タイトルを保存
+        localStorage.setItem('title', data.title);
         localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(data.tasks));
         localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(data.members));
         localStorage.setItem(UNDO_STACK_STORAGE_KEY, JSON.stringify(data.undoStack));
@@ -71,7 +67,6 @@ export function saveToLocalStorage() {
         console.error('Error saving to localStorage:', error);
     }
 }
-
 
 // ボタンリストをローカルストレージに保存
 export function saveMembersToLocalStorage() {
@@ -92,31 +87,25 @@ export function loadFromLocalStorage() {
     const storedRedoStack = localStorage.getItem(REDO_STACK_STORAGE_KEY);
     const storedMembers = localStorage.getItem(MEMBERS_STORAGE_KEY);
 
-    // データを復元
-    data.title = storedTitle || 'やること'; // タイトルを設定
+    data.title = storedTitle || 'やること';
     data.tasks = storedTasks ? JSON.parse(storedTasks) : [];
     data.undoStack = storedUndoStack ? JSON.parse(storedUndoStack) : [];
     data.redoStack = storedRedoStack ? JSON.parse(storedRedoStack) : [];
     data.members = storedMembers ? JSON.parse(storedMembers) : [];
 
-
-    // デフォルトメンバーの追加（メンバーが空の場合）
     if (data.members.length === 0) {
         data.members.push({ name: 'A', icon: 'fas fa-user' });
     }
-
-    // タイトルをDOMに反映
     const appTitle = document.getElementById('appTitle');
     if (appTitle) {
         appTitle.textContent = data.title;
     }
 
-    // 必要に応じてタスクやボタンを補正
     data.tasks.forEach((task) => {
         if (!task.buttons) {
             task.buttons = {};
             data.members.forEach((member) => {
-                task.buttons[member.name] = false; // 必要なら初期化
+                task.buttons[member.name] = false;
             });
         }
     });
@@ -128,11 +117,9 @@ export function loadFromLocalStorage() {
 function validateParams(data) {
     const { title, members, tasks } = data;
     return (
-//        typeof title === 'string' && title.trim() !== '' &&
         ((members && members.length > 0) || (tasks && tasks.length > 0))
     );
 }
-
 
 function showModalA(data) {
     console.log('Before ModalA:', data.members);
@@ -141,9 +128,9 @@ function showModalA(data) {
 
     if (userConfirmed) {
         if (data.members && data.members.length > 0) {
-            showModalB(data); // ボタンがある場合はモーダルBへ
+            showModalB(data);
         } else if (data.tasks && data.tasks.length > 0) {
-            showModalC(data); // タスクのみの場合はモーダルCへ
+            showModalC(data);
         }
     }
 }
@@ -154,13 +141,13 @@ function showModalB(data) {
     const userConfirmed = confirm(modalMessage);
 
     if (userConfirmed) {
-        importMembers(data.members); // ボタンの取り込み
+        importMembers(data.members);
         if (data.tasks && data.tasks.length > 0) {
-            showModalC(data); // tasksがある場合はモーダルC
+            showModalC(data);
         }
     } else {
         if (data.tasks && data.tasks.length > 0) {
-            showModalC(data); // tasksがある場合はモーダルC
+            showModalC(data);
         } else {
             showToast("取り込みを中止しました。");
         }
@@ -173,29 +160,27 @@ function showModalC(data) {
     const userConfirmed = confirm(modalMessage);
 
     if (userConfirmed) {
-        importTasks(data.tasks); // タスクの取り込み
+        importTasks(data.tasks);
     } else {
         showToast("取り込みを中止しました。");
     }
 }
 
 function importMembers(members) {
-    saveState(); // 現在の状態を保存
-    data.members = [...members]; // ボタンを上書き
+    saveState();
+    data.members = [...members];
     saveToLocalStorage();
     renderMembers();
     showToast("ボタンを取り込みました。");
 }
 
 function importTasks(tasks) {
-    saveState(); // 現在の状態を保存
-    data.tasks = [...tasks]; // タスクを上書き
+    saveState();
+    data.tasks = [...tasks];
     saveToLocalStorage();
     renderTasks();
     showToast("タスクを取り込みました。");
 }
-
-
 
 const appTitle = document.getElementById('appTitle');
 const titleModalOverlay = document.getElementById('titleModalOverlay');
@@ -206,19 +191,19 @@ const closeTitleModalButton = document.getElementById('closeTitleModalButton');
 
 // タイトルをクリックしてモーダルを表示
 appTitle.addEventListener('click', () => {
-    titleInput.value = data.title; // 現在のタイトルをモーダルに設定
+    titleInput.value = data.title;
     titleModalOverlay.classList.add('active');
     titleModal.style.display = 'block';
 });
 
 // タイトル保存処理
 saveTitleButton.addEventListener('click', () => {
-    saveState(); // アンドゥ用に現在の状態を保存
-    data.title = titleInput.value.trim(); // タイトルを更新
-    appTitle.textContent = data.title; // UIに反映
-    saveToLocalStorage(); // ローカルストレージに保存
+    saveState();
+    data.title = titleInput.value.trim();
+    appTitle.textContent = data.title;
+    saveToLocalStorage();
     showToast('タイトルを保存しました');
-    closeModal(titleModalOverlay); // モーダルを閉じる
+    closeModal(titleModalOverlay);
 });
 
 // モーダルを閉じる
