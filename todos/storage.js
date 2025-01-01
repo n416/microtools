@@ -121,6 +121,7 @@ function validateParams(data) {
     );
 }
 
+// 以下、インポート時のモーダルチェック
 function showModalA(data) {
     console.log('Before ModalA:', data.members);
     const modalMessage = "データが上書きされます。宜しいですか？";
@@ -182,6 +183,7 @@ function importTasks(tasks) {
     showToast("タスクを取り込みました。");
 }
 
+// タイトル編集モーダル関連
 const appTitle = document.getElementById('appTitle');
 const titleModalOverlay = document.getElementById('titleModalOverlay');
 const titleModal = document.getElementById('titleModal');
@@ -189,14 +191,12 @@ const titleInput = document.getElementById('titleInput');
 const saveTitleButton = document.getElementById('saveTitleButton');
 const closeTitleModalButton = document.getElementById('closeTitleModalButton');
 
-// タイトルをクリックしてモーダルを表示
 appTitle.addEventListener('click', () => {
     titleInput.value = data.title;
     titleModalOverlay.classList.add('active');
     titleModal.style.display = 'block';
 });
 
-// タイトル保存処理
 saveTitleButton.addEventListener('click', () => {
     saveState();
     data.title = titleInput.value.trim();
@@ -206,7 +206,6 @@ saveTitleButton.addEventListener('click', () => {
     closeModal(titleModalOverlay);
 });
 
-// モーダルを閉じる
 closeTitleModalButton.addEventListener('click', () => {
     closeModal(titleModalOverlay);
 });
