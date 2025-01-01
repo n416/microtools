@@ -296,23 +296,88 @@ function createTaskElement(task, index, hideIndex) {
     });
 
     /********************************************
-     * ★追加: Pointer Eventsを用いたモバイル対応
-     *    (PCでもスマホでも使えるように)
+     * ★Pointer Eventsを用いたモバイル対応
      ********************************************/
     li.addEventListener('pointerdown', (event) => {
         // pointerdown => dragstart相当
         handlePointerDown(event, li);
+
+        // ★追加: 長押し判定（500ms）でタスク編集
+        startLongPressTimer(li);
     });
     li.addEventListener('pointermove', (event) => {
         // pointermove => dragover相当
         handlePointerMove(event);
+
+        // 長押しが解除されるほど動いたらキャンセル
+        cancelLongPressTimer();
     });
     li.addEventListener('pointerup', (event) => {
         // pointerup => dragend相当
         handlePointerUp(event);
+
+        // 長押しの最終キャンセル
+        cancelLongPressTimer();
     });
 
     return li;
+}
+
+/**********************************************
+ * ★ 長押し処理（タスク編集）
+ **********************************************/
+let longPressTimeout;
+let isLongPress = false;
+
+/**
+ * 長押しタイマーを開始
+ */
+function startLongPressTimer(li) {
+    isLongPress = false;
+    longPressTimeout = setTimeout(() => {
+        isLongPress = true;
+        const taskIndex = Array.from(taskList.children).indexOf(li);
+        handleLongPress(taskIndex);
+    }, 500); // 500ms 長押し
+}
+
+/**
+ * 長押しタイマーをキャンセル
+ */
+function cancelLongPressTimer() {
+    clearTimeout(longPressTimeout);
+}
+
+/**
+ * 長押し時のタスク編集処理
+ */
+function handleLongPress(taskIndex) {
+    const editTaskModalOverlay = document.getElementById('editTaskModalOverlay');
+    const editTaskModal = document.getElementById('editTaskModal');
+    const editTaskInput = document.getElementById('editTaskInput');
+
+    // 現在のタスク内容を入力欄に設定
+    editTaskInput.value = data.tasks[taskIndex].text;
+
+    // モーダルを表示
+    editTaskModalOverlay.classList.add('active');
+    editTaskModal.style.display = 'block';
+
+    // 保存ボタンの動作
+    const saveEditTaskButton = document.getElementById('saveEditTaskButton');
+    saveEditTaskButton.onclick = () => {
+        data.tasks[taskIndex].text = editTaskInput.value.trim();
+        saveToLocalStorage();
+        renderTasks();
+        closeModal(editTaskModalOverlay);
+        showToast('タスクを編集しました');
+    };
+
+    // キャンセルボタンの動作
+    const cancelEditTaskButton = document.getElementById('cancelEditTaskButton');
+    cancelEditTaskButton.onclick = () => {
+        closeModal(editTaskModalOverlay);
+    };
 }
 
 /**
