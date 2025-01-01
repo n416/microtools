@@ -15,13 +15,17 @@
     <!-- アプリケーションバー -->
     <header class="toolbar">
         <div class="toolbar-left">
+            <!-- リセットボタン -->
             <button id="resetButton" class="toolbar-btn"><i class="fas fa-trash"></i></button>
+            <!-- アンドゥボタン -->
             <button id="undoButton" class="toolbar-btn">
                 <i class="fas fa-undo"></i>
             </button>
+            <!-- リドゥボタン -->
             <button id="redoButton" class="toolbar-btn">
                 <i class="fas fa-redo"></i>
             </button>
+            <!-- シェアボタン -->
             <button id="shareButton" class="toolbar-btn" title="シェア">
                 <i class="fas fa-share-alt"></i>
             </button>
@@ -56,13 +60,16 @@
         </footer>
         <div class="viewconfig-container">
             <div class="viewconfig">
-                <input type="checkbox" id="index-number-invisible"><label for="index-number-invisible">連番を表示しない</label>
+                <input type="checkbox" id="index-number-invisible">
+                <label for="index-number-invisible">連番を表示しない</label>
             </div>
             <div class="viewconfig">
-                <input type="checkbox" id="move-task-to-Bottom-disabled"><label for="move-task-to-Bottom-disabled">完了時を最下部に移動しない</label>
+                <input type="checkbox" id="move-task-to-Bottom-disabled">
+                <label for="move-task-to-Bottom-disabled">完了時を最下部に移動しない</label>
             </div>
         </div>
     </div>
+
     <!-- 設定モーダル -->
     <div id="settingsOverlay" class="modal-overlay">
         <div id="settingsModal" class="modal">
@@ -143,6 +150,7 @@
         </div>
     </div>
     
+    <!-- タスク編集モーダル -->
     <div id="editTaskModalOverlay" class="modal-overlay">
         <div id="editTaskModal" class="modal">
             <div class="modal-content">
@@ -153,7 +161,21 @@
             </div>
         </div>
     </div>
+
+    <!-- タスク削除確認モーダル -->
+    <div id="deleteConfirmModalOverlay" class="modal-overlay">
+        <div id="deleteConfirmModal" class="modal">
+            <div class="modal-content">
+                <h2>タスク削除</h2>
+                <p>削除しても良いですか？</p>
+                <button id="confirmDeleteButton" class="modal-btn save-btn">OK</button>
+                <button id="cancelDeleteButton" class="modal-btn cancel-btn">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="script.js" defer></script>
     <script type="module" src="storage.js" defer></script>
 </body>
+
 </html>

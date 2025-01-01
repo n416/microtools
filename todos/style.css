@@ -50,8 +50,11 @@ h2 {
     transition: transform 0.2s ease;
     color: #666;
 }
-
-.toolbar-btn:hover {
+.toolbar-btn:disabled {
+    color: #ccc; /* Undo/Redoが不可時に淡色化 */
+    cursor: not-allowed;
+}
+.toolbar-btn:hover:not(:disabled) {
     color: #007bff;
 }
 
@@ -113,6 +116,8 @@ h2 {
     flex-direction: column;
     gap: 10px;
     margin: 10px 0;
+    /* Pointer Events でタッチドラッグができるようにする */
+    touch-action: none;
 }
 
 /* タスクリストアイテムの基本スタイル */
@@ -127,7 +132,7 @@ h2 {
     transition: background-color 0.3s;
     position: relative;
     list-style: none;
-    cursor: grab;
+    /* もともとのHTML5 DnDも維持（draggable属性はscript.jsで付与） */
     flex-wrap: wrap;
 }
 
@@ -174,7 +179,6 @@ h2 {
     background-color: #e53935;
     color: white;
 }
-
 
 /* モーダル */
 .modal {
@@ -407,6 +411,7 @@ h2 {
     font-size: 2rem;
 }
 
+/* ★Pointer Events＆HTML5 DnDのドラッグ時のスタイル */
 .dragging {
     opacity: 0.5;
     border: 2px dashed #0056b3 !important;
