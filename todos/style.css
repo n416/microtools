@@ -65,9 +65,65 @@ h2 {
     margin: 0;
 }
 
+/* クイックバー */
+.quick-bar {
+    position: relative;
+    top: 45px; /* toolbarの直下に配置 */
+    width: 100%;
+    background-color: #fafafa;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    z-index: 3;
+    justify-content: center;
+    flex-flow: row-reverse;
+}
+.quick-add-btn {
+    font-size: 1.3rem;
+    color: #666;
+}
+.quick-links-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.quick-link-wrapper {
+    display: flex;
+    align-items: center;
+    background-color: #eaeaea;
+    border-radius: 4px;
+    padding: 2px 5px;
+    gap: 5px;
+}
+.quick-replay-link {
+    background: transparent;
+    border: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #333;
+    padding: 3px 5px;
+}
+.quick-replay-link:hover {
+    color: #007bff;
+}
+.quick-replay-close-btn {
+    background: transparent;
+    border: none;
+    font-weight: bold;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: #666;
+    padding: 3px 5px;
+}
+.quick-replay-close-btn:hover {
+    color: #e53935;
+}
+
 /* メインコンテンツ */
 .app-container {
-    margin-top: 60px;
+    margin-top: 108px; /* toolbar+quickbar分だけ下げる */
     margin: 60px auto 0;
     max-width: 1200px;
     background: white;
