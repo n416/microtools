@@ -645,6 +645,9 @@ function updateTasksAndMembers(updatedMembers, deletedMembers) {
 document.addEventListener('DOMContentLoaded', () => {
     loadCheckboxState(); // チェックボックスの状態を復元
 
+    // ▼ クイックSavesを読み込んでUI再構築
+    loadQuickSavesFromLocalStorage();
+
     // デフォルトのメンバーを登録
     if (data.members.length === 0) {
         data.members.push({ name: 'A', icon: 'fas fa-user' });
@@ -1220,3 +1223,128 @@ cancelDeleteButton.addEventListener('click', () => {
     closeModal(deleteConfirmModalOverlay);
     pendingDeleteTaskIndex = null;
 });
+
+/****************************************
+ * ▼▼▼ ここからクイックバー関連追加 ▼▼▼
+ ****************************************/
+const quickAddButton = document.getElementById('quickAddButton');
+const quickLinksContainer = document.getElementById('quickLinksContainer');
+
+// クイック保存の配列(メモリ上で管理)
+let quickSaves = [];
+
+/**
+ * +ボタン押下時:
+ *  - 現在のdata(タイトル、タスク、メンバー、undo/redo)をコピーして配列へ保存
+ *  - quickLinksContainerに"クイック再生リンク"と"閉じるボタン"を表示
+ *  - さらに、quickSavesをlocalStorageにも保存する
+ */
+quickAddButton.addEventListener('click', () => {
+    // dataのスナップショットを作成
+    const snapshot = {
+        title: data.title,
+        tasks: JSON.parse(JSON.stringify(data.tasks)),
+        members: JSON.parse(JSON.stringify(data.members)),
+        undoStack: [...data.undoStack],
+        redoStack: [...data.redoStack],
+        id: generateQuickSaveId()
+    };
+    // UIに追加
+    addQuickSaveToUI(snapshot);
+
+    // スナップショットを配列に保存
+    quickSaves.push(snapshot);
+
+    // localStorageに保存
+    saveQuickSavesToLocalStorage();
+
+    showToast('クイック保存を追加しました');
+});
+
+/**
+ * QuickSaveをUIに反映（クイック再生リンク・閉じボタン作成）
+ */
+function addQuickSaveToUI(snapshot) {
+    const quickLinkWrapper = document.createElement('div');
+    quickLinkWrapper.classList.add('quick-link-wrapper');
+
+    // クイック再生リンク（app-titleをcaptionにする）
+    const quickLink = document.createElement('button');
+    quickLink.className = 'quick-replay-link';
+    quickLink.textContent = snapshot.title || '(無題)';
+
+    // 閉じボタン(X)
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'quick-replay-close-btn';
+    closeBtn.textContent = 'X';
+
+    // クリックで復元
+    quickLink.addEventListener('click', () => {
+        // 保存時のスナップショットを復元
+        data.title = snapshot.title;
+        data.tasks = JSON.parse(JSON.stringify(snapshot.tasks));
+        data.members = JSON.parse(JSON.stringify(snapshot.members));
+        data.undoStack = [...snapshot.undoStack];
+        data.redoStack = [...snapshot.redoStack];
+
+        // UI更新
+        document.getElementById('appTitle').textContent = data.title;
+        saveToLocalStorage(); // script.js 上部でimport済みの関数
+        renderMembers();
+        renderTasks();
+        updateUndoRedoButtons(); // Undo/Redo ボタンの状態を更新
+        showToast(`クイック再生リンクを復元しました`);
+    });
+
+    // 閉じるボタンで削除
+    closeBtn.addEventListener('click', () => {
+        quickLinksContainer.removeChild(quickLinkWrapper);
+
+        // quickSaves配列から削除
+        quickSaves = quickSaves.filter(q => q.id !== snapshot.id);
+
+        // localStorageに反映
+        saveQuickSavesToLocalStorage();
+    });
+
+    // 要素を組み立ててコンテナに追加
+    quickLinkWrapper.appendChild(quickLink);
+    quickLinkWrapper.appendChild(closeBtn);
+    quickLinksContainer.appendChild(quickLinkWrapper);
+}
+
+/**
+ * クイック保存用ID生成(簡易的に日時ベース)
+ */
+function generateQuickSaveId() {
+    return 'qs-' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+/**
+ * quickSaves配列を localStorage に保存
+ */
+function saveQuickSavesToLocalStorage() {
+    localStorage.setItem('quickSaves', JSON.stringify(quickSaves));
+}
+
+/**
+ * ページ読み込み時に localStorage から quickSaves を復元
+ */
+function loadQuickSavesFromLocalStorage() {
+    const saved = localStorage.getItem('quickSaves');
+    if (saved) {
+        try {
+            quickSaves = JSON.parse(saved);
+            quickSaves.forEach(snapshot => {
+                // 各スナップショットをUIに復元
+                addQuickSaveToUI(snapshot);
+            });
+        } catch (error) {
+            console.error('Failed to parse quickSaves:', error);
+        }
+    }
+}
+
+/****************************************
+ * ▲▲▲ ここまでクイックバー関連追加 ▲▲▲
+ ****************************************/

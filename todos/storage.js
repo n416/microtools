@@ -114,6 +114,7 @@ export function loadFromLocalStorage() {
     renderTasks();
 }
 
+// パラメータを簡易チェック
 function validateParams(data) {
     const { title, members, tasks } = data;
     return (
@@ -121,7 +122,9 @@ function validateParams(data) {
     );
 }
 
-// 以下、インポート時のモーダルチェック
+/**********************************************
+ * 以下、インポート時のモーダルチェック
+ **********************************************/
 function showModalA(data) {
     console.log('Before ModalA:', data.members);
     const modalMessage = "データが上書きされます。宜しいですか？";
@@ -183,7 +186,9 @@ function importTasks(tasks) {
     showToast("タスクを取り込みました。");
 }
 
-// タイトル編集モーダル関連
+/**********************************************
+ * タイトル編集モーダル関連
+ **********************************************/
 const appTitle = document.getElementById('appTitle');
 const titleModalOverlay = document.getElementById('titleModalOverlay');
 const titleModal = document.getElementById('titleModal');
