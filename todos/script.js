@@ -300,29 +300,33 @@ function createTaskElement(task, index, hideIndex) {
         confirmDeleteModal.style.display = 'block';
     });
 
-    /********************************************
-     * Pointer Eventsを用いたモバイル対応
-     ********************************************/
+    // 長押しイベント
+    const spanElement = li.querySelector('.task-caption span');
+    spanElement.addEventListener('pointerdown', (event) => {
+        // ★追加: 長押し判定（500ms）でタスク編集
+        startLongPressTimer(li);
+    });
+    spanElement.addEventListener('pointermove', (event) => {
+        // 長押しが解除されるほど動いたらキャンセル
+        cancelLongPressTimer();
+    });
+    spanElement.addEventListener('pointerup', (event) => {
+        // 長押しの最終キャンセル
+        cancelLongPressTimer();
+    });
+
+    // ドラッグアンドドロップイベント
     li.addEventListener('pointerdown', (event) => {
         // pointerdown => dragstart相当
         handlePointerDown(event, li);
-
-        // ★追加: 長押し判定（500ms）でタスク編集
-        startLongPressTimer(li);
     });
     li.addEventListener('pointermove', (event) => {
         // pointermove => dragover相当
         handlePointerMove(event);
-
-        // 長押しが解除されるほど動いたらキャンセル
-        cancelLongPressTimer();
     });
     li.addEventListener('pointerup', (event) => {
         // pointerup => dragend相当
         handlePointerUp(event);
-
-        // 長押しの最終キャンセル
-        cancelLongPressTimer();
     });
 
     return li;

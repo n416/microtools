@@ -68,17 +68,6 @@ export function saveToLocalStorage() {
     }
 }
 
-// ボタンリストをローカルストレージに保存
-export function saveMembersToLocalStorage() {
-    const members = Array.from(memberList.querySelectorAll('.member-row')).map(row => {
-        const name = row.querySelector('input').value.trim();
-        const icon = row.querySelector('.icon-button i')?.className || '';
-        return { name, icon };
-    });
-    localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(data.members));
-    showToast('設定を保存しました！');
-}
-
 // ローカルストレージからデータを読み込む
 export function loadFromLocalStorage() {
     const storedTitle = localStorage.getItem('title');
