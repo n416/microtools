@@ -143,7 +143,7 @@ export function renderMembers() {
         // 名前の入力欄
         const nameInput = document.createElement('input');
         nameInput.type = 'text';
-        nameInput.className = 'member-name-input';
+        nameInput.className = 'member-name-input input-box'; // input-box を適用
         nameInput.value = member.name;
 
         // 名前変更時のイベントリスナー
@@ -153,7 +153,7 @@ export function renderMembers() {
 
         // アイコンボタン
         const iconButton = document.createElement('button');
-        iconButton.className = 'icon-button';
+        iconButton.className = 'icon-button btn'; // ボタン共通クラス＋独自クラス
         const iconElement = document.createElement('i');
         iconElement.className = member.icon || 'fas fa-user'; // デフォルトアイコン
         iconButton.appendChild(iconElement);
@@ -209,14 +209,15 @@ export function renderMembers() {
 
         // 削除ボタン
         const deleteButton = document.createElement('button');
-        deleteButton.className = 'delete-member-btn';
+        // ボタン共通クラス + 赤ボタン
+        deleteButton.className = 'delete-member-btn btn btn--red';
         deleteButton.textContent = '削除';
 
         // 削除ボタンのイベントリスナー
         deleteButton.addEventListener('click', () => {
             memberRow.classList.add('deleted-member-row');
-            memberRow.style.display = 'none'; // UIから削除
-            member = data.members.filter((m) => m !== member); // メンバーリストから削除
+            memberRow.style.display = 'none';
+            data.member = data.members.filter((m) => m !== member); // メンバーリストから削除
         });
 
         // メンバー行に要素を追加
@@ -249,10 +250,10 @@ function createTaskElement(task, index, hideIndex) {
     const li = document.createElement('li');
     li.className = task.completed ? 'completed' : '';
 
-    // ★もともとのHTML5ドラッグ＆ドロップ属性を維持
+    // HTML5 DnD属性
     li.draggable = true;
 
-    // ★既存のHTML5 DnDイベントをそのまま残す
+    // 既存のHTML5 DnDイベント
     li.addEventListener('dragstart', handleDragStart);
     li.addEventListener('dragover', handleDragOver);
     li.addEventListener('dragend', handleDragEnd);
@@ -262,7 +263,10 @@ function createTaskElement(task, index, hideIndex) {
     li.innerHTML = `
       ${indexSpan}<div class="task-caption"><span>${task.text}</span></div>
       <div class="task-buttons"></div>
-      <div class="task-delete-buttons"><button class="delete-task-btn">削除</button></div>
+      <div class="task-delete-buttons">
+          <!-- 削除ボタンは script.js で付与しない場合、ここでHTML直書きでもOK -->
+          <button class="delete-task-btn btn btn--red">削除</button>
+      </div>
     `;
 
     const buttonsContainer = li.querySelector('.task-buttons');
@@ -272,16 +276,17 @@ function createTaskElement(task, index, hideIndex) {
         if (!(member.name in task.buttons)) {
             task.buttons[member.name] = false;
         }
+        // ボタン共通クラスを付与しつつ、完了時はちょっと違う見た目にする例
         const button = document.createElement('button');
+        button.className = task.buttons[member.name] ? 'completed-button btn' : 'btn';
         button.innerHTML = task.buttons[member.name] ? '完了' : `<i class="${iconClass}"></i>`;
-        button.className = task.buttons[member.name] ? 'completed-button' : '';
 
         button.addEventListener('click', () => {
             enqueueAction(() => {
                 saveState();
                 task.buttons[member.name] = !task.buttons[member.name];
                 button.innerHTML = task.buttons[member.name] ? '完了' : `<i class="${iconClass}"></i>`;
-                button.className = task.buttons[member.name] ? 'completed-button' : '';
+                button.className = task.buttons[member.name] ? 'completed-button btn' : 'btn';
                 checkTaskCompletion(task, index);
             });
         });
@@ -296,7 +301,7 @@ function createTaskElement(task, index, hideIndex) {
     });
 
     /********************************************
-     * ★Pointer Eventsを用いたモバイル対応
+     * Pointer Eventsを用いたモバイル対応
      ********************************************/
     li.addEventListener('pointerdown', (event) => {
         // pointerdown => dragstart相当
@@ -324,7 +329,7 @@ function createTaskElement(task, index, hideIndex) {
 }
 
 /**********************************************
- * ★ 長押し処理（タスク編集）
+ * 長押し処理（タスク編集）
  **********************************************/
 let longPressTimeout;
 let isLongPress = false;
@@ -398,7 +403,7 @@ function checkTaskCompletion(task, index) {
         showToast('タスクが完了しました');
     } else if (!allCompleted && task.completed) {
         task.completed = false;
-        showToast('タスクを未完了に戻りました');
+        showToast('タスクを未完了に戻しました');
         renderTasks();
     }
     saveToLocalStorage();
@@ -543,14 +548,14 @@ addMemberButton.addEventListener('click', () => {
     const row = document.createElement('div');
     row.className = 'member-row';
     row.innerHTML = `
-        <input type="text" class="member-name-input" placeholder="ボタン名">
-        <button class="icon-button"><i class="fas fa-user"></i></button>
-        <button class="delete-member-btn">削除</button>
+        <input type="text" class="member-name-input input-box" placeholder="ボタン名">
+        <button class="icon-button btn"><i class="fas fa-user"></i></button>
+        <button class="delete-member-btn btn btn--red">削除</button>
     `;
-
-    // 削除ボタンの動作
+    // 削除ボタン
     row.querySelector('.delete-member-btn').addEventListener('click', () => {
-        row.remove();
+        row.classList.add('deleted-member-row');
+        row.style.display = 'none';
     });
 
     // アイコンボタンの動作を設定
@@ -602,7 +607,7 @@ function updateTasksAndMembers(updatedMembers, deletedMembers) {
         if (existingMemberIndex !== -1) {
             data.members[existingMemberIndex] = updatedMember; // 既存メンバーを更新
         } else {
-            data.members.push(updatedMember); // 新規メンバーを追加
+            data.members.push(updatedMember);
         }
     });
 
@@ -613,7 +618,7 @@ function updateTasksAndMembers(updatedMembers, deletedMembers) {
                 const normalizedDeletedName = deletedMember.name.trim().toLowerCase();
                 Object.keys(task.buttons).forEach((key) => {
                     if (key.trim().toLowerCase() === normalizedDeletedName) {
-                        delete task.buttons[key]; // 確実に削除
+                        delete task.buttons[key];
                     }
                 });
             }
@@ -648,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ▼ クイックSavesを読み込んでUI再構築
     loadQuickSavesFromLocalStorage();
 
-    // デフォルトのメンバーを登録
+    // デフォルトメンバー
     if (data.members.length === 0) {
         data.members.push({ name: 'A', icon: 'fas fa-user' });
     }
@@ -801,7 +806,7 @@ shareButton.addEventListener('click', async () => {
 });
 
 /****************************************
- * 共通関数：モーダルを閉じる
+ * モーダルを閉じる共通関数
  ****************************************/
 export function closeModal(overlay) {
     overlay.classList.remove('active');
@@ -811,7 +816,7 @@ export function closeModal(overlay) {
     }
 }
 
-// 設定モーダル背景のクリックで閉じる
+// 設定モーダル背景クリック
 const settingsOverlay = document.getElementById('settingsOverlay');
 settingsOverlay.addEventListener('click', (event) => {
     if (event.target === settingsOverlay) {
@@ -819,7 +824,7 @@ settingsOverlay.addEventListener('click', (event) => {
     }
 });
 
-// アイコン選択モーダル背景のクリックで閉じる
+// アイコン選択モーダル背景クリック
 const iconPickerOverlay = document.getElementById('iconPickerOverlay');
 iconPickerOverlay.addEventListener('click', (event) => {
     if (event.target === iconPickerOverlay) {
@@ -836,7 +841,7 @@ closeSettingsButton.addEventListener('click', () => {
     closeModal(settingsOverlay);
 });
 
-// アイコン選択モーダルを閉じるボタン
+// アイコン選択モーダルを閉じる
 closeIconPickerButton.addEventListener('click', () => {
     closeModal(iconPickerOverlay);
 });
@@ -903,7 +908,7 @@ export function openImportModal(data) {
     }
 }
 
-// インポートモーダルを閉じるボタン
+// インポートモーダルを閉じる
 closeImportModalButton1.addEventListener('click', () => {
     importModalOverlay.classList.remove('active');
 });
@@ -1071,11 +1076,9 @@ function handleDragEnd() {
         draggedTask.classList.remove('dragging');
     }
     if (placeholder) placeholder.remove();
-
-    saveState();     
-    updateIndexes(); 
+    saveState();
+    updateIndexes();
     saveToLocalStorage();
-
     draggedTask = null;
     placeholder = null;
 }
@@ -1151,12 +1154,10 @@ document.getElementById('move-task-to-Bottom-disabled').addEventListener('change
 function saveCheckboxState() {
     const indexNumberInvisible = document.getElementById('index-number-invisible').checked;
     const moveTaskToBottomDisabled = document.getElementById('move-task-to-Bottom-disabled').checked;
-
-    const checkboxState = {
+    localStorage.setItem('checkboxState', JSON.stringify({
         indexNumberInvisible,
         moveTaskToBottomDisabled
-    };
-    localStorage.setItem('checkboxState', JSON.stringify(checkboxState));
+    }));
 }
 
 function loadCheckboxState() {
@@ -1257,7 +1258,6 @@ quickAddButton.addEventListener('click', () => {
 
     // localStorageに保存
     saveQuickSavesToLocalStorage();
-
     showToast('クイック保存を追加しました');
 });
 

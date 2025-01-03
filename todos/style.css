@@ -1,4 +1,6 @@
-/* 共通スタイル */
+/* ------------------------------
+   共通スタイル
+------------------------------ */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     margin: 0;
@@ -14,7 +16,10 @@ body {
 h2 {
     font-size: 1em;
 }
-/* アプリケーションバー */
+
+/* ------------------------------
+   アプリケーションバー
+------------------------------ */
 .toolbar {
     background-color: #f8f8f8;
     border-bottom: 1px solid #dee2e6;
@@ -29,7 +34,6 @@ h2 {
     align-items: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-
 .toolbar-left{
     position: absolute;
     left: 15px;
@@ -51,13 +55,12 @@ h2 {
     color: #666;
 }
 .toolbar-btn:disabled {
-    color: #ccc; /* Undo/Redoが不可時に淡色化 */
+    color: #ccc;
     cursor: not-allowed;
 }
 .toolbar-btn:hover:not(:disabled) {
     color: #007bff;
 }
-
 .app-title {
     font-size: 1.5rem;
     font-weight: bold;
@@ -65,10 +68,12 @@ h2 {
     margin: 0;
 }
 
-/* クイックバー */
+/* ------------------------------
+   クイックバー
+------------------------------ */
 .quick-bar {
     position: relative;
-    top: 45px; /* toolbarの直下に配置 */
+    top: 45px; 
     width: 100%;
     background-color: #fafafa;
     padding: 5px 10px;
@@ -121,9 +126,11 @@ h2 {
     color: #e53935;
 }
 
-/* メインコンテンツ */
+/* ------------------------------
+   メインコンテンツ
+------------------------------ */
 .app-container {
-    margin-top: 108px; /* toolbar+quickbar分だけ下げる */
+    margin-top: 108px; 
     margin: 60px auto 0;
     max-width: 1200px;
     background: white;
@@ -131,52 +138,77 @@ h2 {
     padding: 20px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-
-/* 表示設定コンテンツ */
 .viewconfig-container {
     display: flex;
     margin-top: 30px;
     justify-content: flex-end;
+    gap: 15px;
+}
+label{
+    cursor: pointer;
+    user-select: none;
 }
 
+/* ------------------------------
+   共通の入力欄 / ボタン
+------------------------------ */
+/* 入力欄 */
+.input-box {
+    flex: 1;
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+/* ボタン共通 */
+.btn {
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+    box-sizing: border-box;
+    margin: 0;
+    border: 1px solid #CCC;
+}
+.btn--green {
+    background-color: #28a745;
+    color: #fff;
+}
+.btn--green:hover {
+    background-color: #218838;
+}
+.btn--red {
+    background-color: #dc3545;
+    color: #fff;
+}
+.btn--red:hover {
+    background-color: #c82333;
+}
+
+/* ------------------------------
+   タスク入力
+------------------------------ */
 .task-input {
     display: flex;
     gap: 10px;
     margin-bottom: 10px;
 }
 
-.task-input input {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.task-input button {
-    padding: 10px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.task-input button:hover {
-    background-color: #218838;
-}
-
-/* タスクリストのレイアウト */
+/* ------------------------------
+   タスクリスト
+------------------------------ */
 #task-list {
     display: flex;
     padding: 0;
     flex-direction: column;
     gap: 10px;
     margin: 10px 0;
-    /* Pointer Events でタッチドラッグができるようにする */
-    touch-action: none;
+    touch-action: none; 
 }
-
-/* タスクリストアイテムの基本スタイル */
 #task-list li {
     display: flex;
     justify-content: space-between;
@@ -188,10 +220,8 @@ h2 {
     transition: background-color 0.3s;
     position: relative;
     list-style: none;
-    /* もともとのHTML5 DnDも維持（draggable属性はscript.jsで付与） */
     flex-wrap: wrap;
 }
-
 #task-list li .task-caption {
     flex:1;
 }
@@ -199,44 +229,69 @@ h2 {
 #task-list li .task-caption span {
     cursor: pointer;
     display: inline-block;
-    padding: 5px 5px 5px 5px;
+    padding: 5px;
 }
-
-/* タスク完了時のスタイル */
-#task-list li.completed span{
+#task-list li.completed span {
     text-decoration: line-through;
     background-color: #e0e0e0;
     color: #888;
 }
-#task-list li.completed{
+#task-list li.completed {
     background-color: #e0e0e0;
 }
-/* ボタンのスタイル */
-#task-list li button {
-    padding: 5px 10px;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+.delete-task-btn {
+    padding: 10px;
 }
 
-/* 完了ボタン */
-#task-list li button {
-    background-color: #4caf50;
-    color: white;
+/* HTML5 DnD / PointerEvents */
+.dragging {
+    opacity: 0.5;
+    border: 2px dashed #0056b3 !important;
+}
+.placeholder {
+    border: none !important;
+    border-top: 2px dashed #007bff !important;
+    border-radius: 0 !important;
+    height: 0 !important;
+    overflow: hidden;
+    font-size: 0;
+    padding: 0 !important;
+    margin: 0px -5px;
 }
 
-#task-list li button:first-child:hover {
-    background-color: #45a049;
+/* タスクリストの連番リセット */
+#task-list {
+    counter-reset: task-counter;
+}
+.task-buttons {
+    cursor: default;
+    padding: 10px;
+    display: flex;
+    gap: 5px;
+}
+.task-delete-buttons {
+    cursor: default;
+    padding: 10px;
+    display: flex;
+    gap: 5px;
 }
 
-/* 削除ボタン */
-#task-list li .delete-task-btn {
-    background-color: #e53935;
-    color: white;
+/* ------------------------------
+   モーダル
+------------------------------ */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    z-index: 999;
 }
-
-/* モーダル */
+.modal-overlay.active {
+    display: block;
+}
 .modal {
     display: none;
     position: fixed;
@@ -251,40 +306,17 @@ h2 {
     max-width: 400px;
     padding: 20px;
 }
-
 .modal-content {
     display: flex;
     text-align: center;
     flex-wrap: wrap;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.modal-btn {
-    padding: 10px;
-    margin: 5px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.modal-btn.save-btn {
-    background-color: #28a745;
-    color: white;
-}
-
-.modal-btn.cancel-btn {
-    background-color: #dc3545;
-    color: white;
-}
-
-/* アイコン選択 */
-.icon-option {
-    font-size: 1.5rem;
-    border: none;
-    cursor: pointer;
-    padding: 5px;
-}
-
-/* トースト通知 */
+/* ------------------------------
+   トースト通知
+------------------------------ */
 .toast {
     visibility: hidden;
     min-width: 250px;
@@ -301,13 +333,14 @@ h2 {
     opacity: 0;
     transition: visibility 0s, opacity 0.5s ease-in-out;
 }
-
 .toast.show {
     visibility: visible;
     opacity: 1;
 }
 
-/* アニメーション定義 */
+/* ------------------------------
+   進捗アニメ
+------------------------------ */
 @keyframes moveDown {
     0% {
         transform: translateY(0);
@@ -324,135 +357,11 @@ h2 {
         transform: translateY(-100%);
     }
 }
-
-/* アニメーション適用 */
 .moving-down {
     animation: moveDown 0.3s forwards;
 }
 .moving-up {
     animation: moveUp 0.3s forwards;
-}
-
-.task-button {
-    margin-left: 5px;
-    padding: 5px 10px;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.user-button {
-    background-color: #4caf50;
-    color: white;
-}
-
-.heart-button {
-    background-color: #ff4081;
-    color: white;
-}
-
-.star-button {
-    background-color: #ffeb3b;
-    color: black;
-}
-
-.task-button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-}
-/* モーダルの背景 */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: none;
-    z-index: 999;
-}
-.modal-overlay.active {
-    display: block;
-}
-
-/* 選択状態のアイコンを強調表示 */
-.icon-option.selected {
-    background-color: #007bff;
-    color: white;
-    border: 2px solid #0056b3;
-    border-radius: 4px;
-}
-
-/* インポートモーダルのスタイル */
-#importModal .modal-content {
-    text-align: left;
-    max-height: 80vh;
-    overflow-y: auto;
-}
-
-#importTasksSection, #importMembersSection {
-    margin-bottom: 20px;
-}
-#importTasksSection ul, #importMembersSection ul {
-    list-style: none;
-    padding: 0;
-}
-#importTasksSection li, #importMembersSection li {
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-}
-
-.modal-btn:disabled {
-    background-color: #ccc;
-    color: #666;
-    cursor: not-allowed;
-    border: 1px solid #aaa;
-    opacity: 0.6;
-}
-
-#importTasksList li, #importMembersList li {
-    display: flex;
-    align-items: center;
-    padding: 5px 0;
-}
-#importTasksList li i, #importMembersList li i {
-    margin-right: 10px;
-    font-size: 16px;
-    color: #666;
-}
-
-/* インポートボタンの色設定 */
-.modal-btn.save-btn {
-    background-color: #28a745;
-    color: white;
-    border: none;
-}
-.modal-btn.save-btn:hover {
-    background-color: #218838;
-    color: white;
-}
-.modal-btn.save-btn:disabled {
-    background-color: #6c757d;
-    color: white;
-    cursor: not-allowed;
-    opacity: 0.65;
-}
-
-/* ボタンを中央揃え */
-#importAllButton,
-#importTasksButton,
-#importMembersButton,
-#closeImportModalButton1,
-#closeImportModalButton2,
-#importTitleButton {
-    margin: 0 auto;
-    display: block;
-    text-align: center;
-    width: 80%;
-}
-#openAdvancedButton {
-    background-color: #848484;
 }
 .progress-container {
     margin: 10px auto;
@@ -461,66 +370,10 @@ h2 {
     justify-content: center;
     flex-direction: column;
 }
-
 #progress-text {
     cursor: pointer;
     font-size: 2rem;
 }
-
-/* ★Pointer Events＆HTML5 DnDのドラッグ時のスタイル */
-.dragging {
-    opacity: 0.5;
-    border: 2px dashed #0056b3 !important;
-}
-.placeholder{
-    border: none !important;
-    border-top: 2px dashed #007bff !important;
-    border-radius: 0 !important;
-    height: 0 !important;
-    overflow: hidden;
-    font-size: 0;
-    padding: 0 !important;
-    margin: 0px -5px;
-}
-
-/* タスクリスト全体のカウンターをリセット */
-#task-list {
-    counter-reset: task-counter;
-}
-
-.task-buttons {
-    cursor: default;
-    padding: 10px;
-    display: flex;
-    gap: 5px;
-}
-.task-delete-buttons {
-    cursor: default;
-    padding: 10px;
-    display: flex;
-    gap: 5px;
-}
-.delete-task-btn {
-    padding: 10px;
-}
-.task-list button {
-    line-height: 2rem;
-    min-width: 3rem;
-}
-.task-list button i{
-    font-size: 1.2rem;
-}
-
-.viewconfig-container{
-    display: flex;
-    gap: 15px;
-}
-
-label{
-    cursor: pointer;
-    user-select: none;
-}
-
 #progress-clear {
     color: red;
     transition: max-height 0.3s ease-out;
@@ -532,12 +385,74 @@ label{
     max-height: 50px;
     display: block;
 }
-#importAllSection {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+
+/* ------------------------------
+   アイコン選択
+------------------------------ */
+.icon-option {
+    font-size: 1.5rem;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+}
+.icon-option.selected {
+    background-color: #007bff;
+    color: white;
+    border: 2px solid #0056b3;
+    border-radius: 4px;
 }
 
+/* ------------------------------
+   インポートモーダル
+------------------------------ */
+#importModal .modal-content {
+    text-align: left;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+#importTasksSection,
+#importMembersSection {
+    margin-bottom: 20px;
+}
+#importTasksSection ul,
+#importMembersSection ul {
+    list-style: none;
+    padding: 0;
+}
+#importTasksSection li,
+#importMembersSection li {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+#importTasksList li,
+#importMembersList li {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+}
+#importTasksList li i,
+#importMembersList li i {
+    margin-right: 10px;
+    font-size: 16px;
+    color: #666;
+}
+
+/* ------------------------------
+   インポートボタンの色設定
+------------------------------ */
+#importAllButton,
+#importTasksButton,
+#importMembersButton,
+#closeImportModalButton1,
+#closeImportModalButton2,
+#importTitleButton {
+    margin: 0 auto;
+    display: block;
+    text-align: center;
+    width: 80%;
+}
+
+/* advancedセクションのトグル */
 .advanced {
     display: none;
     transition: max-height 0.3s ease-in-out;
@@ -548,7 +463,7 @@ label{
 }
 
 @media (max-width: 501px) {
-    #task-list li{
+    #task-list li {
         flex-direction: row-reverse;
     }
     .app-title {
@@ -556,7 +471,7 @@ label{
         color: transparent;
         height: 2rem;
     }
-    .task-caption{
+    .task-caption {
         min-width: calc(100% - 4rem);
     }
     .modal-content {
@@ -570,16 +485,33 @@ label{
         width: 100%;
     }
 }
-#memberList{
+#memberList {
     width: 100%;
-}
-.member-row{
+    gap: 10px;
     display: flex;
+    flex-direction: column;
+}
+.member-row {
+    display: flex;
+    gap: 5px;
     justify-content: center;
 }
-.modal-content h2{
+.modal-content h2 {
     width: 100%;
 }
-#editTaskInput {
+
+.buttons {
+    display: flex;
+    gap:5px;
+    margin-top: 10px;
+    justify-content: center;
+    width: 100%;
+}
+
+#importAllSection .buttons{
+    margin: 0;
+}
+
+#importAllSection {
     width: 100%;
 }
