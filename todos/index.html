@@ -59,8 +59,10 @@
                 <div id="progress-clear" style="display: none;">進捗を0%にする</div>
             </div>
             <div class="task-input">
-                <input type="text" id="task-input" placeholder="新しいタスクを入力してください">
-                <button id="add-task-button">追加</button>
+                <!-- ここで共通クラス input-box を付与 -->
+                <input type="text" id="task-input" class="input-box" placeholder="新しいタスクを入力してください">
+                <!-- ボタンに共通クラス .btn と色分け用クラス .btn--green -->
+                <button id="add-task-button" class="btn btn--green">追加</button>
             </div>
 
             <ul id="task-list" class="task-list"></ul>
@@ -86,9 +88,12 @@
             <div class="modal-content">
                 <h2>ボタン</h2>
                 <div id="memberList"></div>
-                <button id="addMemberButton" class="modal-btn">追加</button>
-                <button id="saveSettingsButton" class="modal-btn save-btn">保存</button>
-                <button id="closeSettingsButton" class="modal-btn cancel-btn">閉じる</button>
+                <div class="buttons">
+                    <!-- 追加/保存/閉じるボタンを .btn で統一 -->
+                    <button id="addMemberButton" class="btn btn--green">追加</button>
+                    <button id="saveSettingsButton" class="btn btn--green">保存</button>
+                    <button id="closeSettingsButton" class="btn btn--red">閉じる</button>
+                </div>
             </div>
         </div>
     </div>
@@ -105,7 +110,9 @@
                     <button class="icon-option" data-icon="fas fa-bell"><i class="fas fa-bell"></i></button>
                     <button class="icon-option" data-icon="fas fa-check"><i class="fas fa-check"></i></button>
                 </div>
-                <button id="closeIconPickerButton" class="modal-btn cancel-btn">閉じる</button>
+                <div class="buttons">
+                    <button id="closeIconPickerButton" class="btn btn--red">閉じる</button>
+                </div>
             </div>
         </div>
     </div>
@@ -117,10 +124,12 @@
                 <h2>シェアされたURLです</h2>
 
                 <div id="importAllSection">
-                    <button id="importAllButton" class="modal-btn save-btn">すべて取り込む</button>
-                    <button id="closeImportModalButton1" class="modal-btn cancel-btn">無視する</button>
+                    <div class="buttons">
+                        <button id="importAllButton" class="btn btn--green">すべて取り込む</button>
+                        <button id="closeImportModalButton1" class="btn btn--red">無視する</button>
+                    </div>
                     <label>
-                        <input type="checkbox" id="openAdvancedCheckbox" class="modal-btn"> 一部取り込む
+                        <input type="checkbox" id="openAdvancedCheckbox" class="btn"> 一部取り込む
                     </label>
                 </div>
                 <div class="advanced">
@@ -129,20 +138,22 @@
                         <div id="importTitleSection">
                             <p>タイトルが表示されます</p>
                         </div>
-                        <button id="importTitleButton" class="modal-btn save-btn">入れ替え</button>
+                        <button id="importTitleButton" class="btn btn--green">入れ替え</button>
                     </div>
 
                     <div id="importTasksSection">
                         <h3>タスク一覧</h3>
                         <ul id="importTasksList"></ul>
-                        <button id="importTasksButton" class="modal-btn save-btn">入れ替え</button>
+                        <button id="importTasksButton" class="btn btn--green">入れ替え</button>
                     </div>
                     <div id="importMembersSection">
                         <h3>ボタン一覧</h3>
                         <ul id="importMembersList"></ul>
-                        <button id="importMembersButton" class="modal-btn save-btn">入れ替え</button>
+                        <button id="importMembersButton" class="btn btn--green">入れ替え</button>
                     </div>
-                    <button id="closeImportModalButton2" class="modal-btn cancel-btn">閉じる</button>
+                    <div class="buttons">
+                        <button id="closeImportModalButton2" class="btn btn--red">閉じる</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -153,21 +164,27 @@
         <div id="titleModal" class="modal">
             <div class="modal-content">
                 <h2>タイトル編集</h2>
-                <input type="text" id="titleInput" value="やること" />
-                <button id="saveTitleButton" class="modal-btn save-btn">保存</button>
-                <button id="closeTitleModalButton" class="modal-btn cancel-btn">閉じる</button>
+                <!-- input-box を使用してタスク入力欄と同様に -->
+                <input type="text" id="titleInput" class="input-box" value="やること" />
+                <div class="buttons">
+                    <button id="saveTitleButton" class="btn btn--green">保存</button>
+                    <button id="closeTitleModalButton" class="btn btn--red">閉じる</button>
+                </div>
             </div>
         </div>
     </div>
-    
+
     <!-- タスク編集モーダル -->
     <div id="editTaskModalOverlay" class="modal-overlay">
         <div id="editTaskModal" class="modal">
             <div class="modal-content">
                 <h2>タスクを編集</h2>
-                <input type="text" id="editTaskInput" />
-                <button id="saveEditTaskButton" class="modal-btn save-btn">保存</button>
-                <button id="cancelEditTaskButton" class="modal-btn cancel-btn">キャンセル</button>
+                <!-- 同様に input-box -->
+                <input type="text" id="editTaskInput" class="input-box" />
+                <div class="buttons">
+                    <button id="saveEditTaskButton" class="btn btn--green">保存</button>
+                    <button id="cancelEditTaskButton" class="btn btn--red">キャンセル</button>
+                </div>
             </div>
         </div>
     </div>
@@ -178,8 +195,10 @@
             <div class="modal-content">
                 <h2>タスク削除</h2>
                 <p>削除しても良いですか？</p>
-                <button id="confirmDeleteButton" class="modal-btn save-btn">OK</button>
-                <button id="cancelDeleteButton" class="modal-btn cancel-btn">キャンセル</button>
+                <div class="buttons">
+                    <button id="confirmDeleteButton" class="btn btn--green">OK</button>
+                    <button id="cancelDeleteButton" class="btn btn--red">キャンセル</button>
+                </div>
             </div>
         </div>
     </div>
