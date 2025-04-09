@@ -195,6 +195,12 @@ body {
     color: #40007c;
     background-color: #f0e5ff;
 }
+
+.monbera .area-title {
+    color: #7c0040;
+    background-color: #cacaca;
+}
+
 .back-btn {
     display: none;
 }
