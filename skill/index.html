@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>転職スキル確認ツール</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>転職スキル確認ツール</h1>
+
+    <div class="job-selector">
+        <div class="job-select-item">
+            <label for="current-job">現在の職:</label>
+            <select id="current-job">
+                <option value="">選択してください</option>
+                </select>
+        </div>
+        <div class="job-select-item">
+            <label for="target-job">転職後の職:</label>
+            <select id="target-job">
+                <option value="">選択してください</option>
+                </select>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="skill-selector">
+            <h2>現在の職のスキル</h2>
+            <div class="master-checkbox-container">
+                <input type="checkbox" id="master-checkbox">
+                <label for="master-checkbox">すべてチェック / 解除</label>
+            </div>
+            <div id="current-skills">
+                <p>現在の職を選択してください。</p>
+            </div>
+        </div>
+
+        <div class="result">
+            <h2>転職後に利用可能なスキル</h2>
+            <div id="transferable-skills">
+                <p>転職後の職を選択してください。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="potential-skills">
+        <h2>別途習得が必要なスキル（変換元候補）</h2>
+        <div id="unowned-transferable-skills"> <p>現在の職と転職後の職を選択してください。</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
