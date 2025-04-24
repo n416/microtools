@@ -1,0 +1,382 @@
+/* --- style.css (最下部リストスタイルを details/summary 形式に戻す) --- */
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 15px;
+  background-color: #f4f4f4;
+  font-size: 16px;
+}
+
+h1,
+h2 {
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 8px;
+  margin-top: 20px;
+  margin-bottom: 15px;
+  color: #333;
+}
+h2 {
+  font-size: 1.2em;
+}
+
+h1 {
+  text-align: center;
+  color: #0056b3;
+  margin-top: 0;
+}
+
+.job-selector {
+  margin-bottom: 20px;
+  background-color: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+}
+
+.job-select-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.job-select-item label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  display: block;
+}
+
+.job-select-item select {
+  padding: 10px 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 180px;
+}
+
+.container {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.skill-selector,
+.result,
+.potential-skills {
+  flex: 1;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-height: 200px;
+}
+.potential-skills {
+  margin-top: 20px;
+}
+
+.master-checkbox-container {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+.master-checkbox-container label {
+  margin-left: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.master-checkbox-container input[type="checkbox"] {
+  transform: scale(1.1);
+  vertical-align: middle;
+}
+
+#current-skills {
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+#current-skills label {
+  /* 現在スキルリストのラベルにランク色適用 */
+  display: block;
+  margin-bottom: 5px;
+  cursor: pointer;
+  padding: 10px 8px;
+  border-radius: 4px;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+  border: 1px solid transparent;
+}
+#current-skills label:hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.03);
+}
+#current-skills label:active {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+#current-skills input[type="checkbox"] {
+  margin-right: 10px;
+  transform: scale(1.2);
+  vertical-align: middle;
+}
+
+#transferable-skills ul,
+#unowned-transferable-skills ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#transferable-skills li,
+#unowned-transferable-skills li {
+  margin-bottom: 8px;
+  padding: 10px 15px;
+  border-radius: 4px;
+}
+
+/* 転職後スキルリスト */
+#transferable-skills li {
+  /* background-color はランク色で上書き */
+  border: 1px solid #dee2e6;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+#transferable-skills li.owned {
+  border-color: #28a745 !important; /* 所有時は枠線強調 (!importantでランク色より優先) */
+  box-shadow: inset 4px 0 0 #28a745;
+}
+#transferable-skills .target-skill-name {
+  font-weight: bold;
+  grid-column: 1 / 2;
+}
+#transferable-skills .source-skill-info {
+  font-size: 0.9em;
+  color: #28a745;
+  font-weight: bold;
+  grid-column: 2 / 3;
+  text-align: right;
+  white-space: nowrap;
+}
+#transferable-skills .source-skill-info:empty {
+  display: none;
+}
+#transferable-skills .rank {
+  font-size: 0.9em;
+  color: #555;
+  background-color: rgba(255, 255, 255, 0.6);
+  padding: 2px 6px;
+  border-radius: 3px;
+  grid-column: 3 / 4;
+  white-space: nowrap;
+}
+
+/* ▼▼▼ 最下部リスト（別途習得が必要なスキル）のスタイルを戻す ▼▼▼ */
+#unowned-transferable-skills li {
+  /* background-colorはランク色で上書き */
+  border: 1px solid #b3e0ff; /* デフォルトの枠線色 (例: 水色系) */
+  display: block; /* Gridはやめてブロック要素に */
+  /* ランク色を適用するため、背景色は削除 */
+}
+
+/* スキルヘッダー部分 */
+#unowned-transferable-skills .new-skill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+#unowned-transferable-skills .target-skill-name {
+  font-weight: bold;
+}
+
+#unowned-transferable-skills .rank {
+  font-size: 0.9em;
+  color: #555;
+  background-color: rgba(255, 255, 255, 0.6); /* 半透明背景 */
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+/* details/summaryタグのスタイル */
+#unowned-transferable-skills details {
+  margin-top: 8px;
+  border-top: 1px dashed #ccc;
+  padding-top: 8px;
+}
+
+#unowned-transferable-skills summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: #0056b3;
+  font-size: 0.9em;
+  padding: 3px 0;
+  outline: none;
+}
+#unowned-transferable-skills summary:hover {
+  text-decoration: underline;
+}
+#unowned-transferable-skills summary::marker,
+#unowned-transferable-skills summary::-webkit-details-marker {
+  color: #0056b3;
+}
+
+/* 全職のスキルリスト表示部分 */
+#unowned-transferable-skills .all-jobs-list {
+  list-style: none;
+  padding: 5px 0 0 15px;
+  margin: 0;
+  font-size: 0.85em;
+}
+#unowned-transferable-skills .all-jobs-list li {
+  padding: 3px 0;
+  background-color: transparent !important; /* 親の背景色を継承しない */
+  border: none !important; /* 親の枠線を継承しない */
+  display: flex;
+  gap: 8px;
+  margin-bottom: 0;
+}
+#unowned-transferable-skills .all-jobs-list .job-name {
+  font-weight: bold;
+  min-width: 50px;
+  color: #333;
+}
+#unowned-transferable-skills .all-jobs-list .skill-name-detail {
+  color: #333;
+}
+#unowned-transferable-skills .all-jobs-list .skill-name-detail.none {
+  color: #999;
+  font-style: italic;
+}
+/* ▲▲▲ 最下部リストのスタイルここまで ▲▲▲ */
+
+/* ▼▼▼ ランク別パステルカラー（共通適用） ▼▼▼ */
+/* 適用対象: #current-skills label, #transferable-skills li, #unowned-transferable-skills li */
+
+/* 高級 (緑系) */
+.rank-高級,
+.rank-高級-パッシブ {
+  background-color: #c8e6c9;
+  border-color: #a5d6a7;
+}
+#current-skills label.rank-高級:hover,
+#current-skills label.rank-高級-パッシブ:hover {
+  border-color: #77a87a !important;
+  background-color: #b7d9b8 !important;
+}
+#unowned-transferable-skills li.rank-高級,
+#unowned-transferable-skills li.rank-高級-パッシブ {
+  border-color: #a5d6a7;
+} /* 最下部リストの枠線色 */
+
+/* 希少 (青系) */
+.rank-希少,
+.rank-希少-パッシブ {
+  background-color: #bbdefb;
+  border-color: #90caf9;
+}
+#current-skills label.rank-希少:hover,
+#current-skills label.rank-希少-パッシブ:hover {
+  border-color: #64b5f6 !important;
+  background-color: #a3cff9 !important;
+}
+#unowned-transferable-skills li.rank-希少,
+#unowned-transferable-skills li.rank-希少-パッシブ {
+  border-color: #90caf9;
+}
+
+/* 英雄 (紫系) */
+.rank-英雄,
+.rank-英雄-パッシブ {
+  background-color: #d1c4e9;
+  border-color: #b39ddb;
+}
+#current-skills label.rank-英雄:hover,
+#current-skills label.rank-英雄-パッシブ:hover {
+  border-color: #9575cd !important;
+  background-color: #c0b1e0 !important;
+}
+#unowned-transferable-skills li.rank-英雄,
+#unowned-transferable-skills li.rank-英雄-パッシブ {
+  border-color: #b39ddb;
+}
+
+/* 古代 (黄色系) */
+.rank-古代,
+.rank-古代-パッシブ {
+  background-color: #fff9c4;
+  border-color: #fff59d;
+}
+#current-skills label.rank-古代:hover,
+#current-skills label.rank-古代-パッシブ:hover {
+  border-color: #ffee58 !important;
+  background-color: #fbf3b0 !important;
+}
+#unowned-transferable-skills li.rank-古代,
+#unowned-transferable-skills li.rank-古代-パッシブ {
+  border-color: #fff59d;
+}
+
+/* ▲▲▲ ランク別パステルカラー ▲▲▲ */
+
+#transferable-skills p,
+#current-skills p,
+#unowned-transferable-skills p {
+  color: #666;
+  font-style: italic;
+  margin-top: 10px;
+}
+
+/* --- スマホ向けレスポンシブデザイン --- */
+@media (max-width: 768px) {
+  body {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    font-size: 15px;
+  }
+
+  .job-selector {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .job-select-item {
+    width: 100%;
+  }
+  .job-select-item select {
+    min-width: auto;
+  }
+
+  .container {
+    flex-direction: column;
+  }
+
+  .skill-selector,
+  .result,
+  .potential-skills {
+    min-height: auto;
+  }
+
+  #current-skills {
+    max-height: 250px;
+  }
+
+  /* スマホ表示での詳細リストの調整 */
+  #unowned-transferable-skills .all-jobs-list li {
+    flex-wrap: wrap; /* 折り返すように */
+  }
+  #unowned-transferable-skills .all-jobs-list .job-name {
+    min-width: 45px; /* 少し詰める */
+  }
+}
