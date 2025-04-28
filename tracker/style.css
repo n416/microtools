@@ -1,0 +1,408 @@
+body {
+  font-family: sans-serif;
+  line-height: 1.6;
+  padding: 15px;
+  background-color: #f8f9fa;
+  margin: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: auto;
+}
+
+#control-panel {
+  background: #fff;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+#control-panel h1 {
+    font-size: 1.5em; /* Adjust title size */
+    margin: 0;
+}
+
+#trackers-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.tracker {
+  border: 1px solid #dee2e6;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  position: relative;
+  flex: 1 1 100%;
+  min-width: 280px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Media Queries for Layout --- */
+@media (min-width: 600px) {
+  .tracker {
+    flex-basis: calc(50% - 8px);
+  }
+}
+@media (min-width: 992px) {
+  .tracker {
+    flex-basis: calc(33.333% - 10px);
+  }
+}
+
+.tracker h3 {
+  margin: -15px -15px 10px -15px;
+  padding: 10px 15px;
+  border-bottom: 1px solid #eee;
+  background-color: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tracker-title {
+  border: none;
+  font-size: 1.1em;
+  font-weight: bold;
+  width: calc(100% - 30px);
+  background: transparent;
+  padding: 2px 5px;
+  margin: -2px -5px;
+}
+
+.tracker-title:focus {
+  outline: none;
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.input-group {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.input-group label {
+  flex-shrink: 0;
+  width: 3.5rem; /* Adjusted width */
+  font-size: 0.95em;
+  color: #495057;
+  text-align: right; /* Align label text */
+}
+
+.input-group input[type="number"],
+.input-group button {
+  padding: 7px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.95em;
+}
+
+.input-group input[type="number"] {
+  flex-grow: 1;
+  min-width: 60px;
+}
+
+.input-group button {
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.input-group button:hover {
+  background-color: #0056b3;
+}
+
+.results {
+  text-align: center;
+  margin-top: 5px;
+  margin-bottom: 10px;
+  font-size: 0.9em;
+  color: #6c757d;
+}
+
+.results span {
+  display: inline-block;
+  font-weight: bold;
+  background-color: #e9ecef;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 0 5px 5px 5px; /* Even margin */
+  color: #212529;
+}
+
+.history {
+  font-size: 0.9em;
+  color: #555;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px dashed #eee;
+  max-height: 120px;
+  overflow-y: auto;
+  background-color: #fdfdfd;
+  border-radius: 0 0 8px 8px;
+  margin: 0 -15px -15px -15px;
+  padding: 10px 15px;
+}
+
+.history-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  padding: 3px 5px;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.history-entry:hover {
+  background-color: #f1f1f1;
+}
+
+.history-display {
+    flex-grow: 1; /* Allow text to take space */
+    margin-right: 5px; /* Space before controls */
+    word-break: break-all; /* Prevent long numbers from overflowing */
+}
+
+.history-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Increased gap */
+  flex-shrink: 0; /* Prevent controls shrinking */
+}
+
+.history-controls button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1em;
+  padding: 0 3px;
+  line-height: 1;
+  transition: opacity 0.2s, color 0.2s;
+  opacity: 0.5;
+}
+
+.history-entry:hover .history-controls button {
+  opacity: 1;
+}
+
+.edit-history-modal { /* Renamed from edit-history */
+  color: #007bff;
+}
+
+.delete-history {
+  color: #dc3545;
+}
+
+.edit-history-modal:hover {
+  color: #0056b3;
+}
+
+.delete-history:hover {
+  color: #c82333;
+}
+
+.remove-tracker {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+  line-height: 1;
+  transition: background-color 0.2s;
+}
+
+.remove-tracker:hover {
+  background-color: #5a6268;
+}
+
+.main-button {
+  padding: 8px 15px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.95em;
+  transition: background-color 0.2s;
+}
+
+.main-button:hover {
+  background-color: #218838;
+}
+
+#share-button {
+  background-color: #17a2b8;
+}
+
+#share-button:hover {
+  background-color: #138496;
+}
+
+.error,
+.info-message {
+  color: #dc3545;
+  font-size: 0.9em;
+  margin-top: 5px;
+  min-height: 1.2em;
+}
+
+.info-message {
+  color: #007bff;
+}
+
+.time-remaining {
+  margin-top: 5px;
+  font-weight: bold;
+  color: #17a2b8;
+  font-size: 0.95em;
+  min-height: 1.2em;
+  text-align: center; /* Center remaining time */
+}
+
+.latex-num {
+  /* Removed text-align: center, not needed here */
+  /* font-style: italic; */
+}
+
+.unit {
+  font-size: 0.9em;
+  color: #666;
+  margin-left: 3px;
+}
+
+/* --- Tooltip --- */
+[data-tooltip] {
+  position: relative;
+  cursor: pointer;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #343a40;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  z-index: 10;
+}
+[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* --- Modal Styles --- */
+#modal-backdrop {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+#edit-modal {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  min-width: 300px;
+  max-width: 90%; /* Prevent overflow on small screens */
+  box-sizing: border-box;
+}
+
+#edit-modal h4 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  font-size: 1.2em;
+}
+
+.modal-input-group {
+  margin-bottom: 15px;
+}
+
+.modal-input-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 0.95em;
+}
+
+.modal-input-group input[type="datetime-local"],
+.modal-input-group input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 1em;
+}
+
+.modal-buttons {
+  text-align: right;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px; /* Add space above buttons */
+}
+
+.modal-buttons button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+#modal-cancel-button {
+  background-color: #6c757d;
+  color: white;
+}
+#modal-cancel-button:hover {
+  background-color: #5a6268;
+}
+
+#modal-save-button {
+  background-color: #28a745;
+  color: white;
+}
+#modal-save-button:hover {
+  background-color: #218838;
+}
