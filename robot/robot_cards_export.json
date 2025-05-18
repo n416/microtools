@@ -1,0 +1,569 @@
+[
+  {
+    "id": "card-p1-1",
+    "page": 1,
+    "index": 1,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "3",
+    "part": "頭"
+  },
+  {
+    "id": "card-p1-10",
+    "page": 1,
+    "index": 10,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "2",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p1-11",
+    "page": 1,
+    "index": 11,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "1",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p1-12",
+    "page": 1,
+    "index": 12,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "1",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p1-13",
+    "page": 1,
+    "index": 13,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "3",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p1-14",
+    "page": 1,
+    "index": 14,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "3",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p1-15",
+    "page": 1,
+    "index": 15,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "2",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p1-16",
+    "page": 1,
+    "index": 16,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "2",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p1-2",
+    "page": 1,
+    "index": 2,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "3",
+    "part": "頭"
+  },
+  {
+    "id": "card-p1-3",
+    "page": 1,
+    "index": 3,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "2",
+    "part": "頭"
+  },
+  {
+    "id": "card-p1-4",
+    "page": 1,
+    "index": 4,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "2",
+    "part": "頭"
+  },
+  {
+    "id": "card-p1-5",
+    "page": 1,
+    "index": 5,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "1",
+    "part": "頭"
+  },
+  {
+    "id": "card-p1-6",
+    "page": 1,
+    "index": 6,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "1",
+    "part": "頭"
+  },
+  {
+    "id": "card-p1-7",
+    "page": 1,
+    "index": 7,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "3",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p1-8",
+    "page": 1,
+    "index": 8,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "3",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p1-9",
+    "page": 1,
+    "index": 9,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "2",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p2-1",
+    "page": 2,
+    "index": 1,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "1",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p2-10",
+    "page": 2,
+    "index": 10,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "1",
+    "part": "頭"
+  },
+  {
+    "id": "card-p2-11",
+    "page": 2,
+    "index": 11,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "3",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p2-12",
+    "page": 2,
+    "index": 12,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "3",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p2-13",
+    "page": 2,
+    "index": 13,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "2",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p2-14",
+    "page": 2,
+    "index": 14,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "2",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p2-15",
+    "page": 2,
+    "index": 15,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "1",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p2-16",
+    "page": 2,
+    "index": 16,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "1",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p2-2",
+    "page": 2,
+    "index": 2,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "1",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p2-3",
+    "page": 2,
+    "index": 3,
+    "image": null,
+    "manufacturer": "",
+    "value": "",
+    "part": "頭"
+  },
+  {
+    "id": "card-p2-4",
+    "page": 2,
+    "index": 4,
+    "image": null,
+    "manufacturer": "",
+    "value": "",
+    "part": "頭"
+  },
+  {
+    "id": "card-p2-5",
+    "page": 2,
+    "index": 5,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "3",
+    "part": "頭"
+  },
+  {
+    "id": "card-p2-6",
+    "page": 2,
+    "index": 6,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "3",
+    "part": "頭"
+  },
+  {
+    "id": "card-p2-7",
+    "page": 2,
+    "index": 7,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "2",
+    "part": "頭"
+  },
+  {
+    "id": "card-p2-8",
+    "page": 2,
+    "index": 8,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "2",
+    "part": "頭"
+  },
+  {
+    "id": "card-p2-9",
+    "page": 2,
+    "index": 9,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "1",
+    "part": "頭"
+  },
+  {
+    "id": "card-p3-1",
+    "page": 3,
+    "index": 1,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "3",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p3-10",
+    "page": 3,
+    "index": 10,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "3",
+    "part": "頭"
+  },
+  {
+    "id": "card-p3-11",
+    "page": 3,
+    "index": 11,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "2",
+    "part": "頭"
+  },
+  {
+    "id": "card-p3-12",
+    "page": 3,
+    "index": 12,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "2",
+    "part": "頭"
+  },
+  {
+    "id": "card-p3-13",
+    "page": 3,
+    "index": 13,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "1",
+    "part": "頭"
+  },
+  {
+    "id": "card-p3-14",
+    "page": 3,
+    "index": 14,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "1",
+    "part": "頭"
+  },
+  {
+    "id": "card-p3-15",
+    "page": 3,
+    "index": 15,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "3",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p3-16",
+    "page": 3,
+    "index": 16,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "3",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p3-2",
+    "page": 3,
+    "index": 2,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "3",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p3-3",
+    "page": 3,
+    "index": 3,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "2",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p3-4",
+    "page": 3,
+    "index": 4,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "2",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p3-5",
+    "page": 3,
+    "index": 5,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "1",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p3-6",
+    "page": 3,
+    "index": 6,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "1",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p3-7",
+    "page": 3,
+    "index": 7,
+    "image": null,
+    "manufacturer": "",
+    "value": "",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p3-8",
+    "page": 3,
+    "index": 8,
+    "image": null,
+    "manufacturer": "",
+    "value": "",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p3-9",
+    "page": 3,
+    "index": 9,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "3",
+    "part": "頭"
+  },
+  {
+    "id": "card-p4-1",
+    "page": 4,
+    "index": 1,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "2",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p4-10",
+    "page": 4,
+    "index": 10,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "1",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p4-11",
+    "page": 4,
+    "index": 11,
+    "image": null,
+    "manufacturer": "",
+    "value": "",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p4-12",
+    "page": 4,
+    "index": 12,
+    "image": null,
+    "manufacturer": "",
+    "value": "",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p4-13",
+    "page": 4,
+    "index": 13,
+    "image": null,
+    "manufacturer": "ジオ",
+    "value": "",
+    "part": ""
+  },
+  {
+    "id": "card-p4-14",
+    "page": 4,
+    "index": 14,
+    "image": null,
+    "manufacturer": "ツイ",
+    "value": "",
+    "part": ""
+  },
+  {
+    "id": "card-p4-15",
+    "page": 4,
+    "index": 15,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "",
+    "part": ""
+  },
+  {
+    "id": "card-p4-2",
+    "page": 4,
+    "index": 2,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "2",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p4-3",
+    "page": 4,
+    "index": 3,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "1",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p4-4",
+    "page": 4,
+    "index": 4,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "1",
+    "part": "上半身"
+  },
+  {
+    "id": "card-p4-5",
+    "page": 4,
+    "index": 5,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "3",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p4-6",
+    "page": 4,
+    "index": 6,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "3",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p4-7",
+    "page": 4,
+    "index": 7,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "2",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p4-8",
+    "page": 4,
+    "index": 8,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "2",
+    "part": "下半身"
+  },
+  {
+    "id": "card-p4-9",
+    "page": 4,
+    "index": 9,
+    "image": null,
+    "manufacturer": "アナ",
+    "value": "1",
+    "part": "下半身"
+  }
+]
