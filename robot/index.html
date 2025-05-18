@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ロボットカードメーカー</title> <link rel="stylesheet" href="style.css">
+    </head>
+<body>
+    <h1 class="no-print">ロボットカードメーカー</h1>
+    <div id="card-creator-container">
+        <header class="no-print">
+            <div class="controls">
+                <button id="print-button">印刷</button>
+                <button id="add-page-button">ページ追加</button>
+                <button id="delete-page-button" disabled>最終ページ削除</button>
+                <button id="bulk-edit-button" style="display: none;">
+                    一括編集 (<span id="selected-count">0</span>)
+                </button>
+                <button id="export-button">エクスポート</button>
+                <label for="import-file-input" id="import-button-label" class="button-like-label">インポート</label>
+                <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                <button id="start-simulation-button" onclick="window.open('game.html', '_blank')">ゲームをプレイ</button>
+                <button id="clear-all-button">全データ初期化</button>
+            </div>
+        </header>
+
+        <div id="pages-container">
+            </div>
+
+        <div id="edit-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <h2>カード編集 (<span id="modal-card-id"></span>)</h2>
+                <div class="modal-body">
+                    <div class="modal-image-section">
+                        <div id="modal-image-preview">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="placeholder-icon"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            <span>プレビューなし</span>
+                        </div>
+                        <input type="file" id="modal-image-upload" accept="image/*">
+                        <button id="modal-delete-image-button" class="delete-image-button">画像削除</button> </div>
+                    <div class="modal-details-section">
+                        <label for="modal-manufacturer-select">製造所:</label>
+                        <select id="modal-manufacturer-select">
+                            <option value="">(パイロット)</option>
+                            <option value="ジオ">ジオ</option>
+                            <option value="ツイ">ツイ</option>
+                            <option value="アナ">アナ</option>
+                        </select>
+
+                        <label for="modal-value-select">数値:</label>
+                        <select id="modal-value-select">
+                             <option value="">なし</option>
+                            <option value="3">3</option>
+                            <option value="2">2</option>
+                            <option value="1">1</option>
+                        </select>
+
+                        <label for="modal-part-select">部位:</label>
+                        <select id="modal-part-select">
+                            <option value="">なし</option>
+                            <option value="頭">頭 (索敵)</option>
+                            <option value="上半身">上半身 (攻撃)</option>
+                            <option value="下半身">下半身 (防御)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="modal-save-button">保存</button>
+                    <button id="modal-cancel-button">キャンセル</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="bulk-edit-modal" class="modal">
+             <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <h2>一括編集 (<span id="bulk-edit-count">0</span> 件)</h2>
+                <div class="modal-body">
+                    <p>選択したカードの情報を一括で変更します。「変更しない」を選ぶと、その項目は元のまま保持されます。</p>
+                     <div class="modal-details-section">
+                        <label for="bulk-manufacturer-select">製造所:</label>
+                        <select id="bulk-manufacturer-select">
+                            <option value="__nochange__">(変更しない)</option>
+                             <option value="">(パイロット)</option>
+                            <option value="ジオ">ジオ</option>
+                            <option value="ツイ">ツイ</option>
+                            <option value="アナ">アナ</option>
+                        </select>
+
+                        <label for="bulk-value-select">数値:</label>
+                        <select id="bulk-value-select">
+                            <option value="__nochange__">(変更しない)</option>
+                            <option value="">なし</option>
+                            <option value="3">3</option>
+                            <option value="2">2</option>
+                            <option value="1">1</option>
+                        </select>
+
+                        <label for="bulk-part-select">部位:</label>
+                        <select id="bulk-part-select">
+                             <option value="__nochange__">(変更しない)</option>
+                            <option value="">なし</option>
+                             <option value="頭">頭 (索敵)</option>
+                            <option value="上半身">上半身 (攻撃)</option>
+                            <option value="下半身">下半身 (防御)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="bulk-save-button">一括保存</button>
+                    <button id="bulk-cancel-button">キャンセル</button>
+                </div>
+            </div>
+        </div>
+
+    </div> <script src="db.js"></script>
+    <script src="script.js"></script>
+    </body>
+</html>
