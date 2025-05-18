@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ロボット開発＆テスト シミュレーター</title>
+    <link rel="stylesheet" href="game.css">
+    </head>
+<body>
+    <div id="game-container" style="display: block;">
+        <header class="game-header no-print">
+            <h1>ロボット開発＆テスト シミュレーター</h1>
+            <div class="game-controls">
+                <label for="game-import-file-input" id="game-import-button-label" class="button-like-label game-control-button" title="JSONファイルをインポートして新しいゲームを開始します（現在のゲームとカードデータは上書きされます）">
+                    カードデータインポート (上書き)
+                </label>
+                <input type="file" id="game-import-file-input" accept=".json" style="display: none;">
+                </div>
+        </header>
+        <main id="game-area">
+            <div id="game-status">
+                <p id="game-phase">フェイズ: 準備中</p>
+                <p id="round-info">ラウンド: - / 3</p>
+                <p id="player-score">プレイヤー勝利数: 0</p>
+                <p id="cpu-score">CPU勝利数: 0</p>
+            </div>
+
+            <div id="game-message-area">
+                <p id="game-message">ゲームを初期化中...</p>
+            </div>
+
+            <div id="design-screen" class="game-screen" style="display: none;">
+                <div id="player-hand-container">
+                    <h2>あなたの手札</h2>
+                    <div class="hand-area">
+                        <h3>部位カード (<span id="player-hand-count">0</span>)</h3>
+                        <div id="player-hand-cards" class="card-display-area scrollable">
+                            </div>
+                     </div>
+                     <div class="hand-area">
+                        <h3>パイロットカード</h3>
+                        <div id="player-pilot-card" class="card-display-area pilot-card-area">
+                            </div>
+                     </div>
+                </div>
+                <div id="robot-assembly-container">
+                    <h2>ロボット設計エリア (クリック or ドラッグ&ドロップで配置)</h2>
+                    <div id="player-robot-slots" class="robot-slots-container vertical">
+                        <div class="robot-slot" data-robot-index="0">
+                            <h4>ロボット 1</h4>
+                            <div class="part-slot head-slot" data-part-type="head">頭</div>
+                            <div class="part-slot upper-body-slot" data-part-type="upper">上半身</div>
+                            <div class="part-slot lower-body-slot" data-part-type="lower">下半身</div>
+                            <div class="pilot-assign-area"><button class="assign-pilot-button" data-robot-index="0" disabled>パイロット搭乗</button></div>
+                            <div class="robot-stats"></div>
+                        </div>
+                        <div class="robot-slot" data-robot-index="1">
+                            <h4>ロボット 2</h4>
+                            <div class="part-slot head-slot" data-part-type="head">頭</div>
+                            <div class="part-slot upper-body-slot" data-part-type="upper">上半身</div>
+                            <div class="part-slot lower-body-slot" data-part-type="lower">下半身</div>
+                             <div class="pilot-assign-area"><button class="assign-pilot-button" data-robot-index="1" disabled>パイロット搭乗</button></div>
+                             <div class="robot-stats"></div>
+                        </div>
+                        <div class="robot-slot" data-robot-index="2">
+                            <h4>ロボット 3</h4>
+                            <div class="part-slot head-slot" data-part-type="head">頭</div>
+                            <div class="part-slot upper-body-slot" data-part-type="upper">上半身</div>
+                            <div class="part-slot lower-body-slot" data-part-type="lower">下半身</div>
+                            <div class="pilot-assign-area"><button class="assign-pilot-button" data-robot-index="2" disabled>パイロット搭乗</button></div>
+                             <div class="robot-stats"></div>
+                        </div>
+                    </div>
+                    <button id="confirm-design-button" class="no-print" style="margin-top: 15px;" disabled>設計完了</button>
+                </div>
+            </div>
+
+            <div id="battle-selection-screen" class="game-screen" style="display: none;">
+                <h2>戦闘ロボット選択</h2>
+                <div id="player-battle-robot-selection" class="robot-selection robot-slots-container">
+                     </div>
+                <button id="confirm-battle-robot-button" class="no-print" disabled>戦闘開始</button>
+            </div>
+
+            <div id="battle-resolution-screen" class="game-screen" style="display: none;">
+                 <h2>戦闘結果</h2>
+                 <div id="battle-display-area">
+                     <div class="battle-robot-display">
+                          <h4>プレイヤー</h4>
+                         <div id="player-battle-robot" class="robot-slot battle-slot"></div>
+                          <div id="player-battle-stats"></div>
+                     </div>
+                     <div id="battle-vs">VS</div>
+                     <div class="battle-robot-display">
+                          <h4>CPU</h4>
+                         <div id="cpu-battle-robot" class="robot-slot battle-slot"></div>
+                          <div id="cpu-battle-stats"></div>
+                     </div>
+                </div>
+                <div id="battle-result-area">
+                    <p id="battle-result-message"></p>
+                    <button id="next-round-button" class="no-print">次のラウンドへ</button>
+                    <button id="show-final-result-button" class="no-print">最終結果へ</button>
+                </div>
+            </div>
+
+            <div id="game-over-screen" class="game-screen">
+                 <div id="game-over-area">
+                    <h2>ゲーム終了</h2>
+                    <p id="final-result-message"></p>
+                    <div id="battle-pairing-log" style="text-align: left; margin-top: 15px;">
+                        <h3>対戦履歴</h3>
+                        </div>
+                     <div id="final-robot-display" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+                         <div id="final-player-robots" style="margin-bottom: 15px;">
+                            <h4 style="text-align: center;">あなたの最終ロボット構成</h4>
+                            <div class="robot-slots-container final-display">
+                                </div>
+                        </div>
+                         <div id="final-cpu-robots">
+                            <h4 style="text-align: center;">CPUの最終ロボット構成</h4>
+                            <div class="robot-slots-container final-display">
+                                </div>
+                        </div>
+                    </div>
+                    <button id="play-again-button" class="no-print" style="margin-top: 20px;">もう一度プレイ</button>
+                 </div>
+            </div>
+
+        </main>
+    </div>
+    <script src="db.js"></script>
+    <script src="game.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const msgElement = document.getElementById('game-message');
+            const gameArea = document.getElementById('game-area');
+            console.log("[Init] DOMContentLoaded event fired.");
+
+            try {
+                // DB初期化関数が存在するか確認
+                if (typeof initDB !== 'function' || typeof loadAllCardDataFromDB !== 'function') {
+                    throw new Error("Database functions (initDB or loadAllCardDataFromDB) are not defined. Check if db.js is loaded correctly.");
+                }
+                console.log("[Init] Waiting for DB initialization...");
+                // initDB() が Promise を返すことを確認し、完了を待つ
+                await initDB(); // db.js の関数
+                console.log("[Init] DB initialized successfully.");
+
+                // DBからカードデータをロード
+                console.log("[Init] Loading card data from DB...");
+                // loadAllCardDataFromDB も Promise を返すはず
+                const result = await loadAllCardDataFromDB(); // db.js の関数
+                console.log("[Init] Card data loaded from DB:", result); // ★ロード結果確認
+
+                const allCards = result.data; // カードデータオブジェクトを取得
+
+                // ロードしたデータを検証
+                if (!allCards || typeof allCards !== 'object') {
+                     console.error("[Init] Loaded data is not an object. Result:", result);
+                     throw new Error("データベースからカードデータを正しく読み込めませんでした。");
+                }
+                 if (Object.keys(allCards).length === 0) {
+                    console.warn("[Init] No card data found in DB.");
+                    // ★ データがない場合のエラーメッセージを変更し、インポートを促す ★
+                    if (msgElement) {
+                        msgElement.innerHTML = `<span style="color: orange; font-weight: bold;">カードデータがありません。</span><br>カードメーカー画面でカードを作成するか、右上の「カードデータインポート」ボタンからデータをインポートしてください。`;
+                    } else {
+                        alert("カードデータがありません。インポートしてください。");
+                    }
+                    // ゲームを開始せずに待機状態にする (gameManagerは初期化する)
+                    if (window.gameManager && typeof window.gameManager.init === 'function') {
+                        window.gameManager.init(); // DOM要素取得などは行う
+                        // gameState を idle に設定するなどの処理を gameManager.init 内で行うか、ここで行う
+                        console.log("gameManager initialized, waiting for data.");
+                    } else {
+                         throw new Error("gameManager の準備ができていません。");
+                    }
+                    // ここで処理を終了
+                    return;
+                }
+
+                console.log(`[Init] Found ${Object.keys(allCards).length} cards.`);
+
+                // gameManagerの準備確認とゲーム開始
+                if (window.gameManager && typeof window.gameManager.init === 'function' && typeof window.gameManager.startGame === 'function') {
+                    console.log("[Init] Initializing gameManager...");
+                    window.gameManager.init();
+                    console.log("[Init] Starting game...");
+                    window.gameManager.startGame(allCards);
+                    console.log("[Init] Game started successfully.");
+                } else {
+                    throw new Error("gameManager の準備ができていません。");
+                }
+            } catch (error) {
+                // エラー処理
+                console.error("[Init] Game Initialization Error:", error);
+                if (msgElement) {
+                     msgElement.innerHTML = `<span style="color: red; font-weight: bold;">ゲームの初期化に失敗しました: ${error.message}</span><br>ページを再読み込みするか、カードメーカー画面でデータを確認してください。`;
+                } else { alert(`ゲームの初期化に失敗しました: ${error.message}`); }
+                if (gameArea) { /* エリア非表示処理 */ }
+            }
+        });
+    </script>
+</body>
+</html>
