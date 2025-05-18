@@ -1,0 +1,223 @@
+/* game-style.css - ゲーム画面専用スタイル */
+
+body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#game-container {
+    display: flex;
+    flex-wrap: wrap; /* スマホ表示などで折り返すかも */
+    justify-content: space-around;
+    width: 95%;
+    max-width: 1200px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    gap: 15px; /* エリア間の隙間 */
+}
+
+.player-zone {
+    border: 1px solid lightblue;
+    padding: 10px;
+    flex-basis: 30%; /* 横幅の基本サイズ */
+    min-width: 280px; /* 最小幅 */
+}
+.cpu-zone {
+    border-color: lightcoral;
+}
+
+.card-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px; /* カード間の隙間 */
+    min-height: 100px; /* 手札エリアの最低限の高さ */
+    border: 1px dashed #eee;
+    padding: 5px;
+    margin-top: 5px;
+}
+
+.robot-assembly-area {
+    margin-top: 15px;
+    border: 1px dashed #ddd;
+    padding: 5px;
+}
+
+.robot-slot {
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    padding: 8px;
+    min-height: 120px; /* 各ロボットスロットの高さ */
+}
+.cpu-robot {
+    background-color: #f0f0f0; /* CPUロボットは少し色を変えるなど */
+}
+
+.part-slot {
+    border: 1px dashed #aaa;
+    padding: 4px;
+    margin: 3px 0;
+    background-color: #f8f8f8;
+    min-height: 20px;
+}
+.part-slot.filled {
+    background-color: #e0ffe0; /* パーツがセットされたら色変更 */
+    border-style: solid;
+}
+
+.card {
+    border: 1px solid black;
+    padding: 4px;
+    min-width: 60px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8em;
+    background-color: white;
+    cursor: pointer; /* クリック可能を示す */
+    position: relative; /* カード番号用 */
+}
+.card.hand:hover {
+    box-shadow: 0 0 5px gold;
+}
+.card.selected {
+    /* 手札で選択中のスタイル */
+    outline: 2px solid blue;
+    box-shadow: 0 0 8px blue;
+}
+
+.card .card-part {
+    font-weight: bold;
+}
+.card .card-manufacturer {
+    font-size: 0.9em;
+    color: #555;
+}
+.card .card-value {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-top: auto;
+}
+.card .value-1 {
+    color: gray;
+}
+.card .value-2 {
+    color: blue;
+}
+.card .value-3 {
+    color: red;
+}
+
+.card .no-image {
+    width: 40px;
+    height: 30px;
+    background-color: #eee;
+    border: 1px dashed #ccc;
+    margin: 5px 0;
+}
+.card img {
+    max-width: 50px;
+    max-height: 35px;
+    object-fit: contain;
+    margin: 5px 0;
+}
+
+/* 製造所ごとの色分け (既存のCSSにもあるはず) */
+.card.manufacturer-geo {
+    border-color: green;
+}
+.card.manufacturer-tsui {
+    border-color: blue;
+}
+.card.manufacturer-ana {
+    border-color: red;
+}
+
+.pilot-card {
+    background-color: gold;
+    justify-content: center;
+}
+.pilot-ability {
+    font-weight: bold;
+}
+
+.battle-zone {
+    border: 1px solid orange;
+    padding: 10px;
+    flex-basis: 35%;
+    min-width: 300px;
+}
+
+#battle-field {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-bottom: 15px;
+    min-height: 80px;
+}
+.battle-robot-display {
+    border: 1px solid #aaa;
+    padding: 10px;
+    width: 40%;
+    text-align: center;
+}
+#vs-display {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.log-area {
+    border: 1px solid #eee;
+    background-color: #f9f9f9;
+    min-height: 100px;
+    padding: 5px;
+    margin-top: 10px;
+    font-size: 0.9em;
+    white-space: pre-wrap; /* 改行を反映 */
+}
+
+#game-message-area {
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    font-weight: bold;
+    min-height: 30px;
+    background-color: #efefef;
+    margin-top: 10px;
+    flex-basis: 100%; /* 幅いっぱいに */
+}
+
+/* 設計フェイズでの選択可能表示 */
+.robot-slot.selectable {
+    cursor: pointer;
+    border-color: green;
+    border-width: 2px;
+}
+.robot-slot.selectable:hover {
+    background-color: #f0fff0;
+}
+.robot-slot.selected-for-battle {
+    outline: 3px solid orange;
+}
+
+#game-result {
+    margin-top: 20px;
+    border: 2px solid green;
+    padding: 15px;
+    background-color: #e8ffe8;
+    text-align: center;
+}
+
+/* ボタン共通スタイル (既存のCSSに合わせる) */
+button {
+    padding: 8px 15px;
+    margin: 5px;
+    cursor: pointer;
+}
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}

@@ -1,0 +1,769 @@
+/* === style.css (完全版 - 2025/04/18 時点) === */
+
+/* --- 基本設定とフォント --- */
+body {
+  font-family: "Roboto", sans-serif;
+  margin: 0;
+  background-color: #f0f2f5;
+  color: #333;
+}
+
+h1 {
+  text-align: center;
+  color: #1a2a4d;
+  margin-bottom: 15px;
+  font-weight: 700;
+}
+
+header {
+  background-color: #f0f2f5c4;
+  color: #333;
+  position: sticky;
+  top: 0;
+  margin: 0 auto;
+  width: 100%;
+  padding: 10px 0;
+  contain: paint;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+header .controls {
+  text-align: center;
+}
+/* --- グローバルコントロール --- */
+.global-controls {
+  background-color: #fff;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  position: sticky;
+  top: 0; /* 画面上部に固定 */
+  z-index: 900; /* ページ要素より手前に */
+}
+
+.global-controls button {
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+  margin: 5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  vertical-align: middle;
+}
+.global-controls button:hover {
+  opacity: 0.9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+#add-page-button {
+  background-color: #007bff;
+  color: white;
+}
+#bulk-edit-button {
+  background-color: #fd7e14;
+  color: white;
+}
+#print-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.print-note {
+  font-size: 13px;
+  color: #555;
+  margin-top: 12px;
+}
+
+/* --- ページとグリッド --- */
+#pages-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.page {
+  width: 210mm;
+  height: 297mm;
+  margin: 10px auto 25px auto;
+  background-color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 10mm; /* 通常表示時は内側余白あり */
+  position: relative;
+  border-radius: 4px;
+}
+
+.page-number {
+  position: absolute;
+  bottom: 5mm;
+  right: 10mm;
+  font-size: 10pt;
+  color: #bbb;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, calc((297mm - 20mm) / 4 - 5mm)); /* 通常表示時の行高さ計算 */
+  gap: 5mm; /* 通常表示時のカード間隔 */
+  height: calc(297mm - 20mm);
+  width: calc(210mm - 20mm);
+  box-sizing: border-box;
+}
+
+/* --- カードデザイン --- */
+.card {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-sizing: border-box;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.3s ease,
+    background-image 0.3s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  position: relative;
+  background-color: #ffffff; /* デフォルト背景色 */
+}
+
+/* 製造所に応じた背景と文字色 */
+.card.manufacturer-geo {
+  background-image: linear-gradient(225deg, #113021, #20a96d); /* 濃い緑グラデーション */
+  border-color: #198754;
+}
+.card.manufacturer-tsui {
+  background-image: linear-gradient(225deg, #003077, #3da0ff); /* 濃い青グラデーション */
+  border-color: #0d6efd;
+}
+.card.manufacturer-ana {
+  background-image: linear-gradient(50deg, #fff, #a4d0ff, #ffd5a4, #ffa4a4, #ffffff);
+  border-color: #fff;
+}
+
+.card:hover {
+  /* ホバー時のスタイル */
+  /* border-color: #007bff; (選択中スタイルと競合するためコメントアウトも可) */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 複数選択されているカードのスタイル */
+.card.multi-selected {
+  border-color: #fd7e14 !important;
+  box-shadow: 0 0 0 3px rgba(253, 126, 20, 0.4) !important;
+}
+
+/* カード番号 */
+.card-number {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 8pt;
+  color: #bbb; /* デフォルト文字色 (アナ, 未設定) */
+  background-color: rgba(255, 255, 255, 0.7); /* デフォルト背景 */
+  padding: 1px 3px;
+  border-radius: 3px;
+  z-index: 2;
+}
+.card.manufacturer-geo .card-number,
+.card.manufacturer-tsui .card-number {
+  color: #ffffff; /* ジオ・ツイは白文字 */
+  background-color: rgba(0, 0, 0, 0.2); /* 背景を少し暗く */
+}
+
+/* 画像エリア */
+.card-image {
+  width: 100%;
+  height: 65%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f8f9fa;
+  overflow: hidden;
+  border-bottom: 1px solid #eee;
+}
+.card-image img {
+  width: 100%; /* カバー表示用 */
+  height: 100%; /* カバー表示用 */
+  object-fit: cover; /* カバー表示 */
+}
+.card-image .placeholder-icon {
+  width: 40px;
+  height: 40px;
+  color: #adb5bd;
+}
+.card-image span {
+  display: none;
+}
+
+/* 情報エリア */
+.card-info {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+  font-size: 9pt;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  padding-top: 18px;
+}
+.card-info .part-display {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #343a40; /* デフォルト文字色 (アナ, 未設定) */
+  text-align: center;
+}
+.card.manufacturer-geo .part-display,
+.card.manufacturer-tsui .part-display {
+  color: #ffffff; /* ジオ・ツイは白文字 */
+}
+
+.card-info .manufacturer-display {
+  font-size: 8pt;
+  color: #fff; /* 文字色は常に白 */
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  text-align: left;
+  align-self: flex-start;
+}
+/* 製造所ごとのラベル背景色 */
+.card.manufacturer-geo .manufacturer-display {
+  background-color: #00761b;
+} /* 少し明るい緑 */
+.card.manufacturer-tsui .manufacturer-display {
+  background-color: #005295;
+} /* 少し明るい青 */
+.card.manufacturer-ana .manufacturer-display {
+  background-color: #606060;
+} /* 紫 */
+.card:not([class*="manufacturer-"]) .manufacturer-display {
+  background-color: #6c757d;
+} /* 濃灰 */
+
+/* 強化値表示 (モノトーン化) */
+.card-info .value-display {
+  box-sizing: border-box;
+  position: absolute;
+  top: -37px;
+  right: 5px;
+  width: 32px;
+  height: 32px;
+  line-height: 1.8rem;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: 2px solid #fff; /* 薄いグレーの枠線 */
+  z-index: 1;
+}
+.card-info .value-display:empty {
+  display: none;
+}
+.card-info .value-1 {
+  background-color: #ffffff;
+  color: #343a40;
+}
+.card-info .value-2 {
+  background-color: #adb5bd;
+  color: white;
+}
+.card-info .value-3 {
+  background-color: #6c757d;
+  color: white;
+}
+
+/* --- モーダル (ポップアップ) スタイル --- */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+.modal.show {
+  display: flex;
+}
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 25px 30px;
+  border: 1px solid #bbb;
+  width: 90%;
+  max-width: 550px;
+  border-radius: 8px;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+.close-button {
+  color: #aaa;
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 32px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.close-button:hover,
+.close-button:focus {
+  color: #333;
+  text-decoration: none;
+}
+.modal h2 {
+  margin-top: 0;
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+  font-weight: 700;
+}
+.modal h2 span {
+  font-weight: normal;
+  font-size: 0.9em;
+  color: #555;
+}
+.modal-body label {
+  display: block;
+  margin: 12px 0 6px 0;
+  font-weight: bold;
+  font-size: 14px;
+  color: #444;
+}
+.modal-body select,
+.modal-body input[type="file"],
+.modal-body input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+  background-color: #fff;
+}
+.modal-body input[type="file"] {
+  padding: 5px;
+}
+#modal-image-preview {
+  width: 100%;
+  height: 120px;
+  border: 1px dashed #ccc;
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #f8f9fa;
+  overflow: hidden;
+  border-radius: 4px;
+}
+#modal-image-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+} /* プレビューはcontain */
+#modal-image-preview .placeholder-icon {
+  width: 40px;
+  height: 40px;
+  color: #adb5bd;
+  margin-bottom: 5px;
+}
+#modal-image-preview span {
+  color: #6c757d;
+  font-size: 10pt;
+}
+#modal-image-preview.has-image .placeholder-icon,
+#modal-image-preview.has-image span {
+  display: none;
+}
+/* 画像削除ボタンのスタイル */
+.delete-image-button {
+  display: inline-block;
+  padding: 5px 10px;
+  margin-top: -10px;
+  margin-bottom: 15px;
+  font-size: 12px;
+  color: #dc3545;
+  background-color: transparent;
+  border: 1px solid #dc3545;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.delete-image-button:hover {
+  background-color: #dc3545;
+  color: white;
+}
+
+.modal-footer {
+  text-align: right;
+  margin-top: 25px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+.modal-footer button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+  margin-left: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.modal-footer button:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+/* 個別編集モーダル用ボタン */
+#modal-save-button {
+  background-color: #28a745;
+  color: white;
+}
+#modal-cancel-button {
+  background-color: #6c757d;
+  color: white;
+}
+#modal-save-button:hover {
+  background-color: #218838;
+}
+#modal-cancel-button:hover {
+  background-color: #5a6268;
+}
+/* 一括編集モーダル用ボタン */
+#bulk-edit-modal .modal-content {
+  /* スタイルは共通 */
+}
+#bulk-edit-modal p {
+  margin-top: -10px;
+  margin-bottom: 15px;
+  font-size: 13px;
+  color: #555;
+  text-align: center;
+}
+#bulk-save-button {
+  background-color: #fd7e14;
+  color: white;
+}
+#bulk-cancel-button {
+  background-color: #6c757d;
+  color: white;
+}
+#bulk-save-button:hover {
+  background-color: #e66b0a;
+}
+#bulk-cancel-button:hover {
+  background-color: #5a6268;
+}
+
+/* --- 印刷用スタイル --- */
+@media print {
+  .no-print {
+    display: none;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-family: sans-serif;
+  }
+  #pages-container {
+    display: block;
+  }
+
+  .page {
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    overflow: hidden;
+    box-sizing: border-box;
+    border-radius: 0;
+  }
+  .page:last-child {
+    page-break-after: avoid;
+  }
+  .page-number {
+    display: none;
+  }
+
+  .grid-container {
+    /* padding: 10mm; (変更前) */
+    padding: 6mm; /* ★上下左右の内部余白を6mmに変更 */
+    /* gap: 10mm; (変更前) */
+    gap: 6mm; /* ★カード間の隙間を6mmに変更 */
+    width: 100%;
+    height: 100%;
+    grid-template-columns: repeat(4, 1fr); /* サイズは自動調整されます */
+    grid-template-rows: repeat(4, 1fr); /* サイズは自動調整されます */
+    box-sizing: border-box;
+    border: 0.5pt solid #ccc; /* 外枠は維持 */
+  }
+  .card {
+    border: 0.5pt solid #ddd; /* 個々のカードの薄い枠線 */
+    border-radius: 3pt; /* 角丸 */
+    margin: 0; /* ★カード自体のマージンは不要 */
+    padding: 3px; /* 内部パディング (変更なし) */
+    page-break-inside: avoid;
+    overflow: hidden;
+    background-color: #fff !important;
+    cursor: default;
+    box-shadow: none;
+  }
+  /* 印刷時の複数選択スタイル解除も更新 */
+  .card.multi-selected {
+    border: 0.5pt solid #ddd !important;
+    border-radius: 3pt !important;
+    box-shadow: none !important;
+  }
+
+  /* 印刷時のカード背景色 (単色) */
+  .card:not([class*="manufacturer-"]) {
+    background-color: #ffffff !important;
+  }
+  .card.manufacturer-geo .manufacturer-display {
+    background-color: #00761b;
+  } /* 少し明るい緑 */
+  .card.manufacturer-tsui .manufacturer-display {
+    background-color: #005295;
+  } /* 少し明るい青 */
+  .card.manufacturer-ana .manufacturer-display {
+    background-color: #606060;
+  } /* 紫 */
+
+  .card-number {
+    background-color: transparent !important;
+    padding: 0;
+    top: 2px;
+    right: 3px;
+    font-size: 7pt;
+  }
+  /* 印刷時のカード番号文字色 */
+  .card.manufacturer-geo .card-number,
+  .card.manufacturer-tsui .card-number {
+    color: #ffffff !important;
+  }
+  .card.manufacturer-ana .card-number,
+  .card:not([class*="manufacturer-"]) .card-number {
+    color: #ddd !important;
+  }
+
+  .card-image {
+    border-bottom: 1px solid #eee;
+    background-color: #f8f9fa !important;
+  }
+  .card-image .placeholder-icon {
+    color: #ccc !important;
+  }
+  .card-image img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  /* 情報エリアの印刷スタイル */
+  .card-info {
+    padding: 5px;
+    font-size: 8pt;
+    padding-top: 12px;
+  }
+  .card-info .part-display {
+    margin-bottom: 2px;
+    color: #333 !important;
+  } /* デフォルト */
+  /* 印刷時の部位文字色 */
+  .card.manufacturer-geo .part-display,
+  .card.manufacturer-tsui .part-display {
+    color: #ffffff !important;
+  } /* ジオ・ツイは白 */
+
+  .card-info .manufacturer-display {
+    padding: 1px 4px;
+    font-size: 7pt;
+    border-radius: 3px;
+    color: white !important;
+  }
+  /* 製造所ラベル背景色 */
+  .card.manufacturer-geo .manufacturer-display {
+    background-color: #28a745 !important;
+  }
+  .card.manufacturer-tsui .manufacturer-display {
+    background-color: #4dabf7 !important;
+  }
+  .card.manufacturer-ana .manufacturer-display {
+    background-color: #6f42c1 !important;
+  }
+  .card:not([class*="manufacturer-"]) .manufacturer-display {
+    background-color: #6c757d !important;
+  }
+
+  /* 強化値表示 (印刷用モノトーン) */
+  .card-info .value-display {
+    box-sizing: border-box;
+    position: absolute;
+    top: -37px;
+    right: 5px;
+    width: 32px;
+    height: 32px;
+    line-height: 21px;
+    line-height: 1.8rem;
+    border-radius: 50%;
+    font-size: 1.3rem;
+    font-weight: 700;
+    box-shadow: none !important;
+    border: 1pt solid #fff !important;
+    z-index: 1;
+  }
+  /* 強化値 色 (印刷用モノトーン) */
+  .card-info .value-1 {
+    background-color: #ffffff !important;
+    color: #333 !important;
+  }
+  .card-info .value-2 {
+    background-color: #adb5bd !important;
+    color: white !important;
+  }
+  .card-info .value-3 {
+    background-color: #6c757d !important;
+    color: white !important;
+  }
+}
+
+/* ページ削除ボタンのスタイル */
+#delete-page-button {
+  background-color: #dc3545; /* 赤色 */
+  color: white;
+}
+#delete-page-button:hover {
+  background-color: #c82333;
+}
+/* ページ数が1つの場合にボタンを無効化するスタイル（JSと連携） */
+#delete-page-button:disabled {
+  background-color: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.65;
+  box-shadow: none;
+}
+
+/* style.css に追加 */
+
+/* ★パイロットカード用スタイル */
+.card.pilot-card {
+  background-image: none; /* グラデーション解除 */
+  background-color: #e0e0e0; /* 専用の背景色 (少し濃いグレー) */
+  border-color: #adb5bd;
+}
+/* パイロットカードの画像エリアはシンプルに */
+.card.pilot-card .card-image {
+  height: 40%; /* 高さを少し減らす */
+  background-color: #f0f2f5; /* 背景色 */
+  border-bottom: none; /* 区切り線なし */
+}
+/* パイロットカードでは画像やプレースホルダーは非表示 */
+
+/* パイロットカードの情報エリア設定 */
+.card.pilot-card .card-info {
+  padding: 10px;
+  display: flex; /* 中央揃えのため */
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding-top: 10px; /* リセット */
+}
+/* パイロットカードの場合、不要な情報を非表示 */
+.card.pilot-card .part-display,
+.card.pilot-card .manufacturer-display,
+.card.pilot-card .value-display {
+  display: none;
+}
+/* パイロット効果テキストのスタイル */
+.pilot-effect {
+  font-size: 16pt;
+  font-weight: 700;
+  color: #495057;
+}
+/* パイロットカードのカード番号スタイル（任意で調整） */
+.card.pilot-card .card-number {
+  color: #6c757d; /* 通常のグレーに戻す */
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+/* ★印刷時のパイロットカードスタイル */
+@media print {
+  .card.pilot-card {
+    background-image: none !important;
+    background-color: #e9ecef !important; /* 印刷時は少し薄いグレー */
+    border-color: #adb5bd !important;
+  }
+  .card.pilot-card .card-image {
+    height: 40% !important;
+    border-bottom: none !important;
+    background-color: #f8f9fa !important;
+  }
+  .card.pilot-card .card-info {
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  .pilot-effect {
+    font-size: 14pt !important; /* 印刷時は少し小さく */
+    color: #333 !important;
+  }
+  .card.pilot-card .part-display,
+  .card.pilot-card .manufacturer-display,
+  .card.pilot-card .value-display {
+    display: none !important;
+  }
+  .card.pilot-card .card-number {
+    color: #bbb !important; /* 印刷時 */
+    background-color: transparent !important;
+  }
+}
+/* ★全クリアボタンのスタイル */
+#clear-all-button {
+  background-color: #dc3545; /* やや強い赤 */
+  color: white;
+  font-weight: bold;
+}
+#clear-all-button:hover {
+  background-color: #c82333;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.4); /* ホバー時の影も少し赤く */
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}

@@ -1,0 +1,933 @@
+/* === game.css === */
+
+/* --- 基本レイアウト --- */
+#game-container {
+    max-width: 1200px; /* ゲーム画面の最大幅 */
+    margin: 20px auto;
+    padding: 15px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    font-family: sans-serif; /* 基本フォント */
+    display: none; /* 初期状態は非表示 */
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 15px;
+}
+
+.game-header h1 {
+    margin: 0;
+    font-size: 1.5em;
+}
+
+#game-area {
+    /* display: grid; を削除 */
+    /* grid-template-areas を削除 */
+    /* grid-template-columns を削除 */
+    /* gap は残しても良いが、画面ごとのマージンやパディングで調整する方が柔軟かも */
+    gap: 20px;
+    /* 必要であれば、他のスタイル（paddingなど）は残す */
+}
+
+/* 各画面要素が幅を取るように（既にあるかもしれないが一応） */
+.game-screen {
+    width: 100%; /* 基本的に幅いっぱいを使う */
+    box-sizing: border-box; /* padding等を含めて幅計算 */
+}
+
+/* --- 各エリアの配置 --- */
+#game-status {
+    grid-area: status;
+    background-color: #e9ecef;
+    padding: 10px;
+    border-radius: 5px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+#game-status p {
+    margin: 0;
+}
+#game-message-area {
+    grid-area: message;
+    background-color: #fff;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    min-height: 50px;
+}
+#game-message {
+    margin: 0;
+    font-weight: bold;
+}
+#player-area {
+    grid-area: player;
+}
+#cpu-area {
+    grid-area: cpu;
+}
+#battle-area {
+    grid-area: battle;
+    border-top: 1px dashed #ccc;
+    padding-top: 20px;
+}
+#game-over-area {
+    grid-area: gameover;
+    text-align: center;
+    padding: 20px;
+    background-color: #dff0d8;
+    border: 1px solid #c3e6cb;
+    border-radius: 5px;
+}
+
+/* --- プレイヤー/CPUゾーン共通 --- */
+.player-zone {
+    background-color: #ffffff;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.player-zone h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+/* --- 手札エリア --- */
+.hand-area h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1em;
+}
+
+.card-display-area {
+    display: flex;
+    flex-wrap: wrap; /* カードが多ければ折り返す */
+    gap: 5px; /* カード間の隙間 */
+    min-height: 80px; /* 最小の高さを確保 */
+    padding: 5px;
+    background-color: #f0f0f0;
+    border-radius: 3px;
+    margin-bottom: 15px;
+}
+.pilot-card-area {
+    min-height: 60px;
+}
+
+/* --- ゲーム用カードスタイル (既存スタイルを少し調整) --- */
+.game-card {
+    /* style.css の .card スタイルを継承しつつ調整 */
+    width: 160px; /* ゲーム画面用に少し小さく */
+    height: 190px; /* アスペクト比を維持 */
+    font-size: 0.7em; /* フォントも小さく */
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background-color: #fff;
+    cursor: grab; /* ドラッグ可能を示すカーソル */
+    display: flex;
+    flex-direction: column;
+    position: relative; /* 子要素の配置基準 */
+    overflow: hidden; /* はみ出しを隠す */
+    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+    user-select: none; /* テキスト選択を無効化 */
+}
+.game-card .card-image {
+    height: 50%; /* 画像エリアの高さ */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #e9ecef;
+    overflow: hidden;
+}
+.game-card .card-image img {
+    max-height: 100%;
+    max-width: 100%;
+    display: block;
+}
+.game-card .card-image .placeholder-icon {
+    /* SVGアイコン調整 */
+    width: 32px;
+    height: 32px;
+    stroke-width: 0.8;
+}
+.game-card .card-info {
+    padding: 3px;
+    text-align: center;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around; /* 情報を均等配置 */
+    font-size: 0.9em; /* Info内のフォント調整 */
+}
+.game-card .part-display {
+    font-weight: bold;
+}
+.game-card .manufacturer-display {
+    font-size: 0.9em;
+    color: #555;
+}
+.game-card .value-display {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+.game-card .pilot-effect {
+    font-weight: bold;
+    font-size: 0.9em;
+    padding: 5px 0;
+}
+
+/* ドラッグ中のカードスタイル */
+.game-card.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
+}
+
+/* --- ロボット設計エリア --- */
+.robot-design-area h3 {
+    margin-bottom: 10px;
+    font-size: 1em;
+}
+.robot-slots-container {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.robot-slot {
+    position: relative;
+    border: 1px solid #ccc;
+    padding: 10px;
+    width: 150px; /* 各ロボットスロットの幅 */
+    background-color: #f8f8f8;
+    border-radius: 5px;
+    text-align: center;
+}
+.robot-slot h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.9em;
+    background-color: #e0e0e0;
+    padding: 3px;
+    border-radius: 3px;
+}
+.part-slot {
+    border: 2px dashed #d0d0d0;
+    min-height: 150px; /* ドロップ領域の高さ */
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.8em;
+    color: #888;
+    background-color: #fff;
+    position: relative; /* 配置されたカードの位置基準 */
+    border-radius: 3px;
+}
+.part-slot.drag-over {
+    /* ドラッグ中の要素が上に乗った時のスタイル */
+    border-color: #007bff;
+    background-color: #e9f5ff;
+}
+/* 部位スロットに配置されたカード */
+.part-slot .game-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0; /* スロット内でマージン不要 */
+    cursor: default; /* 配置後はドラッグ不可 */
+    font-size: 0.6em; /* スロット内ではさらに小さく */
+}
+.part-slot .game-card .card-image {
+    height: 50%;
+} /* 画像エリアも調整 */
+.part-slot .game-card .card-image .placeholder-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.pilot-assign-area {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    min-height: 25px; /* ボタン配置スペース */
+}
+.assign-pilot-button {
+    font-size: 0.8em;
+    padding: 3px 6px;
+    cursor: pointer;
+}
+/* パイロット搭乗済み表示 */
+.robot-slot.has-pilot .assign-pilot-button {
+    display: none; /* 搭乗済みならボタン非表示 */
+}
+.robot-slot.has-pilot::after {
+    /* パイロットマーク（仮） */
+    content: "P";
+    position: absolute; /* スロット右上に表示 */
+    top: 5px;
+    right: 5px;
+    background-color: gold;
+    color: black;
+    font-weight: bold;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    font-size: 0.8em;
+}
+
+.robot-stats {
+    margin-top: 5px;
+    font-size: 0.8em;
+    text-align: left;
+    padding: 5px;
+    background-color: #eee;
+    border-radius: 3px;
+}
+.robot-stats p {
+    margin: 2px 0;
+}
+
+#confirm-design-button {
+    display: block; /* ボタンをブロック要素にして中央寄せしやすくする */
+    margin: 10px auto 0 auto; /* 上マージンと左右自動マージンで中央へ */
+    padding: 8px 15px;
+}
+
+/* --- CPUエリア --- */
+#cpu-status {
+    font-style: italic;
+    color: #666;
+}
+#cpu-robot-display {
+    /* CPUのロボット表示もプレイヤーと同様のコンテナを使う */
+    margin-top: 15px;
+    opacity: 0.7; /* 少し薄く表示（任意） */
+}
+#cpu-robot-display .robot-slot {
+    background-color: #e8e8e8; /* CPUスロットの背景色を変えるなど */
+}
+
+/* --- 戦闘エリア --- */
+#battle-area h2 {
+    margin-top: 0;
+    font-size: 1.2em;
+}
+#battle-selection-area {
+    padding: 15px;
+    background-color: #fff8e1;
+    border: 1px solid #ffeeba;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+#battle-selection-area h3 {
+    margin: 0 0 10px 0;
+    font-size: 1em;
+}
+#player-battle-robot-selection {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+/* 戦闘選択用のロボット表示 (少し小さく) */
+.robot-selection .robot-slot {
+    padding: 5px;
+    cursor: pointer;
+    border: 2px solid transparent; /* 選択状態を示す枠線用 */
+    position: relative; /* has-pilot表示のため */
+}
+.robot-selection .robot-slot.selected {
+    border-color: #007bff;
+    background-color: #e9f5ff;
+}
+.robot-selection .robot-slot .part-slot {
+    min-height: 160px;
+    margin-bottom: 5px;
+}
+.robot-selection .robot-slot .game-card {
+    font-size: 0.5em;
+} /* さらに小さく */
+.robot-selection .robot-slot .robot-stats {
+    display: none;
+} /* 選択時はステータス非表示 */
+.robot-selection .robot-slot .pilot-assign-area {
+    display: none;
+} /* 選択時はボタン非表示 */
+
+#battle-display-area {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start; /* 上端揃え */
+    gap: 15px;
+    margin-bottom: 15px;
+}
+.battle-robot-display {
+    text-align: center;
+}
+.battle-robot-display h4 {
+    margin: 0 0 5px 0;
+    font-size: 1em;
+}
+.battle-slot {
+    width: 180px; /* 戦闘表示では少し大きく */
+    min-height: 250px;
+    margin: 0 auto;
+    position: relative; /* has-pilot表示のため */
+}
+.battle-slot .part-slot {
+    min-height: 160px;
+}
+.battle-slot .game-card {
+    font-size: 0.7em;
+} /* 設計時と同じくらいに */
+
+#battle-vs {
+    font-size: 2em;
+    font-weight: bold;
+    align-self: center; /* 中央揃え */
+    padding: 0 10px;
+}
+#player-battle-stats,
+#cpu-battle-stats {
+    margin-top: 10px;
+    font-size: 0.9em;
+    padding: 8px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+}
+#player-battle-stats p,
+#cpu-battle-stats p {
+    margin: 3px 0;
+}
+
+#battle-result-area {
+    text-align: center;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+}
+#battle-result-message {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+#next-round-button,
+#show-final-result-button {
+    padding: 8px 15px;
+    margin: 5px;
+}
+
+/* --- ゲームオーバー --- */
+#game-over-area h2 {
+    margin-bottom: 15px;
+}
+#final-result-message {
+    font-size: 1.2em;
+    margin-bottom: 20px;
+}
+#play-again-button {
+    padding: 10px 20px;
+    font-size: 1em;
+}
+
+/* --- ボタン共通スタイル（任意） --- */
+button {
+    cursor: pointer;
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+button:hover:not(:disabled) {
+    background-color: #e0e0e0;
+}
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 戦闘選択画面のロボットスロット共通スタイル */
+.battle-selection-slot {
+    transition: opacity 0.3s ease; /* 見た目の変化を滑らかに */
+    position: relative; /* ラベル表示のため */
+    overflow: hidden; /* ラベルがはみ出さないように */
+    border: 2px solid transparent; /* 選択状態を示す枠線用 */
+}
+/* 選択されたスロットのスタイル */
+.battle-selection-slot.selected {
+    border-color: #007bff;
+    background-color: #e9f5ff;
+}
+
+/* 使用済みロボットのスタイル */
+.battle-selection-slot.used {
+    opacity: 0.6; /* 半透明にする */
+    cursor: not-allowed !important; /* カーソル変更 */
+    /* pointer-events: none; はリスナーを付けないことで代替 */
+    border-color: transparent !important; /* 選択状態に見えないように */
+    background-color: #f8f9fa !important; /* 背景色もリセット */
+}
+
+/* 戦闘結果ラベルのスタイル */
+.battle-result-label {
+    position: absolute;
+    /* スロットの中央に配置 */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-15deg); /* 中央寄せして少し回転 */
+    /* 見た目 */
+    background-color: rgba(50, 50, 50, 0.8); /* 背景色 (少し濃いグレー) */
+    color: white; /* 文字色 */
+    padding: 6px 12px; /* 内側余白 */
+    border-radius: 4px; /* 角丸 */
+    font-size: 1em; /* 文字サイズ */
+    font-weight: bold; /* 太字 */
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.5); /* 白っぽい枠線 */
+    z-index: 10; /* カードの上に表示されるように */
+    pointer-events: none; /* ラベル自体はクリックできないように */
+    white-space: nowrap; /* 改行しない */
+}
+
+/* 結果に応じたラベルの色 */
+.battle-result-label.win {
+    background-color: rgba(25, 135, 84, 0.85); /* Bootstrap Success色 */
+    border-color: rgba(195, 232, 208, 0.7);
+}
+.battle-result-label.lose {
+    background-color: rgba(220, 53, 69, 0.85); /* Bootstrap Danger色 */
+    border-color: rgba(245, 198, 203, 0.7);
+}
+.battle-result-label.draw {
+    background-color: rgba(108, 117, 125, 0.85); /* Bootstrap Secondary色 */
+    border-color: rgba(214, 216, 219, 0.7);
+}
+
+/* === game.css に以下を追加 (カード色再現用) === */
+
+/* --- カード色再現スタイル (style.css から移植・調整) --- */
+
+/* 基本の文字色など (念のため指定) */
+.game-card .part-display {
+    color: #343a40;
+}
+.game-card .card-number {
+    color: #bbb;
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* 製造所: ジオ */
+.game-card.manufacturer-geo {
+    background-image: linear-gradient(225deg, #113021, #20a96d);
+    border-color: #198754;
+}
+.game-card.manufacturer-geo .part-display,
+.game-card.manufacturer-geo .card-number {
+    color: #ffffff;
+}
+.game-card.manufacturer-geo .manufacturer-display {
+    background-color: #00761b;
+    color: #fff;
+}
+.game-card.manufacturer-geo .card-number {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* 製造所: ツイ */
+.game-card.manufacturer-tsui {
+    background-image: linear-gradient(225deg, #003077, #3da0ff);
+    border-color: #0d6efd;
+}
+.game-card.manufacturer-tsui .part-display,
+.game-card.manufacturer-tsui .card-number {
+    color: #ffffff;
+}
+.game-card.manufacturer-tsui .manufacturer-display {
+    background-color: #005295;
+    color: #fff;
+}
+.game-card.manufacturer-tsui .card-number {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* 製造所: アナ */
+.game-card.manufacturer-ana {
+    background-image: linear-gradient(50deg, #fff, #a4d0ff, #ffd5a4, #ffa4a4, #ffffff);
+    /* border-color: #fff; だと背景と同化しそうなので少し変える */
+    border-color: #dee2e6;
+}
+/* アナの文字色はデフォルト（黒系）のまま */
+.game-card.manufacturer-ana .part-display {
+    color: #343a40;
+}
+.game-card.manufacturer-ana .manufacturer-display {
+    background-color: #606060;
+    color: #fff;
+}
+.game-card.manufacturer-ana .card-number {
+    color: #bbb;
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* 製造所表示の共通スタイル (game.css既存スタイルを上書き/補完) */
+.game-card .manufacturer-display {
+    font-size: 0.8em; /* 少し小さく */
+    padding: 1px 4px;
+    border-radius: 3px;
+    display: inline-block; /* 必要なら */
+    /* 位置調整は game.css の .card-info の設定に依存 */
+}
+
+/* 数値表示のスタイル */
+/* 位置調整 (カード右上に配置) */
+.game-card .value-display {
+    position: absolute;
+    top: 3px; /* 位置微調整 */
+    right: 3px; /* 位置微調整 */
+    width: 22px; /* game.cssのカードサイズに合わせる */
+    height: 22px;
+    line-height: 20px; /* 調整 */
+    border-radius: 50%;
+    font-size: 0.9em; /* game.cssのカードサイズに合わせる */
+    font-weight: 700;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    border: 1px solid #fff; /* 白い枠線 */
+    z-index: 1;
+}
+.game-card .value-display:empty {
+    display: none;
+}
+/* 数値ごとの色 */
+.game-card .value-display.value-1 {
+    background-color: #ffffff;
+    color: #343a40;
+    border-color: #dee2e6; /* 枠線の色 */
+}
+.game-card .value-display.value-2 {
+    background-color: #adb5bd;
+    color: white;
+    border-color: #9fa6ad; /* 枠線の色 */
+}
+.game-card .value-display.value-3 {
+    background-color: #6c757d;
+    color: white;
+    border-color: #5a6268; /* 枠線の色 */
+}
+
+/* パイロットカードのスタイル */
+.game-card.pilot-card {
+    background-image: none;
+    background-color: #e0e0e0; /* style.cssに合わせる */
+    border-color: #adb5bd;
+}
+.game-card.pilot-card .card-image {
+    height: 40%;
+    background-color: #f0f2f5;
+    border-bottom: none;
+}
+.game-card.pilot-card .card-info {
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding-top: 10px; /* style.css に合わせる */
+}
+/* パイロットカードで不要な要素を非表示 */
+.game-card.pilot-card .part-display,
+.game-card.pilot-card .manufacturer-display,
+.game-card.pilot-card .value-display {
+    display: none !important; /* 確実に非表示 */
+}
+/* パイロット効果テキスト */
+.game-card.pilot-card .pilot-effect {
+    /* game.css 側の .game-card .pilot-effect を流用 */
+    /* 必要ならここで上書き */
+    font-size: 1.1em; /* 少し大きく */
+    color: #495057;
+}
+/* パイロットカードの番号 */
+.game-card.pilot-card .card-number {
+    color: #6c757d;
+    background-color: rgba(255, 255, 255, 0.6);
+}
+
+/* --- 設計フェイズ画面 (#design-screen) スタイル --- */
+#design-screen {
+    display: flex;
+    flex-direction: row; /* 横並びを明示 */
+    /* flex-wrap: wrap; */ /* ← 基本ルールからは削除 */
+    gap: 20px;
+}
+
+/* 左側: 手札コンテナ */
+#player-hand-container {
+    flex: 1; /* 横幅を伸縮可能に (基本) */
+    min-width: 280px; /* 最小幅 */
+    /* background-color: #f8f9fa; */ /* 必要なら背景色 */
+    padding: 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column; /* 手札とパイロットを縦に */
+}
+#player-hand-container h2 {
+    margin-top: 0;
+    text-align: center;
+}
+
+#player-hand-container .hand-area {
+    margin-bottom: 15px;
+}
+#player-hand-container h3 {
+    font-size: 1em;
+    margin-bottom: 5px;
+}
+
+/* 手札カード表示エリアのスクロール */
+#player-hand-cards.scrollable {
+    max-height: calc(70vh - 150px); /* 高さを画面サイズに応じて調整 (例) */
+    overflow-y: auto; /* 縦スクロールを有効化 */
+    padding: 10px;
+    background-color: #e9ecef; /* 背景色 */
+    border-radius: 4px;
+}
+/* スクロールバーのスタイル (任意) */
+#player-hand-cards.scrollable::-webkit-scrollbar {
+    width: 8px;
+}
+#player-hand-cards.scrollable::-webkit-scrollbar-thumb {
+    background-color: #adb5bd;
+    border-radius: 4px;
+}
+
+/* 右側: 設計コンテナ */
+#robot-assembly-container {
+    flex: 2; /* 手札より広めに (比率は調整可) */
+    min-width: 400px; /* 最小幅 */
+    /* background-color: #ffffff; */
+    padding: 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column; /* スロットとボタンを縦に */
+    align-items: center; /* 中央寄せ */
+}
+#robot-assembly-container h2 {
+    margin-top: 0;
+    text-align: center;
+}
+
+/* ロボットスロットコンテナを縦並び */
+#player-robot-slots.vertical {
+    display: flex;
+    flex-direction: row; /* スロット自体を縦に */
+    align-items: center; /* 中央寄せ */
+    gap: 15px; /* スロット間の隙間 */
+    width: 100%; /* 横幅いっぱい */
+}
+#player-robot-slots.vertical .robot-slot {
+    width: 80%; /* スロットの幅を調整 */
+    max-width: 350px;
+}
+/* スロット内のパーツ配置 (少し調整) */
+#player-robot-slots .part-slot {
+    min-height: 120px; /* 高さを少し調整 */
+}
+
+/* --- カードサイズ統一 --- */
+#design-screen .game-card {
+    width: 120px; /* 例: 共通の幅 */
+    height: 160px; /* 例: 共通の高さ */
+    font-size: 0.8em; /* フォントサイズも調整 */
+    /* 必要に応じて他のスタイルも統一 */
+}
+#design-screen .part-slot .game-card {
+    width: 100%; /* スロット内では幅100%にするなど調整 */
+    height: 100%;
+    font-size: 0.7em;
+}
+
+/* --- クリック選択中のカードスタイル --- */
+#player-hand-cards .game-card.selected {
+    outline: 3px solid dodgerblue;
+    box-shadow: 0 0 10px rgba(30, 144, 255, 0.5);
+    transform: scale(1.03); /* 少し拡大 */
+    transition:
+        transform 0.1s ease,
+        box-shadow 0.1s ease;
+}
+/* 例: ロボットスロット内のパイロットカード表示スタイル */
+.robot-slot .pilot-assign-area .game-card.pilot-card {
+    width: 80px; /* ボタン領域に収まるサイズに調整 */
+    height: auto; /* 幅に合わせて高さを自動調整 */
+    min-height: 40px;
+    font-size: 0.6em; /* フォントも小さく */
+    padding: 2px;
+    cursor: pointer; /* クリック可能を示す */
+    border-width: 1px;
+    margin: 0 auto; /* 中央寄せ */
+}
+.robot-slot .pilot-assign-area .game-card.pilot-card .card-image {
+    height: 50%; /* 画像エリアの比率調整 */
+}
+.robot-slot .pilot-assign-area .game-card.pilot-card .pilot-effect {
+    font-size: 0.8em; /* 効果テキスト調整 */
+}
+/* 搭乗ボタンは非表示に */
+.robot-slot.has-pilot .assign-pilot-button {
+    display: none;
+}
+
+/* game.css に追加 */
+
+/* 最終結果画面のロボット表示エリア */
+#final-robot-display h3 {
+    text-align: center;
+    margin-bottom: 15px;
+}
+#final-robot-display h4 {
+    font-size: 0.9em;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+/* 最終結果画面でのロボットスロットコンテナ */
+.robot-slots-container.final-display {
+    display: flex;
+    flex-direction: row; /* ★横に並べる場合 */
+    justify-content: center; /* 中央寄せ */
+    gap: 10px; /* スロット間の隙間 */
+    flex-wrap: wrap; /* 折り返し */
+}
+/* または縦並びの場合 */
+/*
+.robot-slots-container.final-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+*/
+
+/* 最終結果画面でのロボットスロットのスタイル */
+.final-robot-view {
+    border: 1px solid #ccc;
+    background-color: #f8f9fa;
+    padding: 8px;
+    border-radius: 4px;
+    width: fit-content; /* ★サイズを調整 */
+    /* height: auto; */ /* 高さは自動 */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+/* 最終結果画面でのカードサイズ (小さめに) */
+.final-robot-view .game-card {
+    width: 70px;
+    height: 95px;
+    font-size: 0.6em;
+}
+.final-robot-view .part-slot {
+    min-height: 80px; /* スロット高さを調整 */
+    margin-bottom: 4px;
+}
+/* 最終結果画面でのステータス表示 */
+.final-robot-view .robot-stats.final-stats {
+    font-size: 0.75em;
+    text-align: center;
+    background-color: transparent;
+    padding: 3px 0 0 0;
+}
+.final-robot-view .robot-stats.final-stats p {
+    margin: 1px 0;
+}
+
+/* 最終結果画面でのパイロット表示 */
+.final-robot-view .pilot-display-area {
+    margin-top: 5px;
+    text-align: center; /* 中央寄せ */
+}
+.final-robot-view .assigned-pilot {
+    width: 50px !important; /* さらに小さく */
+    height: auto !important;
+    min-height: 30px !important;
+    font-size: 0.5em !important;
+    padding: 1px !important;
+    border-width: 1px !important;
+    cursor: default !important; /* クリック不要 */
+    margin: 0 auto !important;
+}
+.final-robot-view .assigned-pilot:hover {
+    outline: none !important; /* ホバー効果不要 */
+}
+.final-robot-view .assigned-pilot .card-image {
+    height: 40% !important;
+}
+.final-robot-view .assigned-pilot .pilot-effect {
+    font-size: 0.8em !important;
+    line-height: 1.1 !important;
+}
+
+/* game.css に追加 */
+.button-like-label.game-control-button {
+    display: inline-block; /* ボタンのように表示 */
+    padding: 5px 10px;
+    margin-left: 10px; /* 他の要素との間隔 */
+    background-color: #6c757d; /* グレー系の色 */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px; /* やや小さめ */
+    vertical-align: middle;
+    transition: background-color 0.2s ease;
+}
+
+.button-like-label.game-control-button:hover {
+    background-color: #5a6268;
+}
+
+/* --- レスポンシブ対応 (画面幅が狭い場合) --- */
+@media (max-width: 768px) {
+    #design-screen {
+        flex-direction: column; /* 上下に重ねる */
+        flex-wrap: nowrap; /* ← wrapは不要かも */
+    }
+    #player-hand-container,
+    #robot-assembly-container {
+        width: 100%; /* 横幅いっぱい */
+        min-width: unset; /* 最小幅解除 */
+        flex: unset; /* flex比率解除 */
+    }
+    #player-hand-cards.scrollable {
+        max-height: 30vh; /* 高さを調整 */
+        overflow-x: auto; /* 横スクロールに変更しても良い */
+        overflow-y: hidden;
+        display: flex; /* 横並びにする */
+        padding-bottom: 10px; /* スクロールバー用のスペース */
+    }
+    #player-robot-slots.vertical .robot-slot {
+        width: 90%; /* スロット幅調整 */
+    }
+    #design-screen .game-card {
+        /* スマホ用にカードサイズ調整 */
+        width: 100px;
+        height: 140px;
+        font-size: 0.75em;
+    }
+}
