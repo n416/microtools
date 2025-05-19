@@ -25,14 +25,14 @@ body {
 }
 
 #control-panel h1 {
-    font-size: 1.5em;
-    margin: 0;
+  font-size: 1.5em;
+  margin: 0;
 }
 
 .control-buttons {
-    display: flex;
-    gap: 10px; /* Space between buttons */
-    flex-wrap: wrap; /* Allow buttons to wrap */
+  display: flex;
+  gap: 10px; /* Space between buttons */
+  flex-wrap: wrap; /* Allow buttons to wrap */
 }
 
 #trackers-container {
@@ -182,9 +182,9 @@ body {
 }
 
 .history-display {
-    flex-grow: 1;
-    margin-right: 5px;
-    word-break: break-all;
+  flex-grow: 1;
+  margin-right: 5px;
+  word-break: break-all;
 }
 
 .history-controls {
@@ -201,7 +201,9 @@ body {
   font-size: 1.1em;
   padding: 0 3px;
   line-height: 1;
-  transition: opacity 0.2s, color 0.2s;
+  transition:
+    opacity 0.2s,
+    color 0.2s;
   opacity: 0.5;
 }
 
@@ -265,11 +267,11 @@ body {
 
 /* ===== Style for Compare Button ===== */
 #compare-button {
-    background-color: #ffc107; /* Warning color for compare */
-    color: #212529; /* Dark text for contrast */
+  background-color: #ffc107; /* Warning color for compare */
+  color: #212529; /* Dark text for contrast */
 }
 #compare-button:hover {
-    background-color: #e0a800;
+  background-color: #e0a800;
 }
 /* =============================== */
 
@@ -323,7 +325,9 @@ body {
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s, visibility 0.2s;
+  transition:
+    opacity 0.2s,
+    visibility 0.2s;
   z-index: 10;
 }
 [data-tooltip]:hover::after {
@@ -380,7 +384,8 @@ body {
 
 .modal-input-group input[type="datetime-local"],
 .modal-input-group input[type="number"],
-.modal-input-group select { /* Added select styling */
+.modal-input-group select {
+  /* Added select styling */
   width: 100%;
   padding: 8px;
   border: 1px solid #ccc;
@@ -459,78 +464,79 @@ body {
 }
 
 .modal-compare p {
-    font-size: 0.9em;
-    color: #6c757d;
-    margin-bottom: 15px;
+  font-size: 0.9em;
+  color: #6c757d;
+  margin-bottom: 15px;
 }
 
 /* Re-use modal-input-group and modal-buttons styles */
 #run-comparison-button {
-    background-color: #ffc107; /* Match compare button color */
-    color: #212529;
-    padding: 8px 15px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.2s;
+  background-color: #ffc107; /* Match compare button color */
+  color: #212529;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
 }
 #run-comparison-button:hover {
-    background-color: #e0a800;
+  background-color: #e0a800;
 }
 
-#compare-modal-cancel-button { /* Ensure styling */
-    background-color: #6c757d;
-    color: white;
+#compare-modal-cancel-button {
+  /* Ensure styling */
+  background-color: #6c757d;
+  color: white;
 }
 #compare-modal-cancel-button:hover {
-    background-color: #5a6268;
+  background-color: #5a6268;
 }
 
 #compare-error {
-    color: #dc3545;
-    font-size: 0.9em;
-    min-height: 1.2em; /* Reserve space */
-    text-align: center; /* Center error message */
+  color: #dc3545;
+  font-size: 0.9em;
+  min-height: 1.2em; /* Reserve space */
+  text-align: center; /* Center error message */
 }
 
 /* --- Comparison Results Styles --- */
 #comparison-section {
-    background-color: #fff;
-    padding: 20px;
-    margin-top: 20px;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background-color: #fff;
+  padding: 20px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .section-title {
-    margin-top: 0;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-    font-size: 1.3em;
-    color: #343a40;
+  margin-top: 0;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  font-size: 1.3em;
+  color: #343a40;
 }
 
 #comparison-text-results {
-    margin-bottom: 20px;
-    padding: 15px;
-    background-color: #e9ecef; /* Light background for text results */
-    border-radius: 5px;
-    line-height: 1.7;
-    font-size: 1.05em; /* Make text slightly larger */
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #e9ecef; /* Light background for text results */
+  border-radius: 5px;
+  line-height: 1.7;
+  font-size: 1.05em; /* Make text slightly larger */
 }
 
 .chart-container {
-    position: relative;
-    /* height: 40vh; */ /* Example height constraint */
-    max-width: 100%; /* Ensure chart fits container */
-    min-height: 300px; /* Ensure minimum height */
+  position: relative;
+  /* height: 40vh; */ /* Example height constraint */
+  max-width: 100%; /* Ensure chart fits container */
+  min-height: 300px; /* Ensure minimum height */
 }
 
 #comparison-chart {
-    /* Canvas itself often doesn't need much styling, container handles size */
-    display: block;
-    width: 100%;
+  /* Canvas itself often doesn't need much styling, container handles size */
+  display: block;
+  width: 100%;
 }
