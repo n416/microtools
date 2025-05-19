@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポーション枯渇予測</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 20px;
+      background-color: #f0f2f5;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .container {
+      position: relative;
+      background-color: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h2 {
+      color: #1a73e8;
+      margin-top: 30px;
+      font-size: 1.2rem;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      z-index: 1;
+      color: #ddd;
+      text-align: right;
+      margin: 0;
+    }
+
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #5f6368;
+    }
+
+    input[type="number"],
+    button {
+      padding: 12px 15px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: 1px solid #dadce0;
+      font-size: 16px;
+    }
+
+    input[type="number"] {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #1a73e8;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      border: none;
+    }
+
+    @media (max-width: 768px) {
+      h1{
+        display: none;
+      }
+      input[type="number"],
+      button.record-button {
+        width: 100%;
+        box-sizing: border-box;
+      }
+    }
+
+
+    button:hover {
+      background-color: #1558b0;
+    }
+
+    button.danger {
+      background-color: #d93025;
+    }
+
+    button.danger:hover {
+      background-color: #a50e04;
+    }
+
+    #logArea {
+      /* Main log area container */
+      margin-top: 0;
+      padding: 15px;
+      /* Padding is for the container itself */
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      background-color: #f8f9fa;
+    }
+
+    /* Remove padding from ul if #logArea handles it, or adjust */
+    #logListLatest,
+    #logListOlder {
+      list-style-type: none;
+      padding: 0;
+      /* Remove default ul padding */
+      margin: 0;
+      /* Remove default ul margin */
+    }
+
+    #logListLatest li,
+    #logListOlder li {
+      /* Style for individual log items */
+      padding: 8px 10px;
+      /* Padding for content within li */
+      border-bottom: 1px dotted #e0e0e0;
+      font-size: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #logListLatest li:last-child,
+    #logListOlder li:last-child {
+      border-bottom: none;
+    }
+
+    .log-text {
+      flex-grow: 1;
+    }
+
+    .delete-log-btn {
+      background-color: #ff4d4f;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-left: 10px;
+      transition: background-color 0.2s ease;
+    }
+
+    .delete-log-btn:hover {
+      background-color: #d9363e;
+    }
+
+    #predictionArea {
+      margin-top: 0px;
+      padding: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      background-color: #f8f9fa;
+    }
+
+    .chart-container {
+      margin-top: 25px;
+      position: relative;
+      height: 45vh;
+      width: 100%;
+    }
+
+    #predictionArea p {
+      font-size: 16px;
+      color: #3c4043;
+      line-height: 1.8;
+    }
+
+    #predictionArea strong {
+      color: #1a73e8;
+    }
+
+    #olderLogsAccordion {
+      margin-top: 15px;
+      /* Space between latest logs and accordion */
+    }
+
+    #olderLogsAccordion summary {
+      cursor: pointer;
+      padding: 10px 15px;
+      background-color: #f0f2f5;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      font-weight: bold;
+      color: #5f6368;
+      transition: background-color 0.2s ease;
+      outline: none;
+    }
+
+    #olderLogsAccordion summary:hover {
+      background-color: #e8eaed;
+    }
+
+    #olderLogsAccordion[open] summary {
+      background-color: #e8eaed;
+      border-bottom-left-radius: 0;
+      /* Flatten bottom corners when open */
+      border-bottom-right-radius: 0;
+    }
+
+    #olderLogsAccordion #logListOlder {
+      /* The UL inside accordion */
+      border: 1px solid #dadce0;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      /* background-color: #fff; */
+      /* Keep it consistent or slightly different */
+      padding: 0;
+      /* Padding is handled by li */
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/idb@7/build/umd.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <h1>ポーション枯渇予測</h1>
+    <h2>入力</h2>
+    <div>
+      <label for="potionQuantity">現在の数量を入力してください</label>
+      <input type="number" id="potionQuantity" name="potionQuantity" min="0" placeholder="例: 100">
+      <button class="record-button" onclick="addRecord()">記録する</button>
+    </div>
+
+    <div id="logArea">
+      <ul id="logListLatest"></ul>
+      <details id="olderLogsAccordion" style="display: none;">
+        <summary>過去の記録を見る</summary>
+        <ul id="logListOlder"></ul>
+      </details>
+      <p id="noLogsMessage" style="display: none; text-align: center; padding: 10px;">まだ記録がありません。</p>
+    </div>
+
+    <h2>予測</h2>
+    <div id="predictionArea">
+      <p>まだ予測できません。最低2つの記録が必要です。</p>
+    </div>
+    <div class="chart-container">
+      <canvas id="potionChart"></canvas>
+    </div>
+    <button onclick="clearAllData()" class="danger" style="margin-top: 20px; width: 100%;">全データ削除</button>
+  </div>
+
+  <script>
+    const DB_NAME = 'PotionTrackerDB_v1';
+    const STORE_NAME = 'PotionLogStore';
+    const LOCALSTORAGE_LAST_QUANTITY_KEY = 'lastPotionQuantity';
+    let db;
+    let chartInstance;
+
+    function formatDateTimeSmart(timestamp) {
+      if (timestamp === null || timestamp === undefined) return "";
+      const dateObj = new Date(timestamp);
+      const now = new Date();
+      const timeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+      if (
+        dateObj.getFullYear() === now.getFullYear() &&
+        dateObj.getMonth() === now.getMonth() &&
+        dateObj.getDate() === now.getDate()
+      ) {
+        return dateObj.toLocaleTimeString('ja-JP', timeFormatOptions);
+      } else {
+        const dateFormatOptions = { month: 'numeric', day: 'numeric' };
+        return `${dateObj.toLocaleDateString('ja-JP', dateFormatOptions)} ${dateObj.toLocaleTimeString('ja-JP', timeFormatOptions)}`;
+      }
+    }
+
+    async function initDB() {
+      if (!db) {
+        db = await idb.openDB(DB_NAME, 1, {
+          upgrade(db) {
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            }
+          },
+        });
+      }
+    }
+
+    async function addRecord() {
+      const quantityInput = document.getElementById('potionQuantity');
+      const quantity = parseInt(quantityInput.value, 10);
+      if (isNaN(quantity) || quantity < 0) {
+        alert('有効なポーション数量 (0以上の数値) を入力してください。');
+        return;
+      }
+      await initDB();
+      const record = {
+        timestamp: new Date().getTime(),
+        quantity: quantity
+      };
+      try {
+        await db.add(STORE_NAME, record);
+        localStorage.setItem(LOCALSTORAGE_LAST_QUANTITY_KEY, quantity.toString());
+        loadAndProcessData();
+      } catch (error) {
+        console.error('記録の追加に失敗しました:', error);
+        alert('記録の追加に失敗しました。コンソールで詳細を確認してください。');
+      }
+    }
+
+    async function getAllRecords() {
+      await initDB();
+      try {
+        return await db.getAll(STORE_NAME);
+      } catch (error) {
+        console.error('記録の取得に失敗しました:', error);
+        return [];
+      }
+    }
+
+    async function requestDeleteRecord(recordId) {
+      if (confirm(`ID: ${recordId} の記録を本当に削除しますか？この操作は取り消せません。`)) {
+        await deleteSingleRecord(recordId);
+      }
+    }
+
+    async function deleteSingleRecord(recordId) {
+      await initDB();
+      try {
+        await db.delete(STORE_NAME, recordId);
+        loadAndProcessData();
+      } catch (error) {
+        console.error(`ID: ${recordId} の記録削除に失敗しました:`, error);
+        alert('記録の削除に失敗しました。コンソールで詳細を確認してください。');
+      }
+    }
+
+    async function clearAllData() {
+      if (!confirm('本当に全てのデータを削除しますか？この操作は取り消せません。')) {
+        return;
+      }
+      await initDB();
+      try {
+        await db.clear(STORE_NAME);
+        loadAndProcessData();
+        alert('全てのデータが削除されました。');
+      } catch (error) {
+        console.error('データの削除に失敗しました:', error);
+        alert('データの削除に失敗しました。コンソールで詳細を確認してください。');
+      }
+    }
+
+    // Helper function to create a log list item
+    function createLogListItem(record) {
+      const listItem = document.createElement('li');
+      const logTextSpan = document.createElement('span');
+      logTextSpan.classList.add('log-text');
+      logTextSpan.textContent = `${formatDateTimeSmart(record.timestamp)} - 数量: ${record.quantity} `;
+      listItem.appendChild(logTextSpan);
+
+      const deleteButton = document.createElement('button');
+      deleteButton.textContent = '削除';
+      deleteButton.classList.add('delete-log-btn');
+      deleteButton.onclick = () => requestDeleteRecord(record.id);
+      listItem.appendChild(deleteButton);
+
+      return listItem;
+    }
+
+    function displayLogs(records) {
+      const logListLatestEl = document.getElementById('logListLatest');
+      const olderLogsAccordionEl = document.getElementById('olderLogsAccordion');
+      const olderLogsSummaryEl = olderLogsAccordionEl.querySelector('summary');
+      const logListOlderEl = document.getElementById('logListOlder');
+      const noLogsMessageEl = document.getElementById('noLogsMessage');
+
+      // Clear previous logs
+      logListLatestEl.innerHTML = '';
+      logListOlderEl.innerHTML = '';
+      olderLogsAccordionEl.style.display = 'none';
+      noLogsMessageEl.style.display = 'none';
+      if (olderLogsAccordionEl.hasAttribute('open')) { // Close accordion if it was open
+        // olderLogsAccordionEl.removeAttribute('open'); // Or ensure it's closed by default in logic
+      }
+
+
+      if (!records || records.length === 0) {
+        noLogsMessageEl.style.display = 'block';
+        return;
+      }
+
+      const sortedRecords = [...records].sort((a, b) => b.timestamp - a.timestamp); // Newest first
+
+      const latestLogs = sortedRecords.slice(0, 3);
+      const olderLogs = sortedRecords.slice(3);
+
+      latestLogs.forEach(record => {
+        logListLatestEl.appendChild(createLogListItem(record));
+      });
+
+      if (olderLogs.length > 0) {
+        olderLogsAccordionEl.style.display = 'block';
+        olderLogsSummaryEl.textContent = `過去の記録を見る (${olderLogs.length}件)`;
+        olderLogs.forEach(record => {
+          logListOlderEl.appendChild(createLogListItem(record));
+        });
+      } else {
+        // Ensure summary text is default if no older logs (e.g., after deleting some)
+        olderLogsSummaryEl.textContent = '過去の記録を見る';
+      }
+    }
+
+
+    function formatRemainingTime(milliseconds) {
+      if (milliseconds <= 0) {
+        return "既に枯渇か直後";
+      }
+      const totalSeconds = Math.floor(milliseconds / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      return `${hours}時間${minutes}分`;
+    }
+
+    function calculatePrediction(records) {
+      const predictionArea = document.getElementById('predictionArea');
+      const baseReturn = { prediction: null, regressionParams: null, residualsStdDev: 0 };
+
+      if (!records || records.length < 2) {
+        predictionArea.innerHTML = '<p>まだ予測できません。最低2つの記録が必要です。</p>';
+        return baseReturn;
+      }
+
+      const sortedRecords = [...records].sort((a, b) => a.timestamp - b.timestamp);
+      const n = sortedRecords.length;
+
+      const firstTimestampSeconds = sortedRecords[0].timestamp / 1000;
+      const xValues = sortedRecords.map(r => (r.timestamp / 1000) - firstTimestampSeconds);
+      const yValues = sortedRecords.map(r => r.quantity);
+
+      let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+      for (let i = 0; i < n; i++) {
+        sumX += xValues[i];
+        sumY += yValues[i];
+        sumXY += xValues[i] * yValues[i];
+        sumX2 += xValues[i] * xValues[i];
+      }
+
+      const m_sec = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+      const c_sec = (sumY - m_sec * sumX) / n;
+      const regressionParams = { m_sec, c_sec, firstTimestampSeconds };
+
+      if (m_sec >= 0 && sortedRecords[0].quantity <= sortedRecords[n - 1].quantity) {
+        predictionArea.innerHTML = '<p>ポーションが消費されていないか、増えています。枯渇予測はできません。</p>';
+        return { ...baseReturn, regressionParams };
+      }
+      if (m_sec === 0 && sortedRecords[0].quantity > sortedRecords[n - 1].quantity) {
+        predictionArea.innerHTML = '<p>消費量が非常に少ないか、記録間隔が短すぎるため、正確な予測が困難です。</p>';
+        return { ...baseReturn, regressionParams };
+      }
+      if (m_sec >= 0) {
+        predictionArea.innerHTML = '<p>ポーションが増加傾向にあるため、枯渇予測はできません。</p>';
+        return { ...baseReturn, regressionParams };
+      }
+
+      let residualsStdDev = 0;
+      if (n > 2) {
+        let sumSquaredResiduals = 0;
+        for (let i = 0; i < n; i++) {
+          const predictedY = m_sec * xValues[i] + c_sec;
+          sumSquaredResiduals += Math.pow(yValues[i] - predictedY, 2);
+        }
+        residualsStdDev = Math.sqrt(sumSquaredResiduals / (n - 2));
+      }
+
+      const latestRecord = sortedRecords[n - 1];
+      if (latestRecord.quantity === 0) {
+        predictionArea.innerHTML = `<p>ポーションは既に0です。(最終記録: ${formatDateTimeSmart(latestRecord.timestamp)})</p>`;
+        return { prediction: { depleted: true, depletionTime: latestRecord.timestamp }, regressionParams, residualsStdDev };
+      }
+
+      const depletionTimestamp = (firstTimestampSeconds + (-c_sec / m_sec)) * 1000;
+
+      if (depletionTimestamp <= latestRecord.timestamp && m_sec < 0) {
+        predictionArea.innerHTML = `<p>予測によると、ポーションは既に枯渇しているか、非常に近いです。最終記録: ${formatDateTimeSmart(latestRecord.timestamp)} (${latestRecord.quantity}個)</p>`;
+        return { prediction: { depleted: true, depletionTime: depletionTimestamp }, regressionParams, residualsStdDev };
+      }
+
+      const nowMilliseconds = new Date().getTime();
+      const remainingMilliseconds = depletionTimestamp - nowMilliseconds;
+
+      let depletionTimestamp_lower = null;
+      let depletionTimestamp_upper = null;
+      let predictionText = '';
+
+      if (n > 2 && residualsStdDev > 0 && m_sec < 0) {
+        const abs_m_sec = Math.abs(m_sec);
+        if (abs_m_sec > 1e-9) {
+          const deltaTimeMilliseconds = (residualsStdDev / abs_m_sec) * 1000;
+          depletionTimestamp_lower = depletionTimestamp - deltaTimeMilliseconds;
+          depletionTimestamp_upper = depletionTimestamp + deltaTimeMilliseconds;
+
+          const remaining_lower_str = formatRemainingTime(depletionTimestamp_lower - nowMilliseconds);
+          const remaining_upper_str = formatRemainingTime(depletionTimestamp_upper - nowMilliseconds);
+
+          predictionText = `予測される枯渇範囲: <strong>${formatDateTimeSmart(depletionTimestamp_lower)} ～ ${formatDateTimeSmart(depletionTimestamp_upper)}</strong><br>`;
+          if ((depletionTimestamp_lower - nowMilliseconds > 0) || (depletionTimestamp_upper - nowMilliseconds > 0)) {
+            predictionText += `あと約 <strong>${remaining_lower_str} ～ ${remaining_upper_str}</strong> で枯渇する見込みです。`;
+          } else {
+            predictionText += `予測範囲では既に枯渇している可能性があります。`;
+          }
+        }
+      }
+
+      if (!predictionText) {
+        predictionText = `予測される枯渇日時: <strong>${formatDateTimeSmart(depletionTimestamp)}</strong><br>`;
+        if (remainingMilliseconds > 0) {
+          predictionText += `あと約 <strong>${formatRemainingTime(remainingMilliseconds)}</strong> で枯渇する見込みです。`;
+        } else {
+          predictionText += `既に枯渇しているか、間もなく枯渇する予測です。`;
+        }
+      }
+      predictionArea.innerHTML = predictionText;
+
+      return {
+        prediction: {
+          depleted: remainingMilliseconds <= 0 && !(depletionTimestamp_lower && depletionTimestamp_upper),
+          depletionTime: depletionTimestamp,
+          remainingMilliseconds,
+          depletionTimeLower: depletionTimestamp_lower,
+          depletionTimeUpper: depletionTimestamp_upper
+        },
+        regressionParams,
+        residualsStdDev
+      };
+    }
+
+    function renderChart(records, predictionResult) {
+      const ctx = document.getElementById('potionChart').getContext('2d');
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      if (!records || records.length === 0) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        return;
+      }
+
+      const sortedRecords = [...records].sort((a, b) => a.timestamp - b.timestamp);
+
+      let lastChartTimestamp;
+      const now = new Date().getTime();
+      const minFutureSpanFromNow = 1 * 3600 * 1000;
+      const defaultFutureSpan = 24 * 3600 * 1000;
+      const marginAfterEvent = 1 * 3600 * 1000;
+
+      let targetEndTime = 0;
+
+      if (predictionResult && predictionResult.prediction) {
+        const { depletionTime, depletionTimeLower, depletionTimeUpper } = predictionResult.prediction;
+
+        if (depletionTimeLower && depletionTimeLower > now) {
+          targetEndTime = depletionTimeLower;
+        } else if (depletionTimeUpper && depletionTimeUpper > now) {
+          targetEndTime = depletionTimeUpper;
+        } else if (depletionTime && depletionTime > now) {
+          targetEndTime = depletionTime + marginAfterEvent;
+        } else {
+          targetEndTime = now + defaultFutureSpan;
+        }
+      } else {
+        targetEndTime = now + defaultFutureSpan;
+      }
+
+      lastChartTimestamp = Math.max(targetEndTime, now + minFutureSpanFromNow);
+
+      if (sortedRecords.length > 0) {
+        lastChartTimestamp = Math.max(lastChartTimestamp, sortedRecords[sortedRecords.length - 1].timestamp + minFutureSpanFromNow);
+      }
+
+
+      const datasets = [{
+        label: '実際のポーション数量',
+        data: sortedRecords.map(r => ({ x: r.timestamp, y: r.quantity })),
+        borderColor: 'rgb(26, 115, 232)',
+        backgroundColor: 'rgba(26, 115, 232, 0.1)',
+        tension: 0.1,
+        fill: false,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      }];
+
+      if (predictionResult && predictionResult.regressionParams && predictionResult.regressionParams.m_sec < 0) {
+        const { m_sec, c_sec, firstTimestampSeconds } = predictionResult.regressionParams;
+        const residualsStdDev = predictionResult.residualsStdDev || 0;
+
+        const predictionLine = [];
+        const upperBand = [];
+        const lowerBand = [];
+
+        const firstChartTimestamp = sortedRecords[0].timestamp;
+
+        const numPredictionPoints = 100;
+        const step = (lastChartTimestamp - firstChartTimestamp) / (numPredictionPoints - 1);
+
+        if (lastChartTimestamp > firstChartTimestamp) {
+          for (let i = 0; i < numPredictionPoints; i++) {
+            const currentTs = firstChartTimestamp + i * step;
+            const currentElapsedSeconds = (currentTs / 1000) - firstTimestampSeconds;
+            const predictedQty = Math.max(0, m_sec * currentElapsedSeconds + c_sec);
+            predictionLine.push({ x: currentTs, y: predictedQty });
+
+            if (sortedRecords.length > 2 && residualsStdDev > 0) {
+              upperBand.push({ x: currentTs, y: Math.max(0, predictedQty + residualsStdDev) });
+              lowerBand.push({ x: currentTs, y: Math.max(0, predictedQty - residualsStdDev) });
+            }
+          }
+        } else {
+          const currentElapsedSeconds = (firstChartTimestamp / 1000) - firstTimestampSeconds;
+          const predictedQty = Math.max(0, m_sec * currentElapsedSeconds + c_sec);
+          predictionLine.push({ x: firstChartTimestamp, y: predictedQty });
+          if (sortedRecords.length > 2 && residualsStdDev > 0) {
+            upperBand.push({ x: firstChartTimestamp, y: Math.max(0, predictedQty + residualsStdDev) });
+            lowerBand.push({ x: firstChartTimestamp, y: Math.max(0, predictedQty - residualsStdDev) });
+          }
+        }
+
+        if (predictionResult.prediction && predictionResult.prediction.depletionTime > firstChartTimestamp && predictionResult.prediction.depletionTime <= lastChartTimestamp) {
+          const depletionElapsed = (predictionResult.prediction.depletionTime / 1000) - firstTimestampSeconds;
+          const depletionPointY = Math.max(0, m_sec * depletionElapsed + c_sec);
+          const depletionPoint = { x: predictionResult.prediction.depletionTime, y: depletionPointY };
+          if (!predictionLine.find(p => p.x === depletionPoint.x)) {
+            predictionLine.push(depletionPoint);
+            predictionLine.sort((a, b) => a.x - b.x);
+          }
+        }
+
+        datasets.push({
+          label: '予測枯渇線',
+          data: predictionLine,
+          borderColor: 'rgb(217, 48, 37)',
+          borderDash: [6, 3],
+          tension: 0.1,
+          fill: false,
+          pointRadius: 0,
+        });
+
+        if (sortedRecords.length > 2 && residualsStdDev > 0 && lowerBand.length > 0 && upperBand.length > 0) {
+          datasets.push({
+            label: '予測範囲',
+            data: upperBand,
+            borderColor: 'rgba(251, 188, 5, 0.3)',
+            backgroundColor: 'rgba(251, 188, 5, 0.1)',
+            tension: 0.1,
+            fill: '+1',
+            pointRadius: 0,
+          });
+          datasets.push({
+            label: '予測範囲_lower_hidden',
+            data: lowerBand,
+            borderColor: 'rgba(251, 188, 5, 0.3)',
+            backgroundColor: 'rgba(251, 188, 5, 0.1)',
+            tension: 0.1,
+            fill: false,
+            pointRadius: 0,
+            showInLegend: false,
+          });
+        }
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'hour',
+                displayFormats: {
+                  millisecond: 'HH:mm:ss.SSS',
+                  second: 'HH:mm:ss',
+                  minute: 'HH:mm',
+                  hour: 'HH:mm',
+                  day: 'MM/dd',
+                  week: 'MM/dd',
+                  month: 'yyyy/MM',
+                  quarter: 'yyyy QQ',
+                  year: 'yyyy'
+                }
+              },
+              ticks: {
+                callback: function (value, index, ticks) {
+                  return formatDateTimeSmart(value);
+                }
+              },
+              title: { display: true, text: '時刻', font: { size: 14 } },
+              grid: { color: '#e0e0e0' },
+              min: (sortedRecords.length > 0) ? sortedRecords[0].timestamp : now - minFutureSpanFromNow,
+              max: lastChartTimestamp
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'ポーション数量', font: { size: 14 } },
+              grid: { color: '#e0e0e0' }
+            }
+          },
+          plugins: {
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              titleFont: { size: 14 },
+              bodyFont: { size: 12 },
+              padding: 10,
+              callbacks: {
+                title: function (tooltipItems) {
+                  if (tooltipItems.length > 0) {
+                    const timestamp = tooltipItems[0].parsed.x;
+                    return formatDateTimeSmart(timestamp);
+                  }
+                  return '';
+                }
+              }
+            },
+            legend: {
+              position: 'bottom',
+              labels: {
+                font: { size: 12 },
+                filter: function (legendItem, chartData) {
+                  return legendItem.text !== '予測範囲_lower_hidden';
+                }
+              }
+            }
+          },
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          }
+        }
+      });
+    }
+
+    async function loadAndProcessData() {
+      const quantityInput = document.getElementById('potionQuantity');
+      const lastQuantity = localStorage.getItem(LOCALSTORAGE_LAST_QUANTITY_KEY);
+      if (lastQuantity !== null) {
+        const parsedLastQuantity = parseInt(lastQuantity, 10);
+        if (!isNaN(parsedLastQuantity) && parsedLastQuantity >= 0) {
+          quantityInput.value = parsedLastQuantity;
+        }
+      }
+
+      await initDB();
+      const records = await getAllRecords();
+      displayLogs(records);
+      const predictionResult = calculatePrediction(records);
+      renderChart(records, predictionResult);
+    }
+
+    window.onload = loadAndProcessData;
+
+  </script>
+</body>
+
+</html>
