@@ -1,0 +1,606 @@
+body {
+  font-family: "Arial", sans-serif;
+  margin: 20px;
+  background-color: #f0f2f5;
+  color: #333;
+  line-height: 1.6;
+}
+
+.container {
+  position: relative;
+  background-color: #fff;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+h1.app-title {
+  position: relative;
+  /* right: 20px; */
+  /* top: 120px; */
+  /* z-index: 1; */
+  color: #565656;
+  /* text-align: right; */
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+h2 {
+  color: #1a73e8;
+  margin-top: 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 10px;
+  border-bottom: 1px solid;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: #5f6368;
+}
+
+input[type="number"],
+input[type="text"],
+button,
+select {
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  border-radius: 6px;
+  border: 1px solid #dadce0;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+input[type="number"],
+input[type="text"] {
+  max-width: 100%;
+}
+
+button.small-btn {
+  padding: 8px;
+  font-size: 13px;
+  margin-left: 5px;
+}
+
+button {
+  background-color: #1a73e8;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border: none;
+}
+
+.hg-modal-button {
+  margin-bottom: 0;
+  background-color: #aaa;
+}
+
+@media (max-width: 768px) {
+  h1.app-title {
+    display: none;
+  }
+
+  .main-hg-dropdown-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .main-hg-dropdown-wrapper .custom-dropdown-container.main-hg-dropdown,
+  .main-hg-dropdown-wrapper .hg-modal-button {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .main-hg-dropdown-wrapper .hg-modal-button {
+    margin-bottom: 0;
+  }
+
+  input[type="number"],
+  input[type="text"],
+  button.record-button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  button.small-btn {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 5px;
+  }
+}
+
+button:hover {
+  background-color: #1558b0;
+}
+
+button.danger {
+  background-color: #d93025;
+}
+
+button.danger:hover {
+  background-color: #a50e04;
+}
+
+#logArea {
+  margin-top: 0;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+}
+
+#logListLatest,
+#logListOlder {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+#logListLatest li,
+#logListOlder li {
+  padding: 10px;
+  border-bottom: 1px dotted #e0e0e0;
+  font-size: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#logListLatest li:last-child,
+#logListOlder li:last-child {
+  border-bottom: none;
+}
+
+.log-text {
+  flex-grow: 1;
+}
+
+.delete-log-btn {
+  background-color: #ff4d4f;
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  margin: 0px;
+  transition: background-color 0.2s ease;
+}
+
+.delete-log-btn:hover {
+  background-color: #d9363e;
+}
+
+#predictionMessageArea {
+  margin-top: 0px;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  min-height: 50px;
+}
+
+#predictionMessageArea p {
+  font-size: 16px;
+  color: #3c4043;
+  line-height: 1.8;
+  margin: 0;
+}
+
+#predictionMessageArea strong {
+  color: #1a73e8;
+}
+
+p.consumption-rate {
+  font-size: 0.9em;
+  color: #5f6368;
+  padding: 5px 15px;
+  margin-top: 5px;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+
+.chart-container {
+  margin-top: 25px;
+  position: relative;
+  height: 45vh;
+  width: 100%;
+}
+
+#olderLogsAccordion {
+  margin-top: 15px;
+}
+
+#olderLogsAccordion summary {
+  cursor: pointer;
+  padding: 10px 15px;
+  background-color: #f0f2f5;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  font-weight: bold;
+  color: #5f6368;
+  transition: background-color 0.2s ease;
+  outline: none;
+}
+
+#olderLogsAccordion summary:hover {
+  background-color: #e8eaed;
+}
+
+#olderLogsAccordion[open] summary {
+  background-color: #e8eaed;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+#olderLogsAccordion #logListOlder {
+  border: 1px solid #dadce0;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  padding: 0;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #888;
+  border-radius: 10px;
+  width: 80%;
+  max-width: 500px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.modal-close-btn {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.modal-close-btn:hover,
+.modal-close-btn:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal h3 {
+  margin-top: 0;
+  color: #1a73e8;
+}
+
+#huntingGroundList {
+  list-style-type: none;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+#huntingGroundList li {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+#huntingGroundList li:last-child {
+  border-bottom: none;
+}
+
+#huntingGroundList li:hover {
+  background-color: #f0f2f5;
+}
+
+#huntingGroundList li .hg-consumption-rate {
+  font-size: 0.8em;
+  color: #5f6368;
+  margin-left: 10px;
+}
+
+.hg-actions {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.hg-actions button {
+  margin-top: 10px;
+}
+
+/* --- Custom Dropdown Styles --- */
+.main-hg-dropdown-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.custom-dropdown-container.main-hg-dropdown {
+  position: relative;
+  min-width: 200px;
+  flex-grow: 1;
+  max-width: 450px;
+}
+
+.custom-dropdown-selected {
+  background-color: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  padding: 10px 15px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  font-size: 16px;
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.custom-dropdown-selected:hover,
+.custom-dropdown-selected:focus {
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 1px #1a73e8;
+  outline: none;
+}
+
+#mainHgDropdownSelectedName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 10px;
+  flex-grow: 1;
+}
+
+.custom-dropdown-arrow {
+  width: 20px;
+  height: 20px;
+  fill: #5f6368;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.custom-dropdown-container.open .custom-dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.custom-dropdown-options {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.custom-dropdown-container.open .custom-dropdown-options {
+  display: block;
+}
+
+.custom-dropdown-option {
+  font-size: 16px;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  /* Adjusted padding */
+  cursor: pointer;
+}
+
+.custom-dropdown-option:hover {
+  background-color: #f0f2f5;
+}
+
+.custom-dropdown-option.selected {
+  background-color: #e8f0fe;
+}
+
+.custom-dropdown-option.selected .dropdown-option-name {
+  /* Style for name in selected option */
+  color: #1967d2;
+  /* Darker blue for selected item text */
+  /* font-weight: 500; /* Already set by .dropdown-option-name */
+}
+
+/* Styles for content within custom-dropdown-option */
+.dropdown-option-content-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  overflow: hidden;
+  /* Prevent content from breaking layout */
+}
+
+.dropdown-option-details {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow: hidden;
+  /* Important for text-overflow to work */
+  margin-right: 8px;
+  /* Space before actions */
+}
+
+.dropdown-option-name {
+  font-weight: 500;
+  /* Slightly bolder name */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #202124;
+  /* Standard text color */
+}
+
+.dropdown-option-rate {
+  font-size: 0.8em;
+  color: #5f6368;
+  /* Subdued color for rate */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  /* Small space between name and rate */
+}
+
+.dropdown-option-actions {
+  margin-left: auto;
+  /* Pushes to the right if details don't fill space */
+  flex-shrink: 0;
+  /* Prevent shrinking */
+}
+
+.dropdown-option-delete-btn {
+  background-color: transparent;
+  color: #777;
+  /* Default color for the "×" */
+  border: none;
+  border-radius: 50%;
+  /* Make it round */
+  padding: 2px 6px;
+  /* Fine-tune padding for "×" */
+  font-size: 18px;
+  /* Size of "×" */
+  line-height: 1;
+  /* Ensure consistent height */
+  cursor: pointer;
+  display: flex;
+  /* For centering "×" if needed, though line-height might suffice */
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  /* Explicit width for round button */
+  height: 24px;
+  /* Explicit height for round button */
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.dropdown-option-delete-btn:hover {
+  background-color: #f0f0f0;
+  /* Light grey background on hover */
+  color: #d93025;
+  /* Red color for "×" on hover, indicating danger */
+}
+
+/* --- End Custom Dropdown Styles --- */
+
+.hg-modal-button {
+  flex-shrink: 0;
+}
+
+/* --- Custom Dropdown Styles --- 内に追加、または末尾に追加 --- */
+.custom-dropdown-selected .selected-hg-details {
+  display: flex;
+  flex-direction: column;
+  /* 名前とレートを縦に並べる場合 */
+  /* flex-direction: row; */
+  /* 名前とレートを横に並べる場合。その場合は align-items: baseline; や gap も調整 */
+  justify-content: center;
+  overflow: hidden;
+  flex-grow: 1;
+  margin-right: 8px;
+  /* 矢印とのスペース */
+}
+
+#mainHgDropdownSelectedName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* margin-right: 10px; /* 不要になるか、selected-hg-details で管理 */
+  /* flex-grow: 1; /* selected-hg-details が担う */
+  font-size: 1em;
+  /* ベースのフォントサイズ */
+  line-height: 1.2;
+  /* 行間の調整 */
+}
+
+.selected-hg-rate {
+  font-size: 0.75em;
+  /* 名前より小さく */
+  color: #5f6368;
+  /* dropdown-option-rate と同様の色 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  /* 行間の調整 */
+  margin-top: 2px;
+  /* 名前とのスペース（縦並びの場合） */
+}
+
+/* style.css に以下を追加 */
+
+#timerNotificationControlsContainer button {
+  padding: 8px 12px;
+  font-size: 14px;
+  background-color: #f0f2f5;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  cursor: pointer;
+  border-radius: 4px;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+#timerNotificationControlsContainer button:hover {
+  background-color: #e8eaed;
+  border-color: #c6c6c6;
+}
+
+#timerNotificationControlsContainer button.timer-button.active {
+  background-color: #1a73e8;
+  color: white;
+  border-color: #1a73e8;
+  font-weight: bold;
+}
+
+#timerNotificationControlsContainer button.timer-button.active:hover {
+  background-color: #1558b0;
+}
+
+#timerNotificationControlsContainer .audio-test-link {
+  background: none;
+  border: none;
+  color: #1a73e8;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 5px;
+  font-size: 0.9em;
+}
+
+#timerNotificationControlsContainer .audio-test-link:hover {
+  color: #1558b0;
+  text-decoration: none;
+}
