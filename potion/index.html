@@ -55,6 +55,21 @@
     <div id="predictionMessageArea">
       <p>まだ予測できません。最低2つの記録が必要です。</p>
     </div>
+
+    <div id="timerNotificationControlsContainer" style="margin-top: 15px; display: none;">
+      <div style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; background-color: #f8f9fa;">
+        <h4 style="margin-top: 0; margin-bottom: 10px; color: #1a73e8; font-size: 1em; font-weight: 500;">通知設定</h4>
+        <div id="timerButtons" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom:10px; align-items: center;">
+        </div>
+        <div id="timerStatus" style="font-size: 0.9em; color: #5f6368; min-height: 1.2em;">
+        </div>
+
+        <h5 style="margin-top: 20px; margin-bottom: 8px; font-size: 0.9em; color: #1a73e8; font-weight: 500;">音声通知テスト</h5>
+        <div id="audioTestLinks" style="display: flex; flex-wrap: wrap; gap: 10px;">
+        </div>
+      </div>
+    </div>
+
     <p class="consumption-rate" id="consumptionRateDisplay"></p>
     <div class="chart-container">
       <canvas id="potionChart"></canvas>
