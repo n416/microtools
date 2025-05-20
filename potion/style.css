@@ -425,20 +425,15 @@ p.consumption-rate {
 }
 
 .custom-dropdown-option.selected .dropdown-option-name {
-  /* Style for name in selected option */
   color: #1967d2;
-  /* Darker blue for selected item text */
-  /* font-weight: 500; /* Already set by .dropdown-option-name */
 }
 
-/* Styles for content within custom-dropdown-option */
 .dropdown-option-content-wrapper {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
   overflow: hidden;
-  /* Prevent content from breaking layout */
 }
 
 .dropdown-option-details {
@@ -446,61 +441,45 @@ p.consumption-rate {
   flex-direction: column;
   flex-grow: 1;
   overflow: hidden;
-  /* Important for text-overflow to work */
   margin-right: 8px;
-  /* Space before actions */
 }
 
 .dropdown-option-name {
   font-weight: 500;
-  /* Slightly bolder name */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: #202124;
-  /* Standard text color */
 }
 
 .dropdown-option-rate {
   font-size: 0.8em;
   color: #5f6368;
-  /* Subdued color for rate */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 2px;
-  /* Small space between name and rate */
 }
 
 .dropdown-option-actions {
   margin-left: auto;
-  /* Pushes to the right if details don't fill space */
   flex-shrink: 0;
-  /* Prevent shrinking */
 }
 
 .dropdown-option-delete-btn {
   background-color: transparent;
   color: #777;
-  /* Default color for the "×" */
   border: none;
   border-radius: 50%;
-  /* Make it round */
   padding: 2px 6px;
-  /* Fine-tune padding for "×" */
   font-size: 18px;
-  /* Size of "×" */
   line-height: 1;
-  /* Ensure consistent height */
   cursor: pointer;
   display: flex;
-  /* For centering "×" if needed, though line-height might suffice */
   align-items: center;
   justify-content: center;
   width: 24px;
-  /* Explicit width for round button */
   height: 24px;
-  /* Explicit height for round button */
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
@@ -508,60 +487,43 @@ p.consumption-rate {
 
 .dropdown-option-delete-btn:hover {
   background-color: #f0f0f0;
-  /* Light grey background on hover */
   color: #d93025;
-  /* Red color for "×" on hover, indicating danger */
 }
-
-/* --- End Custom Dropdown Styles --- */
 
 .hg-modal-button {
   flex-shrink: 0;
 }
 
-/* --- Custom Dropdown Styles --- 内に追加、または末尾に追加 --- */
 .custom-dropdown-selected .selected-hg-details {
   display: flex;
   flex-direction: column;
-  /* 名前とレートを縦に並べる場合 */
-  /* flex-direction: row; */
-  /* 名前とレートを横に並べる場合。その場合は align-items: baseline; や gap も調整 */
   justify-content: center;
   overflow: hidden;
   flex-grow: 1;
   margin-right: 8px;
-  /* 矢印とのスペース */
 }
 
 #mainHgDropdownSelectedName {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* margin-right: 10px; /* 不要になるか、selected-hg-details で管理 */
-  /* flex-grow: 1; /* selected-hg-details が担う */
   font-size: 1em;
-  /* ベースのフォントサイズ */
   line-height: 1.2;
-  /* 行間の調整 */
 }
 
 .selected-hg-rate {
   font-size: 0.75em;
-  /* 名前より小さく */
   color: #5f6368;
-  /* dropdown-option-rate と同様の色 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
-  /* 行間の調整 */
   margin-top: 2px;
-  /* 名前とのスペース（縦並びの場合） */
 }
 
-/* style.css に以下を追加 */
-
+/* ▼▼▼ Notification Controls Styles ▼▼▼ */
 #timerNotificationControlsContainer button {
+  /* timerButtons 内の button に限定した方が良いかも */
   padding: 8px 12px;
   font-size: 14px;
   background-color: #f0f2f5;
@@ -572,6 +534,7 @@ p.consumption-rate {
   transition:
     background-color 0.2s ease,
     box-shadow 0.2s ease;
+  margin: 0; /* button default margin reset */
 }
 
 #timerNotificationControlsContainer button:hover {
@@ -598,9 +561,22 @@ p.consumption-rate {
   cursor: pointer;
   padding: 5px;
   font-size: 0.9em;
+  margin: 0; /* button default margin reset */
 }
 
 #timerNotificationControlsContainer .audio-test-link:hover {
   color: #1558b0;
   text-decoration: none;
 }
+
+/* カスタムタイマー入力欄のスタイル (必要に応じて調整) */
+#customTimerMinutesInput {
+  padding: 8px 10px !important; /* importantで上書き、または詳細度を上げる */
+  font-size: 14px !important;
+  border: 1px solid #dadce0 !important;
+  border-radius: 4px !important;
+  width: 70px !important; /* 幅を固定 */
+  margin-bottom: 0 !important; /* timerButtons内のgapで制御するため */
+  box-sizing: border-box;
+}
+/* ▲▲▲ Notification Controls Styles ▲▲▲ */
