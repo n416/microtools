@@ -3,6 +3,7 @@ const POTION_LOG_STORE_NAME = 'PotionLogStore';
 const HUNTING_GROUND_STORE_NAME = 'HuntingGroundStore';
 const LOCALSTORAGE_LAST_QUANTITY_KEY = 'lastPotionQuantity_v2';
 const LOCALSTORAGE_CURRENT_HG_ID_KEY = 'currentHuntingGroundId_v2';
+const LOCALSTORAGE_ACTIVE_TIMER_KEY = 'activePotionTimer_v3_custom'; // キー名を変更
 
 const UNSET_HUNTING_GROUND_ID = 0;
 const UNSET_HUNTING_GROUND_NAME = '未設定';
@@ -10,11 +11,13 @@ const UNSET_HUNTING_GROUND_NAME = '未設定';
 let db;
 let chartInstance;
 let currentHuntingGroundId = UNSET_HUNTING_GROUND_ID;
-let activeTimerInfo = null; // { type: string, timeoutId: number, targetTime: number, depletionTime: number }
-const LOCALSTORAGE_ACTIVE_TIMER_KEY = 'activePotionTimer_v3'; // キー名を少し変更して以前のバージョンと区別
+// activeTimerInfo の構造:
+// { type: 'depletion' | 'custom', timeoutId: number, targetTime: number, depletionTime: number, offsetMinutes?: number }
+let activeTimerInfo = null;
+
 
 let mainHgDropdownContainerEl, mainHgDropdownSelectedEl, mainHgDropdownSelectedNameEl, mainHgDropdownOptionsEl;
-let mainHgDropdownSelectedRateEl; // ★追加
+let mainHgDropdownSelectedRateEl;
 
 function formatDateTimeSmart(timestamp) {
   if (timestamp === null || timestamp === undefined) return "";
@@ -249,9 +252,316 @@ function formatRemainingTime(milliseconds) {
   return `約 ${hours}時間${minutes}分後`;
 }
 
+async function requestNotificationPermission() {
+  if (!("Notification" in window)) {
+    console.log("このブラウザはデスクトップ通知をサポートしていません。");
+    return false;
+  }
+  if (Notification.permission === "granted") {
+    return true;
+  }
+  if (Notification.permission !== "denied") {
+    try {
+      const permission = await Notification.requestPermission();
+      return permission === "granted";
+    } catch (error) {
+      console.error("通知許可の要求中にエラーが発生しました:", error);
+      return false;
+    }
+  }
+  return false;
+}
+
+function speak(text) {
+  if (!('speechSynthesis' in window)) {
+    console.warn('このブラウザは音声合成をサポートしていません。'); // alertから変更
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'ja-JP';
+  window.speechSynthesis.speak(utterance);
+}
+
+function createAudioTestLink(type, label, message) {
+  const link = document.createElement('button');
+  link.classList.add('audio-test-link');
+  link.textContent = label;
+  link.onclick = () => speak(message);
+  return link;
+}
+
+function setupAudioTestLinks() {
+  const container = document.getElementById('audioTestLinks');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const tests = [
+    { type: 'depletion', label: '枯渇時 通知音', message: 'ポーションが枯渇しました。' }, // ラベル少し変更
+    { type: 'custom_5min', label: '5分前 通知音', message: 'まもなくポーションが枯渇します。5分前です。' }, //例
+  ];
+
+  tests.forEach(test => {
+    container.appendChild(createAudioTestLink(test.type, test.label, test.message));
+  });
+}
+
+function showDesktopNotification(title, body) {
+  if (Notification.permission === "granted") {
+    new Notification(title, { body: body });
+  }
+}
+
+function createTimerButton(type, label, depletionTime, isActive = false) {
+  const button = document.createElement('button');
+  button.classList.add('timer-button');
+  if (isActive) {
+    button.classList.add('active');
+  }
+  button.dataset.type = type;
+  button.textContent = label;
+  button.onclick = () => handleTimerAction(type, depletionTime);
+  return button;
+}
+
+function updateTimerUI(currentDepletionTime) {
+  debugger;
+  const buttonsContainer = document.getElementById('timerButtons');
+  const statusEl = document.getElementById('timerStatus');
+  const controlsContainer = document.getElementById('timerNotificationControlsContainer');
+
+  if (!buttonsContainer || !statusEl || !controlsContainer) return;
+  buttonsContainer.innerHTML = ''; // UIをクリア
+
+  let hasValidFutureDepletionTime = currentDepletionTime && currentDepletionTime > Date.now();
+
+  if (!hasValidFutureDepletionTime) {
+    statusEl.textContent = activeTimerInfo ? '以前の通知は無効になりました。' : '予測枯渇時刻が過去または無効なためタイマーを設定できません。';
+    if (activeTimerInfo) clearActiveTimer();
+    // controlsContainerの表示制御は呼び出し元で行う
+    return;
+  }
+
+  // 1. 「枯渇時に通知」ボタン
+  const depletionButtonActive = activeTimerInfo && activeTimerInfo.type === 'depletion' && activeTimerInfo.depletionTime === currentDepletionTime;
+  const depletionButton = createTimerButton('depletion', '枯渇時に通知', currentDepletionTime, depletionButtonActive);
+  buttonsContainer.appendChild(depletionButton);
+
+  // 2. カスタム時間入力エリア
+  const customTimerDiv = document.createElement('div');
+  customTimerDiv.style.display = 'flex';
+  customTimerDiv.style.alignItems = 'center';
+  customTimerDiv.style.gap = '5px';
+  customTimerDiv.style.flexWrap = 'wrap';
+
+  const customMinutesInput = document.createElement('input');
+  customMinutesInput.type = 'number';
+  customMinutesInput.id = 'customTimerMinutesInput'; // CSSでスタイル指定するためID付与
+  customMinutesInput.min = '0';
+  customMinutesInput.placeholder = '例:15';
+  customMinutesInput.value = 5;
+  if (activeTimerInfo && activeTimerInfo.type === 'custom' && typeof activeTimerInfo.offsetMinutes === 'number' && activeTimerInfo.depletionTime === currentDepletionTime) {
+    customMinutesInput.value = activeTimerInfo.offsetMinutes;
+  }
+
+  const customLabelSpan = document.createElement('span');
+  customLabelSpan.textContent = '分前に';
+
+  const setCustomButton = document.createElement('button');
+  setCustomButton.id = 'setCustomTimerButton';
+  setCustomButton.classList.add('timer-button');
+  const customButtonActive = activeTimerInfo && activeTimerInfo.type === 'custom' && activeTimerInfo.depletionTime === currentDepletionTime;
+  if (customButtonActive) {
+    setCustomButton.classList.add('active');
+  }
+  setCustomButton.textContent = 'この設定で通知'; // ボタンのテキスト変更
+  setCustomButton.onclick = () => {
+    const minutes = parseInt(customMinutesInput.value, 10);
+    if (!isNaN(minutes) && minutes >= 0) {
+      if (customButtonActive && activeTimerInfo.offsetMinutes === minutes) { // 同じ設定で再度押されたら解除
+        clearActiveTimer();
+      } else {
+        setTimer('custom', currentDepletionTime, minutes);
+      }
+      debugger;
+      updateTimerUI(currentDepletionTime); // UIを即時更新
+    } else {
+      alert('有効な数値を入力してください（0以上）。');
+    }
+  };
+
+  customTimerDiv.appendChild(customMinutesInput);
+  customTimerDiv.appendChild(customLabelSpan);
+  customTimerDiv.appendChild(setCustomButton);
+  buttonsContainer.appendChild(customTimerDiv);
+
+  // 3. ステータスメッセージ更新
+  if (activeTimerInfo && activeTimerInfo.depletionTime === currentDepletionTime) {
+    if (activeTimerInfo.type === 'depletion') {
+      statusEl.textContent = `枯渇時に通知が ${formatDateTimeSmart(activeTimerInfo.targetTime)} にセットされています。`;
+    } else if (activeTimerInfo.type === 'custom' && typeof activeTimerInfo.offsetMinutes === 'number') {
+      statusEl.textContent = `${activeTimerInfo.offsetMinutes}分前に通知が ${formatDateTimeSmart(activeTimerInfo.targetTime)} にセットされています。`;
+    }
+  } else if (activeTimerInfo && activeTimerInfo.depletionTime !== currentDepletionTime) {
+    // 枯渇予測時刻が変わった場合、保存されていたタイマーは実質無効
+    clearActiveTimer(); // 古いタイマーをクリア
+    statusEl.textContent = '予測枯渇時刻が更新されました。通知を再設定してください。';
+    // 新しい枯渇時刻でカスタム入力値が残っていればそれを表示
+    const oldCustomValue = localStorage.getItem(LOCALSTORAGE_ACTIVE_TIMER_KEY) ? JSON.parse(localStorage.getItem(LOCALSTORAGE_ACTIVE_TIMER_KEY))?.offsetMinutes : '';
+    if (typeof oldCustomValue === 'number') customMinutesInput.value = oldCustomValue;
+
+  } else {
+    statusEl.textContent = '通知はセットされていません。';
+  }
+}
+
+
+function handleTimerAction(type, depletionTime) {
+  if (type === 'depletion') {
+    if (activeTimerInfo && activeTimerInfo.type === 'depletion' && activeTimerInfo.depletionTime === depletionTime) {
+      clearActiveTimer();
+    } else {
+      setTimer('depletion', depletionTime);
+    }
+    updateTimerUI(depletionTime);
+  }
+  // カスタムタイマーのセット/解除は setCustomButton の onclick 内で直接処理
+}
+
+function setTimer(type, depletionTime, customOffsetMinutes = null) {
+  clearActiveTimer(); // 既存のタイマーをクリア
+  let offsetMilliseconds = 0;
+  let actualOffsetMinutes = 0;
+
+  if (type === 'custom') {
+    if (customOffsetMinutes === null || isNaN(customOffsetMinutes) || customOffsetMinutes < 0) {
+      alert('カスタム通知には有効な分数（0以上）を指定してください。');
+      return;
+    }
+    actualOffsetMinutes = parseInt(customOffsetMinutes, 10);
+    offsetMilliseconds = actualOffsetMinutes * 60 * 1000;
+  } else if (type === 'depletion') {
+    actualOffsetMinutes = 0; // 枯渇時はオフセット0分
+  } else {
+    console.error('未対応のタイマータイプ:', type);
+    return;
+  }
+
+  const targetTime = depletionTime - offsetMilliseconds;
+
+  if (targetTime <= Date.now()) {
+    alert('通知時刻が現在時刻より過去になります。タイマーはセットされませんでした。');
+    activeTimerInfo = null; //念のため
+    //updateTimerUI(depletionTime); // UIをリフレッシュしてボタンのアクティブ状態などを解除
+    debugger;
+    return;
+  }
+
+  // setTimeout の上限値 (約24.8日をミリ秒で表現)
+  // 2147483647 (32-bit signed integer max value)
+  const MAX_TIMEOUT_DELAY = 2147483647; 
+  const delayMilliseconds = targetTime - Date.now();
+
+  // ▼▼▼ 遅延時間チェックの追加 ▼▼▼
+  if (delayMilliseconds > MAX_TIMEOUT_DELAY) {
+    alert(`通知時刻が遠すぎるため (${(delayMilliseconds / (1000 * 60 * 60 * 24)).toFixed(1)}日後)、タイマーを設定できません。ブラウザの制限により、約24日後までのタイマーが設定可能です。`);
+    activeTimerInfo = null;
+    updateTimerUI(depletionTime);
+    return;
+  }
+
+  const timeoutId = setTimeout(() => {
+    triggerNotification(type, depletionTime, actualOffsetMinutes);
+    clearActiveTimer(); // 通知後はクリア
+    loadAndProcessDataForCurrentHG(); // UIと予測を再評価
+  }, targetTime - Date.now());
+
+  activeTimerInfo = { type, timeoutId, targetTime, depletionTime, offsetMinutes: (type === 'custom' ? actualOffsetMinutes : undefined) };
+  // localStorageにはtimeoutIdは保存しない
+  localStorage.setItem(LOCALSTORAGE_ACTIVE_TIMER_KEY, JSON.stringify({
+    type,
+    targetTime,
+    depletionTime,
+    offsetMinutes: activeTimerInfo.offsetMinutes
+  }));
+  console.log(`${type === 'custom' ? actualOffsetMinutes + '分前' : '枯渇時'}のタイマーをセット: ${formatDateTimeSmart(targetTime)}`);
+}
+
+function clearActiveTimer() {
+  if (activeTimerInfo && activeTimerInfo.timeoutId) {
+    clearTimeout(activeTimerInfo.timeoutId);
+  }
+  if (activeTimerInfo) { // activeTimerInfo が null でない場合のみログ出力
+    console.log(`${activeTimerInfo.type === 'custom' ? activeTimerInfo.offsetMinutes + '分前' : '枯渇時'} のタイマーを解除しました。`);
+  }
+  activeTimerInfo = null;
+  localStorage.removeItem(LOCALSTORAGE_ACTIVE_TIMER_KEY);
+}
+
+function triggerNotification(type, depletionTime, offsetMinutesUsed = null) {
+  let speechMsg, desktopTitle, desktopBody;
+
+  if (type === 'depletion' || (type === 'custom' && offsetMinutesUsed === 0)) {
+    speechMsg = `ポーションが枯渇しました。予測時刻は ${formatDateTimeSmart(depletionTime)} でした。`;
+    desktopTitle = 'ポーション枯渇';
+    desktopBody = `ポーションが枯渇しました (${formatDateTimeSmart(depletionTime)})。`;
+  } else if (type === 'custom' && offsetMinutesUsed > 0) {
+    speechMsg = `まもなくポーションが枯渇します。${offsetMinutesUsed}分前です。予測時刻は ${formatDateTimeSmart(depletionTime)} です。`;
+    desktopTitle = `ポーション枯渇予測 (${offsetMinutesUsed}分前)`;
+    desktopBody = `ポーションが約${offsetMinutesUsed}分後に枯渇する見込みです (${formatDateTimeSmart(depletionTime)})。`;
+  } else {
+    console.warn("不明な通知タイプまたはオフセット:", type, offsetMinutesUsed);
+    speechMsg = '通知時刻です。'; // フォールバック
+    desktopTitle = '通知';
+    desktopBody = '設定された時刻になりました。';
+  }
+
+  if (document.visibilityState === 'visible') {
+    speak(speechMsg);
+  }
+  showDesktopNotification(desktopTitle, desktopBody);
+}
+
+function loadTimerFromStorage() {
+  const storedTimerJSON = localStorage.getItem(LOCALSTORAGE_ACTIVE_TIMER_KEY);
+  if (storedTimerJSON) {
+    try {
+      const storedTimer = JSON.parse(storedTimerJSON);
+      if (storedTimer.type && storedTimer.targetTime && storedTimer.depletionTime) {
+        // targetTime と depletionTime の両方が未来であるか確認
+        if (storedTimer.targetTime > Date.now() && storedTimer.depletionTime > Date.now()) {
+          let offsetMinsToRestore = undefined;
+          if (storedTimer.type === 'custom') {
+            offsetMinsToRestore = storedTimer.offsetMinutes;
+            if (typeof offsetMinsToRestore !== 'number' || offsetMinsToRestore < 0) {
+              console.warn("ストレージのカスタムオフセットが無効。タイマーをクリアします。");
+              localStorage.removeItem(LOCALSTORAGE_ACTIVE_TIMER_KEY);
+              return; // ここで処理を中断
+            }
+          }
+          // setTimer内でactiveTimerInfoが設定され、localStorageにも再保存される
+          setTimer(storedTimer.type, storedTimer.depletionTime, offsetMinsToRestore);
+          console.log("保存されたタイマーを復元・再設定しました。");
+        } else {
+          console.log("保存されたタイマーの通知時刻または枯渇時刻が過去のためクリアします。");
+          localStorage.removeItem(LOCALSTORAGE_ACTIVE_TIMER_KEY);
+        }
+      } else {
+        console.log("保存されたタイマー情報が不完全なためクリアします。");
+        localStorage.removeItem(LOCALSTORAGE_ACTIVE_TIMER_KEY);
+      }
+    } catch (e) {
+      console.error("ローカルストレージのタイマー情報解析エラー:", e);
+      localStorage.removeItem(LOCALSTORAGE_ACTIVE_TIMER_KEY);
+    }
+  }
+}
+
 async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
   const predictionMessageArea = document.getElementById('predictionMessageArea');
   const consumptionRateDisplay = document.getElementById('consumptionRateDisplay');
+  const timerControlsContainer = document.getElementById('timerNotificationControlsContainer');
+
   const baseReturn = {
     prediction: null,
     regressionParams: null,
@@ -273,6 +583,11 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
     } else {
       consumptionRateDisplay.textContent = `消費速度: 計算不可 (記録不足)`;
     }
+    if (timerControlsContainer) timerControlsContainer.style.display = 'none';
+    if (activeTimerInfo) { // 予測できない場合、アクティブなタイマーがあればクリア
+      clearActiveTimer();
+    }
+    updateTimerUI(null); // UIもクリア状態に
     return { ...baseReturn, consumptionRatePerMin: existingDbRate };
   }
 
@@ -360,9 +675,27 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
     }
   }
   predictionMessageArea.innerHTML = predictionText;
+
+  if (depletionTime && !depleted && depletionTime > Date.now()) {
+    if (timerControlsContainer) timerControlsContainer.style.display = 'block';
+    updateTimerUI(depletionTime);
+    // setupAudioTestLinks(); // これはonloadで一度だけ実行すれば良い場合もある
+  } else {
+    if (timerControlsContainer) timerControlsContainer.style.display = 'none';
+    if (activeTimerInfo && activeTimerInfo.depletionTime !== depletionTime) { // 予測が変わり、以前のタイマーが無効になった場合
+      clearActiveTimer();
+    }
+    updateTimerUI(depletionTime); // depletionTimeがnullや過去でもUIを適切に更新
+  }
+
   return { prediction: depletionTime ? { depleted, depletionTime } : null, regressionParams, residualsStdDev, consumptionRatePerMin: newlyCalculatedRate };
 }
 
+// --- (renderChart, initMainHuntingGroundDropdown, loadHuntingGroundsForMainDropdown, etc. は変更なし) ---
+// --- (openHuntingGroundModal, closeHuntingGroundModal, loadHuntingGroundsForModal, etc. は変更なし) ---
+// --- (addHuntingGroundHandler, getHuntingGroundById, selectHuntingGround, etc. は変更なし) ---
+// --- (requestDeleteHuntingGround, deleteHuntingGround, clearAllUserHuntingGrounds, etc. は変更なし) ---
+// --- (updateHuntingGroundConsumptionRate, updateCurrentHG_UI, loadAndProcessDataForCurrentHG は変更なし) ---
 function renderChart(records, predictionResult) {
   const ctx = document.getElementById('potionChart').getContext('2d');
   if (chartInstance) { chartInstance.destroy(); }
@@ -757,7 +1090,7 @@ async function selectHuntingGround(hgId) {
   }
 
   localStorage.setItem(LOCALSTORAGE_CURRENT_HG_ID_KEY, currentHuntingGroundId.toString());
-  await loadAndProcessDataForCurrentHG();
+  await loadAndProcessDataForCurrentHG(); // This will trigger prediction and UI update for timer
   await loadHuntingGroundsForModal();
   closeHuntingGroundModal();
 }
@@ -802,12 +1135,11 @@ async function deleteHuntingGround(hgIdToDelete) {
     if (currentHuntingGroundId === hgIdToDelete) {
       currentHuntingGroundId = actualUnsetId;
       localStorage.setItem(LOCALSTORAGE_CURRENT_HG_ID_KEY, currentHuntingGroundId.toString());
-      await loadAndProcessDataForCurrentHG(); // This will update UI and dropdown text
+      await loadAndProcessDataForCurrentHG();
     } else {
-      // If current HG wasn't deleted, just refresh lists that might show it
       await loadHuntingGroundsForModal();
     }
-    await loadHuntingGroundsForMainDropdown(); // Always refresh main dropdown options
+    await loadHuntingGroundsForMainDropdown();
     alert('狩り場と関連データが削除されました。');
   } catch (error) {
     console.error('狩り場の削除に失敗:', error); alert('狩り場の削除に失敗しました。');
@@ -842,12 +1174,8 @@ async function clearAllUserHuntingGrounds() {
       currentHuntingGroundId = actualUnsetId;
       localStorage.setItem(LOCALSTORAGE_CURRENT_HG_ID_KEY, currentHuntingGroundId.toString());
     }
-    await loadAndProcessDataForCurrentHG(); // This will refresh everything including dropdown text and options.
-    await loadHuntingGroundsForModal(); // Ensure modal list is also updated.
-    // loadHuntingGroundsForMainDropdown(); // loadAndProcessDataForCurrentHG indirectly updates the selected text,
-    // and if called explicitly, this will also refresh options.
-    // deleteHuntingGround and addHuntingGround also call it.
-    // For safety, or if dropdown might be open, explicit call is fine.
+    await loadAndProcessDataForCurrentHG();
+    await loadHuntingGroundsForModal();
     alert('「未設定」以外の全ての狩り場と関連データが削除されました。');
   } catch (error) {
     console.error('全狩り場削除に失敗:', error); alert('全狩り場削除に失敗しました。');
@@ -870,8 +1198,6 @@ async function updateHuntingGroundConsumptionRate(hgId, rate) {
   if (document.getElementById('huntingGroundModal').style.display === 'block') {
     await loadHuntingGroundsForModal();
   }
-  // Only refresh main dropdown options if it's currently open, to avoid unnecessary redraws
-  // Otherwise, it will be refreshed when next opened.
   if (mainHgDropdownContainerEl && mainHgDropdownContainerEl.classList.contains('open')) {
     await loadHuntingGroundsForMainDropdown();
   }
@@ -900,7 +1226,7 @@ async function updateCurrentHG_UI() {
   }
 
   if (mainHgDropdownSelectedRateEl) {
-    let rateText = "消費: -"; // デフォルトテキスト
+    let rateText = "消費: -";
     if (hg && hg.lastCalculatedConsumptionRate !== null && hg.lastCalculatedConsumptionRate !== undefined && !isNaN(hg.lastCalculatedConsumptionRate)) {
       rateText = `消費: ${hg.lastCalculatedConsumptionRate.toFixed(2)} 個/分`;
     }
@@ -929,7 +1255,6 @@ async function loadAndProcessDataForCurrentHG() {
   const predictionResult = await calculatePredictionAndConsumptionRate(records, currentHuntingGroundId);
   renderChart(records, predictionResult);
 
-  // Refresh dropdown options if it's open, or it's the first load and has no options yet.
   if (mainHgDropdownOptionsEl && (mainHgDropdownContainerEl.classList.contains('open') || mainHgDropdownOptionsEl.children.length === 0)) {
     await loadHuntingGroundsForMainDropdown();
   }
@@ -938,7 +1263,12 @@ async function loadAndProcessDataForCurrentHG() {
 window.onload = async () => {
   await initDB();
   initMainHuntingGroundDropdown();
-  await loadAndProcessDataForCurrentHG();
+
+  await requestNotificationPermission(); // 通知許可を最初に求める
+  loadTimerFromStorage(); // 保存されたタイマーがあれば復元・再設定
+  setupAudioTestLinks(); // 音声テストリンクは静的なので先にセットアップ
+
+  await loadAndProcessDataForCurrentHG(); // データ読み込みと予測、これによりタイマーUIも更新される
 
   window.onclick = function (event) {
     const modal = document.getElementById('huntingGroundModal');
