@@ -325,7 +325,6 @@ function createTimerButton(type, label, depletionTime, isActive = false) {
 }
 
 function updateTimerUI(currentDepletionTime) {
-  debugger;
   const buttonsContainer = document.getElementById('timerButtons');
   const statusEl = document.getElementById('timerStatus');
   const controlsContainer = document.getElementById('timerNotificationControlsContainer');
@@ -383,7 +382,6 @@ function updateTimerUI(currentDepletionTime) {
       } else {
         setTimer('custom', currentDepletionTime, minutes);
       }
-      debugger;
       updateTimerUI(currentDepletionTime); // UIを即時更新
     } else {
       alert('有効な数値を入力してください（0以上）。');
@@ -452,8 +450,7 @@ function setTimer(type, depletionTime, customOffsetMinutes = null) {
   if (targetTime <= Date.now()) {
     alert('通知時刻が現在時刻より過去になります。タイマーはセットされませんでした。');
     activeTimerInfo = null; //念のため
-    //updateTimerUI(depletionTime); // UIをリフレッシュしてボタンのアクティブ状態などを解除
-    debugger;
+    updateTimerUI(depletionTime); // UIをリフレッシュしてボタンのアクティブ状態などを解除
     return;
   }
 
