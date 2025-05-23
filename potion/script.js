@@ -613,11 +613,11 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
   // 4. 状況に応じて処理を分岐
 
   // --- 4a. 暫定予測または待機状態のチェック ---
-  // (増加ありで3件未満) または (増加なしで2件未満)
   if ((increaseDetected && n < 3) || (!increaseDetected && n < 2)) {
     const isProvisionalPossible = existingDbRate !== null && existingDbRate > 0;
     const pointsNeeded = increaseDetected ? 3 - n : 2 - n;
     const increaseTimeStr = increaseDetected ? ` (${formatDateTimeSmart(recordsForCalculation[0].timestamp)})` : '';
+    const nowMilliseconds = Date.now();
 
     if (isProvisionalPossible) {
       // --- 暫定予測 ---
@@ -625,23 +625,26 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
       const firstTimestampSeconds = recordsForCalculation[0].timestamp / 1000;
       const latestElapsedSeconds = (latestRecord.timestamp / 1000) - firstTimestampSeconds;
       const m_sec = -ratePerSec;
-      // 暫定予測線が最新の点を通過するように切片(c_sec)を計算
       const c_sec = latestRecord.quantity - m_sec * latestElapsedSeconds;
       const regressionParams = { m_sec, c_sec, firstTimestampSeconds };
-      // 枯渇時刻を計算
-      const depletionTime = latestRecord.timestamp + (latestRecord.quantity / ratePerSec) * 1000; // 簡易計算
-      const remainingTimeFormatted = formatRemainingTime(depletionTime - Date.now());
+      const depletionTime = latestRecord.timestamp + (latestRecord.quantity / ratePerSec) * 1000;
+      const remainingTimeFormatted = formatRemainingTime(depletionTime - nowMilliseconds);
 
       let message = increaseDetected
         ? `<p>ポーションが増加しました${increaseTimeStr}。<strong>以前の速度 (約 ${existingDbRate.toFixed(2)} 個/分)</strong> で暫定予測します。</p>`
-        : `<p>記録を開始しました。<strong>以前の速度 (約 ${existingDbRate.toFixed(2)} 個/分)</strong> で暫定予測します。</p>`; // ★ n=1 (増加なし) のメッセージ
-      message += `<p>枯渇は <strong>${remainingTimeFormatted}</strong> の見込みです。(暫定予測時刻: ${formatDateTimeSmart(depletionTime)})</p>`;
+        : `<p>記録を開始しました。<strong>以前の速度 (約 ${existingDbRate.toFixed(2)} 個/分)</strong> で暫定予測します。</p>`;
+
+      if (depletionTime > nowMilliseconds) {
+        message += `<p>枯渇は <strong>${remainingTimeFormatted}</strong> の見込みです。(暫定予測時刻: ${formatDateTimeSmart(depletionTime)})</p>`;
+      } else {
+        message += `<p>暫定予測によると、ポーションは既に枯渇している可能性があります。(暫定予測時刻: ${formatDateTimeSmart(depletionTime)})</p>`;
+      }
       message += `<p class="confidence-interval" style="font-size:0.9em; color:#555;">※あと ${pointsNeeded} 回記録すると、新しい消費ペースで再計算されます。</p>`;
 
       predictionMessageArea.innerHTML = message;
       consumptionRateDisplay.textContent = `以前の消費速度: 約 ${existingDbRate.toFixed(2)} 個/分 (暫定使用中)`;
 
-      const isDepleted = depletionTime <= Date.now();
+      const isDepleted = depletionTime <= nowMilliseconds;
       updateTimerUI(isDepleted ? null : depletionTime);
       return { prediction: { depleted: isDepleted, depletionTime }, regressionParams, residualsStdDev: 0, consumptionRatePerMin: existingDbRate };
 
@@ -660,7 +663,6 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
   }
 
   // --- 4b. 線形回帰による計算 ---
-  // (増加ありで3件以上) または (増加なしで2件以上)
   console.log(`${increaseDetected ? '増加後' : '増加なし'}、${n} 件のデータで速度を計算します。`);
 
   const firstTimestampSeconds = recordsForCalculation[0].timestamp / 1000;
@@ -702,38 +704,51 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
   let predictionText = '';
   let depletionTime = null;
   let depleted = false;
+  const nowMilliseconds = Date.now();
 
   if (m_sec >= 0) {
     predictionText = '<p>ポーションが消費されていないか、増えています。枯渇予測はできません。</p>';
   } else {
     const depletionTimestampRelativeSec = -c_sec / m_sec;
     depletionTime = (firstTimestampSeconds + depletionTimestampRelativeSec) * 1000;
+
     if (depletionTime <= latestRecord.timestamp) {
       predictionText = `<p>予測によると、ポーションは既に枯渇しているか、最終記録(${formatDateTimeSmart(latestRecord.timestamp)}: ${latestRecord.quantity}個)直後に枯渇したと考えられます。</p>`;
       depleted = true;
     } else {
-      const nowMilliseconds = new Date().getTime();
       const remainingMilliseconds = depletionTime - nowMilliseconds;
       const remainingTimeFormatted = formatRemainingTime(remainingMilliseconds);
       predictionText = `<p>現在のペースで消費すると、ポーションは<strong> ${remainingTimeFormatted} </strong>に枯渇する見込みです。</p>`;
-      predictionText += `<p>(予測枯渇時刻: ${formatDateTimeSmart(depletionTime)})</p>`;
-      if (n > 2 && residualsStdDev > 0.1) {
-        const qtyAtDepletionLower = residualsStdDev;
-        const qtyAtDepletionUpper = -residualsStdDev;
-        const depletionTimeLowerSec = (- (c_sec + qtyAtDepletionLower)) / m_sec;
-        const depletionTimeUpperSec = (- (c_sec + qtyAtDepletionUpper)) / m_sec;
-        const depletionTimeLower = (firstTimestampSeconds + depletionTimeLowerSec) * 1000;
-        const depletionTimeUpper = (firstTimestampSeconds + depletionTimeUpperSec) * 1000;
+            predictionText += `<p>予測時刻: ${formatDateTimeSmart(depletionTime)}</p>`;
 
-        if (depletionTimeLower < depletionTimeUpper && depletionTimeLower > nowMilliseconds) {
-          predictionText += `<p class="confidence-interval" style="font-size:0.9em; color:#555;">(予測のばらつきを考慮すると、枯渇は ${formatDateTimeSmart(depletionTimeLower)} から ${formatDateTimeSmart(depletionTimeUpper)} の間になる可能性があります。)</p>`;
+      // ★ 予測範囲のテキスト表示 (最終版) ★
+      if (n > 2 && residualsStdDev > 0.01) {
+        const depletionTimeEarliestSec = (- (c_sec - residualsStdDev)) / m_sec;
+        const depletionTimeLatestSec = (- (c_sec + residualsStdDev)) / m_sec;
+        const depletionTimeEarliest = (firstTimestampSeconds + depletionTimeEarliestSec) * 1000;
+        const depletionTimeLatest = (firstTimestampSeconds + depletionTimeLatestSec) * 1000;
+
+        const earliestStr = formatDateTimeSmart(depletionTimeEarliest);
+        const latestStr = formatDateTimeSmart(depletionTimeLatest);
+        let rangeText = "";
+
+        if (depletionTimeEarliest < depletionTimeLatest) {
+          if (depletionTimeEarliest > nowMilliseconds) {
+            rangeText = `${earliestStr} ～ ${latestStr} `;
+          } else if (depletionTimeLatest > nowMilliseconds) {
+            rangeText = `既に枯渇 ～ ${latestStr}`;
+          }
+        }
+
+        if (rangeText) {
+            predictionText += `<p class="confidence-interval" style="font-size:0.9em; color:#555;">範囲: ${rangeText}</p>`;
         }
       }
     }
   }
   predictionMessageArea.innerHTML = predictionText;
 
-  updateTimerUI(depletionTime && !depleted && depletionTime > Date.now() ? depletionTime : null);
+  updateTimerUI(depletionTime && !depleted && depletionTime > nowMilliseconds ? depletionTime : null);
 
   return { prediction: depletionTime ? { depleted, depletionTime } : null, regressionParams, residualsStdDev, consumptionRatePerMin: newlyCalculatedRate };
 }
