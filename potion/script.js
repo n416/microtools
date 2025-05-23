@@ -339,7 +339,7 @@ function updateTimerUI(currentDepletionTime) {
     statusEl.textContent = activeTimerInfo ? '以前の通知は無効になりました。' : '予測枯渇時刻が過去または無効なためタイマーを設定できません。';
     // 既存タイマーがあり、かつ枯渇時刻が無効化 or (存在する場合)変更されたらクリア
     if (activeTimerInfo && (!currentDepletionTime || activeTimerInfo.depletionTime !== currentDepletionTime)) {
-        clearActiveTimer();
+      clearActiveTimer();
     }
     controlsContainer.style.display = 'none'; // コンテナを非表示にする
     return; // 処理を終了
@@ -347,7 +347,7 @@ function updateTimerUI(currentDepletionTime) {
 
   // 有効な未来の枯渇時刻がある場合 => コンテナを表示
   controlsContainer.style.display = 'block';
-  
+
   // 1. 「枯渇時に通知」ボタン
   const depletionButtonActive = activeTimerInfo && activeTimerInfo.type === 'depletion' && activeTimerInfo.depletionTime === currentDepletionTime;
   const depletionButton = createTimerButton('depletion', '枯渇時に通知', currentDepletionTime, depletionButtonActive);
@@ -611,71 +611,58 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
   const latestRecord = recordsForCalculation[n - 1];
 
   // 4. 状況に応じて処理を分岐
-  if (increaseDetected) {
-    // --- 4a. 増加が検出された場合 ---
-    if (n < 3) {
-      // --- 4a-1. データが3件未満の場合 (暫定予測 or 待機) ---
-      const pointsNeeded = 3 - n;
-      const increaseTimeStr = formatDateTimeSmart(recordsForCalculation[0].timestamp);
 
-      if (existingDbRate !== null && existingDbRate > 0) {
-        // --- 以前の速度で暫定予測 ---
-        const ratePerSec = existingDbRate / 60;
-        const firstTimestampSeconds = recordsForCalculation[0].timestamp / 1000;
-        const latestElapsedSeconds = (latestRecord.timestamp / 1000) - firstTimestampSeconds;
-        const m_sec = -ratePerSec;
-        // 暫定予測線が最新の点を通過するように切片(c_sec)を計算
-        const c_sec = latestRecord.quantity - m_sec * latestElapsedSeconds;
-        const regressionParams = { m_sec, c_sec, firstTimestampSeconds };
+  // --- 4a. 暫定予測または待機状態のチェック ---
+  // (増加ありで3件未満) または (増加なしで2件未満)
+  if ((increaseDetected && n < 3) || (!increaseDetected && n < 2)) {
+    const isProvisionalPossible = existingDbRate !== null && existingDbRate > 0;
+    const pointsNeeded = increaseDetected ? 3 - n : 2 - n;
+    const increaseTimeStr = increaseDetected ? ` (${formatDateTimeSmart(recordsForCalculation[0].timestamp)})` : '';
 
-        // 枯渇時刻を計算
-        const depletionTimestampRelativeSec = -c_sec / m_sec;
-        const depletionTime = (firstTimestampSeconds + depletionTimestampRelativeSec) * 1000;
-        const remainingTimeFormatted = formatRemainingTime(depletionTime - Date.now());
+    if (isProvisionalPossible) {
+      // --- 暫定予測 ---
+      const ratePerSec = existingDbRate / 60;
+      const firstTimestampSeconds = recordsForCalculation[0].timestamp / 1000;
+      const latestElapsedSeconds = (latestRecord.timestamp / 1000) - firstTimestampSeconds;
+      const m_sec = -ratePerSec;
+      // 暫定予測線が最新の点を通過するように切片(c_sec)を計算
+      const c_sec = latestRecord.quantity - m_sec * latestElapsedSeconds;
+      const regressionParams = { m_sec, c_sec, firstTimestampSeconds };
+      // 枯渇時刻を計算
+      const depletionTime = latestRecord.timestamp + (latestRecord.quantity / ratePerSec) * 1000; // 簡易計算
+      const remainingTimeFormatted = formatRemainingTime(depletionTime - Date.now());
 
-        let message = `<p>ポーションが増加しました (${increaseTimeStr})。<strong>以前の速度 (約 ${existingDbRate.toFixed(2)} 個/分)</strong> で暫定予測します。</p>`;
-        message += `<p>枯渇は <strong>${remainingTimeFormatted}</strong> の見込みです。(暫定予測時刻: ${formatDateTimeSmart(depletionTime)})</p>`;
-        message += `<p class="confidence-interval" style="font-size:0.9em; color:#555;">※あと ${pointsNeeded} 回記録すると、新しい消費ペースで再計算されます。</p>`;
+      let message = increaseDetected
+        ? `<p>ポーションが増加しました${increaseTimeStr}。<strong>以前の速度 (約 ${existingDbRate.toFixed(2)} 個/分)</strong> で暫定予測します。</p>`
+        : `<p>記録を開始しました。<strong>以前の速度 (約 ${existingDbRate.toFixed(2)} 個/分)</strong> で暫定予測します。</p>`; // ★ n=1 (増加なし) のメッセージ
+      message += `<p>枯渇は <strong>${remainingTimeFormatted}</strong> の見込みです。(暫定予測時刻: ${formatDateTimeSmart(depletionTime)})</p>`;
+      message += `<p class="confidence-interval" style="font-size:0.9em; color:#555;">※あと ${pointsNeeded} 回記録すると、新しい消費ペースで再計算されます。</p>`;
 
-        predictionMessageArea.innerHTML = message;
-        consumptionRateDisplay.textContent = `以前の消費速度: 約 ${existingDbRate.toFixed(2)} 個/分 (暫定使用中)`;
+      predictionMessageArea.innerHTML = message;
+      consumptionRateDisplay.textContent = `以前の消費速度: 約 ${existingDbRate.toFixed(2)} 個/分 (暫定使用中)`;
 
-        // 暫定予測結果を返し、タイマーUIを更新
-        const isDepleted = depletionTime <= Date.now();
-        updateTimerUI(isDepleted ? null : depletionTime);
-        return { prediction: { depleted: isDepleted, depletionTime }, regressionParams, residualsStdDev: 0, consumptionRatePerMin: existingDbRate };
+      const isDepleted = depletionTime <= Date.now();
+      updateTimerUI(isDepleted ? null : depletionTime);
+      return { prediction: { depleted: isDepleted, depletionTime }, regressionParams, residualsStdDev: 0, consumptionRatePerMin: existingDbRate };
 
-      } else {
-        // --- 以前の速度がないため待機 ---
-        let message = `<p>ポーションが増加しました (${increaseTimeStr})。</p>`;
-        message += `<p>あと ${pointsNeeded} 回記録すると予測を開始します。(以前の速度記録なし)</p>`;
-
-        predictionMessageArea.innerHTML = message;
-        consumptionRateDisplay.textContent = `消費速度: 計算不可 (記録不足)`;
-        updateTimerUI(null);
-        return { ...baseReturn, consumptionRateMin: existingDbRate };
-      }
     } else {
-      // --- 4a-2. データが3件以上の場合 (線形回帰へ) ---
-      console.log(`増加後、${n} 件のデータで新しい速度を計算します。`);
-      // このまま下の線形回帰処理に進む
-    }
-  } else {
-    // --- 4b. 増加が検出されなかった場合 ---
-    if (n < 2) {
-      // --- 4b-1. データが2件未満の場合 (待機) ---
-      predictionMessageArea.innerHTML = '<p>まだ予測できません。最低2つの記録が必要です。</p>';
-      consumptionRateDisplay.textContent = existingDbRate ? `保存された消費速度: 約 ${existingDbRate.toFixed(2)} 個/分 (記録不足)` : `消費速度: 計算不可 (記録不足)`;
+      // --- 待機 ---
+      let message = increaseDetected
+        ? `<p>ポーションが増加しました${increaseTimeStr}。</p>`
+        : `<p>まだ予測できません。</p>`;
+      message += `<p>あと ${pointsNeeded} 回記録すると予測を開始します。` + (existingDbRate === null ? `(以前の速度記録なし)` : `(最低${increaseDetected ? 3 : 2}記録必要)`) + `</p>`;
+
+      predictionMessageArea.innerHTML = message;
+      consumptionRateDisplay.textContent = `消費速度: 計算不可 (記録不足)`;
       updateTimerUI(null);
-      return { ...baseReturn, consumptionRatePerMin: existingDbRate };
-    } else {
-      // --- 4b-2. データが2件以上の場合 (線形回帰へ) ---
-      console.log(`増加なし、${n} 件のデータで速度を計算します。`);
-      // このまま下の線形回帰処理に進む
+      return { ...baseReturn, consumptionRateMin: existingDbRate };
     }
   }
 
-  // --- 5. 線形回帰による計算 (4a-2 または 4b-2 からここに来る) ---
+  // --- 4b. 線形回帰による計算 ---
+  // (増加ありで3件以上) または (増加なしで2件以上)
+  console.log(`${increaseDetected ? '増加後' : '増加なし'}、${n} 件のデータで速度を計算します。`);
+
   const firstTimestampSeconds = recordsForCalculation[0].timestamp / 1000;
   const xValues = recordsForCalculation.map(r => (r.timestamp / 1000) - firstTimestampSeconds);
   const yValues = recordsForCalculation.map(r => r.quantity);
@@ -695,7 +682,7 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
     newlyCalculatedRate = Math.abs(m_sec * 60);
     consumptionRateDisplay.textContent = `現在の狩り場の消費速度: 約 ${newlyCalculatedRate.toFixed(2)} 個/分`;
     if (increaseDetected) {
-        consumptionRateDisplay.textContent += ` (新しいデータで計算)`;
+      consumptionRateDisplay.textContent += ` (新しいデータで計算)`;
     }
   } else {
     consumptionRateDisplay.textContent = `現在の狩り場の消費速度: 計算不可 (消費なし/増加傾向)`;
@@ -731,22 +718,21 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
       predictionText = `<p>現在のペースで消費すると、ポーションは<strong> ${remainingTimeFormatted} </strong>に枯渇する見込みです。</p>`;
       predictionText += `<p>(予測枯渇時刻: ${formatDateTimeSmart(depletionTime)})</p>`;
       if (n > 2 && residualsStdDev > 0.1) {
-          const qtyAtDepletionLower = residualsStdDev;
-          const qtyAtDepletionUpper = -residualsStdDev;
-          const depletionTimeLowerSec = (- (c_sec + qtyAtDepletionLower)) / m_sec;
-          const depletionTimeUpperSec = (- (c_sec + qtyAtDepletionUpper)) / m_sec;
-          const depletionTimeLower = (firstTimestampSeconds + depletionTimeLowerSec) * 1000;
-          const depletionTimeUpper = (firstTimestampSeconds + depletionTimeUpperSec) * 1000;
+        const qtyAtDepletionLower = residualsStdDev;
+        const qtyAtDepletionUpper = -residualsStdDev;
+        const depletionTimeLowerSec = (- (c_sec + qtyAtDepletionLower)) / m_sec;
+        const depletionTimeUpperSec = (- (c_sec + qtyAtDepletionUpper)) / m_sec;
+        const depletionTimeLower = (firstTimestampSeconds + depletionTimeLowerSec) * 1000;
+        const depletionTimeUpper = (firstTimestampSeconds + depletionTimeUpperSec) * 1000;
 
-          if (depletionTimeLower < depletionTimeUpper && depletionTimeLower > nowMilliseconds) {
-            predictionText += `<p class="confidence-interval" style="font-size:0.9em; color:#555;">(予測のばらつきを考慮すると、枯渇は ${formatDateTimeSmart(depletionTimeLower)} から ${formatDateTimeSmart(depletionTimeUpper)} の間になる可能性があります。)</p>`;
-          }
+        if (depletionTimeLower < depletionTimeUpper && depletionTimeLower > nowMilliseconds) {
+          predictionText += `<p class="confidence-interval" style="font-size:0.9em; color:#555;">(予測のばらつきを考慮すると、枯渇は ${formatDateTimeSmart(depletionTimeLower)} から ${formatDateTimeSmart(depletionTimeUpper)} の間になる可能性があります。)</p>`;
+        }
       }
     }
   }
   predictionMessageArea.innerHTML = predictionText;
 
-  // タイマーUI更新
   updateTimerUI(depletionTime && !depleted && depletionTime > Date.now() ? depletionTime : null);
 
   return { prediction: depletionTime ? { depleted, depletionTime } : null, regressionParams, residualsStdDev, consumptionRatePerMin: newlyCalculatedRate };
