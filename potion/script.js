@@ -335,12 +335,19 @@ function updateTimerUI(currentDepletionTime) {
   let hasValidFutureDepletionTime = currentDepletionTime && currentDepletionTime > Date.now();
 
   if (!hasValidFutureDepletionTime) {
+    // 有効な未来の枯渇時刻がない場合
     statusEl.textContent = activeTimerInfo ? '以前の通知は無効になりました。' : '予測枯渇時刻が過去または無効なためタイマーを設定できません。';
-    if (activeTimerInfo) clearActiveTimer();
-    // controlsContainerの表示制御は呼び出し元で行う
-    return;
+    // 既存タイマーがあり、かつ枯渇時刻が無効化 or (存在する場合)変更されたらクリア
+    if (activeTimerInfo && (!currentDepletionTime || activeTimerInfo.depletionTime !== currentDepletionTime)) {
+        clearActiveTimer();
+    }
+    controlsContainer.style.display = 'none'; // コンテナを非表示にする
+    return; // 処理を終了
   }
 
+  // 有効な未来の枯渇時刻がある場合 => コンテナを表示
+  controlsContainer.style.display = 'block';
+  
   // 1. 「枯渇時に通知」ボタン
   const depletionButtonActive = activeTimerInfo && activeTimerInfo.type === 'depletion' && activeTimerInfo.depletionTime === currentDepletionTime;
   const depletionButton = createTimerButton('depletion', '枯渇時に通知', currentDepletionTime, depletionButtonActive);
