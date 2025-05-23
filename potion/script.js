@@ -719,7 +719,7 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
       const remainingMilliseconds = depletionTime - nowMilliseconds;
       const remainingTimeFormatted = formatRemainingTime(remainingMilliseconds);
       predictionText = `<p>現在のペースで消費すると、ポーションは<strong> ${remainingTimeFormatted} </strong>に枯渇する見込みです。</p>`;
-      predictionText += `<p>(予測枯渇時刻: ${formatDateTimeSmart(depletionTime)})</p>`;
+            predictionText += `<p>予測時刻: ${formatDateTimeSmart(depletionTime)}</p>`;
 
       // ★ 予測範囲のテキスト表示 (最終版) ★
       if (n > 2 && residualsStdDev > 0.01) {
@@ -734,14 +734,14 @@ async function calculatePredictionAndConsumptionRate(records, hgIdToUpdate) {
 
         if (depletionTimeEarliest < depletionTimeLatest) {
           if (depletionTimeEarliest > nowMilliseconds) {
-            rangeText = `(予測のばらつきを考慮すると、枯渇は ${earliestStr} から ${latestStr} の間になる可能性があります。)`;
+            rangeText = `${earliestStr} ～ ${latestStr} `;
           } else if (depletionTimeLatest > nowMilliseconds) {
-            rangeText = `(予測のばらつきを考慮すると、既に枯渇している可能性から ${latestStr} 頃までの可能性があります。)`;
+            rangeText = `既に枯渇 ～ ${latestStr}`;
           }
         }
 
         if (rangeText) {
-          predictionText += `<p class="confidence-interval" style="font-size:0.9em; color:#555;">${rangeText}</p>`;
+            predictionText += `<p class="confidence-interval" style="font-size:0.9em; color:#555;">範囲: ${rangeText}</p>`;
         }
       }
     }
