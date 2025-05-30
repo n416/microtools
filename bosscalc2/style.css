@@ -1,0 +1,311 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1420px; /* さらに少し狭めて凝縮感を出す */
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #0056b3;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.2em; /* 少し調整 */
+}
+h2 {
+    color: #0056b3;
+    text-align: left;
+    margin-top: 10px;
+    margin-bottom: 10px; /* 詰める */
+    font-size: 1em;
+    padding-bottom: 5px;
+}
+
+p.description {
+    text-align: center;
+    background-color: #fff9e6;
+    border: 1px solid #ffe58f;
+    padding: 8px 10px;
+    border-radius: 4px;
+    margin-bottom: 20px; /* 他セクションとの間隔を少し確保 */
+    font-size: 0.9em;
+}
+
+/* 旧 .settings-section は廃止 */
+
+.top10-section,
+.chart-section {
+    /* output-section も chart-section に統合 */
+    background: transparent;
+    padding: 10px;
+    border-radius: 0px;
+}
+.top10-section{
+    min-width: 180px;
+}
+
+
+/* 上位10位セクション内のボタン用 */
+.top10-section div[style*="text-align: right"] {
+    /* 「貢献度傾向を設定」ボタンの親div */
+    margin-bottom: 10px !important; /* importantで上書き */
+}
+#open-curve-settings-modal-button {
+    padding: 6px 10px;
+    font-size: 0.9em;
+    background-color: #6c757d;
+}
+#open-curve-settings-modal-button:hover {
+    background-color: #545b62;
+}
+
+/* グラフセクション内の予測結果表示 (旧 output-section の内容) */
+.prediction-results-inline {
+    display: flex;
+    flex-wrap: wrap; /* 折り返しを許可 */
+    justify-content: space-around; /* スペースを均等に */
+    margin-bottom: 15px; /* 下の要素との間隔 */
+}
+.result-item-inline {
+    flex: 1 1 200px; /* flex-grow, flex-shrink, flex-basis */
+    padding: 5px 10px;
+    margin: 5px;
+    background-color: #fff;
+    border-bottom: 1px solid #ddd;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* 中央揃え */
+    font-size: 0.95rem; /* 少し調整 */
+}
+.result-item-inline.result-item-fullwidth {
+    /* 討伐時刻は幅を広くとる */
+    flex-basis: 100%;
+}
+.result-item-inline .label {
+    font-weight: bold;
+    color: #495057;
+    margin-right: 10px;
+}
+#prediction-summary {
+    /* 予測時刻サマリーは少し目立たせる */
+    font-weight: bold;
+    color: #0056b3;
+}
+
+/* グラフセクション内の自動更新コントロール */
+.auto-update-control {
+    text-align: center; /* 中央寄せ */
+    margin-bottom: 15px; /* グラフとの間隔 */
+    padding: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+}
+.auto-update-control label {
+    margin-right: 5px;
+}
+.status-message {
+    font-size: 0.85em;
+    color: #e86100;
+    margin-left: 8px;
+    font-weight: bold;
+}
+
+label {
+    /* グローバルなlabel調整は影響範囲注意 */
+    display: inline-block;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+input[type="number"] {
+    /* グローバルなinput調整 */
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 70px;
+    margin-right: 10px;
+    margin-bottom: 8px;
+}
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: background-color 0.3s ease;
+    margin-left: 5px;
+}
+button:hover {
+    background-color: #0056b3;
+}
+.error {
+    color: #dc3545;
+    font-weight: bold;
+    margin-top: 8px;
+    font-size: 0.9em;
+}
+
+/* 上位10位テーブルのスタイル (大きな変更なし、フォントサイズ調整) */
+#top10-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0; /* 上のボタンとの間隔調整のため */
+    font-size: 0.9em; /* テーブル内文字を少し小さく */
+}
+#top10-table th,
+#top10-table td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    text-align: center;
+} /* padding詰める */
+#top10-table th {
+    background-color: #007bff;
+    color: white;
+}
+#top10-table tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+#top10-table input[type="number"] {
+    width: 100px;
+    margin: 0;
+    text-align: right;
+}
+#update-prediction-button {
+    background-color: #ff7f00;
+    margin-top: 10px;
+    width: 100%;
+    font-size: 1.1em;
+}
+#update-prediction-button:hover {
+    background-color: #cc6600;
+}
+
+/* グラフセクション */
+.chart-section {
+    flex: 1;
+    min-width: 55%;
+} /* 上の要素との間隔 */
+.chart-section h2 {
+    margin-bottom: 5px;
+} /* グラフタイトル下のマージン */
+
+/* モーダルウィンドウのスタイル (大きな変更なし) */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    padding-top: 60px;
+}
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%;
+    max-width: 450px;
+    border-radius: 8px;
+    box-shadow:
+        0 4px 8px 0 rgba(0, 0, 0, 0.2),
+        0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    position: relative;
+}
+.modal-content h2 {
+    font-size: 1.3em;
+}
+.modal-close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+}
+.modal-close-button:hover,
+.modal-close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+.modal-input-group {
+    margin-bottom: 12px;
+}
+.modal-input-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: normal;
+    font-size: 0.9em;
+    width: auto;
+}
+.modal-input-group input[type="number"] {
+    width: 80px;
+    padding: 6px;
+    box-sizing: border-box;
+}
+.modal-actions {
+    text-align: right;
+    margin-top: 15px;
+}
+.modal-actions button {
+    padding: 8px 12px;
+    margin-left: 8px;
+}
+#save-curve-settings-button {
+    background-color: #28a745;
+}
+#save-curve-settings-button:hover {
+    background-color: #1e7e34;
+}
+#cancel-curve-settings-button {
+    background-color: #6c757d;
+}
+#cancel-curve-settings-button:hover {
+    background-color: #545b62;
+}
+
+/* クリアボタンコンテナ */
+.clear-storage-container {
+    text-align: center; /* ボタンを中央寄せ */
+    margin-top: 25px; /* 上の要素との間隔 */
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+}
+#clear-storage-button {
+    background-color: #dc3545;
+    font-size: 0.9em;
+}
+#clear-storage-button:hover {
+    background-color: #c82333;
+}
+.main-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+
+@media (max-width: 768px) {
+.top10-section{
+    width: 100%;
+}
+.chart-section{
+    width: 100%;
+}
+}
