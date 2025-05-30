@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ボス討伐時刻予測ツール (レイアウト最終版)</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <h1>ボス討伐時刻予測ツール (レイアウト最終版)</h1>
+        <p class="description">
+            貢献度(%)欄に最新の観測値を入力し、「予測を更新」を押してください。<br>
+            入力すると、すべての欄が最新の推定値に書き換わります。データは自動でブラウザに保存されます。
+        </p>
+        <div class="main-container">
+            <div class="top10-section">
+
+                <div style="margin-bottom: 10px; text-align: right;">
+                    <button id="open-curve-settings-modal-button">貢献度傾向を設定...</button>
+                </div>
+                <div class="auto-update-control">
+                    <input type="checkbox" id="auto-update-checkbox" checked>
+                    <label for="auto-update-checkbox">自動更新</label>
+                    <span id="auto-update-status-message" class="status-message"></span>
+                </div>
+                <table id="top10-table">
+                    <thead>
+                        <tr>
+                            <th>順位</th>
+                            <th>貢献度 (%) [入力/最新推定値]</th>
+                            <th>最終手動更新</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+                <button id="update-prediction-button">予測を更新</button>
+                <p id="input-error" class="error"></p>
+            </div>
+
+            <div class="chart-section">
+                <div class="prediction-results-inline">
+                    <div class="result-item-inline">
+                        <span class="label">推定分速 (%/min):</span>
+                        <span id="minute-rate">--</span>
+                    </div>
+                    <div class="result-item-inline">
+                        <span class="label">残り体力 (%):</span>
+                        <span id="remaining-hp">--</span>
+                    </div>
+                    <div class="result-item-inline result-item-fullwidth">
+                        <span class="label">予測討伐時刻 (残り時間):</span>
+                        <span id="prediction-summary">--</span>
+                    </div>
+                </div>
+                <canvas id="hp-chart"></canvas>
+            </div>
+        </div>
+        <div id="curve-settings-modal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close-button">&times;</span>
+                <h2>貢献度傾向の設定</h2>
+                <p>レイドメンバーの火力分布の傾向を入力してください。<br>この情報から、貢献度カーブの形状と全体の貢献規模を推定します。</p>
+                <div class="modal-input-group">
+                    <label for="elite-members-count">飛び抜けた火力メンバー数 (おおよそ):</label>
+                    <input type="number" id="elite-members-count" min="0" value="5">
+                </div>
+                <div class="modal-input-group">
+                    <label for="good-members-count">ある程度当たる火力メンバー数 (おおよそ):</label>
+                    <input type="number" id="good-members-count" min="0" value="20">
+                </div>
+                <div class="modal-input-group">
+                    <label for="low-members-count">ほぼ当たらないメンバー数 (おおよそ):</label>
+                    <input type="number" id="low-members-count" min="0" value="25">
+                </div>
+                <div class="modal-input-group">
+                    <label>参加人数 (自動計算):</label>
+                    <span id="total-modal-participants" style="font-weight:bold;">50</span>
+                </div>
+                <div class="modal-actions">
+                    <button id="save-curve-settings-button">この内容で設定</button>
+                    <button id="cancel-curve-settings-button" type="button">キャンセル</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="clear-storage-container">
+            <button id="clear-storage-button">保存データをクリア</button>
+        </div>
+
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
