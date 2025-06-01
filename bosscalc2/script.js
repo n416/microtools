@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.insertCell(0).textContent = i + 1;
                 const inputCell = row.insertCell(1); const timeCell = row.insertCell(2);
                 const input = document.createElement('input');
-                input.type = 'number'; input.min = '0.01'; input.step = '0.01'; input.max = '100';
+                input.type = 'number'; input.min = '0.1'; input.step = '0.1'; input.max = '100';
                 input.classList.add('percent-input'); input.dataset.rank = i + 1; input.placeholder = '--';
                 inputCell.appendChild(input); timeCell.textContent = '--';
                 state.top10Data[i].inputElement = input; state.top10Data[i].timeElement = timeCell;
