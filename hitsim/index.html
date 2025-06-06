@@ -1,7 +1,21 @@
-<body>
-    <h1>装備シミュレータ</h1>
-    <p><a href="data.html">インベントリの編集</a></p>
+<!DOCTYPE html>
+<html lang="ja">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>装備シミュレータ</title>
+    <link rel="stylesheet" href="simulator.css">
+</head>
+
+<body>
+    <div class="header-container">
+        <h1>装備シミュレータ</h1>
+        <div class="header-buttons">
+            <a href="data.html" id="edit-inventory-button" class="button-like">インベントリ編集</a>
+            <button id="share-button">共有</button>
+        </div>
+    </div>
     <div class="simulator-container">
         <div id="equipment-panel">
             <div id="column-1" class="equipment-column">
@@ -30,17 +44,45 @@
             </div>
         </div>
         <div id="inventory-panel">
-            <h2>インベントリ</h2>
-            <div id="inventory-list">
+            <div id="inventory-panel">
+                <div id="inventory-tabs">
+                    <button class="tab-button active" data-category="all">全て</button>
+                    <button class="tab-button" data-category="weapon">武器</button>
+                    <button class="tab-button" data-category="armor">防具</button>
+                    <button class="tab-button" data-category="accessory">アクセ</button>
+                </div>
+                <div id="inventory-list">
+                </div>
+            </div>
+        </div>
+        <div id="stats-panel">
+            <h2>ステータス合計</h2>
+            <div class="stats-list">
+                装備がありません。
             </div>
         </div>
     </div>
 
+    <div id="item-details-panel">
+        <h2 id="details-item-name">アイテム詳細</h2>
+        <div class="details-content">
+            <img id="details-item-image" src="" alt="">
+            <div id="details-stats-list"></div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 
-    <div id="stats-panel">
-        <h2>ステータス</h2>
+    <div id="share-modal-overlay" class="hidden">
+        <div id="share-modal">
+            <p>共有されたデータがあります。<br>読み込みますか？</p>
+            <div class="modal-buttons">
+                <button id="modal-ok-button">OK</button>
+                <button id="modal-cancel-button">キャンセル</button>
+            </div>
+        </div>
     </div>
 
-    <link rel="stylesheet" href="simulator.css">
     <script src="simulator.js"></script>
 </body>
+
+</html>

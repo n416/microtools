@@ -43,7 +43,7 @@ h2 {
     color: #a0a0a0;
 }
 
-.slot span{
+.slot span {
     max-width: 3rem;
     font-size: 0.8rem;
     text-align: center;
@@ -257,3 +257,187 @@ h2 {
     color: #fff;
     font-weight: bold;
 }
+
+/* ▼▼▼【ここから末尾に追記】▼▼▼ */
+/* --- アイテム詳細パネル（フローティング）のスタイル --- */
+#item-details-panel {
+    display: none; /* 初期状態は非表示 */
+    position: absolute; /* ページ上の絶対位置に配置 */
+    width: 280px;
+    background-color: rgba(20, 20, 25, 0.9);
+    border: 1px solid #888;
+    border-radius: 5px;
+    padding: 10px 15px;
+    z-index: 1000; /* 他の要素より手前に表示 */
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    pointer-events: none; /* パネル自体がクリックイベントを妨げないように */
+}
+
+#item-details-panel h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #ffdd00;
+    border-bottom: 1px solid #555;
+    padding-bottom: 8px;
+    font-weight: bold;
+}
+
+#item-details-panel .details-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+#item-details-panel #details-item-image {
+    width: 50px;
+    height: 50px;
+    background-color: #1c1c1f;
+    border: 1px solid #666;
+    border-radius: 4px;
+    object-fit: contain;
+}
+
+#item-details-panel #details-stats-list {
+    flex: 1;
+    font-size: 14px;
+}
+
+#details-stats-list .stat-entry {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+}
+
+/* --- インベントリタブのスタイル --- */
+#inventory-tabs {
+    display: flex;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #555;
+}
+
+.tab-button {
+    padding: 8px 15px;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    color: #a0a0a0;
+    font-size: 14px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px; /* 下線を親のborderに重ねるため */
+}
+
+.tab-button.active {
+    color: #fff;
+    border-bottom-color: #ffdd00;
+}
+
+/* --- ヘッダーと共有ボタンのスタイル --- */
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: -10px; /*下の<p>との間隔調整*/
+}
+
+#share-button {
+    padding: 8px 16px;
+    font-size: 14px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#share-button:hover {
+    background-color: #0056b3;
+}
+
+/* --- 共有モーダルのスタイル --- */
+#share-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000; /* 詳細パネルよりさらに手前 */
+}
+
+#share-modal-overlay.hidden {
+    display: none;
+}
+
+#share-modal {
+    background-color: #3e3e42;
+    padding: 25px 35px;
+    border-radius: 8px;
+    border: 1px solid #777;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+    text-align: center;
+}
+
+#share-modal p {
+    margin-top: 0;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.modal-buttons button {
+    padding: 10px 25px;
+    margin: 0 10px;
+    border-radius: 5px;
+    border: 1px solid #777;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+#modal-ok-button {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+#modal-cancel-button {
+    background-color: #555;
+    color: white;
+}
+/* ▼▼▼【ここから末尾に追記】▼▼▼ */
+.header-buttons {
+    display: flex;
+    gap: 10px; /* ボタン間の余白 */
+}
+
+/* 汎用的なボタンスタイル */
+.button-like {
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 14px;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    background-color: #6c757d; /* 少し落ち着いた色に */
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.button-like:hover {
+    background-color: #5a6268;
+}
+
+/* 既存の共有ボタンのスタイルを上書きして統一感を出す */
+#share-button {
+    background-color: #007bff;
+}
+
+#share-button:hover {
+    background-color: #0056b3;
+}
+/* ▲▲▲【ここまで追記】▲▲▲ */
