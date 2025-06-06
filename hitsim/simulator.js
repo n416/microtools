@@ -14,11 +14,16 @@ let equippedItems = {};
 let selectedInventoryItem = null;
 let selectedSlotId = null;
 
+// ▼▼▼【追記】詳細パネル用の変数を定義 ▼▼▼
 let detailsPanel, detailsItemName, detailsItemImage, detailsStatsList;
+// ▲▲▲【追記】▲▲▲
 
+// ▼▼▼【追記】インベントリのフルリストと現在選択中のカテゴリを管理 ▼▼▼
 let allInventoryItems = [];
 let currentInventoryCategory = 'all';
+// ▲▲▲【追記】▲▲▲
 
+// ▼▼▼【新規追加】ステータス計算対象となる列名のリスト ▼▼▼
 const STAT_HEADERS = [
     '評価数値', '基本攻撃力', '攻撃力増幅', 'クリティカルダメージ増幅', '一般攻撃力',
     'スキルダメージ増幅', '近距離攻撃力', '防御力', '武力', 'ガード貫通', '一般ダメージ増幅',
@@ -72,24 +77,37 @@ function handleSharedData(encodedData) {
     const modalOverlay = document.getElementById('share-modal-overlay');
     const okButton = document.getElementById('modal-ok-button');
     const cancelButton = document.getElementById('modal-cancel-button');
+    const modalText = modalOverlay.querySelector('p');
 
     modalOverlay.classList.remove('hidden');
 
-    okButton.onclick = () => {
+    okButton.onclick = async () => {
         try {
+            modalText.textContent = 'データベースを確認・準備中です...';
+            okButton.disabled = true;
+            cancelButton.disabled = true;
+
+            await checkAndSetupDatabaseIfNeeded();
+
+            modalText.textContent = 'データを復元しています...';
+
             const compressedData = atob(encodedData.replace(/-/g, '+').replace(/_/g, '/'));
             const uint8Array = new Uint8Array(compressedData.split('').map(c => c.charCodeAt(0)));
             const jsonString = pako.inflate(uint8Array, { to: 'string' });
             const state = JSON.parse(jsonString);
+
             if (state.inventory && state.equipment) {
                 localStorage.setItem(INVENTORY_KEY, JSON.stringify(state.inventory));
                 localStorage.setItem(EQUIPMENT_SET_KEY, JSON.stringify(state.equipment));
             }
         } catch (e) {
-            console.error('共有データの解析に失敗:', e);
-            alert('共有データの読み込みに失敗しました。');
+            console.error('共有データの処理中にエラーが発生しました:', e);
+            alert('データの読み込みに失敗しました。');
         } finally {
             modalOverlay.classList.add('hidden');
+            modalText.textContent = '共有されたデータがあります。\n読み込みますか？';
+            okButton.disabled = false;
+            cancelButton.disabled = false;
             history.replaceState(null, '', window.location.pathname);
             initializeApp();
         }
@@ -124,12 +142,14 @@ async function initializeApp() {
 }
 
 // --- 関数定義 ---
+// (openDatabase, getItemFromDB, renderInventory, handleInventoryClick, handleSlotClick は変更なし)
 function openDatabase() {
     return new Promise((resolve, reject) => {
+        if (db) return resolve(db);
         const request = indexedDB.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = (e) => { const db = e.target.result; if (!db.objectStoreNames.contains(STORE_NAME)) { db.createObjectStore(STORE_NAME, { keyPath: '名称' }); } };
         request.onerror = (e) => reject('DBオープン失敗:', e.target.error);
-        request.onsuccess = (e) => { db = e.target.result; resolve(); };
+        request.onsuccess = (e) => { db = e.target.result; resolve(db); };
     });
 }
 async function loadAndRenderInventory() {
@@ -138,7 +158,7 @@ async function loadAndRenderInventory() {
     const itemPromises = inventoryItemNames.map(name => getItemFromDB(name));
     const inventoryItems = (await Promise.all(itemPromises)).filter(item => item);
     allInventoryItems = inventoryItems;
-    renderInventory(allInventoryItems);
+    renderInventory(inventoryItems);
 }
 function getItemFromDB(itemName) {
     return new Promise((resolve) => {
@@ -151,14 +171,12 @@ function getItemFromDB(itemName) {
 function renderInventory(items) {
     const inventoryListDiv = document.getElementById('inventory-list');
     inventoryListDiv.innerHTML = '';
-
     const filteredItems = items.filter(item => {
         if (currentInventoryCategory === 'all') {
             return true;
         }
         return getCategoryFromType(item['タイプ']) === currentInventoryCategory;
     });
-
     filteredItems.forEach(item => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'inventory-item';
@@ -169,10 +187,7 @@ function renderInventory(items) {
         img.alt = item['名称'];
         img.className = 'item-icon';
         itemDiv.appendChild(img);
-        itemDiv.addEventListener('click', (e) => {
-            e.stopPropagation();
-            handleInventoryClick(item, e.currentTarget);
-        });
+        itemDiv.addEventListener('click', (e) => { e.stopPropagation(); handleInventoryClick(item, e.currentTarget); });
         inventoryListDiv.appendChild(itemDiv);
     });
 }
@@ -187,58 +202,74 @@ function handleInventoryClick(item, element) {
         displayItemDetails(item, element);
     }
 }
-// ▼▼▼【変更箇所】第2引数としてクリックされた要素(element)を受け取るように修正 ▼▼▼
 function handleSlotClick(slotId, element) {
-    const item = equippedItems[slotId]; // スロットにあるアイテムを取得
-    if (item) { // アイテムが装備されている場合のみ処理
+    const item = equippedItems[slotId];
+    if (item) {
         if (selectedSlotId === slotId) {
-            // 2回目のクリック：装備解除
             unequipItem(slotId);
             clearAllSelections();
         } else {
-            // 1回目のクリック：選択して詳細表示
             clearAllSelections();
             selectedSlotId = slotId;
             element.classList.add('selected');
-            displayItemDetails(item, element); // 詳細表示関数を呼び出し
+            displayItemDetails(item, element);
         }
     }
 }
-// ▲▲▲【変更箇所】▲▲▲
 
+/**
+ * ▼▼▼【空きスロット優先ロジック 最終修正版】▼▼▼
+ * アイテムを対応するスロットに装備させる
+ * @param {object} item - 装備するアイテムオブジェクト
+ */
 function equipItem(item) {
     const itemType = item['タイプ'];
     const slotCategory = TYPE_TO_SLOT_CATEGORY[itemType];
     if (!slotCategory) return;
+
     const possibleSlotIds = SLOT_CATEGORY_TO_IDS[slotCategory];
     const isRing = (slotCategory === 'ring');
+
     if (!isRing) {
         if (Object.values(equippedItems).some(equipped => equipped && equipped['名称'] === item['名称'])) {
             console.log(`ユニークアイテム「${item['名称']}」はすでに装備されています。`);
             return;
         }
     }
+
     const emptySlotId = possibleSlotIds.find(id => !equippedItems[id]);
+
     if (emptySlotId) {
         equippedItems[emptySlotId] = item;
         renderSlot(emptySlotId);
+
     } else {
         if (isRing) {
             const pushedOutItem = equippedItems[possibleSlotIds[4]];
             console.log(`リング枠が満杯のため、「${pushedOutItem['名称']}」が押し出されます。`);
+
             for (let i = possibleSlotIds.length - 2; i >= 0; i--) {
-                equippedItems[possibleSlotIds[i + 1]] = equippedItems[possibleSlotIds[i]];
+                const currentSlotId = possibleSlotIds[i];
+                const nextSlotId = possibleSlotIds[i + 1];
+                equippedItems[nextSlotId] = equippedItems[currentSlotId];
             }
             equippedItems[possibleSlotIds[0]] = item;
+
             possibleSlotIds.forEach(id => renderSlot(id));
+
         } else {
             const targetSlotId = possibleSlotIds[0];
-            if (equippedItems[targetSlotId] && equippedItems[targetSlotId]['名称'] === item['名称']) return;
+
+            if (equippedItems[targetSlotId] && equippedItems[targetSlotId]['名称'] === item['名称']) {
+                return;
+            }
+
             unequipItem(targetSlotId, false);
             equippedItems[targetSlotId] = item;
             renderSlot(targetSlotId);
         }
     }
+
     saveEquippedItems();
     calculateAndRenderStats();
 }
@@ -249,7 +280,7 @@ function unequipItem(slotId, doSaveAndRecalculate = true) {
         renderSlot(slotId);
         if (doSaveAndRecalculate) {
             saveEquippedItems();
-            calculateAndRenderStats();
+            calculateAndRenderStats(); // ★★★ 装備解除後にステータスを再計算
         }
     }
 }
@@ -260,9 +291,7 @@ function renderSlot(slotId) {
     slotElement.classList.remove('selected');
     const newSlotElement = slotElement.cloneNode(true);
     slotElement.parentNode.replaceChild(newSlotElement, slotElement);
-    // ▼▼▼【変更箇所】クリックされた要素(e.currentTarget)をハンドラに渡す ▼▼▼
     newSlotElement.addEventListener('click', (e) => { e.stopPropagation(); handleSlotClick(slotId, e.currentTarget); });
-    // ▲▲▲【変更箇所】▲▲▲
     newSlotElement.innerHTML = '';
     const item = equippedItems[slotId];
     if (item) {
@@ -285,6 +314,7 @@ function saveEquippedItems() {
     for (const slotId in equippedItems) { savableData[slotId] = equippedItems[slotId]['名称']; }
     localStorage.setItem(EQUIPMENT_SET_KEY, JSON.stringify(savableData));
 }
+
 async function loadEquippedItems() {
     const savedSet = JSON.parse(localStorage.getItem(EQUIPMENT_SET_KEY)) || {};
     const itemPromises = [];
@@ -295,6 +325,7 @@ async function loadEquippedItems() {
     await Promise.all(itemPromises);
     document.querySelectorAll('.slot').forEach(slotElement => renderSlot(slotElement.id));
 }
+
 function clearAllSelections() {
     if (selectedInventoryItem) {
         const selectedElem = document.getElementById(`inv-${selectedInventoryItem['名称']}`);
@@ -308,13 +339,20 @@ function clearAllSelections() {
     }
     hideItemDetails();
 }
+
 function setupGlobalClickListener() {
     document.body.addEventListener('click', () => clearAllSelections());
 }
+
+/**
+ * ▼▼▼【新規追加】ステップ4のメイン機能 ▼▼▼
+ * 現在の装備から合計ステータスを計算し、画面に表示する
+ */
 function calculateAndRenderStats() {
     const totalStats = {};
     const percentStats = new Set();
 
+    // 1. 全ての装備アイテムのステータスを合計する
     for (const slotId in equippedItems) {
         const item = equippedItems[slotId];
         for (const statName of STAT_HEADERS) {
@@ -328,8 +366,9 @@ function calculateAndRenderStats() {
         }
     }
 
+    // 2. 計算結果を画面に描画する
     const statsPanel = document.getElementById('stats-panel');
-    statsPanel.innerHTML = '<h2>ステータス合計</h2>';
+    statsPanel.innerHTML = '<h2>ステータス合計</h2>'; // タイトルをセット
 
     const statsList = document.createElement('div');
     statsList.className = 'stats-list';
@@ -349,12 +388,18 @@ function calculateAndRenderStats() {
             const valueSpan = document.createElement('span');
             valueSpan.className = 'stat-value';
 
+
+            // ▼▼▼【ロジック変更箇所】▼▼▼
             if (percentStats.has(statName)) {
                 const percentValue = value * 100;
                 valueSpan.textContent = (Number.isInteger(percentValue) ? percentValue : percentValue.toFixed(1)) + '%';
             } else {
                 valueSpan.textContent = Number.isInteger(value) ? value : value.toFixed(2);
             }
+            // ▲▲▲【ロジック変更箇所】▲▲▲
+
+            // 小数点が見苦しくならないように丸める
+            //valueSpan.textContent = Number.isInteger(value) ? value : value.toFixed(2);
 
             statEntry.appendChild(nameSpan);
             statEntry.appendChild(valueSpan);
@@ -368,6 +413,8 @@ function calculateAndRenderStats() {
 
     statsPanel.appendChild(statsList);
 }
+
+// (displayItemDetails, hideItemDetails, getCategoryFromType, setupInventoryTabs は変更なし)
 function displayItemDetails(item, clickedElement) {
     if (!item || !detailsPanel || !clickedElement) return;
     detailsItemName.textContent = item['名称'];
@@ -473,3 +520,46 @@ function setupShareButton() {
         }
     });
 }
+
+// ▼▼▼【ここから追記】DBの存在チェックとセットアップを行う関数 ▼▼▼
+/**
+ * DBが存在し、データが入っているかを確認し、なければセットアップを実行する
+ */
+async function checkAndSetupDatabaseIfNeeded() {
+    await openDatabase();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const countRequest = store.count();
+
+        countRequest.onsuccess = () => {
+            if (countRequest.result > 0) {
+                console.log("データベースは既に存在し、データが含まれています。");
+                resolve();
+            } else {
+                console.log("データベースが空です。セットアップ処理を実行します...");
+                // db-setup.js内のsetupDatabase関数を呼び出す
+                // この関数がグローバルスコープに存在することを前提としています
+                if (typeof setupDatabase === 'function') {
+                    setupDatabase()
+                        .then(() => {
+                            console.log("データベースのセットアップが完了しました。");
+                            // セットアップ後、DB接続を再確立する必要がある場合があるため、再度openDatabaseを呼ぶ
+                            openDatabase().then(resolve).catch(reject);
+                        })
+                        .catch(err => {
+                            console.error("データベースのセットアップ中にエラーが発生しました。", err);
+                            reject(err);
+                        });
+                } else {
+                    reject('setupDatabase関数が見つかりません。db-setup.jsが正しく読み込まれているか確認してください。');
+                }
+            }
+        };
+        countRequest.onerror = (event) => {
+            console.error("データベースのアイテム数確認中にエラーが発生しました。", event.target.error);
+            reject(event.target.error);
+        };
+    });
+}
+// ▲▲▲【ここまで追記】▲▲▲
