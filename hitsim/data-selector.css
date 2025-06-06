@@ -1,65 +1,112 @@
-body { 
-    font-family: sans-serif; 
+/* ===============================================
+// data-selector.css : ダークテーマ修正版（レイアウト維持）
+// =============================================== */
+
+body {
+    font-family: sans-serif;
+    /* ▼配色変更▼ */
+    background-color: #333;
+    color: #eee;
 }
-table { 
-    border-collapse: collapse; 
+
+table {
+    border-collapse: collapse;
+    width: 100%; /* 元のCSSにはありませんでしたが、レイアウト維持のため追記 */
 }
-th, td { 
-    border: 1px solid #ccc; 
+
+th,
+td {
+    /* ▼配色変更▼ */
+    border: 1px solid #555;
     padding: 4px 8px;
-    text-align: left; 
+    text-align: left;
     white-space: nowrap;
 }
-thead { 
-    background-color: #f0f0f0; 
+
+thead {
+    /* ▼配色変更▼ */
+    background-color: #3e3e42;
 }
-#status { 
-    margin: 1em 0; 
-    font-weight: bold; 
+
+/* ▼追記▼ テーブルの縞模様とホバー色 */
+tbody tr:nth-child(even) {
+    background-color: #333;
 }
+
+tbody tr:nth-child(odd) {
+    background-color: #2a2a2e;
+}
+
+tbody tr:hover {
+    background-color: #4f4f53;
+}
+
+#status {
+    margin: 1em 0;
+    font-weight: bold;
+}
+
 #filter-controls {
     margin-bottom: 1em;
     padding: 1em;
-    background-color: #f5f5f5;
-    border: 1px solid #ddd;
+    /* ▼配色変更▼ */
+    background-color: #2a2a2e;
+    border: 1px solid #555;
+    border-radius: 5px; /* 見た目を整えるため追記 */
 }
+
 #table-container {
-    overflow-x: auto; 
+    overflow-x: auto;
     width: 100%;
 }
+
 .filter-group {
     display: inline-block;
     vertical-align: top;
     margin-right: 20px;
     min-width: 250px;
+    margin-bottom: 10px; /* 見た目を整えるため追記 */
 }
+
 .filter-group label {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
 }
+
 .filter-buttons {
     margin-top: 5px;
 }
+
 .filter-buttons button {
     font-size: 12px;
     padding: 2px 5px;
     margin-right: 5px;
+    /* ▼配色変更▼ */
+    background-color: #555;
+    border: 1px solid #777;
+    color: #eee;
+    border-radius: 3px;
+    cursor: pointer;
 }
+.filter-buttons button:hover {
+    background-color: #666;
+}
+
 .select2-container {
     width: 100% !important;
 }
-/* data-selector.cssの末尾に追記 */
 
 /* カテゴリとタイプをグループ化するためのスタイル */
 .filter-sub-group {
     display: inline-block;
     vertical-align: top;
-    border: 1px solid #b3b3b3;
+    /* ▼配色変更▼ */
+    border: 1px solid #666;
+    background-color: #3e3e42;
     border-radius: 4px;
     padding: 10px;
     margin-right: 20px;
-    background-color: #e9e9e9;
 }
 
 /* サブグループ内のマージンを調整 */
@@ -70,8 +117,6 @@ thead {
     margin-right: 0;
 }
 
-/* data-selector.cssの末尾に追記 */
-
 /* ソート可能なヘッダーのスタイル */
 th.sortable {
     cursor: pointer;
@@ -81,7 +126,7 @@ th.sortable {
 
 /* ソート方向を示す矢印のスタイル */
 th.sortable::after {
-    content: '';
+    content: "";
     position: absolute;
     right: 8px;
     top: 50%;
@@ -90,9 +135,93 @@ th.sortable::after {
 }
 
 th.sortable.sorted-asc::after {
-    border-bottom-color: #333; /* ▲ */
+    /* ▼配色変更▼ */
+    border-bottom-color: #ccc; /* ▲ */
 }
 
 th.sortable.sorted-desc::after {
-    border-top-color: #333; /* ▼ */
+    /* ▼配色変更▼ */
+    border-top-color: #ccc; /* ▼ */
 }
+
+/* ▼▼▼【ここから追記】前回追加したスタイルと、Select2のダークテーマ対応▼▼▼ */
+/* --- Select2 (ドロップダウン) のダークテーマ対応 --- */
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+    background-color: #2a2a2e;
+    border: 1px solid #555;
+    color: #eee;
+    border-radius: 4px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #eee;
+    padding-left: 10px;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #505050;
+    border-color: #ababab;
+    color: #fff;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #fff;
+    margin-right: 5px;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #ddd;
+}
+.select2-dropdown {
+    background-color: #2a2a2e;
+    border: 1px solid #555;
+}
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #007bff;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    background-color: #333;
+    border: 1px solid #555;
+    color: #eee;
+}
+.select2-results__option {
+    padding: 6px 10px;
+}
+
+.select2-container--default .select2-results__option--selected {
+    background-color: #505050;
+}
+
+/* --- ヘッダーとボタンのスタイル --- */
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1em;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.button-like {
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 14px;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    background-color: #6c757d;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.button-like:hover {
+    background-color: #5a6268;
+}
+
+/* チェックボックスのスタイル調整 */
+input[type="checkbox"] {
+    vertical-align: middle;
+    margin-right: 5px;
+}
+/* ▲▲▲【ここまで追記】▲▲▲ */

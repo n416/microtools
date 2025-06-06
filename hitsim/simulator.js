@@ -14,7 +14,11 @@ let equippedItems = {};
 let selectedInventoryItem = null;
 let selectedSlotId = null;
 
-// ▼▼▼【新規追加】ステータス計算対象となる列名のリスト ▼▼▼
+let detailsPanel, detailsItemName, detailsItemImage, detailsStatsList;
+
+let allInventoryItems = [];
+let currentInventoryCategory = 'all';
+
 const STAT_HEADERS = [
     '評価数値', '基本攻撃力', '攻撃力増幅', 'クリティカルダメージ増幅', '一般攻撃力',
     'スキルダメージ増幅', '近距離攻撃力', '防御力', '武力', 'ガード貫通', '一般ダメージ増幅',
@@ -49,18 +53,77 @@ const SLOT_ID_TO_JAPANESE_NAME = {
 };
 
 // --- 初期化処理 ---
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await openDatabase();
-        await loadEquippedItems(); // awaitを追加して完了を待つ
-        await loadAndRenderInventory();
-        setupGlobalClickListener();
-        calculateAndRenderStats(); // ★★★ 初期表示時にもステータスを計算
-    } catch (error) { console.error('初期化中にエラーが発生しました:', error); }
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedData = urlParams.get('share');
+
+    if (sharedData) {
+        handleSharedData(sharedData);
+    } else {
+        initializeApp();
+    }
 });
 
+/**
+ * 共有データが見つかった場合の処理
+ * @param {string} encodedData - URLに含まれるエンコードされたデータ
+ */
+function handleSharedData(encodedData) {
+    const modalOverlay = document.getElementById('share-modal-overlay');
+    const okButton = document.getElementById('modal-ok-button');
+    const cancelButton = document.getElementById('modal-cancel-button');
+
+    modalOverlay.classList.remove('hidden');
+
+    okButton.onclick = () => {
+        try {
+            const compressedData = atob(encodedData.replace(/-/g, '+').replace(/_/g, '/'));
+            const uint8Array = new Uint8Array(compressedData.split('').map(c => c.charCodeAt(0)));
+            const jsonString = pako.inflate(uint8Array, { to: 'string' });
+            const state = JSON.parse(jsonString);
+            if (state.inventory && state.equipment) {
+                localStorage.setItem(INVENTORY_KEY, JSON.stringify(state.inventory));
+                localStorage.setItem(EQUIPMENT_SET_KEY, JSON.stringify(state.equipment));
+            }
+        } catch (e) {
+            console.error('共有データの解析に失敗:', e);
+            alert('共有データの読み込みに失敗しました。');
+        } finally {
+            modalOverlay.classList.add('hidden');
+            history.replaceState(null, '', window.location.pathname);
+            initializeApp();
+        }
+    };
+
+    cancelButton.onclick = () => {
+        modalOverlay.classList.add('hidden');
+        history.replaceState(null, '', window.location.pathname);
+        initializeApp();
+    };
+}
+
+
+/**
+ * アプリケーションのメイン初期化処理
+ */
+async function initializeApp() {
+    try {
+        detailsPanel = document.getElementById('item-details-panel');
+        detailsItemName = document.getElementById('details-item-name');
+        detailsItemImage = document.getElementById('details-item-image');
+        detailsStatsList = document.getElementById('details-stats-list');
+
+        await openDatabase();
+        await loadEquippedItems();
+        await loadAndRenderInventory();
+        setupGlobalClickListener();
+        setupInventoryTabs();
+        setupShareButton();
+        calculateAndRenderStats();
+    } catch (error) { console.error('初期化中にエラーが発生しました:', error); }
+}
+
 // --- 関数定義 ---
-// (openDatabase, getItemFromDB, renderInventory, handleInventoryClick, handleSlotClick は変更なし)
 function openDatabase() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -74,7 +137,8 @@ async function loadAndRenderInventory() {
     if (inventoryItemNames.length === 0) { document.getElementById('inventory-list').innerHTML = '<p style="padding: 10px;">インベントリにアイテムがありません。<br><a href="data.html">インベントリ編集ページ</a>でアイテムを追加してください。</p>'; return; }
     const itemPromises = inventoryItemNames.map(name => getItemFromDB(name));
     const inventoryItems = (await Promise.all(itemPromises)).filter(item => item);
-    renderInventory(inventoryItems);
+    allInventoryItems = inventoryItems;
+    renderInventory(allInventoryItems);
 }
 function getItemFromDB(itemName) {
     return new Promise((resolve) => {
@@ -87,7 +151,15 @@ function getItemFromDB(itemName) {
 function renderInventory(items) {
     const inventoryListDiv = document.getElementById('inventory-list');
     inventoryListDiv.innerHTML = '';
-    items.forEach(item => {
+
+    const filteredItems = items.filter(item => {
+        if (currentInventoryCategory === 'all') {
+            return true;
+        }
+        return getCategoryFromType(item['タイプ']) === currentInventoryCategory;
+    });
+
+    filteredItems.forEach(item => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'inventory-item';
         itemDiv.id = `inv-${item['名称']}`;
@@ -97,97 +169,76 @@ function renderInventory(items) {
         img.alt = item['名称'];
         img.className = 'item-icon';
         itemDiv.appendChild(img);
-        itemDiv.addEventListener('click', (e) => { e.stopPropagation(); handleInventoryClick(item); });
+        itemDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleInventoryClick(item, e.currentTarget);
+        });
         inventoryListDiv.appendChild(itemDiv);
     });
 }
-function handleInventoryClick(item) {
+function handleInventoryClick(item, element) {
     if (selectedInventoryItem && selectedInventoryItem['名称'] === item['名称']) {
         equipItem(item);
         clearAllSelections();
     } else {
         clearAllSelections();
         selectedInventoryItem = item;
-        document.getElementById(`inv-${item['名称']}`).classList.add('selected');
+        element.classList.add('selected');
+        displayItemDetails(item, element);
     }
 }
-function handleSlotClick(slotId) {
-    if (equippedItems[slotId]) {
+// ▼▼▼【変更箇所】第2引数としてクリックされた要素(element)を受け取るように修正 ▼▼▼
+function handleSlotClick(slotId, element) {
+    const item = equippedItems[slotId]; // スロットにあるアイテムを取得
+    if (item) { // アイテムが装備されている場合のみ処理
         if (selectedSlotId === slotId) {
+            // 2回目のクリック：装備解除
             unequipItem(slotId);
             clearAllSelections();
         } else {
+            // 1回目のクリック：選択して詳細表示
             clearAllSelections();
             selectedSlotId = slotId;
-            document.getElementById(slotId).classList.add('selected');
+            element.classList.add('selected');
+            displayItemDetails(item, element); // 詳細表示関数を呼び出し
         }
     }
 }
+// ▲▲▲【変更箇所】▲▲▲
 
-/**
- * ▼▼▼【空きスロット優先ロジック 最終修正版】▼▼▼
- * アイテムを対応するスロットに装備させる
- * @param {object} item - 装備するアイテムオブジェクト
- */
 function equipItem(item) {
     const itemType = item['タイプ'];
     const slotCategory = TYPE_TO_SLOT_CATEGORY[itemType];
     if (!slotCategory) return;
-
     const possibleSlotIds = SLOT_CATEGORY_TO_IDS[slotCategory];
     const isRing = (slotCategory === 'ring');
-
-    // リング以外の場合、すでに同じ名前のユニークアイテムが装備されていないかチェック
     if (!isRing) {
         if (Object.values(equippedItems).some(equipped => equipped && equipped['名称'] === item['名称'])) {
             console.log(`ユニークアイテム「${item['名称']}」はすでに装備されています。`);
             return;
         }
     }
-
-    // 1. まず、そのアイテム種別が装備できるスロットに空きがあるかを探す
     const emptySlotId = possibleSlotIds.find(id => !equippedItems[id]);
-
     if (emptySlotId) {
-        // --- ケースA: 空きスロットがある場合 (全アイテム共通) ---
-        // 見つかった最初の空きスロットに装備する
         equippedItems[emptySlotId] = item;
         renderSlot(emptySlotId);
-
     } else {
-        // --- ケースB: 該当スロットが全て埋まっている場合 ---
         if (isRing) {
-            // --- リングが満杯の場合：FIFOロジックを実行 ---
-            // 5番目のアイテムを覚えておく
             const pushedOutItem = equippedItems[possibleSlotIds[4]];
             console.log(`リング枠が満杯のため、「${pushedOutItem['名称']}」が押し出されます。`);
-
-            // 4→5, 3→4, 2→3, 1→2 へと装備情報をずらす
             for (let i = possibleSlotIds.length - 2; i >= 0; i--) {
-                const currentSlotId = possibleSlotIds[i];
-                const nextSlotId = possibleSlotIds[i + 1];
-                equippedItems[nextSlotId] = equippedItems[currentSlotId];
+                equippedItems[possibleSlotIds[i + 1]] = equippedItems[possibleSlotIds[i]];
             }
-            // 1番目に新しいリングを装備
             equippedItems[possibleSlotIds[0]] = item;
-
-            // 全てのリングスロットを再描画
             possibleSlotIds.forEach(id => renderSlot(id));
-
         } else {
-            // --- リング以外が満杯の場合：最初のスロットを上書き ---
             const targetSlotId = possibleSlotIds[0];
-
-            if (equippedItems[targetSlotId] && equippedItems[targetSlotId]['名称'] === item['名称']) {
-                return;
-            }
-
-            unequipItem(targetSlotId, false); // 元のアイテムを外す
-            equippedItems[targetSlotId] = item; // 新しいアイテムを装備
+            if (equippedItems[targetSlotId] && equippedItems[targetSlotId]['名称'] === item['名称']) return;
+            unequipItem(targetSlotId, false);
+            equippedItems[targetSlotId] = item;
             renderSlot(targetSlotId);
         }
     }
-
     saveEquippedItems();
     calculateAndRenderStats();
 }
@@ -198,7 +249,7 @@ function unequipItem(slotId, doSaveAndRecalculate = true) {
         renderSlot(slotId);
         if (doSaveAndRecalculate) {
             saveEquippedItems();
-            calculateAndRenderStats(); // ★★★ 装備解除後にステータスを再計算
+            calculateAndRenderStats();
         }
     }
 }
@@ -209,7 +260,9 @@ function renderSlot(slotId) {
     slotElement.classList.remove('selected');
     const newSlotElement = slotElement.cloneNode(true);
     slotElement.parentNode.replaceChild(newSlotElement, slotElement);
-    newSlotElement.addEventListener('click', (e) => { e.stopPropagation(); handleSlotClick(slotId); });
+    // ▼▼▼【変更箇所】クリックされた要素(e.currentTarget)をハンドラに渡す ▼▼▼
+    newSlotElement.addEventListener('click', (e) => { e.stopPropagation(); handleSlotClick(slotId, e.currentTarget); });
+    // ▲▲▲【変更箇所】▲▲▲
     newSlotElement.innerHTML = '';
     const item = equippedItems[slotId];
     if (item) {
@@ -232,7 +285,6 @@ function saveEquippedItems() {
     for (const slotId in equippedItems) { savableData[slotId] = equippedItems[slotId]['名称']; }
     localStorage.setItem(EQUIPMENT_SET_KEY, JSON.stringify(savableData));
 }
-
 async function loadEquippedItems() {
     const savedSet = JSON.parse(localStorage.getItem(EQUIPMENT_SET_KEY)) || {};
     const itemPromises = [];
@@ -243,7 +295,6 @@ async function loadEquippedItems() {
     await Promise.all(itemPromises);
     document.querySelectorAll('.slot').forEach(slotElement => renderSlot(slotElement.id));
 }
-
 function clearAllSelections() {
     if (selectedInventoryItem) {
         const selectedElem = document.getElementById(`inv-${selectedInventoryItem['名称']}`);
@@ -255,33 +306,30 @@ function clearAllSelections() {
         if (selectedElem) selectedElem.classList.remove('selected');
         selectedSlotId = null;
     }
+    hideItemDetails();
 }
-
 function setupGlobalClickListener() {
     document.body.addEventListener('click', () => clearAllSelections());
 }
-
-/**
- * ▼▼▼【新規追加】ステップ4のメイン機能 ▼▼▼
- * 現在の装備から合計ステータスを計算し、画面に表示する
- */
 function calculateAndRenderStats() {
     const totalStats = {};
+    const percentStats = new Set();
 
-    // 1. 全ての装備アイテムのステータスを合計する
     for (const slotId in equippedItems) {
         const item = equippedItems[slotId];
         for (const statName of STAT_HEADERS) {
             const value = parseFloat(item[statName]) || 0;
             if (value !== 0) {
+                if (value > 0 && value < 1) {
+                    percentStats.add(statName);
+                }
                 totalStats[statName] = (totalStats[statName] || 0) + value;
             }
         }
     }
 
-    // 2. 計算結果を画面に描画する
     const statsPanel = document.getElementById('stats-panel');
-    statsPanel.innerHTML = '<h2>ステータス合計</h2>'; // タイトルをセット
+    statsPanel.innerHTML = '<h2>ステータス合計</h2>';
 
     const statsList = document.createElement('div');
     statsList.className = 'stats-list';
@@ -301,21 +349,12 @@ function calculateAndRenderStats() {
             const valueSpan = document.createElement('span');
             valueSpan.className = 'stat-value';
 
-
-            // ▼▼▼【ロジック変更箇所】▼▼▼
-            // 値が0より大きく1未満の場合、パーセントに変換して表示
-            if (value > 0 && value < 1) {
+            if (percentStats.has(statName)) {
                 const percentValue = value * 100;
-                // パーセントにした結果が整数なら小数点以下を表示しない
                 valueSpan.textContent = (Number.isInteger(percentValue) ? percentValue : percentValue.toFixed(1)) + '%';
             } else {
-                // 1以上の値はそのまま表示（整数でない場合は小数点以下2桁まで）
                 valueSpan.textContent = Number.isInteger(value) ? value : value.toFixed(2);
             }
-            // ▲▲▲【ロジック変更箇所】▲▲▲
-
-            // 小数点が見苦しくならないように丸める
-            //valueSpan.textContent = Number.isInteger(value) ? value : value.toFixed(2);
 
             statEntry.appendChild(nameSpan);
             statEntry.appendChild(valueSpan);
@@ -328,4 +367,109 @@ function calculateAndRenderStats() {
     }
 
     statsPanel.appendChild(statsList);
+}
+function displayItemDetails(item, clickedElement) {
+    if (!item || !detailsPanel || !clickedElement) return;
+    detailsItemName.textContent = item['名称'];
+    detailsItemImage.src = item['画像URL'] || '';
+    detailsItemImage.alt = item['名称'];
+    detailsStatsList.innerHTML = '';
+    let hasStats = false;
+    STAT_HEADERS.forEach(statName => {
+        const value = parseFloat(item[statName]);
+        if (value && !isNaN(value) && value !== 0) {
+            hasStats = true;
+            const statEntry = document.createElement('div');
+            statEntry.className = 'stat-entry';
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'stat-name';
+            nameSpan.textContent = statName;
+            const valueSpan = document.createElement('span');
+            valueSpan.className = 'stat-value';
+            if (value > 0 && value < 1) {
+                const percentValue = value * 100;
+                valueSpan.textContent = (Number.isInteger(percentValue) ? percentValue : percentValue.toFixed(1)) + '%';
+            } else {
+                valueSpan.textContent = Number.isInteger(value) ? value : value.toFixed(2);
+            }
+            statEntry.appendChild(nameSpan);
+            statEntry.appendChild(valueSpan);
+            detailsStatsList.appendChild(statEntry);
+        }
+    });
+    if (!hasStats) {
+        detailsStatsList.textContent = '表示するステータスがありません。';
+    }
+    const rect = clickedElement.getBoundingClientRect();
+    let top = rect.bottom + window.scrollY + 5;
+    let left = rect.left + window.scrollX;
+    detailsPanel.style.display = 'block';
+    const panelRect = detailsPanel.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    if (left + panelRect.width > viewportWidth) {
+        left = viewportWidth - panelRect.width - 10;
+    }
+    if (left < 0) {
+        left = 10;
+    }
+    detailsPanel.style.top = `${top}px`;
+    detailsPanel.style.left = `${left}px`;
+}
+function hideItemDetails() {
+    if (detailsPanel) {
+        detailsPanel.style.display = 'none';
+    }
+}
+function getCategoryFromType(typeString) {
+    if (!typeString) return 'unknown';
+    const prefix = parseInt(typeString.substring(0, 2), 10);
+    if (prefix >= 1 && prefix <= 9) return 'weapon';
+    if (prefix >= 11 && prefix <= 15) return 'armor';
+    if ((prefix >= 16 && prefix <= 16) || (prefix >= 21 && prefix <= 28)) return 'accessory';
+    return 'unknown';
+}
+function setupInventoryTabs() {
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            document.querySelector('#inventory-tabs .active').classList.remove('active');
+            e.currentTarget.classList.add('active');
+            currentInventoryCategory = e.currentTarget.dataset.category;
+            renderInventory(allInventoryItems);
+        });
+    });
+}
+function setupShareButton() {
+    const shareButton = document.getElementById('share-button');
+    if (!shareButton) return;
+
+    shareButton.addEventListener('click', async () => {
+        const inventoryToShare = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
+        const equipmentToShare = JSON.parse(localStorage.getItem(EQUIPMENT_SET_KEY)) || {};
+
+        const stateToShare = {
+            inventory: inventoryToShare,
+            equipment: equipmentToShare,
+        };
+
+        const jsonString = JSON.stringify(stateToShare);
+        const compressed = pako.deflate(jsonString);
+        const encodedData = btoa(String.fromCharCode.apply(null, compressed))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+
+        const shareUrl = `${window.location.origin}${window.location.pathname}?share=${encodedData}`;
+
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            const originalText = shareButton.textContent;
+            shareButton.textContent = 'コピーしました！';
+            setTimeout(() => {
+                shareButton.textContent = originalText;
+            }, 2000);
+        } catch (err) {
+            console.error('クリップボードへのコピーに失敗しました:', err);
+            alert('URLのコピーに失敗しました。');
+        }
+    });
 }
