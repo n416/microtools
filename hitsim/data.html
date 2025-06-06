@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>装備データセレクター</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="data-selector.css">
+</head>
+
+<body>
+    <div class="header-container">
+        <h1>装備データセレクター</h1>
+        <div class="header-buttons">
+            <a href="index.html" id="back-to-top-button" class="button-like">トップページに戻る</a>
+        </div>
+    </div>
+    <div id="status">準備中...</div>
+
+    <div id="filter-controls">
+        <div class="filter-sub-group">
+            <div class="filter-group">
+                <label for="category-filter">カテゴリ:</label>
+                <select id="category-filter">
+                    <option value="all">すべて</option>
+                    <option value="weapon">武器</option>
+                    <option value="armor">防具</option>
+                    <option value="accessory">アクセサリ</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="type-filter">タイプ:</label>
+                <select id="type-filter" multiple></select>
+                <div class="filter-buttons">
+                    <button id="type-select-all">全て選択</button>
+                    <button id="type-clear">クリア</button>
+                </div>
+            </div>
+        </div>
+        <div class="filter-group">
+            <label for="rank-filter">ランク:</label>
+            <select id="rank-filter" multiple></select>
+            <div class="filter-buttons">
+                <button id="rank-select-all">全て選択</button>
+                <button id="rank-clear">クリア</button>
+            </div>
+        </div>
+        <div class="filter-group">
+            <label>
+                <input type="checkbox" id="inventory-only-filter">
+                インベントリのみ表示
+            </label>
+        </div>
+    </div>
+
+    <div id="table-container">
+        <table id="equipment-table">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="db-setup.js"></script>
+    <script src="data-selector.js"></script>
+</body>
+
+</html>
