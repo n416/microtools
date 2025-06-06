@@ -1,0 +1,443 @@
+body {
+    font-family: sans-serif;
+    background-color: #333;
+    color: #fff;
+}
+
+h1,
+h2 {
+    font-weight: normal;
+}
+
+.simulator-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+/* --- スロットエリア --- */
+#equipment-panel {
+    display: flex;
+    gap: 8px;
+}
+
+/* ▼▼▼【新規追加】▼▼▼ */
+.equipment-column {
+    flex: 1; /* 利用可能なスペースを均等に分け合う */
+    display: flex;
+    flex-direction: column; /* 中の要素（スロット）を縦に並べる */
+    gap: 8px; /* スロット間の余白 */
+}
+
+.slot {
+    box-sizing: border-box;
+    height: 70px; /* スロットの高さ */
+    background-color: #2a2a2e;
+    border: 1px solid #555;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #a0a0a0;
+}
+
+.slot span {
+    max-width: 3rem;
+    font-size: 0.8rem;
+    text-align: center;
+}
+/* 空白を表現するためのスロット */
+#slot-placeholder {
+    background: none;
+    border: none;
+}
+
+/* --- 右側のパネル --- */
+#inventory-panel {
+    flex-basis: 400px;
+    flex-grow: 1;
+    height: 788px; /* 左のスロットエリアの高さに合わせる */
+    background-color: #2a2a2e;
+    border: 1px solid #555;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+#inventory-panel h2 {
+    padding: 0 15px;
+    margin-top: 15px;
+}
+
+#inventory-list {
+    box-sizing: border-box;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 2px;
+    align-content: start;
+}
+
+/* --- 下側のパネル --- */
+#stats-panel {
+    flex-basis: 100%;
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #2a2a2e;
+    border: 1px solid #555;
+    border-radius: 8px;
+}
+
+/* インベントリアイテムのスタイル */
+.inventory-item {
+    box-sizing: border-box;
+    background-color: #444;
+    border: 1px solid #666;
+    padding: 5px;
+    text-align: center;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+}
+.inventory-item:hover {
+    background-color: #5e5e5e;
+    border-color: #888;
+}
+
+/* 装備済みアイテムのスタイル */
+.slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+}
+.equipped-item-name {
+    font-size: 14px;
+    color: #fff;
+    font-weight: bold;
+}
+.unequip-button {
+    font-size: 10px;
+    padding: 1px 4px;
+    margin-top: 5px;
+    cursor: pointer;
+    background-color: #555;
+    color: #ddd;
+    border: 1px solid #777;
+    border-radius: 3px;
+}
+.unequip-button:hover {
+    background-color: #777;
+}
+
+/* simulator.css に追記・または修正 */
+/* simulator.css に追記・または修正 */
+
+/* スロットのスタイル修正 */
+.slot {
+    height: 64px; /* 高さを少し調整 */
+    background-color: #2a2a2e;
+    border: 1px solid #555;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #a0a0a0;
+    position: relative; /* 「外す」ボタンの位置基準 */
+    overflow: hidden; /* はみ出した要素を隠す */
+}
+
+/* インベントリアイテムのスタイル修正 */
+.inventory-item {
+    width: 64px;
+    height: 64px;
+    background-color: #444;
+    border: 1px solid #666;
+    cursor: pointer;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.inventory-item:hover {
+    background-color: #5e5e5e;
+    border-color: #888;
+}
+
+/* ▼▼▼【ここから下を追記】▼▼▼ */
+
+/* アイコン共通スタイル */
+.item-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* アスペクト比を維持してフィット */
+}
+
+/* 外すボタンのスタイル */
+.unequip-button {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    font-size: 12px;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    background-color: rgba(40, 40, 40, 0.7);
+    color: #ddd;
+    border: 1px solid #888;
+    border-radius: 50%; /* 円形にする */
+    opacity: 0; /* 通常は非表示 */
+    transition: opacity 0.2s;
+}
+
+/* スロットにホバーしたときに「外す」ボタンを表示 */
+.slot:hover .unequip-button {
+    opacity: 1;
+} /* 選択状態のスタイル */
+.inventory-item.selected,
+.slot.selected {
+    border: 2px solid #ffdd00;
+    box-shadow: 0 0 10px #ffdd00;
+    box-sizing: border-box;
+}
+
+/* simulator.css の末尾に追記 */
+
+/* --- ステータスパネルのスタイル --- */
+#stats-panel {
+    flex-basis: 100%;
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #2a2a2e;
+    border: 1px solid #555;
+    border-radius: 8px;
+}
+
+#stats-panel h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #555;
+}
+
+.stats-list {
+    display: grid;
+    /* 3列のグリッドレイアウト */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 8px 20px; /* 縦と横の隙間 */
+}
+
+.stat-entry {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    border-bottom: 1px solid #3a3a3a;
+    padding: 4px 0;
+}
+
+.stat-name {
+    color: #ccc;
+}
+
+.stat-value {
+    color: #fff;
+    font-weight: bold;
+}
+
+/* ▼▼▼【ここから末尾に追記】▼▼▼ */
+/* --- アイテム詳細パネル（フローティング）のスタイル --- */
+#item-details-panel {
+    display: none; /* 初期状態は非表示 */
+    position: absolute; /* ページ上の絶対位置に配置 */
+    width: 280px;
+    background-color: rgba(20, 20, 25, 0.9);
+    border: 1px solid #888;
+    border-radius: 5px;
+    padding: 10px 15px;
+    z-index: 1000; /* 他の要素より手前に表示 */
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    pointer-events: none; /* パネル自体がクリックイベントを妨げないように */
+}
+
+#item-details-panel h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #ffdd00;
+    border-bottom: 1px solid #555;
+    padding-bottom: 8px;
+    font-weight: bold;
+}
+
+#item-details-panel .details-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+#item-details-panel #details-item-image {
+    width: 50px;
+    height: 50px;
+    background-color: #1c1c1f;
+    border: 1px solid #666;
+    border-radius: 4px;
+    object-fit: contain;
+}
+
+#item-details-panel #details-stats-list {
+    flex: 1;
+    font-size: 14px;
+}
+
+#details-stats-list .stat-entry {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+}
+
+/* --- インベントリタブのスタイル --- */
+#inventory-tabs {
+    display: flex;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #555;
+}
+
+.tab-button {
+    padding: 8px 15px;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    color: #a0a0a0;
+    font-size: 14px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px; /* 下線を親のborderに重ねるため */
+}
+
+.tab-button.active {
+    color: #fff;
+    border-bottom-color: #ffdd00;
+}
+
+/* --- ヘッダーと共有ボタンのスタイル --- */
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: -10px; /*下の<p>との間隔調整*/
+}
+
+#share-button {
+    padding: 8px 16px;
+    font-size: 14px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#share-button:hover {
+    background-color: #0056b3;
+}
+
+/* --- 共有モーダルのスタイル --- */
+#share-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000; /* 詳細パネルよりさらに手前 */
+}
+
+#share-modal-overlay.hidden {
+    display: none;
+}
+
+#share-modal {
+    background-color: #3e3e42;
+    padding: 25px 35px;
+    border-radius: 8px;
+    border: 1px solid #777;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+    text-align: center;
+}
+
+#share-modal p {
+    margin-top: 0;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.modal-buttons button {
+    padding: 10px 25px;
+    margin: 0 10px;
+    border-radius: 5px;
+    border: 1px solid #777;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+#modal-ok-button {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+#modal-cancel-button {
+    background-color: #555;
+    color: white;
+}
+/* ▼▼▼【ここから末尾に追記】▼▼▼ */
+.header-buttons {
+    display: flex;
+    gap: 10px; /* ボタン間の余白 */
+}
+
+/* 汎用的なボタンスタイル */
+.button-like {
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 14px;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    background-color: #6c757d; /* 少し落ち着いた色に */
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.button-like:hover {
+    background-color: #5a6268;
+}
+
+/* 既存の共有ボタンのスタイルを上書きして統一感を出す */
+#share-button {
+    background-color: #007bff;
+}
+
+#share-button:hover {
+    background-color: #0056b3;
+}
+/* ▲▲▲【ここまで追記】▲▲▲ */
