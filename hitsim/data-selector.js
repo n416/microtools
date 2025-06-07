@@ -42,6 +42,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     loadFilterState();
     loadSortState();
 
+    setupUpdateButton();
     initializeFilters();
 
   } catch (error) {
@@ -319,4 +320,37 @@ function handleSortClick(event) {
   }
 
   saveStateAndRender();
+}
+
+// 【ここから新規追加】
+/**
+ * データベース更新ボタンのイベントリスナーを設定する
+ */
+function setupUpdateButton() {
+  const updateButton = document.getElementById('update-db-button');
+  const statusDiv = document.getElementById('status');
+
+  if (!updateButton) return;
+
+  updateButton.addEventListener('click', async () => {
+    if (!confirm('itemdata.tsv の内容でデータベースを完全に更新します。\nこの操作は元に戻せません。よろしいですか？')) {
+      return;
+    }
+
+    updateButton.disabled = true;
+    statusDiv.textContent = 'データベースを更新中です...（ページを閉じないでください）';
+
+    try {
+      await setupDatabase();
+
+      alert('データベースの更新が完了しました。ページを再読み込みします。');
+      location.reload();
+
+    } catch (error) {
+      console.error('データベースの更新に失敗しました:', error);
+      statusDiv.textContent = `エラー: データベースの更新に失敗しました。詳細はコンソールを確認してください。`;
+      alert(`データベースの更新に失敗しました。\nエラー: ${error.message}`);
+      updateButton.disabled = false;
+    }
+  });
 }
