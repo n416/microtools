@@ -7,17 +7,13 @@ const DB_NAME = 'GameEquipmentDB';
 const DB_VERSION = 9;
 const STORE_NAME = 'equipment';
 const INVENTORY_KEY = 'equipmentInventory_v2';
-// ▼▼▼【変更】複数の装備セットを保存するキーに変更 ▼▼▼
 const EQUIPMENT_SETS_KEY = 'equipmentSets_v1';
 const ACTIVE_SET_ID_KEY = 'activeEquipmentSet_v1';
-// ▲▲▲【変更】▲▲▲
 
 let db;
-// ▼▼▼【変更】状態管理変数を変更・追加 ▼▼▼
-let equippedItems = {}; // 現在アクティブなセットの装備情報
-let allEquipmentSets = {}; // 全セットの装備情報 { "1": {...}, "2": {...}, ... }
-let activeSetId = '1'; // 現在アクティブなセットID
-// ▲▲▲【変更】▲▲▲
+let equippedItems = {};
+let allEquipmentSets = {};
+let activeSetId = '1';
 
 let selectedInventoryItem = null;
 let selectedSlotId = null;
@@ -61,7 +57,6 @@ const SLOT_ID_TO_JAPANESE_NAME = {
 // --- 初期化処理 ---
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
-    // ▼▼▼【変更】パラメータ名を 'd' に短縮(任意) & 互換性のため 'share' もチェック ▼▼▼
     const sharedData = urlParams.get('d') || urlParams.get('share');
 
     if (sharedData) {
@@ -71,10 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-/**
- * ▼▼▼【変更】共有データ復元ロジックを全面的に修正 ▼▼▼
- * @param {string} encodedData - URLに含まれるエンコードされたデータ
- */
+
 function handleSharedData(encodedData) {
     const modalOverlay = document.getElementById('share-modal-overlay');
     const okButton = document.getElementById('modal-ok-button');
@@ -93,13 +85,11 @@ function handleSharedData(encodedData) {
 
             modalText.textContent = 'データを復元しています...';
 
-            // 1. デコード・展開・JSONパース
             const compressedData = atob(encodedData.replace(/-/g, '+').replace(/_/g, '/'));
             const uint8Array = new Uint8Array(compressedData.split('').map(c => c.charCodeAt(0)));
             const jsonString = pako.inflate(uint8Array, { to: 'string' });
             const equipmentNames = JSON.parse(jsonString);
 
-            // 2. 必要なアイテム名を全てリストアップ
             const allItemNames = [];
             for (const setId in equipmentNames) {
                 for (const slotId in equipmentNames[setId]) {
@@ -107,11 +97,9 @@ function handleSharedData(encodedData) {
                 }
             }
 
-            // 3. DBから完全なアイテムデータを一括取得
             const foundItems = await getItemsFromDBByNames(allItemNames);
             const itemsMap = new Map(foundItems.map(item => [item['名称'], item]));
 
-            // 4. 完全な装備セットデータを再構築
             const newEquipmentSets = { '1': {}, '2': {}, '3': {}, '4': {} };
             for (const setId in equipmentNames) {
                 newEquipmentSets[setId] = {};
@@ -123,9 +111,18 @@ function handleSharedData(encodedData) {
                 }
             }
 
-            // 5. 復元した装備セットをlocalStorageに保存
             localStorage.setItem(EQUIPMENT_SETS_KEY, JSON.stringify(newEquipmentSets));
-            // 注意: インベントリは共有データに含まれないため、ユーザー自身のものが維持されます。
+
+            // ▼▼▼【今回の追加機能】▼▼▼
+            // 復元したアイテムをインベントリにも追加する
+            const currentInventory = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
+            // 現在のインベントリと復元されたアイテム名を結合し、重複を削除
+            const newInventorySet = new Set([...currentInventory, ...allItemNames]);
+            const newInventory = Array.from(newInventorySet);
+            // 新しいインベントリをlocalStorageに保存
+            localStorage.setItem(INVENTORY_KEY, JSON.stringify(newInventory));
+            console.log("復元された装備アイテムをインベントリに自動追加しました。");
+            // ▲▲▲【今回の追加機能】▲▲▲
 
         } catch (e) {
             console.error('共有データの処理中にエラーが発生しました:', e);
@@ -135,9 +132,7 @@ function handleSharedData(encodedData) {
             modalText.textContent = '共有されたデータがあります。\n読み込みますか？';
             okButton.disabled = false;
             cancelButton.disabled = false;
-            // URLからパラメータを削除
             history.replaceState(null, '', window.location.pathname);
-            // アプリケーションを初期化して画面に反映
             initializeApp();
         }
     };
@@ -150,9 +145,6 @@ function handleSharedData(encodedData) {
 }
 
 
-/**
- * アプリケーションのメイン初期化処理
- */
 async function initializeApp() {
     try {
         detailsPanel = document.getElementById('item-details-panel');
@@ -161,21 +153,16 @@ async function initializeApp() {
         detailsStatsList = document.getElementById('details-stats-list');
 
         await openDatabase();
-        // ▼▼▼【変更】複数セットの読み込み処理に変更 ▼▼▼
         loadAllEquipmentSets();
-        // ▲▲▲【変更】▲▲▲
         await loadAndRenderInventory();
         setupGlobalClickListener();
         setupInventoryTabs();
         setupShareButton();
-        // ▼▼▼【追記】セット管理コントロールのイベント設定 ▼▼▼
         setupSetControls();
-        // ▲▲▲【追記】▲▲▲
         calculateAndRenderStats();
     } catch (error) { console.error('初期化中にエラーが発生しました:', error); }
 }
 
-// --- 関数定義 ---
 function openDatabase() {
     return new Promise((resolve, reject) => {
         if (db) return resolve(db);
@@ -188,14 +175,14 @@ function openDatabase() {
 async function loadAndRenderInventory() {
     const inventoryItemNames = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
     if (inventoryItemNames.length === 0) { document.getElementById('inventory-list').innerHTML = '<p style="padding: 10px;">インベントリにアイテムがありません。<br><a href="data.html">インベントリ編集ページ</a>でアイテムを追加してください。</p>'; return; }
-    const inventoryItems = await getItemsFromDBByNames(inventoryItemNames); // ▼▼▼【変更】効率化のためヘルパー関数を使用▼▼▼
-    allInventoryItems = inventoryItems.filter(item => item); // 取得できなかったアイテムを除外
+    const inventoryItems = await getItemsFromDBByNames(inventoryItemNames);
+    allInventoryItems = inventoryItems.filter(item => item);
     renderInventory(allInventoryItems);
 }
 
 function getItemFromDB(itemName) {
     return new Promise((resolve) => {
-        if (!db) { resolve(null); return; } // DB接続チェック
+        if (!db) { resolve(null); return; }
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const request = transaction.objectStore(STORE_NAME).get(itemName);
         request.onsuccess = () => resolve(request.result || null);
@@ -203,7 +190,6 @@ function getItemFromDB(itemName) {
     });
 }
 
-// ▼▼▼【追加】複数のアイテムをDBから効率的に取得するヘルパー関数 ▼▼▼
 function getItemsFromDBByNames(itemNames) {
     return new Promise(async (resolve, reject) => {
         if (!db) {
@@ -364,7 +350,7 @@ function unequipItem(slotId, doSaveAndRecalculate = true) {
         renderSlot(slotId);
         if (doSaveAndRecalculate) {
             saveAllEquipmentSets();
-            calculateAndRenderStats(); // ★★★ 装備解除後にステータスを再計算
+            calculateAndRenderStats();
         }
     }
 }
