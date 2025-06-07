@@ -13,11 +13,11 @@
         <h1>装備シミュレータ</h1>
         <div class="header-buttons">
             <a href="data.html" id="edit-inventory-button" class="button-like">インベントリ編集</a>
-            <button id="share-button">共有</button>
         </div>
     </div>
     <div class="simulator-container">
         <div id="equipment-panel">
+            <button id="share-button">共有</button>
             <div id="column-1" class="equipment-column">
                 <div class="slot" id="slot-weapon"><span>武器</span></div>
                 <div class="slot" id="slot-top"><span>上装備</span></div>
@@ -69,12 +69,7 @@
                 </div>
             </div>
         </div>
-        <div id="stats-panel">
-            <h2>ステータス合計</h2>
-            <div class="stats-list">
-                装備がありません。
-            </div>
-        </div>
+        <div id="stats-panel"></div>
     </div>
 
     <div id="item-details-panel">
@@ -84,6 +79,7 @@
             <div id="details-stats-list"></div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <script src="db-setup.js"></script>
     <div id="share-modal-overlay" class="hidden">
@@ -103,6 +99,16 @@
             </div>
             <div class="modal-buttons">
                 <button id="copy-modal-cancel-button">キャンセル</button>
+            </div>
+        </div>
+    </div>
+    <div id="generic-modal-overlay" class="hidden">
+        <div id="generic-modal">
+            <h3 id="generic-modal-title">タイトル</h3>
+            <div id="generic-modal-content">
+                <p>ここにメッセージや入力フォームが入ります。</p>
+            </div>
+            <div id="generic-modal-buttons">
             </div>
         </div>
     </div>
