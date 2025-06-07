@@ -18,8 +18,11 @@ h2 {
 
 /* --- スロットエリア --- */
 #equipment-panel {
+    flex-direction: row;
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    max-width: 150px;
 }
 
 /* ▼▼▼【新規追加】▼▼▼ */
@@ -318,6 +321,7 @@ h2 {
 }
 
 .tab-button {
+    flex: 0.5;
     padding: 8px 15px;
     cursor: pointer;
     background-color: transparent;
@@ -439,5 +443,118 @@ h2 {
 
 #share-button:hover {
     background-color: #0056b3;
+}
+
+/* --- セット管理コントロール --- */
+#set-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+    border-radius: 4px;
+}
+
+#set-switchers {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow: hidden; /* 角丸を効かせるため */
+    justify-content: center;
+}
+
+.set-button {
+    flex: 1;
+    width: 50%;
+    background-color: #3e3e42;
+    color: #ccc;
+    border: none;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.set-button:last-child {
+    border-right: none;
+}
+
+.set-button:hover {
+    background-color: #4f4f53;
+}
+
+.set-button.active {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+#clear-set-button,
+#copy-set-button {
+    margin-top: 2px;
+    padding: 5px;
+    border: none;
+    border-radius: 0;
+}
+
+#set-actions {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 0px;
+    justify-content: center;
+}
+
+#clear-set-button {
+    padding: 5px;
+    background-color: #800511; /* 赤色系 */
+}
+#clear-set-button:hover {
+    background-color: #49020a;
+}
+
+/* --- セットコピー用モーダル --- */
+#copy-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+#copy-modal-overlay.hidden {
+    display: none;
+}
+#copy-modal {
+    background-color: #3e3e42;
+    padding: 25px 35px;
+    border-radius: 8px;
+    border: 1px solid #777;
+    text-align: center;
+}
+#copy-modal p {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+#copy-source-options {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+.copy-source-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+.copy-source-button.disabled {
+    background-color: #7b7b7b;
 }
 /* ▲▲▲【ここまで追記】▲▲▲ */
