@@ -11,6 +11,7 @@ h2 {
 
 .simulator-container {
     display: flex;
+    justify-content: center;
     flex-wrap: wrap;
     gap: 20px;
     margin-top: 20px;
@@ -237,12 +238,7 @@ h2 {
     border-bottom: 1px solid #555;
 }
 
-.stats-list {
-    display: grid;
-    /* 3列のグリッドレイアウト */
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 8px 20px; /* 縦と横の隙間 */
-}
+
 
 .stat-entry {
     display: flex;
@@ -253,6 +249,7 @@ h2 {
 }
 
 .stat-name {
+    flex:1;
     color: #ccc;
 }
 
@@ -346,7 +343,8 @@ h2 {
 }
 
 #share-button {
-    padding: 8px 16px;
+    width: 100%;
+    padding: 5px;
     font-size: 14px;
     background-color: #007bff;
     color: white;
@@ -557,4 +555,249 @@ h2 {
 .copy-source-button.disabled {
     background-color: #7b7b7b;
 }
-/* ▲▲▲【ここまで追記】▲▲▲ */
+/* --- 比較機能用スタイル --- */
+#comparison-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+#comparison-controls .comparison-label {
+    font-weight: bold;
+}
+
+#comparison-set-selector {
+    display: flex;
+    gap: 5px;
+}
+
+#comparison-set-selector label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 3px 8px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background-color: #3e3e42;
+    font-size: 12px;
+    transition: background-color 0.2s;
+}
+
+#comparison-set-selector input[type="radio"] {
+    display: none;
+}
+
+#comparison-set-selector input[type="radio"]:checked + label {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+#comparison-set-selector input[type="radio"]:disabled + label {
+    background-color: #2a2a2e;
+    color: #666;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+.stat-value .diff {
+    margin-left: 8px;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.stat-value .diff.positive {
+    color: #90ee90; /* 明るい緑 */
+}
+
+.stat-value .diff.negative {
+    color: #f08080; /* 明るい赤 */
+}
+
+/* --- 汎用的な非表示クラス --- */
+.hidden {
+    display: none !important;
+}
+/* stat-entryのレイアウト調整 */
+.stats-list .stat-entry {
+    display: flex;
+    justify-content: space-between;
+}
+
+/* --- 並び順変更機能 --- */
+#sort-order-controls {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #555;
+}
+
+#sort-order-management {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+#sort-order-management .sort-order-set {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    background-color: #3e3e42;
+    border-radius: 4px;
+}
+
+#sort-order-management .sort-order-link {
+    color: "#a0cff_f";
+    cursor: pointer;
+    text-decoration: none;
+}
+
+#sort-order-management .sort-order-link.active {
+    color: #ffc107;
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+#sort-order-management .sort-order-action {
+    color: #ccc;
+    cursor: pointer;
+    font-size: 14px;
+    background: none;
+    border: none;
+    padding: 0 3px;
+}
+#sort-order-management .sort-order-action:hover {
+    color: white;
+}
+#sort-order-management .delete-button {
+    color: #f08080;
+}
+#sort-order-management .delete-button:hover {
+    color: #ff4d4d;
+}
+
+/* ドラッグ中のスタイル */
+.stats-list.is-sorting .stat-entry {
+    cursor: grab;
+    user-select: none;
+    border: 1px dashed #777;
+    background-color: #3a3a3e;
+}
+
+.stats-list.is-sorting .stat-entry:active {
+    cursor: grabbing;
+}
+
+.stat-entry.dragging {
+    opacity: 0.5;
+    background: #555;
+}
+
+/* --- 汎用モーダル --- */
+#generic-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+#generic-modal {
+    background-color: #2a2a2e;
+    padding: 20px 25px;
+    border-radius: 8px;
+    border: 1px solid #555;
+    min-width: 300px;
+    max-width: 90%;
+}
+
+#generic-modal-title {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+#generic-modal-content {
+    margin-bottom: 20px;
+}
+
+#generic-modal-content p {
+    margin: 0;
+}
+#generic-modal-content input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    background-color: #333;
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 4px;
+}
+
+#generic-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+#generic-modal-buttons button {
+    padding: 8px 15px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+}
+#generic-modal-buttons button.primary {
+    background-color: #007bff;
+    color: white;
+}
+#generic-modal-buttons button.secondary {
+    background-color: #555;
+    color: white;
+}
+
+
+/* 各ステータスの連番表示用スタイル */
+.stat-entry .stat-number {
+    color: #888;
+    margin-right: 10px;
+    min-width: 20px; /* 番号の幅を揃える */
+    text-align: right;
+    font-size: 0.9em;
+}
+
+/* ドラッグ中のゴースト（挿入位置の目印）のスタイル */
+.stats-list .sortable-ghost {
+    opacity: 0.4;
+    background-color: #007bff;
+}
+
+/* 補足：ドラッグ中の要素自体のスタイル */
+.stats-list .sortable-chosen {
+    cursor: grabbing !important;
+}
+/* --- ステータスリストのレイアウト調整（マルチカラムレイアウト版） --- */
+.stats-list {
+    /* 画面幅に応じて列数が自動で変わるように、列の幅を指定します。
+       このコンテナに300px幅の列がいくつ収まるかで、列数が決まります。 */
+    column-width: 250px;
+    
+    /* 列と列の間の隙間を指定します。 */
+    column-gap: 25px;
+}
+
+/* 項目（ステータス一行）が列の変わり目で
+   分割されてしまうのを防ぐ、重要なおまじないです。
+*/
+.stats-list .stat-entry {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+}
