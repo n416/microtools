@@ -13,12 +13,20 @@
     <div class="header-container">
         <h1>装備データセレクター</h1>
         <div class="header-buttons">
+            <button id="update-db-button" class="button-like">データベース更新</button>
             <a href="index.html" id="back-to-top-button" class="button-like">トップページに戻る</a>
         </div>
     </div>
     <div id="status">準備中...</div>
 
     <div id="filter-controls">
+        <div class="filter-group">
+            <label>
+                <input type="checkbox" id="inventory-only-filter">
+                インベントリのみ表示
+            </label>
+        </div>
+
         <div class="filter-sub-group">
             <div class="filter-group">
                 <label for="category-filter">カテゴリ:</label>
@@ -45,12 +53,6 @@
                 <button id="rank-select-all">全て選択</button>
                 <button id="rank-clear">クリア</button>
             </div>
-        </div>
-        <div class="filter-group">
-            <label>
-                <input type="checkbox" id="inventory-only-filter">
-                インベントリのみ表示
-            </label>
         </div>
     </div>
 
