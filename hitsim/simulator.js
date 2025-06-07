@@ -9,11 +9,20 @@ const STORE_NAME = 'equipment';
 const INVENTORY_KEY = 'equipmentInventory_v2';
 const EQUIPMENT_SETS_KEY = 'equipmentSets_v1';
 const ACTIVE_SET_ID_KEY = 'activeEquipmentSet_v1';
+const SORT_ORDERS_KEY = 'equipmentSortOrders_v1';
+const ACTIVE_SORT_KEY = 'activeSortOrderKey_v1';
 
 let db;
 let equippedItems = {};
 let allEquipmentSets = {};
 let activeSetId = '1';
+let comparisonSetId = null;
+
+// 並び順変更機能用の変数
+let sortOrders = {};
+let activeSortKey = 'default';
+let isSortMode = false;
+let sortableInstance = null; // 【変更】SortableJSのインスタンスを保持
 
 let selectedInventoryItem = null;
 let selectedSlotId = null;
@@ -113,16 +122,11 @@ function handleSharedData(encodedData) {
 
             localStorage.setItem(EQUIPMENT_SETS_KEY, JSON.stringify(newEquipmentSets));
 
-            // ▼▼▼【今回の追加機能】▼▼▼
-            // 復元したアイテムをインベントリにも追加する
             const currentInventory = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
-            // 現在のインベントリと復元されたアイテム名を結合し、重複を削除
             const newInventorySet = new Set([...currentInventory, ...allItemNames]);
             const newInventory = Array.from(newInventorySet);
-            // 新しいインベントリをlocalStorageに保存
             localStorage.setItem(INVENTORY_KEY, JSON.stringify(newInventory));
             console.log("復元された装備アイテムをインベントリに自動追加しました。");
-            // ▲▲▲【今回の追加機能】▲▲▲
 
         } catch (e) {
             console.error('共有データの処理中にエラーが発生しました:', e);
@@ -153,6 +157,7 @@ async function initializeApp() {
         detailsStatsList = document.getElementById('details-stats-list');
 
         await openDatabase();
+        loadSortOrders();
         loadAllEquipmentSets();
         await loadAndRenderInventory();
         setupGlobalClickListener();
@@ -209,15 +214,6 @@ function getItemsFromDBByNames(itemNames) {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const objectStore = transaction.objectStore(STORE_NAME);
         const results = [];
-        let requestsPending = uniqueNames.length;
-
-        const checkCompletion = () => {
-            requestsPending--;
-            if (requestsPending === 0) {
-                // oncompleteを待たずに解決
-            }
-        };
-
         transaction.oncomplete = () => {
             resolve(results);
         };
@@ -231,11 +227,9 @@ function getItemsFromDBByNames(itemNames) {
                 if (request.result) {
                     results.push(request.result);
                 }
-                checkCompletion();
             };
             request.onerror = (e) => {
                 console.error(`Error fetching item by name: ${name}`, e.target.error);
-                checkCompletion();
             };
         });
     });
@@ -424,36 +418,53 @@ function setupGlobalClickListener() {
 }
 
 
+// 【ここから置き換え】ステータス計算と表示機能（UX改善版）
 function calculateAndRenderStats() {
-    const totalStats = {};
-    const percentStats = new Set();
-
-    for (const slotId in equippedItems) {
-        const item = equippedItems[slotId];
-        for (const statName of STAT_HEADERS) {
-            const value = parseFloat(item[statName]) || 0;
-            if (value !== 0) {
-                if (value > 0 && value < 1) {
-                    percentStats.add(statName);
-                }
-                totalStats[statName] = (totalStats[statName] || 0) + value;
-            }
-        }
-    }
+    const { totalStats, percentStats } = calculateStatsForSet(equippedItems);
+    const { totalStats: comparisonTotalStats } = calculateStatsForSet(allEquipmentSets[comparisonSetId]);
 
     const statsPanel = document.getElementById('stats-panel');
-    statsPanel.innerHTML = '<h2>ステータス合計</h2>';
+    statsPanel.innerHTML = '';
+
+    const comparisonContainer = document.createElement('div');
+    comparisonContainer.id = 'comparison-controls';
+    statsPanel.appendChild(comparisonContainer);
+    renderComparisonSelector();
+
+    const title = document.createElement('h2');
+    title.textContent = 'ステータス合計';
+    statsPanel.appendChild(title);
 
     const statsList = document.createElement('div');
     statsList.className = 'stats-list';
+    statsPanel.appendChild(statsList);
 
-    let hasStats = false;
-    for (const statName in totalStats) {
-        const value = totalStats[statName];
-        if (value !== 0) {
-            hasStats = true;
+    const currentSortOrder = sortOrders[activeSortKey] || STAT_HEADERS;
+    const statsToRender = Object.keys(totalStats)
+        .filter(stat => totalStats[stat] !== 0)
+        .sort((a, b) => {
+            const indexA = currentSortOrder.indexOf(a);
+            const indexB = currentSortOrder.indexOf(b);
+            if (indexA === -1 && indexB === -1) return STAT_HEADERS.indexOf(a) - STAT_HEADERS.indexOf(b);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+        });
+
+    if (statsToRender.length === 0) {
+        statsList.textContent = '装備がありません。';
+    } else {
+        statsToRender.forEach((statName, index) => {
+            const value = totalStats[statName];
             const statEntry = document.createElement('div');
             statEntry.className = 'stat-entry';
+            statEntry.dataset.statName = statName;
+
+            // 番号表示用のspanを追加
+            const numberSpan = document.createElement('span');
+            numberSpan.className = 'stat-number';
+            numberSpan.textContent = `${index + 1}.`;
+            statEntry.appendChild(numberSpan);
 
             const nameSpan = document.createElement('span');
             nameSpan.className = 'stat-name';
@@ -462,25 +473,47 @@ function calculateAndRenderStats() {
             const valueSpan = document.createElement('span');
             valueSpan.className = 'stat-value';
 
+            let displayValueText;
             if (percentStats.has(statName)) {
                 const percentValue = value * 100;
-                valueSpan.textContent = (Number.isInteger(percentValue) ? percentValue : percentValue.toFixed(1)) + '%';
+                displayValueText = (Number.isInteger(percentValue) ? percentValue : percentValue.toFixed(1)) + '%';
             } else {
-                valueSpan.textContent = Number.isInteger(value) ? value : value.toFixed(2);
+                displayValueText = Number.isInteger(value) ? value : value.toFixed(2);
             }
 
+            let diffHtml = '';
+            if (comparisonSetId) {
+                const comparisonValue = comparisonTotalStats[statName] || 0;
+                const diff = value - comparisonValue;
+
+                if (diff !== 0) {
+                    const diffClass = diff > 0 ? 'positive' : 'negative';
+                    const diffSign = diff > 0 ? '+' : '';
+
+                    let diffDisplayValue;
+                    if (percentStats.has(statName) || (Math.abs(diff) > 0 && Math.abs(diff) < 1 && !Number.isInteger(diff))) {
+                        const percentDiff = diff * 100;
+                        diffDisplayValue = (Number.isInteger(percentDiff) ? percentDiff : percentDiff.toFixed(1)) + '%';
+                    } else {
+                        diffDisplayValue = Number.isInteger(diff) ? diff : diff.toFixed(2);
+                    }
+                    diffHtml = ` <span class="diff ${diffClass}">(${diffSign}${diffDisplayValue})</span>`;
+                }
+            }
+
+            valueSpan.innerHTML = `${displayValueText}${diffHtml}`;
             statEntry.appendChild(nameSpan);
             statEntry.appendChild(valueSpan);
             statsList.appendChild(statEntry);
-        }
+        });
     }
 
-    if (!hasStats) {
-        statsList.textContent = '装備がありません。';
-    }
-
-    statsPanel.appendChild(statsList);
+    const sortControlsContainer = document.createElement('div');
+    sortControlsContainer.id = 'sort-order-controls';
+    statsPanel.appendChild(sortControlsContainer);
+    renderSortOrderControls();
 }
+// 【ここまで置き換え】
 
 
 function displayItemDetails(item, clickedElement) {
@@ -554,18 +587,14 @@ function setupInventoryTabs() {
     });
 }
 
-/**
- * ▼▼▼【変更】共有URL生成ロジックを軽量化 ▼▼▼
- */
+
 function setupShareButton() {
     const shareButton = document.getElementById('share-button');
     if (!shareButton) return;
 
     shareButton.addEventListener('click', async () => {
-        // 1. 現在の全装備セットから「名称」だけを抽出する
         const equipmentNamesToShare = {};
         for (const setId in allEquipmentSets) {
-            // 空のセットは共有データに含めない
             if (Object.keys(allEquipmentSets[setId]).length === 0) continue;
 
             equipmentNamesToShare[setId] = {};
@@ -582,7 +611,6 @@ function setupShareButton() {
             return;
         }
 
-        // 2. 装備セットの「名称」情報のみをJSON化して圧縮・エンコード
         const jsonString = JSON.stringify(equipmentNamesToShare);
         const compressed = pako.deflate(jsonString);
         const encodedData = btoa(String.fromCharCode.apply(null, compressed))
@@ -590,7 +618,6 @@ function setupShareButton() {
             .replace(/\//g, '_')
             .replace(/=+$/, '');
 
-        // 3. パラメータ名を 'd' (data) にしてURLを生成
         const shareUrl = `${window.location.origin}${window.location.pathname}?d=${encodedData}`;
 
         try {
@@ -735,4 +762,383 @@ function copySetFrom(sourceSetId) {
         calculateAndRenderStats();
         document.getElementById('copy-modal-overlay').classList.add('hidden');
     }
+}
+
+// =============================================================
+// 【ここから新規追加・修正】比較機能 & 並び順変更機能
+// =============================================================
+
+function renderComparisonSelector() {
+    const container = document.getElementById('comparison-controls');
+    if (!container) return;
+
+    container.innerHTML = '<label class="comparison-label">比較対象:</label>';
+
+    const selectorDiv = document.createElement('div');
+    selectorDiv.id = 'comparison-set-selector';
+
+    const noneId = `comp-none`;
+    const noneInput = document.createElement('input');
+    noneInput.type = 'radio';
+    noneInput.id = noneId;
+    noneInput.name = 'comparison-set';
+    noneInput.value = 'none';
+    noneInput.checked = comparisonSetId === null;
+    const noneLabel = document.createElement('label');
+    noneLabel.htmlFor = noneId;
+    noneLabel.textContent = 'なし';
+    selectorDiv.appendChild(noneInput);
+    selectorDiv.appendChild(noneLabel);
+
+    for (let i = 1; i <= 4; i++) {
+        const setId = String(i);
+        const radioId = `comp-${setId}`;
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.id = radioId;
+        input.name = 'comparison-set';
+        input.value = setId;
+        input.checked = comparisonSetId === setId;
+        input.disabled = setId === activeSetId;
+        const label = document.createElement('label');
+        label.htmlFor = radioId;
+        label.textContent = `${setId}`;
+        selectorDiv.appendChild(input);
+        selectorDiv.appendChild(label);
+    }
+
+    container.appendChild(selectorDiv);
+
+    selectorDiv.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', (event) => {
+            comparisonSetId = event.target.value === 'none' ? null : event.target.value;
+            calculateAndRenderStats();
+        });
+    });
+}
+
+function calculateStatsForSet(items) {
+    const totalStats = {};
+    const percentStats = new Set();
+    if (!items) return { totalStats, percentStats };
+    for (const slotId in items) {
+        const item = items[slotId];
+        if (!item) continue;
+        for (const statName of STAT_HEADERS) {
+            const value = parseFloat(item[statName]) || 0;
+            if (value !== 0) {
+                if (value > 0 && value < 1) {
+                    percentStats.add(statName);
+                }
+                totalStats[statName] = (totalStats[statName] || 0) + value;
+            }
+        }
+    }
+    return { totalStats, percentStats };
+}
+
+function renderSortOrderControls() {
+    const container = document.getElementById('sort-order-controls');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const button = document.createElement('button');
+    button.id = 'toggle-sort-mode-button';
+    button.textContent = isSortMode ? '確定' : '順番変更';
+    button.onclick = handleToggleSortMode;
+    container.appendChild(button);
+
+    const managementDiv = document.createElement('div');
+    managementDiv.id = 'sort-order-management';
+
+    Object.keys(sortOrders).forEach(key => {
+        const setDiv = document.createElement('div');
+        setDiv.className = 'sort-order-set';
+
+        const link = document.createElement('a');
+        link.href = '#';
+        link.textContent = key;
+        link.className = 'sort-order-link';
+        if (key === activeSortKey) {
+            link.classList.add('active');
+        }
+        link.onclick = (e) => {
+            e.preventDefault();
+            if (isSortMode) return;
+            activeSortKey = key;
+            localStorage.setItem(ACTIVE_SORT_KEY, activeSortKey);
+            calculateAndRenderStats();
+        };
+        setDiv.appendChild(link);
+
+        const renameButton = document.createElement('button');
+        renameButton.textContent = '✏️';
+        renameButton.className = 'sort-order-action rename-button';
+        renameButton.title = '名称変更';
+        renameButton.onclick = (e) => {
+            e.preventDefault();
+            if (isSortMode) return;
+            handleRenameSortOrder(key);
+        };
+        setDiv.appendChild(renameButton);
+
+        if (key !== 'default') {
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = '❌';
+            deleteButton.className = 'sort-order-action delete-button';
+            deleteButton.title = '削除';
+            deleteButton.onclick = (e) => {
+                e.preventDefault();
+                if (isSortMode) return;
+                handleDeleteSortOrder(key);
+            };
+            setDiv.appendChild(deleteButton);
+        }
+
+        managementDiv.appendChild(setDiv);
+    });
+
+    container.appendChild(managementDiv);
+}
+
+function handleToggleSortMode() {
+    if (!isSortMode && !sortOrders.default) {
+        isSortMode = true;
+        toggleSortModeUI(true);
+        return;
+    }
+
+    if (isSortMode) {
+        isSortMode = false;
+        const statsList = document.querySelector('.stats-list');
+        const newOrder = Array.from(statsList.querySelectorAll('.stat-entry')).map(el => el.dataset.statName);
+        sortOrders[activeSortKey] = newOrder;
+        saveSortOrders();
+        toggleSortModeUI(false);
+        return;
+    }
+
+    if (!isSortMode && sortOrders.default) {
+        const content = document.createElement('p');
+        content.textContent = `「${activeSortKey}」を編集しますか、それとも新しい並び順を追加しますか？`;
+
+        const buttons = [
+            {
+                text: `「${activeSortKey}」を変更`,
+                class: 'secondary',
+                onClick: () => {
+                    isSortMode = true;
+                    toggleSortModeUI(true);
+                    closeModal();
+                }
+            },
+            {
+                text: '新規作成',
+                class: 'primary',
+                onClick: () => {
+                    closeModal();
+                    handleCreateNewSortOrder();
+                }
+            },
+        ];
+        showModal('並び順の編集', content, buttons);
+    }
+}
+
+function handleCreateNewSortOrder() {
+    const content = document.createElement('div');
+    const p = document.createElement('p');
+    p.textContent = '新しい並び順セットの名前を入力してください。';
+    p.style.marginBottom = '10px';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = '例: 火力重視';
+    content.appendChild(p);
+    content.appendChild(input);
+
+    const buttons = [
+        {
+            text: 'キャンセル',
+            class: 'secondary',
+            onClick: () => closeModal()
+        },
+        {
+            text: '作成',
+            class: 'primary',
+            onClick: () => {
+                let newName = input.value.trim();
+                if (!newName) {
+                    alert('名前を入力してください。');
+                    return;
+                }
+                if (sortOrders[newName]) {
+                    alert('同じ名前のセットが既に存在します。');
+                    return;
+                }
+                const baseOrder = sortOrders.default || Array.from(document.querySelectorAll('.stats-list .stat-entry')).map(el => el.dataset.statName);
+                sortOrders[newName] = [...baseOrder];
+                activeSortKey = newName;
+                saveSortOrders();
+                isSortMode = true;
+                toggleSortModeUI(true);
+                closeModal();
+            }
+        }
+    ];
+    showModal('新しい並び順セット', content, buttons);
+}
+
+
+function handleRenameSortOrder(oldName) {
+    const content = document.createElement('div');
+    const p = document.createElement('p');
+    p.textContent = `「${oldName}」の新しい名前を入力してください。`;
+    p.style.marginBottom = '10px';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = oldName;
+    content.appendChild(p);
+    content.appendChild(input);
+
+    const buttons = [
+        {
+            text: 'キャンセル',
+            class: 'secondary',
+            onClick: () => closeModal()
+        },
+        {
+            text: '変更',
+            class: 'primary',
+            onClick: () => {
+                const newName = input.value.trim();
+                if (!newName) {
+                    alert('名前を入力してください。');
+                    return;
+                }
+                if (newName !== oldName && sortOrders[newName]) {
+                    alert('同じ名前のセットが既に存在します。');
+                    return;
+                }
+                if (newName === oldName) {
+                    closeModal();
+                    return;
+                }
+
+                sortOrders[newName] = sortOrders[oldName];
+                delete sortOrders[oldName];
+
+                if (activeSortKey === oldName) {
+                    activeSortKey = newName;
+                }
+                saveSortOrders();
+                calculateAndRenderStats();
+                closeModal();
+            }
+        }
+    ];
+    showModal('名称変更', content, buttons);
+}
+
+function handleDeleteSortOrder(keyToDelete) {
+    const content = document.createElement('p');
+    content.textContent = `並び順セット「${keyToDelete}」を本当に削除しますか？`;
+
+    const buttons = [
+        {
+            text: 'キャンセル',
+            class: 'secondary',
+            onClick: () => closeModal()
+        },
+        {
+            text: '削除',
+            class: 'primary',
+            onClick: () => {
+                delete sortOrders[keyToDelete];
+                if (activeSortKey === keyToDelete) {
+                    activeSortKey = 'default';
+                }
+                saveSortOrders();
+                calculateAndRenderStats();
+                closeModal();
+            }
+        }
+    ];
+    showModal('削除の確認', content, buttons);
+}
+
+// 【変更】SortableJS を使用するように修正
+function toggleSortModeUI(enable) {
+    const statsList = document.querySelector('.stats-list');
+    const button = document.getElementById('toggle-sort-mode-button');
+
+    if (enable) {
+        isSortMode = true;
+        button.textContent = '確定';
+        statsList.classList.add('is-sorting');
+
+        if (sortableInstance) {
+            sortableInstance.destroy();
+        }
+        sortableInstance = new Sortable(statsList, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+        });
+
+    } else {
+        isSortMode = false;
+        button.textContent = '順番変更';
+        statsList.classList.remove('is-sorting');
+
+        if (sortableInstance) {
+            sortableInstance.destroy();
+            sortableInstance = null;
+        }
+        calculateAndRenderStats();
+    }
+}
+
+// 【削除】ネイティブD&Dハンドラは不要になったため削除
+// handleDragStart, handleDragOver, handleDrop, handleDragEnd を削除
+
+function saveSortOrders() {
+    localStorage.setItem(SORT_ORDERS_KEY, JSON.stringify(sortOrders));
+    localStorage.setItem(ACTIVE_SORT_KEY, activeSortKey);
+}
+function loadSortOrders() {
+    sortOrders = JSON.parse(localStorage.getItem(SORT_ORDERS_KEY)) || {};
+    activeSortKey = localStorage.getItem(ACTIVE_SORT_KEY) || 'default';
+    if (!sortOrders[activeSortKey]) {
+        activeSortKey = 'default';
+    }
+}
+
+
+function showModal(title, contentElement, buttons) {
+    const modal = document.getElementById('generic-modal-overlay');
+    document.getElementById('generic-modal-title').textContent = title;
+
+    const contentContainer = document.getElementById('generic-modal-content');
+    contentContainer.innerHTML = '';
+    contentContainer.appendChild(contentElement);
+
+    const buttonsContainer = document.getElementById('generic-modal-buttons');
+    buttonsContainer.innerHTML = '';
+    buttons.forEach(btnInfo => {
+        const button = document.createElement('button');
+        button.textContent = btnInfo.text;
+        button.className = btnInfo.class;
+        button.onclick = btnInfo.onClick;
+        buttonsContainer.appendChild(button);
+    });
+
+    modal.classList.remove('hidden');
+    const firstInput = contentContainer.querySelector('input');
+    if (firstInput) {
+        firstInput.focus();
+    }
+}
+
+function closeModal() {
+    const modal = document.getElementById('generic-modal-overlay');
+    modal.classList.add('hidden');
 }
