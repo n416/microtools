@@ -42,7 +42,21 @@
                 <div class="slot" id="slot-amulet"><span>アミュレッタ</span></div>
                 <div class="slot" id="slot-placeholder"></div>
             </div>
+
+            <div id="set-controls">
+                <div id="set-switchers">
+                    <button class="set-button" data-set-id="1">1</button>
+                    <button class="set-button" data-set-id="2">2</button>
+                    <button class="set-button" data-set-id="3">3</button>
+                    <button class="set-button" data-set-id="4">4</button>
+                </div>
+                <div id="set-actions">
+                    <button id="copy-set-button" class="button-like">コピー</button>
+                    <button id="clear-set-button" class="button-like">クリア</button>
+                </div>
+            </div>
         </div>
+
         <div id="inventory-panel">
             <div id="inventory-panel">
                 <div id="inventory-tabs">
@@ -78,6 +92,17 @@
             <div class="modal-buttons">
                 <button id="modal-ok-button">OK</button>
                 <button id="modal-cancel-button">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="copy-modal-overlay" class="hidden">
+        <div id="copy-modal">
+            <p>どのセットからコピーしますか？</p>
+            <div id="copy-source-options" class="modal-options">
+            </div>
+            <div class="modal-buttons">
+                <button id="copy-modal-cancel-button">キャンセル</button>
             </div>
         </div>
     </div>
