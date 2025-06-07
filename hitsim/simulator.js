@@ -61,7 +61,8 @@ const SLOT_ID_TO_JAPANESE_NAME = {
 // --- 初期化処理 ---
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const sharedData = urlParams.get('share');
+    // ▼▼▼【変更】パラメータ名を 'd' に短縮(任意) & 互換性のため 'share' もチェック ▼▼▼
+    const sharedData = urlParams.get('d') || urlParams.get('share');
 
     if (sharedData) {
         handleSharedData(sharedData);
@@ -71,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * 共有データが見つかった場合の処理
+ * ▼▼▼【変更】共有データ復元ロジックを全面的に修正 ▼▼▼
  * @param {string} encodedData - URLに含まれるエンコードされたデータ
  */
 function handleSharedData(encodedData) {
@@ -92,24 +93,51 @@ function handleSharedData(encodedData) {
 
             modalText.textContent = 'データを復元しています...';
 
+            // 1. デコード・展開・JSONパース
             const compressedData = atob(encodedData.replace(/-/g, '+').replace(/_/g, '/'));
             const uint8Array = new Uint8Array(compressedData.split('').map(c => c.charCodeAt(0)));
             const jsonString = pako.inflate(uint8Array, { to: 'string' });
-            const state = JSON.parse(jsonString);
+            const equipmentNames = JSON.parse(jsonString);
 
-            if (state.inventory && state.equipment) {
-                localStorage.setItem(INVENTORY_KEY, JSON.stringify(state.inventory));
-                localStorage.setItem(EQUIPMENT_SETS_KEY, JSON.stringify(state.equipment));
+            // 2. 必要なアイテム名を全てリストアップ
+            const allItemNames = [];
+            for (const setId in equipmentNames) {
+                for (const slotId in equipmentNames[setId]) {
+                    allItemNames.push(equipmentNames[setId][slotId]);
+                }
             }
+
+            // 3. DBから完全なアイテムデータを一括取得
+            const foundItems = await getItemsFromDBByNames(allItemNames);
+            const itemsMap = new Map(foundItems.map(item => [item['名称'], item]));
+
+            // 4. 完全な装備セットデータを再構築
+            const newEquipmentSets = { '1': {}, '2': {}, '3': {}, '4': {} };
+            for (const setId in equipmentNames) {
+                newEquipmentSets[setId] = {};
+                for (const slotId in equipmentNames[setId]) {
+                    const itemName = equipmentNames[setId][slotId];
+                    if (itemsMap.has(itemName)) {
+                        newEquipmentSets[setId][slotId] = itemsMap.get(itemName);
+                    }
+                }
+            }
+
+            // 5. 復元した装備セットをlocalStorageに保存
+            localStorage.setItem(EQUIPMENT_SETS_KEY, JSON.stringify(newEquipmentSets));
+            // 注意: インベントリは共有データに含まれないため、ユーザー自身のものが維持されます。
+
         } catch (e) {
             console.error('共有データの処理中にエラーが発生しました:', e);
-            alert('データの読み込みに失敗しました。');
+            alert('データの読み込みに失敗しました。URLが破損している可能性があります。');
         } finally {
             modalOverlay.classList.add('hidden');
             modalText.textContent = '共有されたデータがあります。\n読み込みますか？';
             okButton.disabled = false;
             cancelButton.disabled = false;
+            // URLからパラメータを削除
             history.replaceState(null, '', window.location.pathname);
+            // アプリケーションを初期化して画面に反映
             initializeApp();
         }
     };
@@ -160,19 +188,74 @@ function openDatabase() {
 async function loadAndRenderInventory() {
     const inventoryItemNames = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
     if (inventoryItemNames.length === 0) { document.getElementById('inventory-list').innerHTML = '<p style="padding: 10px;">インベントリにアイテムがありません。<br><a href="data.html">インベントリ編集ページ</a>でアイテムを追加してください。</p>'; return; }
-    const itemPromises = inventoryItemNames.map(name => getItemFromDB(name));
-    const inventoryItems = (await Promise.all(itemPromises)).filter(item => item);
-    allInventoryItems = inventoryItems;
-    renderInventory(inventoryItems);
+    const inventoryItems = await getItemsFromDBByNames(inventoryItemNames); // ▼▼▼【変更】効率化のためヘルパー関数を使用▼▼▼
+    allInventoryItems = inventoryItems.filter(item => item); // 取得できなかったアイテムを除外
+    renderInventory(allInventoryItems);
 }
+
 function getItemFromDB(itemName) {
     return new Promise((resolve) => {
+        if (!db) { resolve(null); return; } // DB接続チェック
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const request = transaction.objectStore(STORE_NAME).get(itemName);
         request.onsuccess = () => resolve(request.result || null);
         request.onerror = () => resolve(null);
     });
 }
+
+// ▼▼▼【追加】複数のアイテムをDBから効率的に取得するヘルパー関数 ▼▼▼
+function getItemsFromDBByNames(itemNames) {
+    return new Promise(async (resolve, reject) => {
+        if (!db) {
+            try {
+                await openDatabase();
+            } catch (e) {
+                reject("Database connection failed");
+                return;
+            }
+        }
+        const uniqueNames = [...new Set(itemNames)];
+        if (uniqueNames.length === 0) {
+            resolve([]);
+            return;
+        }
+
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const results = [];
+        let requestsPending = uniqueNames.length;
+
+        const checkCompletion = () => {
+            requestsPending--;
+            if (requestsPending === 0) {
+                // oncompleteを待たずに解決
+            }
+        };
+
+        transaction.oncomplete = () => {
+            resolve(results);
+        };
+        transaction.onerror = (event) => {
+            reject('Transaction error: ' + event.target.error);
+        };
+
+        uniqueNames.forEach(name => {
+            const request = objectStore.get(name);
+            request.onsuccess = () => {
+                if (request.result) {
+                    results.push(request.result);
+                }
+                checkCompletion();
+            };
+            request.onerror = (e) => {
+                console.error(`Error fetching item by name: ${name}`, e.target.error);
+                checkCompletion();
+            };
+        });
+    });
+}
+
+
 function renderInventory(items) {
     const inventoryListDiv = document.getElementById('inventory-list');
     inventoryListDiv.innerHTML = '';
@@ -222,11 +305,7 @@ function handleSlotClick(slotId, element) {
     }
 }
 
-/**
- * ▼▼▼【空きスロット優先ロジック 最終修正版】▼▼▼
- * アイテムを対応するスロットに装備させる
- * @param {object} item - 装備するアイテムオブジェクト
- */
+
 function equipItem(item) {
     const itemType = item['タイプ'];
     const slotCategory = TYPE_TO_SLOT_CATEGORY[itemType];
@@ -315,38 +394,27 @@ function renderSlot(slotId) {
 }
 
 
-// ▼▼▼【変更】複数セットに対応した保存・読み込み関数 ▼▼▼
-/**
- * 現在の装備セット(複数)の状態をlocalStorageに保存する
- */
 function saveAllEquipmentSets() {
     allEquipmentSets[activeSetId] = equippedItems;
     localStorage.setItem(EQUIPMENT_SETS_KEY, JSON.stringify(allEquipmentSets));
     localStorage.setItem(ACTIVE_SET_ID_KEY, activeSetId);
 }
 
-/**
- * localStorageから全装備セットとアクティブIDを読み込む
- */
+
 function loadAllEquipmentSets() {
     activeSetId = localStorage.getItem(ACTIVE_SET_ID_KEY) || '1';
     const savedSets = JSON.parse(localStorage.getItem(EQUIPMENT_SETS_KEY));
     if (savedSets) {
         allEquipmentSets = savedSets;
     } else {
-        // データがなければ初期化
         allEquipmentSets = { '1': {}, '2': {}, '3': {}, '4': {} };
     }
-    // アクティブなセットをグローバル変数に設定
     equippedItems = allEquipmentSets[activeSetId] || {};
 
-    // UIの再描画
     renderAllSlots();
     updateSetButtonsUI();
 }
-/**
- * 全てのスロットを描画し直す
- */
+
 function renderAllSlots() {
     document.querySelectorAll('.slot').forEach(slotElement => renderSlot(slotElement.id));
 }
@@ -369,15 +437,11 @@ function setupGlobalClickListener() {
     document.body.addEventListener('click', () => clearAllSelections());
 }
 
-/**
- * ▼▼▼【新規追加】ステップ4のメイン機能 ▼▼▼
- * 現在の装備から合計ステータスを計算し、画面に表示する
- */
+
 function calculateAndRenderStats() {
     const totalStats = {};
     const percentStats = new Set();
 
-    // 1. 全ての装備アイテムのステータスを合計する
     for (const slotId in equippedItems) {
         const item = equippedItems[slotId];
         for (const statName of STAT_HEADERS) {
@@ -391,9 +455,8 @@ function calculateAndRenderStats() {
         }
     }
 
-    // 2. 計算結果を画面に描画する
     const statsPanel = document.getElementById('stats-panel');
-    statsPanel.innerHTML = '<h2>ステータス合計</h2>'; // タイトルをセット
+    statsPanel.innerHTML = '<h2>ステータス合計</h2>';
 
     const statsList = document.createElement('div');
     statsList.className = 'stats-list';
@@ -413,18 +476,12 @@ function calculateAndRenderStats() {
             const valueSpan = document.createElement('span');
             valueSpan.className = 'stat-value';
 
-
-            // ▼▼▼【ロジック変更箇所】▼▼▼
             if (percentStats.has(statName)) {
                 const percentValue = value * 100;
                 valueSpan.textContent = (Number.isInteger(percentValue) ? percentValue : percentValue.toFixed(1)) + '%';
             } else {
                 valueSpan.textContent = Number.isInteger(value) ? value : value.toFixed(2);
             }
-            // ▲▲▲【ロジック変更箇所】▲▲▲
-
-            // 小数点が見苦しくならないように丸める
-            //valueSpan.textContent = Number.isInteger(value) ? value : value.toFixed(2);
 
             statEntry.appendChild(nameSpan);
             statEntry.appendChild(valueSpan);
@@ -439,7 +496,7 @@ function calculateAndRenderStats() {
     statsPanel.appendChild(statsList);
 }
 
-// (displayItemDetails, hideItemDetails, getCategoryFromType, setupInventoryTabs は変更なし)
+
 function displayItemDetails(item, clickedElement) {
     if (!item || !detailsPanel || !clickedElement) return;
     detailsItemName.textContent = item['名称'];
@@ -510,27 +567,45 @@ function setupInventoryTabs() {
         });
     });
 }
+
+/**
+ * ▼▼▼【変更】共有URL生成ロジックを軽量化 ▼▼▼
+ */
 function setupShareButton() {
     const shareButton = document.getElementById('share-button');
     if (!shareButton) return;
 
     shareButton.addEventListener('click', async () => {
-        const inventoryToShare = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
-        const equipmentToShare = JSON.parse(localStorage.getItem(EQUIPMENT_SET_KEY)) || {};
+        // 1. 現在の全装備セットから「名称」だけを抽出する
+        const equipmentNamesToShare = {};
+        for (const setId in allEquipmentSets) {
+            // 空のセットは共有データに含めない
+            if (Object.keys(allEquipmentSets[setId]).length === 0) continue;
 
-        const stateToShare = {
-            inventory: inventoryToShare,
-            equipment: equipmentToShare,
-        };
+            equipmentNamesToShare[setId] = {};
+            for (const slotId in allEquipmentSets[setId]) {
+                const item = allEquipmentSets[setId][slotId];
+                if (item && item['名称']) {
+                    equipmentNamesToShare[setId][slotId] = item['名称'];
+                }
+            }
+        }
 
-        const jsonString = JSON.stringify(stateToShare);
+        if (Object.keys(equipmentNamesToShare).length === 0) {
+            alert('共有できる装備データがありません。');
+            return;
+        }
+
+        // 2. 装備セットの「名称」情報のみをJSON化して圧縮・エンコード
+        const jsonString = JSON.stringify(equipmentNamesToShare);
         const compressed = pako.deflate(jsonString);
         const encodedData = btoa(String.fromCharCode.apply(null, compressed))
             .replace(/\+/g, '-')
             .replace(/\//g, '_')
             .replace(/=+$/, '');
 
-        const shareUrl = `${window.location.origin}${window.location.pathname}?share=${encodedData}`;
+        // 3. パラメータ名を 'd' (data) にしてURLを生成
+        const shareUrl = `${window.location.origin}${window.location.pathname}?d=${encodedData}`;
 
         try {
             await navigator.clipboard.writeText(shareUrl);
@@ -546,10 +621,7 @@ function setupShareButton() {
     });
 }
 
-// ▼▼▼【ここから追記】DBの存在チェックとセットアップを行う関数 ▼▼▼
-/**
- * DBが存在し、データが入っているかを確認し、なければセットアップを実行する
- */
+
 async function checkAndSetupDatabaseIfNeeded() {
     await openDatabase();
     return new Promise((resolve, reject) => {
@@ -563,13 +635,10 @@ async function checkAndSetupDatabaseIfNeeded() {
                 resolve();
             } else {
                 console.log("データベースが空です。セットアップ処理を実行します...");
-                // db-setup.js内のsetupDatabase関数を呼び出す
-                // この関数がグローバルスコープに存在することを前提としています
                 if (typeof setupDatabase === 'function') {
                     setupDatabase()
                         .then(() => {
                             console.log("データベースのセットアップが完了しました。");
-                            // セットアップ後、DB接続を再確立する必要がある場合があるため、再度openDatabaseを呼ぶ
                             openDatabase().then(resolve).catch(reject);
                         })
                         .catch(err => {
@@ -588,11 +657,8 @@ async function checkAndSetupDatabaseIfNeeded() {
     });
 }
 
-/**
- * セット管理コントロールのイベントリスナーを設定する
- */
+
 function setupSetControls() {
-    // セット切替ボタン
     document.querySelectorAll('.set-button').forEach(button => {
         button.addEventListener('click', () => {
             const newSetId = button.dataset.setId;
@@ -602,38 +668,23 @@ function setupSetControls() {
         });
     });
 
-    // コピーボタン
     document.getElementById('copy-set-button').addEventListener('click', openCopyModal);
-
-    // クリアボタン
     document.getElementById('clear-set-button').addEventListener('click', clearCurrentSet);
 }
 
-/**
- * 装備セットを切り替える
- * @param {string} newSetId - 切り替え先のセットID ('1', '2', '3', '4')
- */
-function switchEquipmentSet(newSetId) {
-    // 現在のセットの状態を保存
-    allEquipmentSets[activeSetId] = equippedItems;
 
-    // 新しいセットに切り替え
+function switchEquipmentSet(newSetId) {
+    allEquipmentSets[activeSetId] = equippedItems;
     activeSetId = newSetId;
     equippedItems = allEquipmentSets[activeSetId] || {};
-
-    // 永続化
     saveAllEquipmentSets();
-
-    // UIを更新
     clearAllSelections();
     renderAllSlots();
     calculateAndRenderStats();
     updateSetButtonsUI();
 }
 
-/**
- * セット切替ボタンのUI（アクティブ状態）を更新する
- */
+
 function updateSetButtonsUI() {
     document.querySelectorAll('.set-button').forEach(button => {
         if (button.dataset.setId === activeSetId) {
@@ -644,9 +695,7 @@ function updateSetButtonsUI() {
     });
 }
 
-/**
- * 現在のセットをクリアする
- */
+
 function clearCurrentSet() {
     if (confirm(`セット${activeSetId} の装備を全てクリアします。よろしいですか？`)) {
         equippedItems = {};
@@ -656,17 +705,15 @@ function clearCurrentSet() {
     }
 }
 
-/**
- * セットコピーモーダルを開く
- */
+
 function openCopyModal() {
     const modalOverlay = document.getElementById('copy-modal-overlay');
     const optionsContainer = document.getElementById('copy-source-options');
-    optionsContainer.innerHTML = ''; // 既存の選択肢をクリア
+    optionsContainer.innerHTML = '';
 
     for (let i = 1; i <= 4; i++) {
         const setId = String(i);
-        if (setId !== activeSetId) { // 自分以外のセットをコピー元として表示
+        if (setId !== activeSetId) {
             const button = document.createElement('button');
             button.textContent = `${setId}`;
             button.className = 'copy-source-button';
@@ -691,23 +738,15 @@ function openCopyModal() {
     modalOverlay.classList.remove('hidden');
 }
 
-/**
- * 指定したセットから現在のセットへコピーを実行する
- * @param {string} sourceSetId - コピー元のセットID
- */
+
 function copySetFrom(sourceSetId) {
     if (confirm(`セット${sourceSetId} の内容を、現在のセット${activeSetId} に上書きコピーします。よろしいですか？`)) {
-        // ディープコピーで参照を切る
         const sourceData = JSON.parse(JSON.stringify(allEquipmentSets[sourceSetId] || {}));
         equippedItems = sourceData;
-
         saveAllEquipmentSets();
-
-        // UIを更新
         clearAllSelections();
         renderAllSlots();
         calculateAndRenderStats();
         document.getElementById('copy-modal-overlay').classList.add('hidden');
     }
 }
-// ▲▲▲【ここまで追記】▲▲▲
