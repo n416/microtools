@@ -7,23 +7,24 @@ const DB_NAME = 'GameEquipmentDB';
 const DB_VERSION = 9;
 const STORE_NAME = 'equipment';
 const INVENTORY_KEY = 'equipmentInventory_v2';
-const EQUIPMENT_SET_KEY = 'equipmentSet_v1';
+// ▼▼▼【変更】複数の装備セットを保存するキーに変更 ▼▼▼
+const EQUIPMENT_SETS_KEY = 'equipmentSets_v1';
+const ACTIVE_SET_ID_KEY = 'activeEquipmentSet_v1';
+// ▲▲▲【変更】▲▲▲
 
 let db;
-let equippedItems = {};
+// ▼▼▼【変更】状態管理変数を変更・追加 ▼▼▼
+let equippedItems = {}; // 現在アクティブなセットの装備情報
+let allEquipmentSets = {}; // 全セットの装備情報 { "1": {...}, "2": {...}, ... }
+let activeSetId = '1'; // 現在アクティブなセットID
+// ▲▲▲【変更】▲▲▲
+
 let selectedInventoryItem = null;
 let selectedSlotId = null;
-
-// ▼▼▼【追記】詳細パネル用の変数を定義 ▼▼▼
 let detailsPanel, detailsItemName, detailsItemImage, detailsStatsList;
-// ▲▲▲【追記】▲▲▲
 
-// ▼▼▼【追記】インベントリのフルリストと現在選択中のカテゴリを管理 ▼▼▼
 let allInventoryItems = [];
 let currentInventoryCategory = 'all';
-// ▲▲▲【追記】▲▲▲
-
-// ▼▼▼【新規追加】ステータス計算対象となる列名のリスト ▼▼▼
 const STAT_HEADERS = [
     '評価数値', '基本攻撃力', '攻撃力増幅', 'クリティカルダメージ増幅', '一般攻撃力',
     'スキルダメージ増幅', '近距離攻撃力', '防御力', '武力', 'ガード貫通', '一般ダメージ増幅',
@@ -98,7 +99,7 @@ function handleSharedData(encodedData) {
 
             if (state.inventory && state.equipment) {
                 localStorage.setItem(INVENTORY_KEY, JSON.stringify(state.inventory));
-                localStorage.setItem(EQUIPMENT_SET_KEY, JSON.stringify(state.equipment));
+                localStorage.setItem(EQUIPMENT_SETS_KEY, JSON.stringify(state.equipment));
             }
         } catch (e) {
             console.error('共有データの処理中にエラーが発生しました:', e);
@@ -132,17 +133,21 @@ async function initializeApp() {
         detailsStatsList = document.getElementById('details-stats-list');
 
         await openDatabase();
-        await loadEquippedItems();
+        // ▼▼▼【変更】複数セットの読み込み処理に変更 ▼▼▼
+        loadAllEquipmentSets();
+        // ▲▲▲【変更】▲▲▲
         await loadAndRenderInventory();
         setupGlobalClickListener();
         setupInventoryTabs();
         setupShareButton();
+        // ▼▼▼【追記】セット管理コントロールのイベント設定 ▼▼▼
+        setupSetControls();
+        // ▲▲▲【追記】▲▲▲
         calculateAndRenderStats();
     } catch (error) { console.error('初期化中にエラーが発生しました:', error); }
 }
 
 // --- 関数定義 ---
-// (openDatabase, getItemFromDB, renderInventory, handleInventoryClick, handleSlotClick は変更なし)
 function openDatabase() {
     return new Promise((resolve, reject) => {
         if (db) return resolve(db);
@@ -270,7 +275,7 @@ function equipItem(item) {
         }
     }
 
-    saveEquippedItems();
+    saveAllEquipmentSets();
     calculateAndRenderStats();
 }
 
@@ -279,7 +284,7 @@ function unequipItem(slotId, doSaveAndRecalculate = true) {
         delete equippedItems[slotId];
         renderSlot(slotId);
         if (doSaveAndRecalculate) {
-            saveEquippedItems();
+            saveAllEquipmentSets();
             calculateAndRenderStats(); // ★★★ 装備解除後にステータスを再計算
         }
     }
@@ -309,20 +314,40 @@ function renderSlot(slotId) {
     }
 }
 
-function saveEquippedItems() {
-    const savableData = {};
-    for (const slotId in equippedItems) { savableData[slotId] = equippedItems[slotId]['名称']; }
-    localStorage.setItem(EQUIPMENT_SET_KEY, JSON.stringify(savableData));
+
+// ▼▼▼【変更】複数セットに対応した保存・読み込み関数 ▼▼▼
+/**
+ * 現在の装備セット(複数)の状態をlocalStorageに保存する
+ */
+function saveAllEquipmentSets() {
+    allEquipmentSets[activeSetId] = equippedItems;
+    localStorage.setItem(EQUIPMENT_SETS_KEY, JSON.stringify(allEquipmentSets));
+    localStorage.setItem(ACTIVE_SET_ID_KEY, activeSetId);
 }
 
-async function loadEquippedItems() {
-    const savedSet = JSON.parse(localStorage.getItem(EQUIPMENT_SET_KEY)) || {};
-    const itemPromises = [];
-    for (const slotId in savedSet) {
-        const itemName = savedSet[slotId];
-        itemPromises.push(getItemFromDB(itemName).then(item => { if (item) equippedItems[slotId] = item; }));
+/**
+ * localStorageから全装備セットとアクティブIDを読み込む
+ */
+function loadAllEquipmentSets() {
+    activeSetId = localStorage.getItem(ACTIVE_SET_ID_KEY) || '1';
+    const savedSets = JSON.parse(localStorage.getItem(EQUIPMENT_SETS_KEY));
+    if (savedSets) {
+        allEquipmentSets = savedSets;
+    } else {
+        // データがなければ初期化
+        allEquipmentSets = { '1': {}, '2': {}, '3': {}, '4': {} };
     }
-    await Promise.all(itemPromises);
+    // アクティブなセットをグローバル変数に設定
+    equippedItems = allEquipmentSets[activeSetId] || {};
+
+    // UIの再描画
+    renderAllSlots();
+    updateSetButtonsUI();
+}
+/**
+ * 全てのスロットを描画し直す
+ */
+function renderAllSlots() {
     document.querySelectorAll('.slot').forEach(slotElement => renderSlot(slotElement.id));
 }
 
@@ -561,5 +586,128 @@ async function checkAndSetupDatabaseIfNeeded() {
             reject(event.target.error);
         };
     });
+}
+
+/**
+ * セット管理コントロールのイベントリスナーを設定する
+ */
+function setupSetControls() {
+    // セット切替ボタン
+    document.querySelectorAll('.set-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const newSetId = button.dataset.setId;
+            if (newSetId !== activeSetId) {
+                switchEquipmentSet(newSetId);
+            }
+        });
+    });
+
+    // コピーボタン
+    document.getElementById('copy-set-button').addEventListener('click', openCopyModal);
+
+    // クリアボタン
+    document.getElementById('clear-set-button').addEventListener('click', clearCurrentSet);
+}
+
+/**
+ * 装備セットを切り替える
+ * @param {string} newSetId - 切り替え先のセットID ('1', '2', '3', '4')
+ */
+function switchEquipmentSet(newSetId) {
+    // 現在のセットの状態を保存
+    allEquipmentSets[activeSetId] = equippedItems;
+
+    // 新しいセットに切り替え
+    activeSetId = newSetId;
+    equippedItems = allEquipmentSets[activeSetId] || {};
+
+    // 永続化
+    saveAllEquipmentSets();
+
+    // UIを更新
+    clearAllSelections();
+    renderAllSlots();
+    calculateAndRenderStats();
+    updateSetButtonsUI();
+}
+
+/**
+ * セット切替ボタンのUI（アクティブ状態）を更新する
+ */
+function updateSetButtonsUI() {
+    document.querySelectorAll('.set-button').forEach(button => {
+        if (button.dataset.setId === activeSetId) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
+}
+
+/**
+ * 現在のセットをクリアする
+ */
+function clearCurrentSet() {
+    if (confirm(`セット${activeSetId} の装備を全てクリアします。よろしいですか？`)) {
+        equippedItems = {};
+        saveAllEquipmentSets();
+        renderAllSlots();
+        calculateAndRenderStats();
+    }
+}
+
+/**
+ * セットコピーモーダルを開く
+ */
+function openCopyModal() {
+    const modalOverlay = document.getElementById('copy-modal-overlay');
+    const optionsContainer = document.getElementById('copy-source-options');
+    optionsContainer.innerHTML = ''; // 既存の選択肢をクリア
+
+    for (let i = 1; i <= 4; i++) {
+        const setId = String(i);
+        if (setId !== activeSetId) { // 自分以外のセットをコピー元として表示
+            const button = document.createElement('button');
+            button.textContent = `${setId}`;
+            button.className = 'copy-source-button';
+            button.onclick = () => {
+                copySetFrom(setId);
+            };
+            optionsContainer.appendChild(button);
+        }
+        else {
+            const button = document.createElement('button');
+            button.textContent = `対象`;
+            button.className = 'copy-source-button disabled';
+            optionsContainer.appendChild(button);
+        }
+
+    }
+
+    document.getElementById('copy-modal-cancel-button').onclick = () => {
+        modalOverlay.classList.add('hidden');
+    };
+
+    modalOverlay.classList.remove('hidden');
+}
+
+/**
+ * 指定したセットから現在のセットへコピーを実行する
+ * @param {string} sourceSetId - コピー元のセットID
+ */
+function copySetFrom(sourceSetId) {
+    if (confirm(`セット${sourceSetId} の内容を、現在のセット${activeSetId} に上書きコピーします。よろしいですか？`)) {
+        // ディープコピーで参照を切る
+        const sourceData = JSON.parse(JSON.stringify(allEquipmentSets[sourceSetId] || {}));
+        equippedItems = sourceData;
+
+        saveAllEquipmentSets();
+
+        // UIを更新
+        clearAllSelections();
+        renderAllSlots();
+        calculateAndRenderStats();
+        document.getElementById('copy-modal-overlay').classList.add('hidden');
+    }
 }
 // ▲▲▲【ここまで追記】▲▲▲
