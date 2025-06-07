@@ -280,6 +280,21 @@ function renderTable(equipmentData) {
       }
       row.appendChild(cell);
     });
+
+    // 行自体にクリックイベントを設定
+    row.addEventListener('click', function (event) {
+      // クリックされたのがチェックボックス自身や、その他のインタラクティブな要素でない場合のみ処理
+      if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON') {
+        const checkboxInRow = this.querySelector('input[type="checkbox"]');
+        if (checkboxInRow) {
+          // チェック状態を反転
+          checkboxInRow.checked = !checkboxInRow.checked;
+          // 'change' イベントを能動的に発行して、既存の保存ロジックをトリガーする
+          checkboxInRow.dispatchEvent(new Event('change', { 'bubbles': true }));
+        }
+      }
+    });
+
     tableBody.appendChild(row);
   });
 }
