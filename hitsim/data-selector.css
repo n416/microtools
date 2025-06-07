@@ -1,7 +1,9 @@
 /* ===============================================
 // data-selector.css : ダークテーマ修正版（レイアウト維持）
 // =============================================== */
-
+* {
+    box-sizing: border-box;
+}
 body {
     font-family: sans-serif;
     /* ▼配色変更▼ */
@@ -224,4 +226,23 @@ input[type="checkbox"] {
     vertical-align: middle;
     margin-right: 5px;
 }
-/* ▲▲▲【ここまで追記】▲▲▲ */
+
+/* 複数選択ボックス内の検索フィールド（プレースホルダー表示領域）のスタイル */
+.select2-container--default .select2-search--inline .select2-search__field {
+    /* フォントサイズを小さくし、周りのテキストと合わせます */
+    font-size: 0.7rem;
+
+    /* 縦方向の位置を中央に調整 */
+    margin-top: 0;
+    padding: 0;
+    line-height: 24px; /* select2-selection__choice の高さに合わせると綺麗に中央揃えされやすい */
+}
+
+.select2-search__field::placeholder {
+    color: #999;
+}
+
+#category-filter{
+    font-size: 1rem;
+    padding: 5px;
+}
