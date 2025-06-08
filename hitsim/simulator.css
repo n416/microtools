@@ -801,3 +801,54 @@ h2 {
     -webkit-column-break-inside: avoid;
     page-break-inside: avoid;
 }
+
+/* --- アイテム強化機能のスタイル --- */
+.details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#enchant-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: auto; /* 詳細パネルは妨げないが、ボタンは操作可能に */
+}
+
+#enchant-controls button {
+    width: 28px;
+    height: 28px;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #fff;
+    background-color: #555;
+    border: 1px solid #777;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+}
+
+#enchant-controls button:hover {
+    background-color: #666;
+}
+
+#enchant-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#details-item-enchant {
+    font-size: 1.1em;
+    font-weight: bold;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* JSで追加される強化ボーナス値のスタイル */
+.enchant-bonus {
+    color: #81c784; /* 少し落ち着いた緑 */
+    font-size: 0.9em;
+    margin-left: 5px;
+}
