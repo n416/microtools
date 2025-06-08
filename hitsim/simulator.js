@@ -572,8 +572,8 @@ function getCategoryFromType(typeString) {
     if (!typeString) return 'unknown';
     const prefix = parseInt(typeString.substring(0, 2), 10);
     if (prefix >= 1 && prefix <= 9) return 'weapon';
-    if (prefix >= 11 && prefix <= 15) return 'armor';
-    if ((prefix >= 16 && prefix <= 16) || (prefix >= 21 && prefix <= 28)) return 'accessory';
+    if (prefix >= 11 && prefix <= 16) return 'armor';
+    if (prefix >= 21 && prefix <= 28) return 'accessory';
     return 'unknown';
 }
 function setupInventoryTabs() {
