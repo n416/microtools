@@ -58,27 +58,33 @@
         </div>
 
         <div id="inventory-panel">
-            <div id="inventory-panel">
-                <div id="inventory-tabs">
-                    <button class="tab-button active" data-category="all">全て</button>
-                    <button class="tab-button" data-category="weapon">武器</button>
-                    <button class="tab-button" data-category="armor">防具</button>
-                    <button class="tab-button" data-category="accessory">アクセ</button>
-                </div>
-                <div id="inventory-list">
-                </div>
+            <div id="inventory-tabs">
+                <button class="tab-button active" data-category="all">全て</button>
+                <button class="tab-button" data-category="weapon">武器</button>
+                <button class="tab-button" data-category="armor">防具</button>
+                <button class="tab-button" data-category="accessory">アクセ</button>
+            </div>
+            <div id="inventory-list">
             </div>
         </div>
         <div id="stats-panel"></div>
     </div>
 
     <div id="item-details-panel">
-        <h2 id="details-item-name">アイテム詳細</h2>
+        <div class="details-header">
+            <h2 id="details-item-name">アイテム詳細</h2>
+            <div id="enchant-controls">
+                <button id="enchant-down-button">-</button>
+                <span id="details-item-enchant"></span>
+                <button id="enchant-up-button">+</button>
+            </div>
+        </div>
         <div class="details-content">
             <img id="details-item-image" src="" alt="">
             <div id="details-stats-list"></div>
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <script src="db-setup.js"></script>
