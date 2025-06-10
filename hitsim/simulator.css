@@ -271,7 +271,6 @@ h2 {
     z-index: 1000; /* 他の要素より手前に表示 */
     color: #fff;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    pointer-events: none; /* パネル自体がクリックイベントを妨げないように */
 }
 
 #item-details-panel h2 {

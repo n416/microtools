@@ -4,16 +4,16 @@
 
 // --- グローバル定数・変数 ---
 const DB_NAME = 'GameEquipmentDB';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 const STORE_NAME = 'equipment';
 const INVENTORY_KEY = 'equipmentInventory_v2';
-const EQUIPMENT_SETS_KEY = 'equipmentSets_v2'; // データ構造変更のためバージョンアップ
+const EQUIPMENT_SETS_KEY = 'equipmentSets_v2';
 const ACTIVE_SET_ID_KEY = 'activeEquipmentSet_v1';
 const SORT_ORDERS_KEY = 'equipmentSortOrders_v1';
 const ACTIVE_SORT_KEY = 'activeSortOrderKey_v1';
 
 let db;
-// ▼【変更点】equippedItemsのデータ構造を変更: itemオブジェクト -> {item: itemObject, enchantLevel: 0}
+let allEnhancementData = {}; // ランクごとの強化データをキャッシュするオブジェクト
 let equippedItems = {};
 let allEquipmentSets = {};
 let activeSetId = '1';
@@ -172,19 +172,51 @@ async function initializeApp() {
         detailsItemEnchant = document.getElementById('details-item-enchant');
 
         await openDatabase();
+
+        // DBから強化データを読み込み、グローバル変数にキャッシュする
+        try {
+            const transaction = db.transaction(['enhancementData'], 'readonly');
+            const store = transaction.objectStore('enhancementData');
+            const request = store.getAll();
+
+            await new Promise((resolve, reject) => {
+                request.onsuccess = (event) => {
+                    const results = event.target.result;
+                    results.forEach(item => {
+                        allEnhancementData[item.rank] = item.data;
+                    });
+                    console.log('強化データをキャッシュしました:', allEnhancementData);
+                    resolve();
+                };
+                request.onerror = (event) => {
+                    // エラーが発生してもアプリケーションの実行は継続させる
+                    console.error('強化データの読み込みに失敗しました:', event.target.error);
+                    resolve(); // エラーでもresolveして処理を続ける
+                };
+            });
+        } catch (e) {
+            // トランザクション開始エラー（ストアがない等）でもアプリケーションは継続
+            console.error("強化データキャッシュ中にエラーが発生しました（処理は続行）:", e);
+        }
+
         loadSortOrders();
-        loadAllEquipmentSets(); // データ構造の変換処理も内包
+        loadAllEquipmentSets();
         await loadAndRenderInventory();
         setupGlobalClickListener();
         setupInventoryTabs();
         setupShareButton();
         setupSetControls();
         setupEnchantControls(); // ▼【変更点】強化ボタンのリスナーを設定
+        setupDetailsPanelListener();
         calculateAndRenderStats();
     } catch (error) { console.error('初期化中にエラーが発生しました:', error); }
 }
-
-// ▼【新規追加】強化ボタンのイベントリスナーをまとめる関数
+function setupDetailsPanelListener() {
+    if (!detailsPanel) return;
+    detailsPanel.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+}
 function setupEnchantControls() {
     enchantDownButton.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -619,7 +651,7 @@ function displayItemDetails(item, clickedElement) {
     // ▼【変更点】強化値UIの表示制御
     if (selectedSlotId) { // 装備スロットのアイテムの場合のみ強化UIを表示
         enchantControls.classList.remove('hidden');
-        detailsItemEnchant.textContent = enchantLevel > 0 ? `+${enchantLevel}` : '無強化';
+        detailsItemEnchant.textContent = enchantLevel > 0 ? `+${enchantLevel}` : '0';
         enchantDownButton.disabled = enchantLevel <= 0;
         enchantUpButton.disabled = enchantLevel >= 12;
     } else {
@@ -929,22 +961,54 @@ function calculateStatsForSet(items) {
 // ▼【新規追加】強化ボーナスを計算する関数
 function getEnchantBonus(item, enchantLevel) {
     const bonus = {};
-    if (!item || enchantLevel <= 0) return bonus;
-
-    const itemCategory = getCategoryFromType(item['タイプ']);
-
-    // 武器は「基本攻撃力」、防具は「防御力」が、元の値の5% x 強化値分、加算されるルール
-    if (itemCategory === 'weapon') {
-        const baseAttack = parseFloat(item['基本攻撃力']) || 0;
-        if (baseAttack > 0) {
-            bonus['基本攻撃力'] = Math.round(baseAttack * 0.05 * enchantLevel);
-        }
-    } else if (itemCategory === 'armor') {
-        const baseDefense = parseFloat(item['防御力']) || 0;
-        if (baseDefense > 0) {
-            bonus['防御力'] = Math.round(baseDefense * 0.05 * enchantLevel);
-        }
+    if (!item || enchantLevel <= 0) {
+        return bonus;
     }
+
+    const rankName = item['ランク'].replace(/^[0-9\s]+/, '');
+    if (!allEnhancementData || !allEnhancementData[rankName]) {
+        return bonus;
+    }
+
+    const enhancementTable = allEnhancementData[rankName];
+    const itemCategory = getCategoryFromType(item['タイプ']);
+    const itemEnhancementType = getEnhancementType(item['タイプ']);
+
+    // ★ここから変更 =============================================
+    const categoryNameToTsv = {
+        'weapon': '武器',
+        'armor': '防具',
+        'accessory': 'アクセサリー'
+    }[itemCategory];
+    // ★ここまで変更 =============================================
+
+    enhancementTable.forEach(row => {
+        let isApplicable = false;
+
+
+        // 【大前提】TSVの1列目がアイテムの大カテゴリと一致するか？
+        if (row.category === categoryNameToTsv) {
+
+            // 【条件1】部位固有ボーナス
+            // TSVの2列目(row.type)がアイテムの部位(itemEnhancementType)と一致するか？
+            if (row.type === itemEnhancementType) {
+                isApplicable = true;
+            }
+            // 【条件2】カテゴリ共通ボーナス
+            // TSVの2列目(row.type)が「共通」か？
+            else if (row.type === '共通') {
+                isApplicable = true;
+            }
+        }
+        // ★ここまで変更 =============================================
+
+        if (isApplicable) {
+            const bonusValue = row.bonuses[enchantLevel - 1];
+            if (bonusValue && bonusValue !== 0) {
+                bonus[row.stat] = (bonus[row.stat] || 0) + bonusValue;
+            }
+        }
+    });
 
     return bonus;
 }
@@ -1300,4 +1364,30 @@ function showModal(title, contentElement, buttons) {
 function closeModal() {
     const modal = document.getElementById('generic-modal-overlay');
     if (modal) modal.classList.add('hidden');
+}
+
+function getEnhancementType(itemType) {
+    if (!itemType) return null;
+    const prefix = parseInt(itemType.substring(0, 2), 10);
+
+    if (prefix >= 1 && prefix <= 9) return '武器';
+
+    const typeMapping = {
+        11: '頭',
+        12: '手',
+        13: '上装備',
+        14: '下装備',
+        15: '足',
+        16: 'マント',
+        21: 'ベルト',
+        22: 'ブレスレット',
+        23: 'リング',
+        24: 'ネックレス',
+        25: '勲章',
+        26: '守護具',
+        27: 'カンパネラ',
+        28: 'アミュレッタ'
+    };
+
+    return typeMapping[prefix] || null;
 }
