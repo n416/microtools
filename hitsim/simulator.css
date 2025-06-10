@@ -849,3 +849,35 @@ h2 {
     font-size: 0.9em;
     margin-left: 5px;
 }
+
+/* simulator.css の末尾に追加 */
+
+/* --- 詳細パネルアクションボタン --- */
+.details-actions-container {
+    border-top: 1px solid #555;
+    margin-top: 10px;
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+}
+
+.details-actions-container .button-like {
+    flex: 1;
+    padding: 6px;
+    font-size: 13px;
+}
+
+#details-action-duplicate {
+    background-color: #17a2b8;
+}
+#details-action-duplicate:hover {
+    background-color: #138496;
+}
+
+#details-action-delete {
+    background-color: #dc3545;
+}
+#details-action-delete:hover {
+    background-color: #c82333;
+}
