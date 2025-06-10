@@ -3,7 +3,7 @@
 // ===============================================
 
 const DB_NAME = 'GameEquipmentDB';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 const STORE_NAME = 'equipment';
 const INVENTORY_KEY = 'equipmentInventory_v2';
 const FILTER_STATE_KEY = 'equipmentFilterState_v2';
