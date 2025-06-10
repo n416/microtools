@@ -7,13 +7,19 @@ const DB_NAME = 'GameEquipmentDB';
 const DB_VERSION = 10;
 const STORE_NAME = 'equipment';
 const INVENTORY_KEY = 'equipmentInventory_v2';
+// ★ここから追加 =============================================
+const INVENTORY_ENHANCEMENTS_KEY = 'inventoryEnhancements_v1';
+// ★ここまで追加 =============================================
 const EQUIPMENT_SETS_KEY = 'equipmentSets_v2';
 const ACTIVE_SET_ID_KEY = 'activeEquipmentSet_v1';
 const SORT_ORDERS_KEY = 'equipmentSortOrders_v1';
 const ACTIVE_SORT_KEY = 'activeSortOrderKey_v1';
 
 let db;
-let allEnhancementData = {}; // ランクごとの強化データをキャッシュするオブジェクト
+let allEnhancementData = {};
+// ★ここから追加 =============================================
+let inventoryEnhancements = {}; // インベントリ内アイテムの強化状態を保持
+// ★ここまで追加 =============================================
 let equippedItems = {};
 let allEquipmentSets = {};
 let activeSetId = '1';
@@ -29,7 +35,6 @@ let selectedInventoryItem = null;
 let selectedSlotId = null;
 let detailsPanel, detailsItemName, detailsItemImage, detailsStatsList;
 
-// ▼【変更点】強化値操作UIのDOM要素を格納する変数を追加
 let enchantControls, enchantDownButton, enchantUpButton, detailsItemEnchant;
 
 let allInventoryItems = [];
@@ -102,7 +107,6 @@ function handleSharedData(encodedData) {
             const uint8Array = new Uint8Array(compressedData.split('').map(c => c.charCodeAt(0)));
             const jsonString = pako.inflate(uint8Array, { to: 'string' });
 
-            // ▼【変更点】共有データの形式変更に対応
             const sharedSets = JSON.parse(jsonString);
 
             const allItemNames = new Set();
@@ -165,7 +169,6 @@ async function initializeApp() {
         detailsItemImage = document.getElementById('details-item-image');
         detailsStatsList = document.getElementById('details-stats-list');
 
-        // ▼【変更点】強化値UIの要素を取得
         enchantControls = document.getElementById('enchant-controls');
         enchantDownButton = document.getElementById('enchant-down-button');
         enchantUpButton = document.getElementById('enchant-up-button');
@@ -173,13 +176,12 @@ async function initializeApp() {
 
         await openDatabase();
 
-        // DBから強化データを読み込み、グローバル変数にキャッシュする
         try {
             const transaction = db.transaction(['enhancementData'], 'readonly');
             const store = transaction.objectStore('enhancementData');
             const request = store.getAll();
 
-            await new Promise((resolve, reject) => {
+            await new Promise((resolve) => {
                 request.onsuccess = (event) => {
                     const results = event.target.result;
                     results.forEach(item => {
@@ -189,34 +191,29 @@ async function initializeApp() {
                     resolve();
                 };
                 request.onerror = (event) => {
-                    // エラーが発生してもアプリケーションの実行は継続させる
                     console.error('強化データの読み込みに失敗しました:', event.target.error);
-                    resolve(); // エラーでもresolveして処理を続ける
+                    resolve();
                 };
             });
         } catch (e) {
-            // トランザクション開始エラー（ストアがない等）でもアプリケーションは継続
             console.error("強化データキャッシュ中にエラーが発生しました（処理は続行）:", e);
         }
 
         loadSortOrders();
+        // ★ここから追加 =============================================
+        loadInventoryEnhancements();
+        // ★ここまで追加 =============================================
         loadAllEquipmentSets();
         await loadAndRenderInventory();
         setupGlobalClickListener();
         setupInventoryTabs();
         setupShareButton();
         setupSetControls();
-        setupEnchantControls(); // ▼【変更点】強化ボタンのリスナーを設定
-        setupDetailsPanelListener();
+        setupEnchantControls();
         calculateAndRenderStats();
     } catch (error) { console.error('初期化中にエラーが発生しました:', error); }
 }
-function setupDetailsPanelListener() {
-    if (!detailsPanel) return;
-    detailsPanel.addEventListener('click', (event) => {
-        event.stopPropagation();
-    });
-}
+
 function setupEnchantControls() {
     enchantDownButton.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -228,32 +225,53 @@ function setupEnchantControls() {
     });
 }
 
-// ▼【新規追加】強化レベルを変更する関数
 function updateEnchantLevel(change) {
-    if (!selectedSlotId || !equippedItems[selectedSlotId]) return;
+    let newLevel;
+    let currentLevel;
 
-    const equipped = equippedItems[selectedSlotId];
-    let newLevel = equipped.enchantLevel + change;
+    // ★ここから変更 =============================================
+    if (selectedSlotId && equippedItems[selectedSlotId]) {
+        const equipped = equippedItems[selectedSlotId];
+        currentLevel = equipped.enchantLevel;
+        newLevel = currentLevel + change;
 
-    // 0から12の範囲に収める
-    if (newLevel < 0) newLevel = 0;
-    if (newLevel > 12) newLevel = 12;
+        if (newLevel < 0) newLevel = 0;
+        if (newLevel > 12) newLevel = 12;
 
-    if (newLevel !== equipped.enchantLevel) {
-        equipped.enchantLevel = newLevel;
+        if (newLevel !== currentLevel) {
+            equipped.enchantLevel = newLevel;
+            renderSlot(selectedSlotId);
+            saveAllEquipmentSets(); // 装備セットの状態を保存
+            displayItemDetails(equipped.item, document.getElementById(selectedSlotId));
+        }
+    } else if (selectedInventoryItem) {
+        const itemName = selectedInventoryItem['名称'];
+        // インベントリ強化オブジェクトにアイテムが存在しない場合は初期化
+        if (!inventoryEnhancements[itemName]) {
+            inventoryEnhancements[itemName] = [{ instanceId: Date.now(), Lv: 0 }];
+        }
+        const instance = inventoryEnhancements[itemName][0]; // 今回は最初のインスタンスを対象
+        currentLevel = instance.Lv;
+        newLevel = currentLevel + change;
 
-        // 装備スロットの表示更新 (例: +1 武神の剣)
-        renderSlot(selectedSlotId);
+        if (newLevel < 0) newLevel = 0;
+        if (newLevel > 12) newLevel = 12;
 
-        // 合計ステータスの再計算
-        calculateAndRenderStats();
-
-        // 変更を保存
-        saveAllEquipmentSets();
-
-        // 詳細パネルの再表示（内容更新のため）
-        displayItemDetails(equipped.item, document.getElementById(selectedSlotId));
+        if (newLevel !== currentLevel) {
+            instance.Lv = newLevel;
+            saveInventoryEnhancements(); // インベントリ強化状態を保存
+            renderInventory(allInventoryItems); // インベントリ表示を更新
+            displayItemDetails(selectedInventoryItem, document.getElementById(`inv-${itemName}`));
+        }
+    } else {
+        return; // 対象がなければ何もしない
     }
+
+    // 共通の再計算処理
+    if (newLevel !== currentLevel) {
+        calculateAndRenderStats();
+    }
+    // ★ここまで変更 =============================================
 }
 
 function openDatabase() {
@@ -319,7 +337,7 @@ function getItemsFromDBByNames(itemNames) {
                 console.error(`Error fetching item by name: ${name}`, e.target.error);
                 completed++;
                 if (completed === uniqueNames.length) {
-                    resolve(results); // エラーがあっても処理を続ける
+                    resolve(results);
                 }
             };
         });
@@ -340,12 +358,38 @@ function renderInventory(items) {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'inventory-item';
         itemDiv.id = `inv-${item['名称']}`;
-        itemDiv.title = `${item['名称']}\nタイプ: ${item['タイプ']}`;
+
+        // ★ここから変更 =============================================
+        const instances = inventoryEnhancements[item['名称']];
+        const instance = instances ? instances[0] : null; // 今回は最初のインスタンスのみ考慮
+        const enchantLevel = instance ? instance.Lv : 0;
+        const enchantText = enchantLevel > 0 ? `+${enchantLevel}` : '';
+
+        itemDiv.title = `${item['名称']} ${enchantText}\nタイプ: ${item['タイプ']}`;
+        // ★ここまで変更 =============================================
+
         const img = document.createElement('img');
         img.src = item['画像URL'] || '';
         img.alt = item['名称'];
         img.className = 'item-icon';
         itemDiv.appendChild(img);
+
+        // ★ここから追加 =============================================
+        if (enchantText) {
+            const enchantDiv = document.createElement('div');
+            enchantDiv.textContent = enchantText;
+            // styleはrenderSlotからコピー
+            enchantDiv.style.position = 'absolute';
+            enchantDiv.style.right = '2px';
+            enchantDiv.style.bottom = '2px';
+            enchantDiv.style.color = 'yellow';
+            enchantDiv.style.fontWeight = 'bold';
+            enchantDiv.style.fontSize = '12px';
+            enchantDiv.style.textShadow = '1px 1px 2px black';
+            itemDiv.appendChild(enchantDiv);
+        }
+        // ★ここまで追加 =============================================
+
         itemDiv.addEventListener('click', (e) => { e.stopPropagation(); handleInventoryClick(item, e.currentTarget); });
         inventoryListDiv.appendChild(itemDiv);
     });
@@ -362,8 +406,8 @@ function handleInventoryClick(item, element) {
     }
 }
 function handleSlotClick(slotId, element) {
-    const equipped = equippedItems[slotId]; // item -> equipped
-    if (equipped) { // item -> equipped
+    const equipped = equippedItems[slotId];
+    if (equipped) {
         if (selectedSlotId === slotId) {
             unequipItem(slotId);
             clearAllSelections();
@@ -371,7 +415,7 @@ function handleSlotClick(slotId, element) {
             clearAllSelections();
             selectedSlotId = slotId;
             element.classList.add('selected');
-            displayItemDetails(equipped.item, element); // item -> equipped.item
+            displayItemDetails(equipped.item, element);
         }
     }
 }
@@ -385,7 +429,6 @@ function equipItem(item) {
     const possibleSlotIds = SLOT_CATEGORY_TO_IDS[slotCategory];
     const isRing = (slotCategory === 'ring');
 
-    // ▼【変更点】ユニークチェックを新しいデータ構造に対応
     if (!isRing) {
         if (Object.values(equippedItems).some(equipped => equipped && equipped.item['名称'] === item['名称'])) {
             console.log(`ユニークアイテム「${item['名称']}」はすでに装備されています。`);
@@ -395,23 +438,31 @@ function equipItem(item) {
 
     const emptySlotId = possibleSlotIds.find(id => !equippedItems[id]);
 
+    // ★ここから変更 =============================================
+    // インベントリから強化レベルとインスタンスIDを取得
+    const instances = inventoryEnhancements[item['名称']];
+    const instanceToEquip = instances ? instances[0] : null; // 今回は最初のインスタンスを装備
+    const enchantLevel = instanceToEquip ? instanceToEquip.Lv : 0;
+    const instanceId = instanceToEquip ? instanceToEquip.instanceId : Date.now(); // なければ新規作成
+    // ★ここまで変更 =============================================
+
     if (emptySlotId) {
-        // ▼【変更点】強化値を含めたオブジェクトを保存
-        equippedItems[emptySlotId] = { item: item, enchantLevel: 0 };
+        // ★変更: 強化情報も一緒に保存
+        equippedItems[emptySlotId] = { item: item, enchantLevel: enchantLevel, instanceId: instanceId };
         renderSlot(emptySlotId);
 
     } else {
         if (isRing) {
-            // ▼【変更点】リングの押し出し処理を新しいデータ構造に対応
             const pushedOutItemName = equippedItems[possibleSlotIds[4]].item['名称'];
             console.log(`リング枠が満杯のため、「${pushedOutItemName}」が押し出されます。`);
 
+            // ★変更: リング押し出し時にinstanceIdも引き継ぐ
             for (let i = possibleSlotIds.length - 2; i >= 0; i--) {
                 const currentSlotId = possibleSlotIds[i];
                 const nextSlotId = possibleSlotIds[i + 1];
                 equippedItems[nextSlotId] = equippedItems[currentSlotId];
             }
-            equippedItems[possibleSlotIds[0]] = { item: item, enchantLevel: 0 };
+            equippedItems[possibleSlotIds[0]] = { item: item, enchantLevel: enchantLevel, instanceId: instanceId };
             possibleSlotIds.forEach(id => renderSlot(id));
 
         } else {
@@ -422,7 +473,7 @@ function equipItem(item) {
             }
 
             unequipItem(targetSlotId, false);
-            equippedItems[targetSlotId] = { item: item, enchantLevel: 0 };
+            equippedItems[targetSlotId] = { item: item, enchantLevel: enchantLevel, instanceId: instanceId };
             renderSlot(targetSlotId);
         }
     }
@@ -433,6 +484,23 @@ function equipItem(item) {
 
 function unequipItem(slotId, doSaveAndRecalculate = true) {
     if (equippedItems[slotId]) {
+        // ★ここから追加 =============================================
+        // 装備解除時に、強化レベルをインベントリデータに戻す
+        const unequipped = equippedItems[slotId];
+        const itemName = unequipped.item['名称'];
+        if (!inventoryEnhancements[itemName]) {
+            inventoryEnhancements[itemName] = [];
+        }
+
+        // 今回はインスタンスが1つしかないので、単純に上書きする
+        inventoryEnhancements[itemName][0] = {
+            instanceId: unequipped.instanceId,
+            Lv: unequipped.enchantLevel
+        };
+        saveInventoryEnhancements();
+        renderInventory(allInventoryItems); // インベントリの表示更新
+        // ★ここまで追加 =============================================
+
         delete equippedItems[slotId];
         renderSlot(slotId);
         if (doSaveAndRecalculate) {
@@ -451,11 +519,11 @@ function renderSlot(slotId) {
     newSlotElement.addEventListener('click', (e) => { e.stopPropagation(); handleSlotClick(slotId, e.currentTarget); });
     newSlotElement.innerHTML = '';
 
-    // ▼【変更点】新しいデータ構造からアイテム情報を取得し、強化値を表示
     const equipped = equippedItems[slotId];
     if (equipped) {
         const item = equipped.item;
-        const enchantText = equipped.enchantLevel > 0 ? `+${equipped.enchantLevel}` : '';
+        const enchantLevel = equipped.enchantLevel; // ★ データ構造の変更に伴い修正
+        const enchantText = enchantLevel > 0 ? `+${enchantLevel}` : '';
 
         newSlotElement.title = `${item['名称']} ${enchantText}\nタイプ: ${item['タイプ']}`;
         const img = document.createElement('img');
@@ -464,7 +532,6 @@ function renderSlot(slotId) {
         img.className = 'item-icon';
         newSlotElement.appendChild(img);
 
-        // アイコンの上に強化値を表示する要素を追加（任意）
         if (enchantText) {
             const enchantDiv = document.createElement('div');
             enchantDiv.textContent = enchantText;
@@ -493,20 +560,30 @@ function saveAllEquipmentSets() {
     localStorage.setItem(ACTIVE_SET_ID_KEY, activeSetId);
 }
 
+// ★ここから追加 =============================================
+function saveInventoryEnhancements() {
+    localStorage.setItem(INVENTORY_ENHANCEMENTS_KEY, JSON.stringify(inventoryEnhancements));
+}
+function loadInventoryEnhancements() {
+    inventoryEnhancements = JSON.parse(localStorage.getItem(INVENTORY_ENHANCEMENTS_KEY)) || {};
+}
+// ★ここまで追加 =============================================
+
 
 function loadAllEquipmentSets() {
     activeSetId = localStorage.getItem(ACTIVE_SET_ID_KEY) || '1';
     const savedSets = JSON.parse(localStorage.getItem(EQUIPMENT_SETS_KEY));
     if (savedSets) {
         allEquipmentSets = savedSets;
-        // ▼【変更点】古いデータ構造との互換性維持
         for (const setId in allEquipmentSets) {
             for (const slotId in allEquipmentSets[setId]) {
                 const equipped = allEquipmentSets[setId][slotId];
-                if (equipped && !equipped.item && equipped['名称']) { // itemプロパティがなく、名称プロパティがある場合は旧形式
+                // ★データ構造の互換性維持を修正
+                if (equipped && !equipped.item && equipped['名称']) {
                     allEquipmentSets[setId][slotId] = {
                         item: equipped,
-                        enchantLevel: 0
+                        enchantLevel: 0,
+                        instanceId: Date.now() + Math.random() // 古いデータにはIDがないので新規作成
                     };
                 }
             }
@@ -539,7 +616,14 @@ function clearAllSelections() {
 }
 
 function setupGlobalClickListener() {
-    document.body.addEventListener('click', () => clearAllSelections());
+    document.body.addEventListener('click', (event) => {
+        if (event.target.closest('.slot') ||
+            event.target.closest('.inventory-item') ||
+            event.target.closest('#item-details-panel')) {
+            return;
+        }
+        clearAllSelections();
+    });
 }
 
 
@@ -641,24 +725,33 @@ function calculateAndRenderStats() {
 function displayItemDetails(item, clickedElement) {
     if (!item || !detailsPanel || !clickedElement) return;
 
-    const enchantLevel = selectedSlotId && equippedItems[selectedSlotId] ? equippedItems[selectedSlotId].enchantLevel : 0;
+    // ★ここから変更 =============================================
+    let enchantLevel = 0;
+    if (selectedSlotId && equippedItems[selectedSlotId]) {
+        enchantLevel = equippedItems[selectedSlotId].enchantLevel;
+    } else if (selectedInventoryItem) {
+        const instances = inventoryEnhancements[selectedInventoryItem['名称']];
+        if (instances && instances[0]) {
+            enchantLevel = instances[0].Lv;
+        }
+    }
 
     detailsItemName.textContent = item['名称'];
     detailsItemImage.src = item['画像URL'] || '';
     detailsItemImage.alt = item['名称'];
     detailsStatsList.innerHTML = '';
 
-    // ▼【変更点】強化値UIの表示制御
-    if (selectedSlotId) { // 装備スロットのアイテムの場合のみ強化UIを表示
+    // ★変更: インベントリ品選択時も強化UIを表示
+    if (selectedSlotId || selectedInventoryItem) {
         enchantControls.classList.remove('hidden');
-        detailsItemEnchant.textContent = enchantLevel > 0 ? `+${enchantLevel}` : '0';
+        detailsItemEnchant.textContent = enchantLevel > 0 ? `+${enchantLevel}` : '無強化';
         enchantDownButton.disabled = enchantLevel <= 0;
         enchantUpButton.disabled = enchantLevel >= 12;
     } else {
         enchantControls.classList.add('hidden');
     }
+    // ★ここまで変更 =============================================
 
-    // ▼【変更点】強化ボーナスを加味してステータスを表示
     const baseStats = {};
     STAT_HEADERS.forEach(statName => {
         const value = parseFloat(item[statName]);
@@ -697,7 +790,7 @@ function displayItemDetails(item, clickedElement) {
 
             if (bonusValue > 0) {
                 let bonusText = Number.isInteger(bonusValue) ? bonusValue : bonusValue.toFixed(2);
-                if (baseStats[statName] > 0 && baseStats[statName] < 1) { // 元が%表記の場合
+                if (baseStats[statName] > 0 && baseStats[statName] < 1) {
                     bonusText = (bonusValue * 100).toFixed(1) + '%';
                 }
                 valueText += ` <span class="enchant-bonus">(+${bonusText})</span>`;
@@ -739,6 +832,7 @@ function getCategoryFromType(typeString) {
     if (prefix >= 21 && prefix <= 28) return 'accessory';
     return 'unknown';
 }
+
 function setupInventoryTabs() {
     document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -756,7 +850,6 @@ function setupShareButton() {
     if (!shareButton) return;
 
     shareButton.addEventListener('click', async () => {
-        // ▼【変更点】共有データに強化値を含める
         const equipmentDataToShare = {};
         for (const setId in allEquipmentSets) {
             if (Object.keys(allEquipmentSets[setId]).length === 0) continue;
@@ -766,8 +859,8 @@ function setupShareButton() {
                 const equipped = allEquipmentSets[setId][slotId];
                 if (equipped && equipped.item && equipped.item['名称']) {
                     equipmentDataToShare[setId][slotId] = {
-                        n: equipped.item['名称'], // name
-                        e: equipped.enchantLevel  // enchantLevel
+                        n: equipped.item['名称'],
+                        e: equipped.enchantLevel
                     };
                 }
             }
@@ -815,12 +908,10 @@ async function checkAndSetupDatabaseIfNeeded() {
                 resolve();
             } else {
                 console.log("データベースが空です。セットアップ処理を実行します...");
-                // グローバルスコープの `setupDatabase` (from db-setup.js) を呼び出す
                 if (typeof window.setupDatabase === 'function') {
                     window.setupDatabase()
                         .then(() => {
                             console.log("データベースのセットアップが完了しました。");
-                            // 再度DBを開きなおす
                             openDatabase().then(resolve).catch(reject);
                         })
                         .catch(err => {
@@ -933,7 +1024,6 @@ function calculateStatsForSet(items) {
     if (!items) return { totalStats, percentStats };
 
     for (const slotId in items) {
-        // ▼【変更点】新しいデータ構造に対応
         const equipped = items[slotId];
         if (!equipped || !equipped.item) continue;
 
@@ -947,7 +1037,6 @@ function calculateStatsForSet(items) {
             const value = baseValue + bonusValue;
 
             if (value !== 0) {
-                // パーセント表記のステータスかを判定
                 if (String(item[statName]).includes('%') || (baseValue > 0 && baseValue < 1 && !Number.isInteger(baseValue))) {
                     percentStats.add(statName);
                 }
@@ -958,7 +1047,6 @@ function calculateStatsForSet(items) {
     return { totalStats, percentStats };
 }
 
-// ▼【新規追加】強化ボーナスを計算する関数
 function getEnchantBonus(item, enchantLevel) {
     const bonus = {};
     if (!item || enchantLevel <= 0) {
@@ -974,33 +1062,23 @@ function getEnchantBonus(item, enchantLevel) {
     const itemCategory = getCategoryFromType(item['タイプ']);
     const itemEnhancementType = getEnhancementType(item['タイプ']);
 
-    // ★ここから変更 =============================================
     const categoryNameToTsv = {
         'weapon': '武器',
         'armor': '防具',
         'accessory': 'アクセサリー'
     }[itemCategory];
-    // ★ここまで変更 =============================================
 
     enhancementTable.forEach(row => {
         let isApplicable = false;
 
-
-        // 【大前提】TSVの1列目がアイテムの大カテゴリと一致するか？
         if (row.category === categoryNameToTsv) {
-
-            // 【条件1】部位固有ボーナス
-            // TSVの2列目(row.type)がアイテムの部位(itemEnhancementType)と一致するか？
             if (row.type === itemEnhancementType) {
                 isApplicable = true;
             }
-            // 【条件2】カテゴリ共通ボーナス
-            // TSVの2列目(row.type)が「共通」か？
             else if (row.type === '共通') {
                 isApplicable = true;
             }
         }
-        // ★ここまで変更 =============================================
 
         if (isApplicable) {
             const bonusValue = row.bonuses[enchantLevel - 1];
@@ -1012,6 +1090,7 @@ function getEnchantBonus(item, enchantLevel) {
 
     return bonus;
 }
+
 
 function renderComparisonSelector() {
     const container = document.getElementById('comparison-controls');
@@ -1130,19 +1209,18 @@ function handleToggleSortMode() {
     const statsList = document.querySelector('.stats-list');
     if (!statsList) return;
 
-    // isSortMode の状態を切り替える前に、現在のstat-entryのリストを取得
     const currentStatNames = Array.from(statsList.querySelectorAll('.stat-entry')).map(el => el.dataset.statName);
 
     if (!isSortMode && !sortOrders.default) {
-        sortOrders.default = currentStatNames; // 初回は現在の表示順をdefaultとして保存
+        sortOrders.default = currentStatNames;
     }
 
-    if (isSortMode) { // 確定時
+    if (isSortMode) {
         const newOrder = Array.from(statsList.querySelectorAll('.stat-entry')).map(el => el.dataset.statName);
         sortOrders[activeSortKey] = newOrder;
         saveSortOrders();
         toggleSortModeUI(false);
-    } else { // 変更開始時
+    } else {
         if (sortOrders.default) {
             const content = document.createElement('p');
             content.textContent = `「${activeSortKey}」を編集しますか、それとも新しい並び順を追加しますか？`;
@@ -1166,7 +1244,7 @@ function handleToggleSortMode() {
                 },
             ];
             showModal('並び順の編集', content, buttons);
-        } else { // 初回のみ
+        } else {
             toggleSortModeUI(true);
         }
     }
