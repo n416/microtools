@@ -1,18 +1,21 @@
 // ===============================================
-// simulator.js : メイン画面用スクリプト (最終完成版)
+// simulator.js : メイン画面用スクリプト (強化機能追加版)
 // ===============================================
 
 // --- グローバル定数・変数 ---
 const DB_NAME = 'GameEquipmentDB';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 const STORE_NAME = 'equipment';
 const INVENTORY_KEY = 'equipmentInventory_v2';
-const EQUIPMENT_SETS_KEY = 'equipmentSets_v1';
+const INVENTORY_ENHANCEMENTS_KEY = 'inventoryEnhancements_v1';
+const EQUIPMENT_SETS_KEY = 'equipmentSets_v2';
 const ACTIVE_SET_ID_KEY = 'activeEquipmentSet_v1';
 const SORT_ORDERS_KEY = 'equipmentSortOrders_v1';
 const ACTIVE_SORT_KEY = 'activeSortOrderKey_v1';
 
 let db;
+let allEnhancementData = {};
+let inventoryEnhancements = {};
 let equippedItems = {};
 let allEquipmentSets = {};
 let activeSetId = '1';
@@ -22,11 +25,14 @@ let comparisonSetId = null;
 let sortOrders = {};
 let activeSortKey = 'default';
 let isSortMode = false;
-let sortableInstance = null; // 【変更】SortableJSのインスタンスを保持
+let sortableInstance = null;
 
 let selectedInventoryItem = null;
+let selectedInstanceId = null;
 let selectedSlotId = null;
+
 let detailsPanel, detailsItemName, detailsItemImage, detailsStatsList;
+let enchantControls, enchantDownButton, enchantUpButton, detailsItemEnchant;
 
 let allInventoryItems = [];
 let currentInventoryCategory = 'all';
@@ -97,25 +103,30 @@ function handleSharedData(encodedData) {
             const compressedData = atob(encodedData.replace(/-/g, '+').replace(/_/g, '/'));
             const uint8Array = new Uint8Array(compressedData.split('').map(c => c.charCodeAt(0)));
             const jsonString = pako.inflate(uint8Array, { to: 'string' });
-            const equipmentNames = JSON.parse(jsonString);
 
-            const allItemNames = [];
-            for (const setId in equipmentNames) {
-                for (const slotId in equipmentNames[setId]) {
-                    allItemNames.push(equipmentNames[setId][slotId]);
+            const sharedSets = JSON.parse(jsonString);
+
+            const allItemNames = new Set();
+            for (const setId in sharedSets) {
+                for (const slotId in sharedSets[setId]) {
+                    allItemNames.add(sharedSets[setId][slotId].n); // name
                 }
             }
 
-            const foundItems = await getItemsFromDBByNames(allItemNames);
+            const foundItems = await getItemsFromDBByNames(Array.from(allItemNames));
             const itemsMap = new Map(foundItems.map(item => [item['名称'], item]));
 
             const newEquipmentSets = { '1': {}, '2': {}, '3': {}, '4': {} };
-            for (const setId in equipmentNames) {
+            for (const setId in sharedSets) {
                 newEquipmentSets[setId] = {};
-                for (const slotId in equipmentNames[setId]) {
-                    const itemName = equipmentNames[setId][slotId];
+                for (const slotId in sharedSets[setId]) {
+                    const itemName = sharedSets[setId][slotId].n;
+                    const enchantLevel = sharedSets[setId][slotId].e || 0;
                     if (itemsMap.has(itemName)) {
-                        newEquipmentSets[setId][slotId] = itemsMap.get(itemName);
+                        newEquipmentSets[setId][slotId] = {
+                            item: itemsMap.get(itemName),
+                            enchantLevel: enchantLevel
+                        };
                     }
                 }
             }
@@ -124,8 +135,7 @@ function handleSharedData(encodedData) {
 
             const currentInventory = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
             const newInventorySet = new Set([...currentInventory, ...allItemNames]);
-            const newInventory = Array.from(newInventorySet);
-            localStorage.setItem(INVENTORY_KEY, JSON.stringify(newInventory));
+            localStorage.setItem(INVENTORY_KEY, JSON.stringify(Array.from(newInventorySet)));
             console.log("復元された装備アイテムをインベントリに自動追加しました。");
 
         } catch (e) {
@@ -156,34 +166,241 @@ async function initializeApp() {
         detailsItemImage = document.getElementById('details-item-image');
         detailsStatsList = document.getElementById('details-stats-list');
 
+        enchantControls = document.getElementById('enchant-controls');
+        enchantDownButton = document.getElementById('enchant-down-button');
+        enchantUpButton = document.getElementById('enchant-up-button');
+        detailsItemEnchant = document.getElementById('details-item-enchant');
+
         await openDatabase();
+
+        try {
+            const transaction = db.transaction(['enhancementData'], 'readonly');
+            const store = transaction.objectStore('enhancementData');
+            const request = store.getAll();
+
+            await new Promise((resolve) => {
+                request.onsuccess = (event) => {
+                    const results = event.target.result;
+                    results.forEach(item => {
+                        allEnhancementData[item.rank] = item.data;
+                    });
+                    console.log('強化データをキャッシュしました:', allEnhancementData);
+                    resolve();
+                };
+                request.onerror = (event) => {
+                    console.error('強化データの読み込みに失敗しました:', event.target.error);
+                    resolve();
+                };
+            });
+        } catch (e) {
+            console.error("強化データキャッシュ中にエラーが発生しました（処理は続行）:", e);
+        }
+
         loadSortOrders();
+        loadInventoryEnhancements();
         loadAllEquipmentSets();
         await loadAndRenderInventory();
         setupGlobalClickListener();
         setupInventoryTabs();
         setupShareButton();
         setupSetControls();
+        setupEnchantControls();
+        setupDetailsActionButtons();
         calculateAndRenderStats();
     } catch (error) { console.error('初期化中にエラーが発生しました:', error); }
 }
 
+function setupDetailsActionButtons() {
+    document.getElementById('details-action-set').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (selectedInventoryItem && selectedInstanceId) {
+            equipInstance(selectedInventoryItem, selectedInstanceId);
+            clearAllSelections();
+        }
+    });
+
+    document.getElementById('details-action-duplicate').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (selectedInventoryItem && selectedInstanceId) {
+            const itemName = selectedInventoryItem['名称'];
+            const instances = inventoryEnhancements[itemName];
+            const sourceInstance = instances?.find(inst => inst.instanceId === selectedInstanceId);
+
+            if (sourceInstance) {
+                const newInstance = {
+                    instanceId: Date.now() + Math.random(),
+                    Lv: sourceInstance.Lv
+                };
+                instances.push(newInstance);
+                saveInventoryEnhancements();
+                renderInventory(allInventoryItems);
+            }
+            clearAllSelections();
+        }
+    });
+
+    document.getElementById('details-action-delete').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (selectedInventoryItem && selectedInstanceId) {
+            deleteInstance(selectedInventoryItem, selectedInstanceId);
+        }
+    });
+}
+
+function deleteInstance(item, instanceId) {
+    const itemName = item['名称'];
+    const instances = inventoryEnhancements[itemName];
+    if (!instances) return;
+
+    const instanceIndex = instances.findIndex(inst => inst.instanceId === instanceId);
+    if (instanceIndex === -1) return;
+
+    const instanceLv = instances[instanceIndex].Lv;
+    if (!confirm(`${itemName} (+${instanceLv}) を削除します。よろしいですか？`)) {
+        return;
+    }
+
+    instances.splice(instanceIndex, 1);
+
+    if (instances.length === 0) {
+        delete inventoryEnhancements[itemName];
+
+        let masterInventory = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
+        masterInventory = masterInventory.filter(name => name !== itemName);
+        localStorage.setItem(INVENTORY_KEY, JSON.stringify(masterInventory));
+
+        allInventoryItems = allInventoryItems.filter(i => i['名称'] !== itemName);
+    }
+
+    saveInventoryEnhancements();
+    renderInventory(allInventoryItems);
+    clearAllSelections();
+}
+
+
+function setupEnchantControls() {
+    enchantDownButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateEnchantLevel(-1);
+    });
+    enchantUpButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateEnchantLevel(1);
+    });
+}
+
+function updateEnchantLevel(change) {
+    let newLevel;
+    let currentLevel;
+    let targetElement;
+
+    if (selectedSlotId && equippedItems[selectedSlotId]) {
+        const equipped = equippedItems[selectedSlotId];
+        currentLevel = equipped.enchantLevel;
+        newLevel = currentLevel + change;
+
+        if (newLevel < 0) newLevel = 0;
+        if (newLevel > 12) newLevel = 12;
+
+        if (newLevel !== currentLevel) {
+            equipped.enchantLevel = newLevel;
+            renderSlot(selectedSlotId);
+            saveAllEquipmentSets();
+            targetElement = document.getElementById(selectedSlotId);
+            displayItemDetails(equipped.item, targetElement);
+        }
+    } else if (selectedInventoryItem && selectedInstanceId) {
+        const itemName = selectedInventoryItem['名称'];
+        if (!inventoryEnhancements[itemName]) {
+            inventoryEnhancements[itemName] = [{ instanceId: selectedInstanceId, Lv: 0 }];
+        }
+
+        const instance = inventoryEnhancements[itemName].find(inst => inst.instanceId === selectedInstanceId);
+        if (!instance) return;
+
+        currentLevel = instance.Lv;
+        newLevel = currentLevel + change;
+
+        if (newLevel < 0) newLevel = 0;
+        if (newLevel > 12) newLevel = 12;
+
+        if (newLevel !== currentLevel) {
+            instance.Lv = newLevel;
+            saveInventoryEnhancements();
+            renderInventory(allInventoryItems);
+            targetElement = document.getElementById(`inv-instance-${selectedInstanceId}`);
+            if (targetElement) {
+                targetElement.classList.add('selected');
+                displayItemDetails(selectedInventoryItem, targetElement);
+            } else {
+                hideItemDetails();
+            }
+        }
+    } else {
+        return;
+    }
+
+    if (newLevel !== currentLevel) {
+        calculateAndRenderStats();
+    }
+}
+
+// 変更後
 function openDatabase() {
     return new Promise((resolve, reject) => {
         if (db) return resolve(db);
         const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onupgradeneeded = (e) => { const db = e.target.result; if (!db.objectStoreNames.contains(STORE_NAME)) { db.createObjectStore(STORE_NAME, { keyPath: '名称' }); } };
+
+        // ★ onupgradeneeded の内容を db-setup.js と同じ完全なものに更新
+        request.onupgradeneeded = (event) => {
+            console.log('[simulator.js] onupgradeneededイベントが発生しました。');
+            const db = event.target.result;
+            // equipment ストア
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                const objectStore = db.createObjectStore(STORE_NAME, { keyPath: '名称' });
+                objectStore.createIndex('ランク', 'ランク', { unique: false });
+                objectStore.createIndex('タイプ', 'タイプ', { unique: false });
+            }
+            // enhancementData ストア
+            if (!db.objectStoreNames.contains('enhancementData')) {
+                db.createObjectStore('enhancementData', { keyPath: 'rank' });
+            }
+        };
+
         request.onerror = (e) => reject('DBオープン失敗:', e.target.error);
         request.onsuccess = (e) => { db = e.target.result; resolve(db); };
     });
 }
+
+// ★ここまで変更 =============================================
+
 async function loadAndRenderInventory() {
     const inventoryItemNames = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
-    if (inventoryItemNames.length === 0) { document.getElementById('inventory-list').innerHTML = '<p style="padding: 10px;">インベントリにアイテムがありません。<br><a href="data.html">インベントリ編集ページ</a>でアイテムを追加してください。</p>'; return; }
+    if (inventoryItemNames.length === 0) {
+        document.getElementById('inventory-list').innerHTML = '<p style="padding: 10px;">インベントリにアイテムがありません。<br><a href="data.html">インベントリ編集ページ</a>でアイテムを追加してください。</p>';
+        allInventoryItems = [];
+        return;
+    }
+
     const inventoryItems = await getItemsFromDBByNames(inventoryItemNames);
     allInventoryItems = inventoryItems.filter(item => item);
+
+    let enhancementsModified = false;
+    allInventoryItems.forEach(item => {
+        const itemName = item['名称'];
+        if (!inventoryEnhancements[itemName] || inventoryEnhancements[itemName].length === 0) {
+            inventoryEnhancements[itemName] = [{ instanceId: Date.now() + Math.random(), Lv: 0 }];
+            enhancementsModified = true;
+        }
+    });
+
+    if (enhancementsModified) {
+        saveInventoryEnhancements();
+    }
+
     renderInventory(allInventoryItems);
 }
+
 
 function getItemFromDB(itemName) {
     return new Promise((resolve) => {
@@ -214,12 +431,7 @@ function getItemsFromDBByNames(itemNames) {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const objectStore = transaction.objectStore(STORE_NAME);
         const results = [];
-        transaction.oncomplete = () => {
-            resolve(results);
-        };
-        transaction.onerror = (event) => {
-            reject('Transaction error: ' + event.target.error);
-        };
+        let completed = 0;
 
         uniqueNames.forEach(name => {
             const request = objectStore.get(name);
@@ -227,9 +439,17 @@ function getItemsFromDBByNames(itemNames) {
                 if (request.result) {
                     results.push(request.result);
                 }
+                completed++;
+                if (completed === uniqueNames.length) {
+                    resolve(results);
+                }
             };
             request.onerror = (e) => {
                 console.error(`Error fetching item by name: ${name}`, e.target.error);
+                completed++;
+                if (completed === uniqueNames.length) {
+                    resolve(results);
+                }
             };
         });
     });
@@ -239,40 +459,78 @@ function getItemsFromDBByNames(itemNames) {
 function renderInventory(items) {
     const inventoryListDiv = document.getElementById('inventory-list');
     inventoryListDiv.innerHTML = '';
+
     const filteredItems = items.filter(item => {
-        if (currentInventoryCategory === 'all') {
-            return true;
-        }
+        if (currentInventoryCategory === 'all') return true;
         return getCategoryFromType(item['タイプ']) === currentInventoryCategory;
     });
+
     filteredItems.forEach(item => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'inventory-item';
-        itemDiv.id = `inv-${item['名称']}`;
-        itemDiv.title = `${item['名称']}\nタイプ: ${item['タイプ']}`;
-        const img = document.createElement('img');
-        img.src = item['画像URL'] || '';
-        img.alt = item['名称'];
-        img.className = 'item-icon';
-        itemDiv.appendChild(img);
-        itemDiv.addEventListener('click', (e) => { e.stopPropagation(); handleInventoryClick(item, e.currentTarget); });
-        inventoryListDiv.appendChild(itemDiv);
+        const itemName = item['名称'];
+        const instances = inventoryEnhancements[itemName];
+
+        if (instances && instances.length > 0) {
+            instances.forEach(instance => {
+                const itemDiv = createInventoryItemElement(item, instance);
+                inventoryListDiv.appendChild(itemDiv);
+            });
+        }
     });
 }
-function handleInventoryClick(item, element) {
-    if (selectedInventoryItem && selectedInventoryItem['名称'] === item['名称']) {
-        equipItem(item);
+
+function createInventoryItemElement(item, instance) {
+    const enchantLevel = instance.Lv;
+    const enchantText = enchantLevel > 0 ? `+${enchantLevel}` : '';
+
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'inventory-item';
+    itemDiv.id = `inv-instance-${instance.instanceId}`;
+    itemDiv.title = `${item['名称']} ${enchantText}\nタイプ: ${item['タイプ']}`;
+
+    const img = document.createElement('img');
+    img.src = item['画像URL'] || '';
+    img.alt = item['名称'];
+    img.className = 'item-icon';
+    itemDiv.appendChild(img);
+
+    if (enchantText) {
+        const enchantDiv = document.createElement('div');
+        enchantDiv.textContent = enchantText;
+        enchantDiv.style.position = 'absolute';
+        enchantDiv.style.right = '2px';
+        enchantDiv.style.bottom = '2px';
+        enchantDiv.style.color = 'yellow';
+        enchantDiv.style.fontWeight = 'bold';
+        enchantDiv.style.fontSize = '12px';
+        enchantDiv.style.textShadow = '1px 1px 2px black';
+        itemDiv.appendChild(enchantDiv);
+    }
+
+    itemDiv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleInventoryClick(item, instance, e.currentTarget);
+    });
+
+    return itemDiv;
+}
+
+
+function handleInventoryClick(item, instance, element) {
+    if (selectedInstanceId === instance.instanceId) {
+        equipInstance(item, instance.instanceId);
         clearAllSelections();
     } else {
         clearAllSelections();
         selectedInventoryItem = item;
+        selectedInstanceId = instance.instanceId;
         element.classList.add('selected');
         displayItemDetails(item, element);
     }
 }
+
 function handleSlotClick(slotId, element) {
-    const item = equippedItems[slotId];
-    if (item) {
+    const equipped = equippedItems[slotId];
+    if (equipped) {
         if (selectedSlotId === slotId) {
             unequipItem(slotId);
             clearAllSelections();
@@ -280,56 +538,56 @@ function handleSlotClick(slotId, element) {
             clearAllSelections();
             selectedSlotId = slotId;
             element.classList.add('selected');
-            displayItemDetails(item, element);
+            displayItemDetails(equipped.item, element);
         }
     }
 }
 
-
-function equipItem(item) {
+function equipInstance(item, instanceId) {
     const itemType = item['タイプ'];
     const slotCategory = TYPE_TO_SLOT_CATEGORY[itemType];
     if (!slotCategory) return;
 
+    const instances = inventoryEnhancements[item['名称']];
+    const sourceInstance = instances?.find(inst => inst.instanceId === instanceId) || { Lv: 0 };
+
+    equipToSlot(item, sourceInstance);
+}
+
+function equipToSlot(item, instance) {
+    const slotCategory = TYPE_TO_SLOT_CATEGORY[item['タイプ']];
     const possibleSlotIds = SLOT_CATEGORY_TO_IDS[slotCategory];
-    const isRing = (slotCategory === 'ring');
-
-    if (!isRing) {
-        if (Object.values(equippedItems).some(equipped => equipped && equipped['名称'] === item['名称'])) {
-            console.log(`ユニークアイテム「${item['名称']}」はすでに装備されています。`);
-            return;
-        }
-    }
-
     const emptySlotId = possibleSlotIds.find(id => !equippedItems[id]);
 
+    const itemToEquip = {
+        item: item,
+        enchantLevel: instance.Lv,
+        instanceId: Date.now() + Math.random()
+    };
+
     if (emptySlotId) {
-        equippedItems[emptySlotId] = item;
+        equippedItems[emptySlotId] = itemToEquip;
         renderSlot(emptySlotId);
-
     } else {
-        if (isRing) {
-            const pushedOutItem = equippedItems[possibleSlotIds[4]];
-            console.log(`リング枠が満杯のため、「${pushedOutItem['名称']}」が押し出されます。`);
-
+        if (slotCategory === 'ring') {
+            const lastRingSlotId = possibleSlotIds[possibleSlotIds.length - 1];
+            if (equippedItems[lastRingSlotId]) {
+                unequipItem(lastRingSlotId, false);
+            }
             for (let i = possibleSlotIds.length - 2; i >= 0; i--) {
                 const currentSlotId = possibleSlotIds[i];
                 const nextSlotId = possibleSlotIds[i + 1];
-                equippedItems[nextSlotId] = equippedItems[currentSlotId];
+                if (equippedItems[currentSlotId]) {
+                    equippedItems[nextSlotId] = equippedItems[currentSlotId];
+                    delete equippedItems[currentSlotId];
+                }
             }
-            equippedItems[possibleSlotIds[0]] = item;
-
+            equippedItems[possibleSlotIds[0]] = itemToEquip;
             possibleSlotIds.forEach(id => renderSlot(id));
-
         } else {
             const targetSlotId = possibleSlotIds[0];
-
-            if (equippedItems[targetSlotId] && equippedItems[targetSlotId]['名称'] === item['名称']) {
-                return;
-            }
-
             unequipItem(targetSlotId, false);
-            equippedItems[targetSlotId] = item;
+            equippedItems[targetSlotId] = itemToEquip;
             renderSlot(targetSlotId);
         }
     }
@@ -338,13 +596,37 @@ function equipItem(item) {
     calculateAndRenderStats();
 }
 
+
 function unequipItem(slotId, doSaveAndRecalculate = true) {
     if (equippedItems[slotId]) {
+        const unequipped = equippedItems[slotId];
+        const itemName = unequipped.item['名称'];
+        const enchantLevel = unequipped.enchantLevel;
+
+        if (!inventoryEnhancements[itemName]) {
+            inventoryEnhancements[itemName] = [];
+        }
+        const instances = inventoryEnhancements[itemName];
+
+        const alreadyExists = instances.some(inst => inst.Lv === enchantLevel);
+
+        if (!alreadyExists) {
+            instances.push({
+                instanceId: unequipped.instanceId,
+                Lv: enchantLevel
+            });
+        }
+
         delete equippedItems[slotId];
-        renderSlot(slotId);
+
         if (doSaveAndRecalculate) {
+            saveInventoryEnhancements();
             saveAllEquipmentSets();
+            renderInventory(allInventoryItems);
+            renderSlot(slotId);
             calculateAndRenderStats();
+        } else {
+            renderSlot(slotId);
         }
     }
 }
@@ -357,14 +639,33 @@ function renderSlot(slotId) {
     slotElement.parentNode.replaceChild(newSlotElement, slotElement);
     newSlotElement.addEventListener('click', (e) => { e.stopPropagation(); handleSlotClick(slotId, e.currentTarget); });
     newSlotElement.innerHTML = '';
-    const item = equippedItems[slotId];
-    if (item) {
-        newSlotElement.title = `${item['名称']}\nタイプ: ${item['タイプ']}`;
+
+    const equipped = equippedItems[slotId];
+    if (equipped) {
+        const item = equipped.item;
+        const enchantLevel = equipped.enchantLevel;
+        const enchantText = enchantLevel > 0 ? `+${enchantLevel}` : '';
+
+        newSlotElement.title = `${item['名称']} ${enchantText}\nタイプ: ${item['タイプ']}`;
         const img = document.createElement('img');
         img.src = item['画像URL'] || '';
         img.alt = item['名称'];
         img.className = 'item-icon';
         newSlotElement.appendChild(img);
+
+        if (enchantText) {
+            const enchantDiv = document.createElement('div');
+            enchantDiv.textContent = enchantText;
+            enchantDiv.style.position = 'absolute';
+            enchantDiv.style.right = '2px';
+            enchantDiv.style.bottom = '2px';
+            enchantDiv.style.color = 'yellow';
+            enchantDiv.style.fontWeight = 'bold';
+            enchantDiv.style.fontSize = '12px';
+            enchantDiv.style.textShadow = '1px 1px 2px black';
+            newSlotElement.appendChild(enchantDiv);
+        }
+
     } else {
         newSlotElement.title = '';
         const defaultSpan = document.createElement('span');
@@ -380,12 +681,31 @@ function saveAllEquipmentSets() {
     localStorage.setItem(ACTIVE_SET_ID_KEY, activeSetId);
 }
 
+function saveInventoryEnhancements() {
+    localStorage.setItem(INVENTORY_ENHANCEMENTS_KEY, JSON.stringify(inventoryEnhancements));
+}
+function loadInventoryEnhancements() {
+    inventoryEnhancements = JSON.parse(localStorage.getItem(INVENTORY_ENHANCEMENTS_KEY)) || {};
+}
+
 
 function loadAllEquipmentSets() {
     activeSetId = localStorage.getItem(ACTIVE_SET_ID_KEY) || '1';
     const savedSets = JSON.parse(localStorage.getItem(EQUIPMENT_SETS_KEY));
     if (savedSets) {
         allEquipmentSets = savedSets;
+        for (const setId in allEquipmentSets) {
+            for (const slotId in allEquipmentSets[setId]) {
+                const equipped = allEquipmentSets[setId][slotId];
+                if (equipped && !equipped.item && equipped['名称']) {
+                    allEquipmentSets[setId][slotId] = {
+                        item: equipped,
+                        enchantLevel: 0,
+                        instanceId: Date.now() + Math.random()
+                    };
+                }
+            }
+        }
     } else {
         allEquipmentSets = { '1': {}, '2': {}, '3': {}, '4': {} };
     }
@@ -401,9 +721,10 @@ function renderAllSlots() {
 
 function clearAllSelections() {
     if (selectedInventoryItem) {
-        const selectedElem = document.getElementById(`inv-${selectedInventoryItem['名称']}`);
+        const selectedElem = document.getElementById(`inv-instance-${selectedInstanceId}`);
         if (selectedElem) selectedElem.classList.remove('selected');
         selectedInventoryItem = null;
+        selectedInstanceId = null;
     }
     if (selectedSlotId) {
         const selectedElem = document.getElementById(selectedSlotId);
@@ -414,11 +735,17 @@ function clearAllSelections() {
 }
 
 function setupGlobalClickListener() {
-    document.body.addEventListener('click', () => clearAllSelections());
+    document.body.addEventListener('click', (event) => {
+        if (event.target.closest('.slot') ||
+            event.target.closest('.inventory-item') ||
+            event.target.closest('#item-details-panel')) {
+            return;
+        }
+        clearAllSelections();
+    });
 }
 
 
-// 【ここから置き換え】ステータス計算と表示機能（UX改善版）
 function calculateAndRenderStats() {
     const { totalStats, percentStats } = calculateStatsForSet(equippedItems);
     const { totalStats: comparisonTotalStats } = calculateStatsForSet(allEquipmentSets[comparisonSetId]);
@@ -460,7 +787,6 @@ function calculateAndRenderStats() {
             statEntry.className = 'stat-entry';
             statEntry.dataset.statName = statName;
 
-            // 番号表示用のspanを追加
             const numberSpan = document.createElement('span');
             numberSpan.className = 'stat-number';
             numberSpan.textContent = `${index + 1}.`;
@@ -476,7 +802,7 @@ function calculateAndRenderStats() {
             let displayValueText;
             if (percentStats.has(statName)) {
                 const percentValue = value * 100;
-                displayValueText = (Number.isInteger(percentValue) ? percentValue : percentValue.toFixed(1)) + '%';
+                displayValueText = (Number.isInteger(percentValue) ? percentValue : percentValue.toFixed(2)) + '%';
             } else {
                 displayValueText = Number.isInteger(value) ? value : value.toFixed(2);
             }
@@ -491,9 +817,9 @@ function calculateAndRenderStats() {
                     const diffSign = diff > 0 ? '+' : '';
 
                     let diffDisplayValue;
-                    if (percentStats.has(statName) || (Math.abs(diff) > 0 && Math.abs(diff) < 1 && !Number.isInteger(diff))) {
+                    if (percentStats.has(statName)) {
                         const percentDiff = diff * 100;
-                        diffDisplayValue = (Number.isInteger(percentDiff) ? percentDiff : percentDiff.toFixed(1)) + '%';
+                        diffDisplayValue = (Number.isInteger(percentDiff) ? percentDiff : percentDiff.toFixed(2)) + '%';
                     } else {
                         diffDisplayValue = Number.isInteger(diff) ? diff : diff.toFixed(2);
                     }
@@ -513,41 +839,95 @@ function calculateAndRenderStats() {
     statsPanel.appendChild(sortControlsContainer);
     renderSortOrderControls();
 }
-// 【ここまで置き換え】
 
 
 function displayItemDetails(item, clickedElement) {
     if (!item || !detailsPanel || !clickedElement) return;
+
+    let enchantLevel = 0;
+
+    if (selectedSlotId && equippedItems[selectedSlotId]) {
+        enchantLevel = equippedItems[selectedSlotId].enchantLevel;
+    } else if (selectedInventoryItem && selectedInstanceId) {
+        const instances = inventoryEnhancements[selectedInventoryItem['名称']];
+        const instance = instances?.find(inst => inst.instanceId === selectedInstanceId);
+        if (instance) {
+            enchantLevel = instance.Lv;
+        }
+    }
+
     detailsItemName.textContent = item['名称'];
     detailsItemImage.src = item['画像URL'] || '';
     detailsItemImage.alt = item['名称'];
     detailsStatsList.innerHTML = '';
-    let hasStats = false;
+
+    const detailsActions = document.getElementById('details-actions');
+    if (selectedInstanceId) {
+        detailsActions.classList.remove('hidden');
+    } else {
+        detailsActions.classList.add('hidden');
+    }
+
+    if (selectedSlotId || selectedInstanceId) {
+        enchantControls.classList.remove('hidden');
+        detailsItemEnchant.textContent = enchantLevel > 0 ? `+${enchantLevel}` : '無強化';
+        enchantDownButton.disabled = enchantLevel <= 0;
+        enchantUpButton.disabled = enchantLevel >= 12;
+    } else {
+        enchantControls.classList.add('hidden');
+    }
+
+    const baseStats = {};
     STAT_HEADERS.forEach(statName => {
         const value = parseFloat(item[statName]);
         if (value && !isNaN(value) && value !== 0) {
-            hasStats = true;
+            baseStats[statName] = value;
+        }
+    });
+
+    const enchantBonus = getEnchantBonus(item, enchantLevel);
+    const allStatKeys = new Set([...Object.keys(baseStats), ...Object.keys(enchantBonus)]);
+
+    if (allStatKeys.size === 0) {
+        detailsStatsList.textContent = '表示するステータスがありません。';
+    } else {
+        allStatKeys.forEach(statName => {
+            const baseValue = baseStats[statName] || 0;
+            const bonusValue = enchantBonus[statName] || 0;
+            const totalValue = baseValue + bonusValue;
+
             const statEntry = document.createElement('div');
             statEntry.className = 'stat-entry';
             const nameSpan = document.createElement('span');
             nameSpan.className = 'stat-name';
             nameSpan.textContent = statName;
+
             const valueSpan = document.createElement('span');
             valueSpan.className = 'stat-value';
-            if (value > 0 && value < 1) {
-                const percentValue = value * 100;
-                valueSpan.textContent = (Number.isInteger(percentValue) ? percentValue : percentValue.toFixed(1)) + '%';
+
+            let valueText = '';
+            if (totalValue > 0 && totalValue < 1 && !Number.isInteger(totalValue)) {
+                const percentValue = totalValue * 100;
+                valueText = (Number.isInteger(percentValue) ? percentValue : percentValue.toFixed(1)) + '%';
             } else {
-                valueSpan.textContent = Number.isInteger(value) ? value : value.toFixed(2);
+                valueText = Number.isInteger(totalValue) ? totalValue : totalValue.toFixed(2);
             }
+
+            if (bonusValue > 0) {
+                let bonusText = Number.isInteger(bonusValue) ? bonusValue : bonusValue.toFixed(2);
+                if (baseStats[statName] > 0 && baseStats[statName] < 1) {
+                    bonusText = (bonusValue * 100).toFixed(1) + '%';
+                }
+                valueText += ` <span class="enchant-bonus">(+${bonusText})</span>`;
+            }
+
+            valueSpan.innerHTML = valueText;
             statEntry.appendChild(nameSpan);
             statEntry.appendChild(valueSpan);
             detailsStatsList.appendChild(statEntry);
-        }
-    });
-    if (!hasStats) {
-        detailsStatsList.textContent = '表示するステータスがありません。';
+        });
     }
+
     const rect = clickedElement.getBoundingClientRect();
     let top = rect.bottom + window.scrollY + 5;
     let left = rect.left + window.scrollX;
@@ -567,15 +947,17 @@ function hideItemDetails() {
     if (detailsPanel) {
         detailsPanel.style.display = 'none';
     }
+    enchantControls.classList.add('hidden');
 }
 function getCategoryFromType(typeString) {
     if (!typeString) return 'unknown';
     const prefix = parseInt(typeString.substring(0, 2), 10);
     if (prefix >= 1 && prefix <= 9) return 'weapon';
-    if (prefix >= 11 && prefix <= 15) return 'armor';
-    if ((prefix >= 16 && prefix <= 16) || (prefix >= 21 && prefix <= 28)) return 'accessory';
+    if (prefix >= 11 && prefix <= 16) return 'armor';
+    if (prefix >= 21 && prefix <= 28) return 'accessory';
     return 'unknown';
 }
+
 function setupInventoryTabs() {
     document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -593,25 +975,28 @@ function setupShareButton() {
     if (!shareButton) return;
 
     shareButton.addEventListener('click', async () => {
-        const equipmentNamesToShare = {};
+        const equipmentDataToShare = {};
         for (const setId in allEquipmentSets) {
             if (Object.keys(allEquipmentSets[setId]).length === 0) continue;
 
-            equipmentNamesToShare[setId] = {};
+            equipmentDataToShare[setId] = {};
             for (const slotId in allEquipmentSets[setId]) {
-                const item = allEquipmentSets[setId][slotId];
-                if (item && item['名称']) {
-                    equipmentNamesToShare[setId][slotId] = item['名称'];
+                const equipped = allEquipmentSets[setId][slotId];
+                if (equipped && equipped.item && equipped.item['名称']) {
+                    equipmentDataToShare[setId][slotId] = {
+                        n: equipped.item['名称'],
+                        e: equipped.enchantLevel
+                    };
                 }
             }
         }
 
-        if (Object.keys(equipmentNamesToShare).length === 0) {
+        if (Object.keys(equipmentDataToShare).length === 0) {
             alert('共有できる装備データがありません。');
             return;
         }
 
-        const jsonString = JSON.stringify(equipmentNamesToShare);
+        const jsonString = JSON.stringify(equipmentDataToShare);
         const compressed = pako.deflate(jsonString);
         const encodedData = btoa(String.fromCharCode.apply(null, compressed))
             .replace(/\+/g, '-')
@@ -648,8 +1033,8 @@ async function checkAndSetupDatabaseIfNeeded() {
                 resolve();
             } else {
                 console.log("データベースが空です。セットアップ処理を実行します...");
-                if (typeof setupDatabase === 'function') {
-                    setupDatabase()
+                if (typeof window.setupDatabase === 'function') {
+                    window.setupDatabase()
                         .then(() => {
                             console.log("データベースのセットアップが完了しました。");
                             openDatabase().then(resolve).catch(reject);
@@ -726,22 +1111,16 @@ function openCopyModal() {
 
     for (let i = 1; i <= 4; i++) {
         const setId = String(i);
-        if (setId !== activeSetId) {
-            const button = document.createElement('button');
-            button.textContent = `${setId}`;
-            button.className = 'copy-source-button';
-            button.onclick = () => {
-                copySetFrom(setId);
-            };
-            optionsContainer.appendChild(button);
+        const button = document.createElement('button');
+        button.textContent = `${setId}`;
+        button.className = 'copy-source-button';
+        if (setId === activeSetId) {
+            button.classList.add('disabled');
+            button.disabled = true;
+        } else {
+            button.onclick = () => copySetFrom(setId);
         }
-        else {
-            const button = document.createElement('button');
-            button.textContent = `対象`;
-            button.className = 'copy-source-button disabled';
-            optionsContainer.appendChild(button);
-        }
-
+        optionsContainer.appendChild(button);
     }
 
     document.getElementById('copy-modal-cancel-button').onclick = () => {
@@ -764,9 +1143,79 @@ function copySetFrom(sourceSetId) {
     }
 }
 
-// =============================================================
-// 【ここから新規追加・修正】比較機能 & 並び順変更機能
-// =============================================================
+function calculateStatsForSet(items) {
+    const totalStats = {};
+    const percentStats = new Set();
+    if (!items) return { totalStats, percentStats };
+
+    for (const slotId in items) {
+        const equipped = items[slotId];
+        if (!equipped || !equipped.item) continue;
+
+        const item = equipped.item;
+        const enchantLevel = equipped.enchantLevel || 0;
+        const enchantBonus = getEnchantBonus(item, enchantLevel);
+
+        for (const statName of STAT_HEADERS) {
+            const baseValue = parseFloat(item[statName]) || 0;
+            const bonusValue = enchantBonus[statName] || 0;
+            const value = baseValue + bonusValue;
+
+            if (value !== 0) {
+                if (String(item[statName]).includes('%') || (baseValue > 0 && baseValue < 1 && !Number.isInteger(baseValue))) {
+                    percentStats.add(statName);
+                }
+                totalStats[statName] = (totalStats[statName] || 0) + value;
+            }
+        }
+    }
+    return { totalStats, percentStats };
+}
+
+function getEnchantBonus(item, enchantLevel) {
+    const bonus = {};
+    if (!item || enchantLevel <= 0) {
+        return bonus;
+    }
+
+    const rankName = item['ランク'].replace(/^[0-9\s]+/, '');
+    if (!allEnhancementData || !allEnhancementData[rankName]) {
+        return bonus;
+    }
+
+    const enhancementTable = allEnhancementData[rankName];
+    const itemCategory = getCategoryFromType(item['タイプ']);
+    const itemEnhancementType = getEnhancementType(item['タイプ']);
+
+    const categoryNameToTsv = {
+        'weapon': '武器',
+        'armor': '防具',
+        'accessory': 'アクセサリー'
+    }[itemCategory];
+
+    enhancementTable.forEach(row => {
+        let isApplicable = false;
+
+        if (row.category === categoryNameToTsv) {
+            if (row.type === itemEnhancementType) {
+                isApplicable = true;
+            }
+            else if (row.type === '共通') {
+                isApplicable = true;
+            }
+        }
+
+        if (isApplicable) {
+            const bonusValue = row.bonuses[enchantLevel - 1];
+            if (bonusValue && bonusValue !== 0) {
+                bonus[row.stat] = (bonus[row.stat] || 0) + bonusValue;
+            }
+        }
+    });
+
+    return bonus;
+}
+
 
 function renderComparisonSelector() {
     const container = document.getElementById('comparison-controls');
@@ -815,26 +1264,6 @@ function renderComparisonSelector() {
             calculateAndRenderStats();
         });
     });
-}
-
-function calculateStatsForSet(items) {
-    const totalStats = {};
-    const percentStats = new Set();
-    if (!items) return { totalStats, percentStats };
-    for (const slotId in items) {
-        const item = items[slotId];
-        if (!item) continue;
-        for (const statName of STAT_HEADERS) {
-            const value = parseFloat(item[statName]) || 0;
-            if (value !== 0) {
-                if (value > 0 && value < 1) {
-                    percentStats.add(statName);
-                }
-                totalStats[statName] = (totalStats[statName] || 0) + value;
-            }
-        }
-    }
-    return { totalStats, percentStats };
 }
 
 function renderSortOrderControls() {
@@ -902,48 +1331,50 @@ function renderSortOrderControls() {
 }
 
 function handleToggleSortMode() {
+    const statsList = document.querySelector('.stats-list');
+    if (!statsList) return;
+
+    const currentStatNames = Array.from(statsList.querySelectorAll('.stat-entry')).map(el => el.dataset.statName);
+
     if (!isSortMode && !sortOrders.default) {
-        isSortMode = true;
-        toggleSortModeUI(true);
-        return;
+        sortOrders.default = currentStatNames;
     }
 
     if (isSortMode) {
-        isSortMode = false;
-        const statsList = document.querySelector('.stats-list');
         const newOrder = Array.from(statsList.querySelectorAll('.stat-entry')).map(el => el.dataset.statName);
         sortOrders[activeSortKey] = newOrder;
         saveSortOrders();
         toggleSortModeUI(false);
-        return;
-    }
+    } else {
+        if (sortOrders.default) {
+            const content = document.createElement('p');
+            content.textContent = `「${activeSortKey}」を編集しますか、それとも新しい並び順を追加しますか？`;
 
-    if (!isSortMode && sortOrders.default) {
-        const content = document.createElement('p');
-        content.textContent = `「${activeSortKey}」を編集しますか、それとも新しい並び順を追加しますか？`;
-
-        const buttons = [
-            {
-                text: `「${activeSortKey}」を変更`,
-                class: 'secondary',
-                onClick: () => {
-                    isSortMode = true;
-                    toggleSortModeUI(true);
-                    closeModal();
-                }
-            },
-            {
-                text: '新規作成',
-                class: 'primary',
-                onClick: () => {
-                    closeModal();
-                    handleCreateNewSortOrder();
-                }
-            },
-        ];
-        showModal('並び順の編集', content, buttons);
+            const buttons = [
+                {
+                    text: `「${activeSortKey}」を変更`,
+                    class: 'secondary',
+                    onClick: () => {
+                        toggleSortModeUI(true);
+                        closeModal();
+                    }
+                },
+                {
+                    text: '新規作成',
+                    class: 'primary',
+                    onClick: () => {
+                        closeModal();
+                        handleCreateNewSortOrder();
+                    }
+                },
+            ];
+            showModal('並び順の編集', content, buttons);
+        } else {
+            toggleSortModeUI(true);
+        }
     }
 }
+
 
 function handleCreateNewSortOrder() {
     const content = document.createElement('div');
@@ -1066,7 +1497,6 @@ function handleDeleteSortOrder(keyToDelete) {
     showModal('削除の確認', content, buttons);
 }
 
-// 【変更】SortableJS を使用するように修正
 function toggleSortModeUI(enable) {
     const statsList = document.querySelector('.stats-list');
     const button = document.getElementById('toggle-sort-mode-button');
@@ -1076,9 +1506,7 @@ function toggleSortModeUI(enable) {
         button.textContent = '確定';
         statsList.classList.add('is-sorting');
 
-        if (sortableInstance) {
-            sortableInstance.destroy();
-        }
+        if (sortableInstance) sortableInstance.destroy();
         sortableInstance = new Sortable(statsList, {
             animation: 150,
             ghostClass: 'sortable-ghost',
@@ -1097,9 +1525,6 @@ function toggleSortModeUI(enable) {
     }
 }
 
-// 【削除】ネイティブD&Dハンドラは不要になったため削除
-// handleDragStart, handleDragOver, handleDrop, handleDragEnd を削除
-
 function saveSortOrders() {
     localStorage.setItem(SORT_ORDERS_KEY, JSON.stringify(sortOrders));
     localStorage.setItem(ACTIVE_SORT_KEY, activeSortKey);
@@ -1112,9 +1537,10 @@ function loadSortOrders() {
     }
 }
 
-
 function showModal(title, contentElement, buttons) {
     const modal = document.getElementById('generic-modal-overlay');
+    if (!modal) return;
+
     document.getElementById('generic-modal-title').textContent = title;
 
     const contentContainer = document.getElementById('generic-modal-content');
@@ -1140,5 +1566,31 @@ function showModal(title, contentElement, buttons) {
 
 function closeModal() {
     const modal = document.getElementById('generic-modal-overlay');
-    modal.classList.add('hidden');
+    if (modal) modal.classList.add('hidden');
+}
+
+function getEnhancementType(itemType) {
+    if (!itemType) return null;
+    const prefix = parseInt(itemType.substring(0, 2), 10);
+
+    if (prefix >= 1 && prefix <= 9) return '武器';
+
+    const typeMapping = {
+        11: '頭',
+        12: '手',
+        13: '上装備',
+        14: '下装備',
+        15: '足',
+        16: 'マント',
+        21: 'ベルト',
+        22: 'ブレスレット',
+        23: 'リング',
+        24: 'ネックレス',
+        25: '勲章',
+        26: '守護具',
+        27: 'カンパネラ',
+        28: 'アミュレッタ'
+    };
+
+    return typeMapping[prefix] || null;
 }
