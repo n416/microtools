@@ -12,6 +12,7 @@ const EQUIPMENT_SETS_KEY = 'equipmentSets_v2';
 const ACTIVE_SET_ID_KEY = 'activeEquipmentSet_v1';
 const SORT_ORDERS_KEY = 'equipmentSortOrders_v1';
 const ACTIVE_SORT_KEY = 'activeSortOrderKey_v1';
+const CUSTOM_TABS_KEY = 'customInventoryTabs_v1';
 
 let db;
 let allEnhancementData = {};
@@ -36,6 +37,9 @@ let enchantControls, enchantDownButton, enchantUpButton, detailsItemEnchant;
 
 let allInventoryItems = [];
 let currentInventoryCategory = 'all';
+let activeTabInfo = { type: 'category', value: 'all' };
+
+let customTabs = [];
 const STAT_HEADERS = [
     '評価数値', '基本攻撃力', '攻撃力増幅', 'クリティカルダメージ増幅', '一般攻撃力',
     'スキルダメージ増幅', '近距離攻撃力', '防御力', '武力', 'ガード貫通', '一般ダメージ増幅',
@@ -199,6 +203,7 @@ async function initializeApp() {
         loadSortOrders();
         loadInventoryEnhancements();
         loadAllEquipmentSets();
+        loadCustomTabs();
         await loadAndRenderInventory();
         setupGlobalClickListener();
         setupInventoryTabs();
@@ -289,33 +294,37 @@ function setupEnchantControls() {
     });
 }
 
+// simulator.js の updateEnchantLevel 関数をこれで置き換えてください
+
 function updateEnchantLevel(change) {
     let newLevel;
     let currentLevel;
-    let targetElement;
 
     if (selectedSlotId && equippedItems[selectedSlotId]) {
+        // ▼▼▼【ここからが修正・復元したコードです】▼▼▼
         const equipped = equippedItems[selectedSlotId];
         currentLevel = equipped.enchantLevel;
         newLevel = currentLevel + change;
 
+        // 強化値は0から12の範囲に収める
         if (newLevel < 0) newLevel = 0;
         if (newLevel > 12) newLevel = 12;
 
         if (newLevel !== currentLevel) {
+            // 1. データ更新
             equipped.enchantLevel = newLevel;
+            // 2. UI更新 (スロットと詳細パネル)
             renderSlot(selectedSlotId);
+            displayItemDetails(equipped.item, document.getElementById(selectedSlotId));
+            // 3. 保存
             saveAllEquipmentSets();
-            targetElement = document.getElementById(selectedSlotId);
-            displayItemDetails(equipped.item, targetElement);
         }
-    } else if (selectedInventoryItem && selectedInstanceId) {
-        const itemName = selectedInventoryItem['名称'];
-        if (!inventoryEnhancements[itemName]) {
-            inventoryEnhancements[itemName] = [{ instanceId: selectedInstanceId, Lv: 0 }];
-        }
+        // ▲▲▲【ここまでが修正・復元したコードです】▲▲▲
 
-        const instance = inventoryEnhancements[itemName].find(inst => inst.instanceId === selectedInstanceId);
+    } else if (selectedInventoryItem && selectedInstanceId) {
+        // (インベントリアイテムの処理 - こちらは正常に動作しています)
+        const itemName = selectedInventoryItem['名称'];
+        const instance = inventoryEnhancements[itemName]?.find(inst => inst.instanceId === selectedInstanceId);
         if (!instance) return;
 
         currentLevel = instance.Lv;
@@ -327,8 +336,9 @@ function updateEnchantLevel(change) {
         if (newLevel !== currentLevel) {
             instance.Lv = newLevel;
             saveInventoryEnhancements();
-            renderInventory(allInventoryItems);
-            targetElement = document.getElementById(`inv-instance-${selectedInstanceId}`);
+            refreshInventoryView();
+
+            const targetElement = document.getElementById(`inv-instance-${selectedInstanceId}`);
             if (targetElement) {
                 targetElement.classList.add('selected');
                 displayItemDetails(selectedInventoryItem, targetElement);
@@ -337,31 +347,29 @@ function updateEnchantLevel(change) {
             }
         }
     } else {
+        // 何も選択されていない場合は何もしない
         return;
     }
 
-    if (newLevel !== currentLevel) {
+    // 強化値に変更があった場合のみ、ステータス全体を再計算
+    if (newLevel !== undefined && newLevel !== currentLevel) {
         calculateAndRenderStats();
     }
 }
 
-// 変更後
 function openDatabase() {
     return new Promise((resolve, reject) => {
         if (db) return resolve(db);
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-        // ★ onupgradeneeded の内容を db-setup.js と同じ完全なものに更新
         request.onupgradeneeded = (event) => {
             console.log('[simulator.js] onupgradeneededイベントが発生しました。');
             const db = event.target.result;
-            // equipment ストア
             if (!db.objectStoreNames.contains(STORE_NAME)) {
                 const objectStore = db.createObjectStore(STORE_NAME, { keyPath: '名称' });
                 objectStore.createIndex('ランク', 'ランク', { unique: false });
                 objectStore.createIndex('タイプ', 'タイプ', { unique: false });
             }
-            // enhancementData ストア
             if (!db.objectStoreNames.contains('enhancementData')) {
                 db.createObjectStore('enhancementData', { keyPath: 'rank' });
             }
@@ -371,8 +379,6 @@ function openDatabase() {
         request.onsuccess = (e) => { db = e.target.result; resolve(db); };
     });
 }
-
-// ★ここまで変更 =============================================
 
 async function loadAndRenderInventory() {
     const inventoryItemNames = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
@@ -455,22 +461,21 @@ function getItemsFromDBByNames(itemNames) {
     });
 }
 
-
-function renderInventory(items) {
+function renderInventory(itemsToDisplay) {
     const inventoryListDiv = document.getElementById('inventory-list');
     inventoryListDiv.innerHTML = '';
 
-    const filteredItems = items.filter(item => {
-        if (currentInventoryCategory === 'all') return true;
-        return getCategoryFromType(item['タイプ']) === currentInventoryCategory;
-    });
-
-    filteredItems.forEach(item => {
+    // 渡されたアイテム配列を描画するだけ
+    itemsToDisplay.forEach(item => {
         const itemName = item['名称'];
-        const instances = inventoryEnhancements[itemName];
+        const instances = inventoryEnhancements[itemName] || [];
 
-        if (instances && instances.length > 0) {
-            instances.forEach(instance => {
+        const itemInstancesToRender = instances.filter(instance =>
+            itemsToDisplay.some(displayItem => displayItem['名称'] === itemName)
+        );
+
+        if (itemInstancesToRender.length > 0) {
+            itemInstancesToRender.forEach(instance => {
                 const itemDiv = createInventoryItemElement(item, instance);
                 inventoryListDiv.appendChild(itemDiv);
             });
@@ -486,6 +491,7 @@ function createInventoryItemElement(item, instance) {
     itemDiv.className = 'inventory-item';
     itemDiv.id = `inv-instance-${instance.instanceId}`;
     itemDiv.title = `${item['名称']} ${enchantText}\nタイプ: ${item['タイプ']}`;
+    itemDiv.style.position = 'relative'; // ★ CSSの変更に合わせてJS側でも適用
 
     const img = document.createElement('img');
     img.src = item['画像URL'] || '';
@@ -513,7 +519,6 @@ function createInventoryItemElement(item, instance) {
 
     return itemDiv;
 }
-
 
 function handleInventoryClick(item, instance, element) {
     if (selectedInstanceId === instance.instanceId) {
@@ -548,20 +553,14 @@ function equipInstance(item, instanceId) {
     const slotCategory = TYPE_TO_SLOT_CATEGORY[itemType];
     if (!slotCategory) return;
 
-    const instances = inventoryEnhancements[item['名称']];
-    const sourceInstance = instances?.find(inst => inst.instanceId === instanceId) || { Lv: 0 };
+    const sourceInstance = inventoryEnhancements[item['名称']]?.find(inst => inst.instanceId === instanceId) || { Lv: 0 };
 
-    equipToSlot(item, sourceInstance);
-}
-
-function equipToSlot(item, instance) {
-    const slotCategory = TYPE_TO_SLOT_CATEGORY[item['タイプ']];
     const possibleSlotIds = SLOT_CATEGORY_TO_IDS[slotCategory];
     const emptySlotId = possibleSlotIds.find(id => !equippedItems[id]);
 
     const itemToEquip = {
         item: item,
-        enchantLevel: instance.Lv,
+        enchantLevel: sourceInstance.Lv,
         instanceId: Date.now() + Math.random()
     };
 
@@ -595,7 +594,6 @@ function equipToSlot(item, instance) {
     saveAllEquipmentSets();
     calculateAndRenderStats();
 }
-
 
 function unequipItem(slotId, doSaveAndRecalculate = true) {
     if (equippedItems[slotId]) {
@@ -684,8 +682,33 @@ function saveAllEquipmentSets() {
 function saveInventoryEnhancements() {
     localStorage.setItem(INVENTORY_ENHANCEMENTS_KEY, JSON.stringify(inventoryEnhancements));
 }
+
+// ★変更: データ修復ロジックを追加
 function loadInventoryEnhancements() {
-    inventoryEnhancements = JSON.parse(localStorage.getItem(INVENTORY_ENHANCEMENTS_KEY)) || {};
+    let enhancements = JSON.parse(localStorage.getItem(INVENTORY_ENHANCEMENTS_KEY)) || {};
+    let needsSave = false;
+
+    for (const itemName in enhancements) {
+        if (Object.prototype.hasOwnProperty.call(enhancements, itemName)) {
+            const instances = enhancements[itemName];
+            if (Array.isArray(instances)) {
+                instances.forEach(instance => {
+                    if (typeof instance === 'object' && instance !== null && !Object.prototype.hasOwnProperty.call(instance, 'instanceId')) {
+                        console.warn(`「${itemName}」のインスタンスにIDがありません。新しいIDを付与します。`, instance);
+                        instance.instanceId = Date.now() + Math.random();
+                        needsSave = true;
+                    }
+                });
+            }
+        }
+    }
+
+    if (needsSave) {
+        console.log('破損したインスタンスデータを修正し、保存しました。');
+        localStorage.setItem(INVENTORY_ENHANCEMENTS_KEY, JSON.stringify(enhancements));
+    }
+
+    inventoryEnhancements = enhancements;
 }
 
 
@@ -959,14 +982,309 @@ function getCategoryFromType(typeString) {
 }
 
 function setupInventoryTabs() {
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.addEventListener('click', (e) => {
-            document.querySelector('#inventory-tabs .active').classList.remove('active');
-            e.currentTarget.classList.add('active');
-            currentInventoryCategory = e.currentTarget.dataset.category;
-            renderInventory(allInventoryItems);
-        });
+    document.querySelectorAll('#inventory-tabs .tab-button[data-category]').forEach(button => {
+        button.addEventListener('click', handleTabClick);
     });
+    document.getElementById('add-custom-tab-button').addEventListener('click', handleAddCustomTab);
+    renderCustomTabs();
+}
+
+
+// ★変更: handleTabClick のロジックを refreshInventoryView に移動
+function handleTabClick(event) {
+    document.querySelectorAll('#inventory-tabs .active').forEach(b => b.classList.remove('active'));
+
+    const clickedElement = event.currentTarget.closest('.tab-button, .custom-tab-container');
+    clickedElement.classList.add('active');
+
+    const category = clickedElement.dataset.category;
+    const tabId = clickedElement.dataset.tabId;
+
+    if (category) {
+        activeTabInfo = { type: 'category', value: category };
+    } else if (tabId) {
+        activeTabInfo = { type: 'custom', value: tabId };
+    }
+
+    refreshInventoryView();
+}
+
+// ★追加: インベントリ表示を更新する中央集権的な関数
+function refreshInventoryView() {
+    let itemsToRender = [...allInventoryItems];
+
+    if (activeTabInfo.type === 'category') {
+        const category = activeTabInfo.value;
+        if (category !== 'all') {
+            itemsToRender = itemsToRender.filter(item => getCategoryFromType(item['タイプ']) === category);
+        }
+    } else if (activeTabInfo.type === 'custom') {
+        const tab = customTabs.find(t => t.id === activeTabInfo.value);
+        if (tab) {
+            // 1. フィルター
+            if (tab.filters.length > 0) {
+                itemsToRender = itemsToRender.filter(item =>
+                    tab.filters.includes(getCategoryFromType(item['タイプ']))
+                );
+            } else {
+                itemsToRender = []; // フィルターが空なら何も表示しない
+            }
+
+            // 2. 「基準0は非表示」フィルター
+            if (tab.hideZeroStat) {
+                itemsToRender = itemsToRender.filter(item => (parseFloat(item[tab.sortStat]) || 0) > 0);
+            }
+
+            // 3. ソート (降順)
+            itemsToRender.sort((a, b) => {
+                const valA = parseFloat(a[tab.sortStat]) || 0;
+                const valB = parseFloat(b[tab.sortStat]) || 0;
+                return valB - valA;
+            });
+        }
+    }
+
+    renderInventory(itemsToRender);
+}
+
+function handleAddCustomTab() {
+    const name = prompt('新しいタブの名前を入力してください:', '');
+    if (name && name.trim()) {
+        const newTab = {
+            id: `custom_${Date.now()}`,
+            name: name.trim(),
+            sortStat: '評価数値',
+            filters: ['weapon', 'armor', 'accessory'],
+            hideZeroStat: false
+        };
+        customTabs.push(newTab);
+        saveCustomTabs();
+        renderCustomTabs();
+    }
+}
+
+function handleDeleteCustomTab(tabId) {
+    const tabToDelete = customTabs.find(t => t.id === tabId);
+    if (!tabToDelete) return;
+
+    if (confirm(`タブ「${tabToDelete.name}」を削除しますか？`)) {
+        customTabs = customTabs.filter(t => t.id !== tabId);
+        saveCustomTabs();
+        renderCustomTabs();
+
+        const activeTab = document.querySelector('#inventory-tabs .active');
+        if (!activeTab) { // アクティブなタブが削除されたタブだった場合
+            document.querySelector('button[data-category="all"]').click();
+        }
+    }
+}
+
+function loadCustomTabs() {
+    customTabs = JSON.parse(localStorage.getItem(CUSTOM_TABS_KEY)) || [];
+}
+
+function saveCustomTabs() {
+    localStorage.setItem(CUSTOM_TABS_KEY, JSON.stringify(customTabs));
+}
+
+// ★変更: カスタムタブのHTML構造を修正
+function renderCustomTabs() {
+    document.querySelectorAll('.custom-tab-container').forEach(el => el.remove());
+
+    const addButton = document.getElementById('add-custom-tab-button');
+
+    customTabs.forEach(tab => {
+        const container = document.createElement('button');
+        container.className = 'custom-tab-container tab-button';
+        container.dataset.tabId = tab.id;
+        container.addEventListener('click', handleTabClick);
+
+        const label = document.createElement('span');
+        label.className = 'tab-label';
+        label.textContent = tab.name;
+
+        const actions = document.createElement('span');
+        actions.className = 'tab-actions';
+
+        const settingsIcon = document.createElement('span');
+        settingsIcon.className = 'tab-action-icon';
+        settingsIcon.textContent = '⚙️';
+        settingsIcon.title = '設定';
+        settingsIcon.onclick = (e) => {
+            e.stopPropagation();
+            openTabSettingsModal(tab.id);
+        };
+
+        const deleteIcon = document.createElement('span');
+        deleteIcon.className = 'tab-action-icon';
+        deleteIcon.textContent = '❌';
+        deleteIcon.title = '削除';
+        deleteIcon.onclick = (e) => {
+            e.stopPropagation();
+            handleDeleteCustomTab(tab.id);
+        };
+
+        actions.appendChild(settingsIcon);
+        actions.appendChild(deleteIcon);
+
+        container.appendChild(label);
+        container.appendChild(actions);
+
+        addButton.parentNode.insertBefore(container, addButton);
+    });
+}
+
+
+// simulator.js の openTabSettingsModal 関数をこれで置き換えてください
+
+function openTabSettingsModal(tabId) {
+    const tab = customTabs.find(t => t.id === tabId);
+    if (!tab) return;
+
+    const content = document.createElement('div');
+    content.className = 'tab-settings-modal';
+
+    // --- ヘルパー: 設定グループを作成 ---
+    const createSettingGroup = (labelText, childElement) => {
+        const group = document.createElement('div');
+        group.className = 'setting-group';
+        const label = document.createElement('label');
+        label.textContent = labelText;
+        group.appendChild(label);
+        group.appendChild(childElement);
+        return group;
+    };
+
+    // --- 0. 名称変更 ---
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.id = 'tab-name-input';
+    nameInput.value = tab.name;
+    content.appendChild(createSettingGroup('タブ名:', nameInput));
+
+    // --- 1. ソート設定 ---
+    const sortSelect = document.createElement('select');
+    sortSelect.id = 'sort-stat-select';
+    STAT_HEADERS.forEach(stat => {
+        const option = new Option(stat, stat);
+        if (stat === tab.sortStat) {
+            option.selected = true;
+        }
+        sortSelect.appendChild(option);
+    });
+    content.appendChild(createSettingGroup('ソート基準 (降順):', sortSelect));
+
+    // --- 2. フィルター設定 ---
+    const filterContainer = document.createElement('div');
+    const filterOptionsWrapper = document.createElement('div');
+    filterOptionsWrapper.className = 'filter-options';
+    const filterOptions = { 'weapon': '武器', 'armor': '防具', 'accessory': 'アクセサリー' };
+
+    for (const key in filterOptions) {
+        const checkboxId = `filter-checkbox-${key}`;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'toggle-switch-wrapper';
+        const labelText = document.createElement('span');
+        labelText.className = 'label-text';
+        labelText.textContent = filterOptions[key];
+        const toggleSwitch = document.createElement('label');
+        toggleSwitch.className = 'toggle-switch';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = checkboxId;
+        checkbox.value = key;
+        if (tab.filters.includes(key)) {
+            checkbox.checked = true;
+        }
+        const slider = document.createElement('span');
+        slider.className = 'slider';
+        toggleSwitch.appendChild(checkbox);
+        toggleSwitch.appendChild(slider);
+        wrapper.appendChild(labelText);
+        wrapper.appendChild(toggleSwitch);
+        filterOptionsWrapper.appendChild(wrapper);
+    }
+    filterContainer.appendChild(filterOptionsWrapper);
+    content.appendChild(createSettingGroup('カテゴリーフィルター:', filterContainer));
+
+    // --- 3. 「基準0は非表示」フィルター ---
+    const hideZeroWrapper = document.createElement('div');
+    hideZeroWrapper.className = 'other-options';
+    const hideZeroToggleWrapper = document.createElement('div');
+    hideZeroToggleWrapper.className = 'toggle-switch-wrapper';
+    const hideZeroLabelText = document.createElement('span');
+    hideZeroLabelText.className = 'label-text';
+    hideZeroLabelText.textContent = '基準０のアイテムは表示しない';
+    const hideZeroToggleSwitch = document.createElement('label');
+    hideZeroToggleSwitch.className = 'toggle-switch';
+    const hideZeroCheckbox = document.createElement('input');
+    hideZeroCheckbox.type = 'checkbox';
+    hideZeroCheckbox.id = 'hide-zero-stat-toggle';
+    hideZeroCheckbox.checked = tab.hideZeroStat;
+    const hideZeroSlider = document.createElement('span');
+    hideZeroSlider.className = 'slider';
+    hideZeroToggleSwitch.appendChild(hideZeroCheckbox);
+    hideZeroToggleSwitch.appendChild(hideZeroSlider);
+    hideZeroToggleWrapper.appendChild(hideZeroLabelText);
+    hideZeroToggleWrapper.appendChild(hideZeroToggleSwitch);
+    hideZeroWrapper.appendChild(hideZeroToggleWrapper)
+    content.appendChild(createSettingGroup('追加フィルター:', hideZeroWrapper));
+
+    // --- モーダルのボタン ---
+    const buttons = [
+        { text: 'キャンセル', class: 'secondary', onClick: () => closeModal() },
+        {
+            text: '保存',
+            class: 'primary',
+            onClick: () => {
+                const newName = nameInput.value.trim();
+                if (!newName) {
+                    alert('タブ名は空にできません。');
+                    return;
+                }
+
+                // タブオブジェクトの情報を更新
+                tab.name = newName;
+                tab.sortStat = sortSelect.value;
+                tab.hideZeroStat = hideZeroCheckbox.checked;
+
+                const newFilters = [];
+                content.querySelectorAll('.filter-options input[type="checkbox"]:checked').forEach(cb => {
+                    newFilters.push(cb.value);
+                });
+                tab.filters = newFilters;
+
+                saveCustomTabs();   // 変更をlocalStorageに保存
+                renderCustomTabs(); // タブボタンのUIを再描画
+                closeModal();       // モーダルを閉じる
+
+                // ▼▼▼【ここからが新しい修正コードです】▼▼▼
+
+                // 1. 念のため全てのタブのアクティブ状態を解除
+                document.querySelectorAll('#inventory-tabs .active').forEach(b => b.classList.remove('active'));
+
+                // 2. 保存したタブに対応する、"新しく作られた"ボタン要素を探す
+                const savedTabElement = document.querySelector(`.custom-tab-container[data-tab-id="${tab.id}"]`);
+
+                if (savedTabElement) {
+                    // 3. 見つけたボタンをアクティブにする
+                    savedTabElement.classList.add('active');
+
+                    // 4. アプリケーションの状態変数を正しく設定
+                    activeTabInfo = { type: 'custom', value: tab.id };
+
+                    // 5. 新しいフィルタ設定でインベントリ表示を更新
+                    refreshInventoryView();
+                } else {
+                    // 万が一要素が見つからなかった場合の安全策
+                    document.querySelector('button[data-category="all"]').click();
+                }
+                // ▲▲▲【ここまでが新しい修正コードです】▲▲▲
+            }
+        }
+    ];
+
+    showModal(`タブ「${tab.name}」の設定`, content, buttons);
 }
 
 
