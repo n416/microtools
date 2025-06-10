@@ -684,8 +684,34 @@ function saveAllEquipmentSets() {
 function saveInventoryEnhancements() {
     localStorage.setItem(INVENTORY_ENHANCEMENTS_KEY, JSON.stringify(inventoryEnhancements));
 }
+// 変更後
 function loadInventoryEnhancements() {
-    inventoryEnhancements = JSON.parse(localStorage.getItem(INVENTORY_ENHANCEMENTS_KEY)) || {};
+    let enhancements = JSON.parse(localStorage.getItem(INVENTORY_ENHANCEMENTS_KEY)) || {};
+    let needsSave = false;
+
+    // データ修復ロジック: 全てのインスタンスをチェックし、IDがなければ付与する
+    for (const itemName in enhancements) {
+        if (Object.prototype.hasOwnProperty.call(enhancements, itemName)) {
+            const instances = enhancements[itemName];
+            if (Array.isArray(instances)) {
+                instances.forEach(instance => {
+                    if (typeof instance === 'object' && instance !== null && !Object.prototype.hasOwnProperty.call(instance, 'instanceId')) {
+                        console.warn(`「${itemName}」のインスタンスにIDがありません。新しいIDを付与します。`, instance);
+                        instance.instanceId = Date.now() + Math.random();
+                        needsSave = true;
+                    }
+                });
+            }
+        }
+    }
+
+    // 修復が行われた場合は、修正後のデータをlocalStorageに保存し直す
+    if (needsSave) {
+        console.log('破損したインスタンスデータを修正し、保存しました。');
+        localStorage.setItem(INVENTORY_ENHANCEMENTS_KEY, JSON.stringify(enhancements));
+    }
+
+    inventoryEnhancements = enhancements;
 }
 
 
