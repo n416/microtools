@@ -4,9 +4,9 @@ body {
     color: #fff;
 }
 
-h1,
-h2 {
+h1, h2 {
     font-weight: normal;
+    font-size: 1.2rem;
 }
 
 .simulator-container {
