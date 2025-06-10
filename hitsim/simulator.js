@@ -4,7 +4,7 @@
 
 // --- グローバル定数・変数 ---
 const DB_NAME = 'GameEquipmentDB';
-const DB_VERSION = 10;
+const DB_VERSION = 11;
 const STORE_NAME = 'equipment';
 const INVENTORY_KEY = 'equipmentInventory_v2';
 const INVENTORY_ENHANCEMENTS_KEY = 'inventoryEnhancements_v1';
