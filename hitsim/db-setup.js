@@ -49,7 +49,7 @@ function parseEnhancementTsv(tsvText) {
 async function setupDatabase() {
   console.log('[setupDatabase] 関数を開始します。');
   const DB_NAME = 'GameEquipmentDB';
-  const DB_VERSION = 10; // ★バージョンを9から10に変更
+  const DB_VERSION = 11;
   const STORE_NAME = 'equipment';
   const TSV_FILE_PATH = './itemdata.tsv';
   const ENHANCEMENT_STORE_NAME = 'enhancementData';
