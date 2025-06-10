@@ -7,9 +7,7 @@ const DB_NAME = 'GameEquipmentDB';
 const DB_VERSION = 10;
 const STORE_NAME = 'equipment';
 const INVENTORY_KEY = 'equipmentInventory_v2';
-// ★ここから追加 =============================================
 const INVENTORY_ENHANCEMENTS_KEY = 'inventoryEnhancements_v1';
-// ★ここまで追加 =============================================
 const EQUIPMENT_SETS_KEY = 'equipmentSets_v2';
 const ACTIVE_SET_ID_KEY = 'activeEquipmentSet_v1';
 const SORT_ORDERS_KEY = 'equipmentSortOrders_v1';
@@ -17,9 +15,7 @@ const ACTIVE_SORT_KEY = 'activeSortOrderKey_v1';
 
 let db;
 let allEnhancementData = {};
-// ★ここから追加 =============================================
-let inventoryEnhancements = {}; // インベントリ内アイテムの強化状態を保持
-// ★ここまで追加 =============================================
+let inventoryEnhancements = {};
 let equippedItems = {};
 let allEquipmentSets = {};
 let activeSetId = '1';
@@ -32,9 +28,10 @@ let isSortMode = false;
 let sortableInstance = null;
 
 let selectedInventoryItem = null;
+let selectedInstanceId = null;
 let selectedSlotId = null;
-let detailsPanel, detailsItemName, detailsItemImage, detailsStatsList;
 
+let detailsPanel, detailsItemName, detailsItemImage, detailsStatsList;
 let enchantControls, enchantDownButton, enchantUpButton, detailsItemEnchant;
 
 let allInventoryItems = [];
@@ -200,9 +197,7 @@ async function initializeApp() {
         }
 
         loadSortOrders();
-        // ★ここから追加 =============================================
         loadInventoryEnhancements();
-        // ★ここまで追加 =============================================
         loadAllEquipmentSets();
         await loadAndRenderInventory();
         setupGlobalClickListener();
@@ -210,9 +205,78 @@ async function initializeApp() {
         setupShareButton();
         setupSetControls();
         setupEnchantControls();
+        setupDetailsActionButtons();
         calculateAndRenderStats();
     } catch (error) { console.error('初期化中にエラーが発生しました:', error); }
 }
+
+function setupDetailsActionButtons() {
+    document.getElementById('details-action-set').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (selectedInventoryItem && selectedInstanceId) {
+            equipInstance(selectedInventoryItem, selectedInstanceId);
+            clearAllSelections();
+        }
+    });
+
+    document.getElementById('details-action-duplicate').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (selectedInventoryItem && selectedInstanceId) {
+            const itemName = selectedInventoryItem['名称'];
+            const instances = inventoryEnhancements[itemName];
+            const sourceInstance = instances?.find(inst => inst.instanceId === selectedInstanceId);
+
+            if (sourceInstance) {
+                const newInstance = {
+                    instanceId: Date.now() + Math.random(),
+                    Lv: sourceInstance.Lv
+                };
+                instances.push(newInstance);
+                saveInventoryEnhancements();
+                renderInventory(allInventoryItems);
+            }
+            clearAllSelections();
+        }
+    });
+
+    document.getElementById('details-action-delete').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (selectedInventoryItem && selectedInstanceId) {
+            deleteInstance(selectedInventoryItem, selectedInstanceId);
+        }
+    });
+}
+
+function deleteInstance(item, instanceId) {
+    const itemName = item['名称'];
+    const instances = inventoryEnhancements[itemName];
+    if (!instances) return;
+
+    const instanceIndex = instances.findIndex(inst => inst.instanceId === instanceId);
+    if (instanceIndex === -1) return;
+
+    const instanceLv = instances[instanceIndex].Lv;
+    if (!confirm(`${itemName} (+${instanceLv}) を削除します。よろしいですか？`)) {
+        return;
+    }
+
+    instances.splice(instanceIndex, 1);
+
+    if (instances.length === 0) {
+        delete inventoryEnhancements[itemName];
+
+        let masterInventory = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
+        masterInventory = masterInventory.filter(name => name !== itemName);
+        localStorage.setItem(INVENTORY_KEY, JSON.stringify(masterInventory));
+
+        allInventoryItems = allInventoryItems.filter(i => i['名称'] !== itemName);
+    }
+
+    saveInventoryEnhancements();
+    renderInventory(allInventoryItems);
+    clearAllSelections();
+}
+
 
 function setupEnchantControls() {
     enchantDownButton.addEventListener('click', (e) => {
@@ -228,8 +292,8 @@ function setupEnchantControls() {
 function updateEnchantLevel(change) {
     let newLevel;
     let currentLevel;
+    let targetElement;
 
-    // ★ここから変更 =============================================
     if (selectedSlotId && equippedItems[selectedSlotId]) {
         const equipped = equippedItems[selectedSlotId];
         currentLevel = equipped.enchantLevel;
@@ -241,16 +305,19 @@ function updateEnchantLevel(change) {
         if (newLevel !== currentLevel) {
             equipped.enchantLevel = newLevel;
             renderSlot(selectedSlotId);
-            saveAllEquipmentSets(); // 装備セットの状態を保存
-            displayItemDetails(equipped.item, document.getElementById(selectedSlotId));
+            saveAllEquipmentSets();
+            targetElement = document.getElementById(selectedSlotId);
+            displayItemDetails(equipped.item, targetElement);
         }
-    } else if (selectedInventoryItem) {
+    } else if (selectedInventoryItem && selectedInstanceId) {
         const itemName = selectedInventoryItem['名称'];
-        // インベントリ強化オブジェクトにアイテムが存在しない場合は初期化
         if (!inventoryEnhancements[itemName]) {
-            inventoryEnhancements[itemName] = [{ instanceId: Date.now(), Lv: 0 }];
+            inventoryEnhancements[itemName] = [{ instanceId: selectedInstanceId, Lv: 0 }];
         }
-        const instance = inventoryEnhancements[itemName][0]; // 今回は最初のインスタンスを対象
+
+        const instance = inventoryEnhancements[itemName].find(inst => inst.instanceId === selectedInstanceId);
+        if (!instance) return;
+
         currentLevel = instance.Lv;
         newLevel = currentLevel + change;
 
@@ -259,37 +326,81 @@ function updateEnchantLevel(change) {
 
         if (newLevel !== currentLevel) {
             instance.Lv = newLevel;
-            saveInventoryEnhancements(); // インベントリ強化状態を保存
-            renderInventory(allInventoryItems); // インベントリ表示を更新
-            displayItemDetails(selectedInventoryItem, document.getElementById(`inv-${itemName}`));
+            saveInventoryEnhancements();
+            renderInventory(allInventoryItems);
+            targetElement = document.getElementById(`inv-instance-${selectedInstanceId}`);
+            if (targetElement) {
+                targetElement.classList.add('selected');
+                displayItemDetails(selectedInventoryItem, targetElement);
+            } else {
+                hideItemDetails();
+            }
         }
     } else {
-        return; // 対象がなければ何もしない
+        return;
     }
 
-    // 共通の再計算処理
     if (newLevel !== currentLevel) {
         calculateAndRenderStats();
     }
-    // ★ここまで変更 =============================================
 }
 
+// 変更後
 function openDatabase() {
     return new Promise((resolve, reject) => {
         if (db) return resolve(db);
         const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onupgradeneeded = (e) => { const db = e.target.result; if (!db.objectStoreNames.contains(STORE_NAME)) { db.createObjectStore(STORE_NAME, { keyPath: '名称' }); } };
+
+        // ★ onupgradeneeded の内容を db-setup.js と同じ完全なものに更新
+        request.onupgradeneeded = (event) => {
+            console.log('[simulator.js] onupgradeneededイベントが発生しました。');
+            const db = event.target.result;
+            // equipment ストア
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                const objectStore = db.createObjectStore(STORE_NAME, { keyPath: '名称' });
+                objectStore.createIndex('ランク', 'ランク', { unique: false });
+                objectStore.createIndex('タイプ', 'タイプ', { unique: false });
+            }
+            // enhancementData ストア
+            if (!db.objectStoreNames.contains('enhancementData')) {
+                db.createObjectStore('enhancementData', { keyPath: 'rank' });
+            }
+        };
+
         request.onerror = (e) => reject('DBオープン失敗:', e.target.error);
         request.onsuccess = (e) => { db = e.target.result; resolve(db); };
     });
 }
+
+// ★ここまで変更 =============================================
+
 async function loadAndRenderInventory() {
     const inventoryItemNames = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
-    if (inventoryItemNames.length === 0) { document.getElementById('inventory-list').innerHTML = '<p style="padding: 10px;">インベントリにアイテムがありません。<br><a href="data.html">インベントリ編集ページ</a>でアイテムを追加してください。</p>'; return; }
+    if (inventoryItemNames.length === 0) {
+        document.getElementById('inventory-list').innerHTML = '<p style="padding: 10px;">インベントリにアイテムがありません。<br><a href="data.html">インベントリ編集ページ</a>でアイテムを追加してください。</p>';
+        allInventoryItems = [];
+        return;
+    }
+
     const inventoryItems = await getItemsFromDBByNames(inventoryItemNames);
     allInventoryItems = inventoryItems.filter(item => item);
+
+    let enhancementsModified = false;
+    allInventoryItems.forEach(item => {
+        const itemName = item['名称'];
+        if (!inventoryEnhancements[itemName] || inventoryEnhancements[itemName].length === 0) {
+            inventoryEnhancements[itemName] = [{ instanceId: Date.now() + Math.random(), Lv: 0 }];
+            enhancementsModified = true;
+        }
+    });
+
+    if (enhancementsModified) {
+        saveInventoryEnhancements();
+    }
+
     renderInventory(allInventoryItems);
 }
+
 
 function getItemFromDB(itemName) {
     return new Promise((resolve) => {
@@ -348,63 +459,75 @@ function getItemsFromDBByNames(itemNames) {
 function renderInventory(items) {
     const inventoryListDiv = document.getElementById('inventory-list');
     inventoryListDiv.innerHTML = '';
+
     const filteredItems = items.filter(item => {
-        if (currentInventoryCategory === 'all') {
-            return true;
-        }
+        if (currentInventoryCategory === 'all') return true;
         return getCategoryFromType(item['タイプ']) === currentInventoryCategory;
     });
+
     filteredItems.forEach(item => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'inventory-item';
-        itemDiv.id = `inv-${item['名称']}`;
+        const itemName = item['名称'];
+        const instances = inventoryEnhancements[itemName];
 
-        // ★ここから変更 =============================================
-        const instances = inventoryEnhancements[item['名称']];
-        const instance = instances ? instances[0] : null; // 今回は最初のインスタンスのみ考慮
-        const enchantLevel = instance ? instance.Lv : 0;
-        const enchantText = enchantLevel > 0 ? `+${enchantLevel}` : '';
-
-        itemDiv.title = `${item['名称']} ${enchantText}\nタイプ: ${item['タイプ']}`;
-        // ★ここまで変更 =============================================
-
-        const img = document.createElement('img');
-        img.src = item['画像URL'] || '';
-        img.alt = item['名称'];
-        img.className = 'item-icon';
-        itemDiv.appendChild(img);
-
-        // ★ここから追加 =============================================
-        if (enchantText) {
-            const enchantDiv = document.createElement('div');
-            enchantDiv.textContent = enchantText;
-            // styleはrenderSlotからコピー
-            enchantDiv.style.position = 'absolute';
-            enchantDiv.style.right = '2px';
-            enchantDiv.style.bottom = '2px';
-            enchantDiv.style.color = 'yellow';
-            enchantDiv.style.fontWeight = 'bold';
-            enchantDiv.style.fontSize = '12px';
-            enchantDiv.style.textShadow = '1px 1px 2px black';
-            itemDiv.appendChild(enchantDiv);
+        if (instances && instances.length > 0) {
+            instances.forEach(instance => {
+                const itemDiv = createInventoryItemElement(item, instance);
+                inventoryListDiv.appendChild(itemDiv);
+            });
         }
-        // ★ここまで追加 =============================================
-
-        itemDiv.addEventListener('click', (e) => { e.stopPropagation(); handleInventoryClick(item, e.currentTarget); });
-        inventoryListDiv.appendChild(itemDiv);
     });
 }
-function handleInventoryClick(item, element) {
-    if (selectedInventoryItem && selectedInventoryItem['名称'] === item['名称']) {
-        equipItem(item);
+
+function createInventoryItemElement(item, instance) {
+    const enchantLevel = instance.Lv;
+    const enchantText = enchantLevel > 0 ? `+${enchantLevel}` : '';
+
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'inventory-item';
+    itemDiv.id = `inv-instance-${instance.instanceId}`;
+    itemDiv.title = `${item['名称']} ${enchantText}\nタイプ: ${item['タイプ']}`;
+
+    const img = document.createElement('img');
+    img.src = item['画像URL'] || '';
+    img.alt = item['名称'];
+    img.className = 'item-icon';
+    itemDiv.appendChild(img);
+
+    if (enchantText) {
+        const enchantDiv = document.createElement('div');
+        enchantDiv.textContent = enchantText;
+        enchantDiv.style.position = 'absolute';
+        enchantDiv.style.right = '2px';
+        enchantDiv.style.bottom = '2px';
+        enchantDiv.style.color = 'yellow';
+        enchantDiv.style.fontWeight = 'bold';
+        enchantDiv.style.fontSize = '12px';
+        enchantDiv.style.textShadow = '1px 1px 2px black';
+        itemDiv.appendChild(enchantDiv);
+    }
+
+    itemDiv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleInventoryClick(item, instance, e.currentTarget);
+    });
+
+    return itemDiv;
+}
+
+
+function handleInventoryClick(item, instance, element) {
+    if (selectedInstanceId === instance.instanceId) {
+        equipInstance(item, instance.instanceId);
         clearAllSelections();
     } else {
         clearAllSelections();
         selectedInventoryItem = item;
+        selectedInstanceId = instance.instanceId;
         element.classList.add('selected');
         displayItemDetails(item, element);
     }
 }
+
 function handleSlotClick(slotId, element) {
     const equipped = equippedItems[slotId];
     if (equipped) {
@@ -420,60 +543,51 @@ function handleSlotClick(slotId, element) {
     }
 }
 
-
-function equipItem(item) {
+function equipInstance(item, instanceId) {
     const itemType = item['タイプ'];
     const slotCategory = TYPE_TO_SLOT_CATEGORY[itemType];
     if (!slotCategory) return;
 
+    const instances = inventoryEnhancements[item['名称']];
+    const sourceInstance = instances?.find(inst => inst.instanceId === instanceId) || { Lv: 0 };
+
+    equipToSlot(item, sourceInstance);
+}
+
+function equipToSlot(item, instance) {
+    const slotCategory = TYPE_TO_SLOT_CATEGORY[item['タイプ']];
     const possibleSlotIds = SLOT_CATEGORY_TO_IDS[slotCategory];
-    const isRing = (slotCategory === 'ring');
-
-    if (!isRing) {
-        if (Object.values(equippedItems).some(equipped => equipped && equipped.item['名称'] === item['名称'])) {
-            console.log(`ユニークアイテム「${item['名称']}」はすでに装備されています。`);
-            return;
-        }
-    }
-
     const emptySlotId = possibleSlotIds.find(id => !equippedItems[id]);
 
-    // ★ここから変更 =============================================
-    // インベントリから強化レベルとインスタンスIDを取得
-    const instances = inventoryEnhancements[item['名称']];
-    const instanceToEquip = instances ? instances[0] : null; // 今回は最初のインスタンスを装備
-    const enchantLevel = instanceToEquip ? instanceToEquip.Lv : 0;
-    const instanceId = instanceToEquip ? instanceToEquip.instanceId : Date.now(); // なければ新規作成
-    // ★ここまで変更 =============================================
+    const itemToEquip = {
+        item: item,
+        enchantLevel: instance.Lv,
+        instanceId: Date.now() + Math.random()
+    };
 
     if (emptySlotId) {
-        // ★変更: 強化情報も一緒に保存
-        equippedItems[emptySlotId] = { item: item, enchantLevel: enchantLevel, instanceId: instanceId };
+        equippedItems[emptySlotId] = itemToEquip;
         renderSlot(emptySlotId);
-
     } else {
-        if (isRing) {
-            const pushedOutItemName = equippedItems[possibleSlotIds[4]].item['名称'];
-            console.log(`リング枠が満杯のため、「${pushedOutItemName}」が押し出されます。`);
-
-            // ★変更: リング押し出し時にinstanceIdも引き継ぐ
+        if (slotCategory === 'ring') {
+            const lastRingSlotId = possibleSlotIds[possibleSlotIds.length - 1];
+            if (equippedItems[lastRingSlotId]) {
+                unequipItem(lastRingSlotId, false);
+            }
             for (let i = possibleSlotIds.length - 2; i >= 0; i--) {
                 const currentSlotId = possibleSlotIds[i];
                 const nextSlotId = possibleSlotIds[i + 1];
-                equippedItems[nextSlotId] = equippedItems[currentSlotId];
+                if (equippedItems[currentSlotId]) {
+                    equippedItems[nextSlotId] = equippedItems[currentSlotId];
+                    delete equippedItems[currentSlotId];
+                }
             }
-            equippedItems[possibleSlotIds[0]] = { item: item, enchantLevel: enchantLevel, instanceId: instanceId };
+            equippedItems[possibleSlotIds[0]] = itemToEquip;
             possibleSlotIds.forEach(id => renderSlot(id));
-
         } else {
             const targetSlotId = possibleSlotIds[0];
-
-            if (equippedItems[targetSlotId] && equippedItems[targetSlotId].item['名称'] === item['名称']) {
-                return;
-            }
-
             unequipItem(targetSlotId, false);
-            equippedItems[targetSlotId] = { item: item, enchantLevel: enchantLevel, instanceId: instanceId };
+            equippedItems[targetSlotId] = itemToEquip;
             renderSlot(targetSlotId);
         }
     }
@@ -482,30 +596,37 @@ function equipItem(item) {
     calculateAndRenderStats();
 }
 
+
 function unequipItem(slotId, doSaveAndRecalculate = true) {
     if (equippedItems[slotId]) {
-        // ★ここから追加 =============================================
-        // 装備解除時に、強化レベルをインベントリデータに戻す
         const unequipped = equippedItems[slotId];
         const itemName = unequipped.item['名称'];
+        const enchantLevel = unequipped.enchantLevel;
+
         if (!inventoryEnhancements[itemName]) {
             inventoryEnhancements[itemName] = [];
         }
+        const instances = inventoryEnhancements[itemName];
 
-        // 今回はインスタンスが1つしかないので、単純に上書きする
-        inventoryEnhancements[itemName][0] = {
-            instanceId: unequipped.instanceId,
-            Lv: unequipped.enchantLevel
-        };
-        saveInventoryEnhancements();
-        renderInventory(allInventoryItems); // インベントリの表示更新
-        // ★ここまで追加 =============================================
+        const alreadyExists = instances.some(inst => inst.Lv === enchantLevel);
+
+        if (!alreadyExists) {
+            instances.push({
+                instanceId: unequipped.instanceId,
+                Lv: enchantLevel
+            });
+        }
 
         delete equippedItems[slotId];
-        renderSlot(slotId);
+
         if (doSaveAndRecalculate) {
+            saveInventoryEnhancements();
             saveAllEquipmentSets();
+            renderInventory(allInventoryItems);
+            renderSlot(slotId);
             calculateAndRenderStats();
+        } else {
+            renderSlot(slotId);
         }
     }
 }
@@ -522,7 +643,7 @@ function renderSlot(slotId) {
     const equipped = equippedItems[slotId];
     if (equipped) {
         const item = equipped.item;
-        const enchantLevel = equipped.enchantLevel; // ★ データ構造の変更に伴い修正
+        const enchantLevel = equipped.enchantLevel;
         const enchantText = enchantLevel > 0 ? `+${enchantLevel}` : '';
 
         newSlotElement.title = `${item['名称']} ${enchantText}\nタイプ: ${item['タイプ']}`;
@@ -560,14 +681,12 @@ function saveAllEquipmentSets() {
     localStorage.setItem(ACTIVE_SET_ID_KEY, activeSetId);
 }
 
-// ★ここから追加 =============================================
 function saveInventoryEnhancements() {
     localStorage.setItem(INVENTORY_ENHANCEMENTS_KEY, JSON.stringify(inventoryEnhancements));
 }
 function loadInventoryEnhancements() {
     inventoryEnhancements = JSON.parse(localStorage.getItem(INVENTORY_ENHANCEMENTS_KEY)) || {};
 }
-// ★ここまで追加 =============================================
 
 
 function loadAllEquipmentSets() {
@@ -578,12 +697,11 @@ function loadAllEquipmentSets() {
         for (const setId in allEquipmentSets) {
             for (const slotId in allEquipmentSets[setId]) {
                 const equipped = allEquipmentSets[setId][slotId];
-                // ★データ構造の互換性維持を修正
                 if (equipped && !equipped.item && equipped['名称']) {
                     allEquipmentSets[setId][slotId] = {
                         item: equipped,
                         enchantLevel: 0,
-                        instanceId: Date.now() + Math.random() // 古いデータにはIDがないので新規作成
+                        instanceId: Date.now() + Math.random()
                     };
                 }
             }
@@ -603,9 +721,10 @@ function renderAllSlots() {
 
 function clearAllSelections() {
     if (selectedInventoryItem) {
-        const selectedElem = document.getElementById(`inv-${selectedInventoryItem['名称']}`);
+        const selectedElem = document.getElementById(`inv-instance-${selectedInstanceId}`);
         if (selectedElem) selectedElem.classList.remove('selected');
         selectedInventoryItem = null;
+        selectedInstanceId = null;
     }
     if (selectedSlotId) {
         const selectedElem = document.getElementById(selectedSlotId);
@@ -725,14 +844,15 @@ function calculateAndRenderStats() {
 function displayItemDetails(item, clickedElement) {
     if (!item || !detailsPanel || !clickedElement) return;
 
-    // ★ここから変更 =============================================
     let enchantLevel = 0;
+
     if (selectedSlotId && equippedItems[selectedSlotId]) {
         enchantLevel = equippedItems[selectedSlotId].enchantLevel;
-    } else if (selectedInventoryItem) {
+    } else if (selectedInventoryItem && selectedInstanceId) {
         const instances = inventoryEnhancements[selectedInventoryItem['名称']];
-        if (instances && instances[0]) {
-            enchantLevel = instances[0].Lv;
+        const instance = instances?.find(inst => inst.instanceId === selectedInstanceId);
+        if (instance) {
+            enchantLevel = instance.Lv;
         }
     }
 
@@ -741,8 +861,14 @@ function displayItemDetails(item, clickedElement) {
     detailsItemImage.alt = item['名称'];
     detailsStatsList.innerHTML = '';
 
-    // ★変更: インベントリ品選択時も強化UIを表示
-    if (selectedSlotId || selectedInventoryItem) {
+    const detailsActions = document.getElementById('details-actions');
+    if (selectedInstanceId) {
+        detailsActions.classList.remove('hidden');
+    } else {
+        detailsActions.classList.add('hidden');
+    }
+
+    if (selectedSlotId || selectedInstanceId) {
         enchantControls.classList.remove('hidden');
         detailsItemEnchant.textContent = enchantLevel > 0 ? `+${enchantLevel}` : '無強化';
         enchantDownButton.disabled = enchantLevel <= 0;
@@ -750,7 +876,6 @@ function displayItemDetails(item, clickedElement) {
     } else {
         enchantControls.classList.add('hidden');
     }
-    // ★ここまで変更 =============================================
 
     const baseStats = {};
     STAT_HEADERS.forEach(statName => {
