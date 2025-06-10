@@ -881,3 +881,177 @@ h1, h2 {
 #details-action-delete:hover {
     background-color: #c82333;
 }
+/* ===============================================
+// カスタムタブと設定モーダル用のスタイル
+// =============================================== */
+
+/* --- カスタムタブ --- */
+#add-custom-tab-button {
+    cursor: pointer;
+    flex: 0 0 auto;
+    width: 60px; /* ユーザー様指定の幅 */
+    font-size: 1.2em;
+    padding: 0;
+    line-height: 1;
+    color: #ccc;
+    background-color: transparent;
+    border: 1px solid #555;
+    border-radius: 5px; /* ユーザー様指定の半径 */
+    margin-left: 5px;
+}
+#add-custom-tab-button:hover {
+    background-color: #4f4f53;
+    color: white;
+}
+
+.custom-tab-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 8px 15px;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    color: #a0a0a0;
+    font-size: 14px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    min-width: 80px;
+}
+
+.custom-tab-container.active {
+    color: #fff;
+    border-bottom-color: #ffdd00;
+}
+.custom-tab-container:hover {
+    background-color: #3e3e42;
+}
+
+.tab-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tab-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 8px;
+    position: absolute;
+    right: 5px;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.custom-tab-container:hover .tab-actions {
+    visibility: visible;
+    opacity: 1;
+}
+
+.tab-action-icon {
+    cursor: pointer;
+    font-size: 12px;
+}
+.tab-action-icon:hover {
+    opacity: 0.7;
+}
+
+
+/* --- 設定モーダル --- */
+.tab-settings-modal .setting-group {
+    margin-bottom: 20px;
+}
+.tab-settings-modal .setting-group:last-child {
+    margin-bottom: 0;
+}
+
+/* ★変更: 大ラベルにのみ適用されるようにセレクタを修正 */
+.tab-settings-modal .setting-group > label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.tab-settings-modal input[type="text"],
+.tab-settings-modal select {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    background-color: #222;
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.tab-settings-modal .filter-options,
+.tab-settings-modal .other-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: 1px solid #444;
+    background-color: #2a2a2e;
+    padding: 12px;
+    border-radius: 4px;
+}
+
+/* --- トグルスイッチUI --- */
+.toggle-switch-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.toggle-switch-wrapper .label-text {
+    font-weight: normal;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0; /* スイッチが縮まないように */
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-switch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #555;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.toggle-switch .slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .slider {
+    background-color: #007bff;
+}
+
+.toggle-switch input:checked + .slider:before {
+    transform: translateX(20px);
+}
