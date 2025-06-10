@@ -110,6 +110,7 @@ h2 {
     overflow: hidden;
     text-overflow: ellipsis;
     user-select: none;
+    position: relative; /* ★この行を追加 */
 }
 .inventory-item:hover {
     background-color: #5e5e5e;
@@ -238,8 +239,6 @@ h2 {
     border-bottom: 1px solid #555;
 }
 
-
-
 .stat-entry {
     display: flex;
     justify-content: space-between;
@@ -249,7 +248,7 @@ h2 {
 }
 
 .stat-name {
-    flex:1;
+    flex: 1;
     color: #ccc;
 }
 
@@ -762,7 +761,6 @@ h2 {
     color: white;
 }
 
-
 /* 各ステータスの連番表示用スタイル */
 .stat-entry .stat-number {
     color: #888;
@@ -787,7 +785,7 @@ h2 {
     /* 画面幅に応じて列数が自動で変わるように、列の幅を指定します。
        このコンテナに300px幅の列がいくつ収まるかで、列数が決まります。 */
     column-width: 250px;
-    
+
     /* 列と列の間の隙間を指定します。 */
     column-gap: 25px;
 }
