@@ -85,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-
 function handleSharedData(encodedData) {
     const modalOverlay = document.getElementById('share-modal-overlay');
     const okButton = document.getElementById('modal-ok-button');
@@ -107,17 +106,24 @@ function handleSharedData(encodedData) {
             const compressedData = atob(encodedData.replace(/-/g, '+').replace(/_/g, '/'));
             const uint8Array = new Uint8Array(compressedData.split('').map(c => c.charCodeAt(0)));
             const jsonString = pako.inflate(uint8Array, { to: 'string' });
-
             const sharedSets = JSON.parse(jsonString);
 
             const allItemNames = new Set();
             for (const setId in sharedSets) {
                 for (const slotId in sharedSets[setId]) {
+                    // sharedSets[setId][slotId].n が undefined の可能性がある
                     allItemNames.add(sharedSets[setId][slotId].n); // name
                 }
             }
+            
+            // 1. バリデーションの追加
+            // allItemNamesから配列を作成し、filter(name => name)で
+            // undefined や null などの無効な名前を取り除く。
+            const validItemNames = Array.from(allItemNames).filter(name => name);
 
-            const foundItems = await getItemsFromDBByNames(Array.from(allItemNames));
+            // 2. バリデーション済みのクリーンなリストでDBに問い合わせる
+            const foundItems = await getItemsFromDBByNames(validItemNames);
+            
             const itemsMap = new Map(foundItems.map(item => [item['名称'], item]));
 
             const newEquipmentSets = { '1': {}, '2': {}, '3': {}, '4': {} };
@@ -126,6 +132,8 @@ function handleSharedData(encodedData) {
                 for (const slotId in sharedSets[setId]) {
                     const itemName = sharedSets[setId][slotId].n;
                     const enchantLevel = sharedSets[setId][slotId].e || 0;
+                    
+                    // itemsMapに存在しない（無効または古い）アイテムは無視される
                     if (itemsMap.has(itemName)) {
                         newEquipmentSets[setId][slotId] = {
                             item: itemsMap.get(itemName),
@@ -137,15 +145,17 @@ function handleSharedData(encodedData) {
 
             localStorage.setItem(EQUIPMENT_SETS_KEY, JSON.stringify(newEquipmentSets));
 
+            // インベントリにもバリデーション済みのアイテム名のみを追加する
             const currentInventory = JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
-            const newInventorySet = new Set([...currentInventory, ...allItemNames]);
+            const newInventorySet = new Set([...currentInventory, ...validItemNames]);
             localStorage.setItem(INVENTORY_KEY, JSON.stringify(Array.from(newInventorySet)));
             console.log("復元された装備アイテムをインベントリに自動追加しました。");
 
         } catch (e) {
             console.error('共有データの処理中にエラーが発生しました:', e);
-            alert('データの読み込みに失敗しました。URLが破損している可能性があります。');
+            alert('データの読み込みに失敗しました。URLが破損しているか、非対応のデータ形式の可能性があります。');
         } finally {
+            // この処理はクラッシュがなくなれば正常に実行される
             modalOverlay.classList.add('hidden');
             modalText.textContent = '共有されたデータがあります。\n読み込みますか？';
             okButton.disabled = false;
@@ -161,7 +171,6 @@ function handleSharedData(encodedData) {
         initializeApp();
     };
 }
-
 
 async function initializeApp() {
     try {
