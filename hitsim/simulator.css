@@ -4,7 +4,8 @@ body {
     color: #fff;
 }
 
-h1, h2 {
+h1,
+h2 {
     font-weight: normal;
     font-size: 1.2rem;
 }
@@ -895,10 +896,11 @@ h1, h2 {
     line-height: 1;
     color: #ccc;
     background-color: transparent;
-    border: 1px solid #555;
-    border-radius: 5px; /* ユーザー様指定の半径 */
-    margin-left: 5px;
+    border-radius: 0;
+    border: none;
+    border-left: 1px dashed #646464;
 }
+
 #add-custom-tab-button:hover {
     background-color: #4f4f53;
     color: white;
@@ -958,7 +960,6 @@ h1, h2 {
 .tab-action-icon:hover {
     opacity: 0.7;
 }
-
 
 /* --- 設定モーダル --- */
 .tab-settings-modal .setting-group {
@@ -1032,7 +1033,7 @@ h1, h2 {
     right: 0;
     bottom: 0;
     background-color: #555;
-    transition: .4s;
+    transition: 0.4s;
     border-radius: 24px;
 }
 
@@ -1044,7 +1045,7 @@ h1, h2 {
     left: 2px;
     bottom: 2px;
     background-color: white;
-    transition: .4s;
+    transition: 0.4s;
     border-radius: 50%;
 }
 
