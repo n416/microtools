@@ -4,7 +4,7 @@
 
 // --- グローバル定数・変数 ---
 const DB_NAME = 'GameEquipmentDB';
-const DB_VERSION = 11;
+const DB_VERSION = 12;
 const STORE_NAME = 'equipment';
 const INVENTORY_KEY = 'equipmentInventory_v2';
 const INVENTORY_ENHANCEMENTS_KEY = 'inventoryEnhancements_v1';
@@ -115,7 +115,7 @@ function handleSharedData(encodedData) {
                     allItemNames.add(sharedSets[setId][slotId].n); // name
                 }
             }
-            
+
             // 1. バリデーションの追加
             // allItemNamesから配列を作成し、filter(name => name)で
             // undefined や null などの無効な名前を取り除く。
@@ -123,7 +123,7 @@ function handleSharedData(encodedData) {
 
             // 2. バリデーション済みのクリーンなリストでDBに問い合わせる
             const foundItems = await getItemsFromDBByNames(validItemNames);
-            
+
             const itemsMap = new Map(foundItems.map(item => [item['名称'], item]));
 
             const newEquipmentSets = { '1': {}, '2': {}, '3': {}, '4': {} };
@@ -132,7 +132,7 @@ function handleSharedData(encodedData) {
                 for (const slotId in sharedSets[setId]) {
                     const itemName = sharedSets[setId][slotId].n;
                     const enchantLevel = sharedSets[setId][slotId].e || 0;
-                    
+
                     // itemsMapに存在しない（無効または古い）アイテムは無視される
                     if (itemsMap.has(itemName)) {
                         newEquipmentSets[setId][slotId] = {
@@ -197,7 +197,6 @@ async function initializeApp() {
                     results.forEach(item => {
                         allEnhancementData[item.rank] = item.data;
                     });
-                    console.log('強化データをキャッシュしました:', allEnhancementData);
                     resolve();
                 };
                 request.onerror = (event) => {
@@ -211,7 +210,7 @@ async function initializeApp() {
 
         loadSortOrders();
         loadInventoryEnhancements();
-        loadAllEquipmentSets();
+        await loadAllEquipmentSets();
         loadCustomTabs();
         await loadAndRenderInventory();
         setupGlobalClickListener();
@@ -372,20 +371,29 @@ function openDatabase() {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 
         request.onupgradeneeded = (event) => {
-            console.log('[simulator.js] onupgradeneededイベントが発生しました。');
             const db = event.target.result;
+            // このファイルで直接利用するストアの定義
             if (!db.objectStoreNames.contains(STORE_NAME)) {
-                const objectStore = db.createObjectStore(STORE_NAME, { keyPath: '名称' });
-                objectStore.createIndex('ランク', 'ランク', { unique: false });
-                objectStore.createIndex('タイプ', 'タイプ', { unique: false });
+                db.createObjectStore(STORE_NAME, { keyPath: '名称' });
             }
             if (!db.objectStoreNames.contains('enhancementData')) {
                 db.createObjectStore('enhancementData', { keyPath: 'rank' });
             }
+            // シミュレータ側でもsetBonusesストアの定義を追加します。
+            // これにより、DBがどちらのJSファイルから作成されてもスキーマが一致するようになります。
+            if (!db.objectStoreNames.contains('setBonuses')) {
+                db.createObjectStore('setBonuses', { keyPath: 'setName' });
+            }
         };
 
-        request.onerror = (e) => reject('DBオープン失敗:', e.target.error);
-        request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+        request.onerror = (e) => {
+            reject('DBオープン失敗:', e.target.error);
+        };
+        request.onsuccess = (e) => {
+            db = e.target.result;
+            // ★ 接続成功時に、実際に利用可能なストア一覧を出力します
+            resolve(db);
+        };
     });
 }
 
@@ -720,27 +728,40 @@ function loadInventoryEnhancements() {
     inventoryEnhancements = enhancements;
 }
 
-
-function loadAllEquipmentSets() {
+async function loadAllEquipmentSets() { // ★ asyncキーワードを追加
     activeSetId = localStorage.getItem(ACTIVE_SET_ID_KEY) || '1';
-    const savedSets = JSON.parse(localStorage.getItem(EQUIPMENT_SETS_KEY));
-    if (savedSets) {
-        allEquipmentSets = savedSets;
-        for (const setId in allEquipmentSets) {
-            for (const slotId in allEquipmentSets[setId]) {
-                const equipped = allEquipmentSets[setId][slotId];
-                if (equipped && !equipped.item && equipped['名称']) {
-                    allEquipmentSets[setId][slotId] = {
-                        item: equipped,
-                        enchantLevel: 0,
-                        instanceId: Date.now() + Math.random()
-                    };
+    const savedSets = JSON.parse(localStorage.getItem(EQUIPMENT_SETS_KEY)) || { '1': {}, '2': {}, '3': {}, '4': {} };
+
+    // 1. localStorageから読み込んだ全セット内の、全アイテム名（重複なし）を収集します
+    const allEquippedItemNames = new Set();
+    for (const setId in savedSets) {
+        for (const slotId in savedSets[setId]) {
+            const equipped = savedSets[setId][slotId];
+            if (equipped && equipped.item && equipped.item['名称']) {
+                allEquippedItemNames.add(equipped.item['名称']);
+            }
+        }
+    }
+
+    // 装備中のアイテムが1つでもあれば更新処理を実行します
+    if (allEquippedItemNames.size > 0) {
+        // 2. 収集した名前を元に、データベースから最新のアイテム情報をまとめて取得します
+        const freshItems = await getItemsFromDBByNames(Array.from(allEquippedItemNames));
+        const freshItemsMap = new Map(freshItems.map(item => [item['名称'], item]));
+
+        // 3. localStorageから読み込んだデータをループし、古いitemオブジェクトをDBから取得した最新のものに差し替えます
+        for (const setId in savedSets) {
+            for (const slotId in savedSets[setId]) {
+                const equipped = savedSets[setId][slotId];
+                if (equipped && equipped.item && freshItemsMap.has(equipped.item['名称'])) {
+                    // ここで古いデータが最新のデータで上書きされます
+                    equipped.item = freshItemsMap.get(equipped.item['名称']);
                 }
             }
         }
-    } else {
-        allEquipmentSets = { '1': {}, '2': {}, '3': {}, '4': {} };
     }
+    // 4. データが更新されたsavedSetsをグローバル変数に格納します
+    allEquipmentSets = savedSets;
     equippedItems = allEquipmentSets[activeSetId] || {};
 
     renderAllSlots();
@@ -777,14 +798,39 @@ function setupGlobalClickListener() {
     });
 }
 
-
-function calculateAndRenderStats() {
-    const { totalStats, percentStats } = calculateStatsForSet(equippedItems);
-    const { totalStats: comparisonTotalStats } = calculateStatsForSet(allEquipmentSets[comparisonSetId]);
-
+async function calculateAndRenderStats() {
+    // セット効果のスロット情報も受け取る
+    const { totalStats, percentStats, activeSetBonuses, activeSetInfo } = await calculateStatsForSet(equippedItems);
+    const { totalStats: comparisonTotalStats } = await calculateStatsForSet(allEquipmentSets[comparisonSetId] || {});
     const statsPanel = document.getElementById('stats-panel');
     statsPanel.innerHTML = '';
 
+    // --- ハイライト処理 ---
+    // 1. ★修正点: 全てのスロットのハイライト用クラスのみを正しくリセットします
+    document.querySelectorAll('.slot').forEach(slot => {
+        for (let i = 1; i <= 4; i++) { // 用意したハイライトクラスの数だけループ
+            slot.classList.remove(`set-highlight-${i}`);
+        }
+    });
+
+    // 2. 発動中のセット情報をもとに、対象スロットにハイライト用クラスを追加します
+    if (activeSetInfo) {
+        let highlightCounter = 1;
+        for (const setName in activeSetInfo) {
+            const info = activeSetInfo[setName];
+            if (info.slots && highlightCounter <= 4) {
+                info.slots.forEach(slotId => {
+                    const slotElement = document.getElementById(slotId);
+                    if (slotElement) {
+                        slotElement.classList.add(`set-highlight-${highlightCounter}`);
+                    }
+                });
+                highlightCounter++;
+            }
+        }
+    }
+
+    // --- 表示処理 ---
     const comparisonContainer = document.createElement('div');
     comparisonContainer.id = 'comparison-controls';
     statsPanel.appendChild(comparisonContainer);
@@ -840,14 +886,12 @@ function calculateAndRenderStats() {
             }
 
             let diffHtml = '';
-            if (comparisonSetId) {
+            if (comparisonSetId && comparisonTotalStats) {
                 const comparisonValue = comparisonTotalStats[statName] || 0;
                 const diff = value - comparisonValue;
-
                 if (diff !== 0) {
                     const diffClass = diff > 0 ? 'positive' : 'negative';
                     const diffSign = diff > 0 ? '+' : '';
-
                     let diffDisplayValue;
                     if (percentStats.has(statName)) {
                         const percentDiff = diff * 100;
@@ -866,12 +910,39 @@ function calculateAndRenderStats() {
         });
     }
 
+    // セット効果パネルの表示
+    if (activeSetBonuses && activeSetBonuses.length > 0) {
+        const setBonusContainer = document.createElement('div');
+        setBonusContainer.style.padding = '10px';
+        setBonusContainer.style.borderRadius = '4px';
+
+        const uniqueBonuses = {};
+        activeSetBonuses.forEach(b => {
+            const key = `${b.setName}-${b.count}`;
+            uniqueBonuses[key] = b;
+        });
+
+        Object.values(uniqueBonuses).forEach(bonus => {
+            const effectDiv = document.createElement('div');
+            effectDiv.style.fontSize = '14px';
+            effectDiv.style.padding = '2px 0';
+            const setNameSpan = document.createElement('strong');
+            setNameSpan.textContent = `[${bonus.setName}] (${bonus.count}セット): `;
+            const statsText = Object.entries(bonus.stats)
+                .map(([name, value]) => `${name} +${String(value).includes('.') && value < 1 ? (value * 100).toFixed(0) + '%' : value}`)
+                .join(', ');
+            effectDiv.appendChild(setNameSpan);
+            effectDiv.append(statsText);
+            setBonusContainer.appendChild(effectDiv);
+        });
+        statsPanel.appendChild(setBonusContainer);
+    }
+
     const sortControlsContainer = document.createElement('div');
     sortControlsContainer.id = 'sort-order-controls';
     statsPanel.appendChild(sortControlsContainer);
     renderSortOrderControls();
 }
-
 
 function displayItemDetails(item, clickedElement) {
     if (!item || !detailsPanel || !clickedElement) return;
@@ -960,6 +1031,20 @@ function displayItemDetails(item, clickedElement) {
         });
     }
 
+    // アイテムが「セット名」を持っており、かつそれが有効な名前（ハイフンではない）の場合のみ表示
+    if (item['セット名'] && item['セット名'] !== '-') {
+        const setDiv = document.createElement('div');
+        setDiv.className = 'details-set-name';
+        setDiv.textContent = `セット：${item['セット名']}`;
+
+        setDiv.style.fontWeight = 'bold';
+        setDiv.style.paddingBottom = '8px';
+        setDiv.style.marginTop = '5px';
+        setDiv.style.borderBottom = '1px solid #555';
+
+        detailsStatsList.appendChild(setDiv);
+    }
+
     const rect = clickedElement.getBoundingClientRect();
     let top = rect.bottom + window.scrollY + 5;
     let left = rect.left + window.scrollX;
@@ -975,6 +1060,7 @@ function displayItemDetails(item, clickedElement) {
     detailsPanel.style.top = `${top}px`;
     detailsPanel.style.left = `${left}px`;
 }
+
 function hideItemDetails() {
     if (detailsPanel) {
         detailsPanel.style.display = 'none';
@@ -1470,24 +1556,25 @@ function copySetFrom(sourceSetId) {
     }
 }
 
-function calculateStatsForSet(items) {
+async function calculateStatsForSet(items) {
     const totalStats = {};
     const percentStats = new Set();
-    if (!items) return { totalStats, percentStats };
+    const activeSetBonuses = [];
+    const activeSetInfo = {};
 
+    if (!items) return { totalStats, percentStats, activeSetBonuses, activeSetInfo };
+
+    // アイテム個別のステータス計算 (変更なし)
     for (const slotId in items) {
         const equipped = items[slotId];
         if (!equipped || !equipped.item) continue;
-
         const item = equipped.item;
         const enchantLevel = equipped.enchantLevel || 0;
         const enchantBonus = getEnchantBonus(item, enchantLevel);
-
         for (const statName of STAT_HEADERS) {
             const baseValue = parseFloat(item[statName]) || 0;
             const bonusValue = enchantBonus[statName] || 0;
             const value = baseValue + bonusValue;
-
             if (value !== 0) {
                 if (String(item[statName]).includes('%') || (baseValue > 0 && baseValue < 1 && !Number.isInteger(baseValue))) {
                     percentStats.add(statName);
@@ -1496,7 +1583,71 @@ function calculateStatsForSet(items) {
             }
         }
     }
-    return { totalStats, percentStats };
+
+    // セット効果の計算ロジック
+    const setCounts = {};
+    for (const slotId in items) {
+        const equipped = items[slotId];
+        if (equipped && equipped.item && equipped.item['セット名'] && equipped.item['セット名'] !== '-') {
+            const setName = equipped.item['セット名'];
+            if (!setCounts[setName]) {
+                setCounts[setName] = { count: 0, slots: [] };
+            }
+            setCounts[setName].count++;
+            setCounts[setName].slots.push(slotId);
+        }
+    }
+
+    if (Object.keys(setCounts).length > 0) {
+        try {
+            console.log('[シミュレータ診断] setBonusesストアのトランザクションを開始します。');
+            const transaction = db.transaction(['setBonuses'], 'readonly');
+            const store = transaction.objectStore('setBonuses');
+            console.log('[シミュレータ診断] トランザクションとストアの取得に成功。');
+
+            for (const setName in setCounts) {
+                const count = setCounts[setName].count;
+                const request = store.get(setName);
+                const setData = await new Promise((resolve, reject) => {
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                console.log(`[シミュレータ診断] DBから取得した「${setName}」のルール:`, setData);
+
+                if (setData) {
+                    // 発動条件を満たすボーナスの中から、最大のセット数を持つものを探し出す
+                    let bestBonus = null;
+                    setData.bonuses.forEach(bonus => {
+                        if (count >= bonus.count) {
+                            if (!bestBonus || bonus.count > bestBonus.count) {
+                                bestBonus = bonus;
+                            }
+                        }
+                    });
+
+                    // 最大のセット効果が存在する場合、その効果のみを適用する
+                    if (bestBonus) {
+                        for (const statName in bestBonus.stats) {
+                            const value = bestBonus.stats[statName];
+                            totalStats[statName] = (totalStats[statName] || 0) + value;
+                            if (value > 0 && value < 1 && !Number.isInteger(value)) {
+                                percentStats.add(statName);
+                            }
+                        }
+                        // 表示用の配列にも、この最大の効果だけを追加する
+                        activeSetBonuses.push({ setName: setName, count: bestBonus.count, stats: bestBonus.stats });
+                        activeSetInfo[setName] = { slots: setCounts[setName].slots };
+                    }
+
+                }
+            }
+        } catch (e) {
+            console.error('[シミュレータ診断] セット効果の計算中にエラーが発生しました:', e);
+        }
+    }
+
+    return { totalStats, percentStats, activeSetBonuses, activeSetInfo };
 }
 
 function getEnchantBonus(item, enchantLevel) {
@@ -1542,7 +1693,6 @@ function getEnchantBonus(item, enchantLevel) {
 
     return bonus;
 }
-
 
 function renderComparisonSelector() {
     const container = document.getElementById('comparison-controls');
