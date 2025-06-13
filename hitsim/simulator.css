@@ -1056,3 +1056,29 @@ h2 {
 .toggle-switch input:checked + .slider:before {
     transform: translateX(20px);
 }
+
+/* simulator.css の末尾に追記 */
+
+/* --- セット効果ハイライト --- */
+.slot.set-highlight-1 {
+    border: 1px dashed #00d9ff; /* 水色 */
+/*    box-shadow: 0 0 8px #00d9ff, inset 0 0 8px rgba(0, 217, 255, 0.5);*/
+}
+.slot.set-highlight-2 {
+    border: 1px dashed #ffaa00; /* オレンジ */
+/*    box-shadow: 0 0 8px #ffaa00, inset 0 0 8px rgba(255, 170, 0, 0.5);*/
+}
+.slot.set-highlight-3 {
+    border: 1px dashed #a2ff00; /* ライムグリーン */
+/*    box-shadow: 0 0 8px #a2ff00, inset 0 0 8px rgba(162, 255, 0, 0.5);*/
+}
+.slot.set-highlight-4 {
+    border: 1px dashed #ff00d4; /* マゼンタ */
+/*    box-shadow: 0 0 8px #ff00d4, inset 0 0 8px rgba(255, 0, 212, 0.5);*/
+}
+
+/* 選択されている時のスタイルを上書きして、ハイライトが優先されるように調整 */
+.slot.selected {
+    border: 2px solid #ffdd00;
+    box-shadow: 0 0 10px #ffdd00;
+}
