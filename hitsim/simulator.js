@@ -205,6 +205,7 @@ async function initializeApp() {
         await loadAndRenderInventory();
         setupGlobalClickListener();
         setupInventoryTabs();
+        setupInventorySearch(); // 検索機能の初期化を追加
         setupShareButton();
         setupSetControls();
         setupEnchantControls();
@@ -546,14 +547,14 @@ function equipInstance(item, instanceId) {
 
     const sourceInstance = inventoryEnhancements[item['名称']]?.find(inst => inst.instanceId === instanceId) || { Lv: 0 };
 
-    const possibleSlotIds = SLOT_CATEGORY_TO_IDS[slotCategory];
-    const emptySlotId = possibleSlotIds.find(id => !equippedItems[id]);
-
     const itemToEquip = {
         item: item,
         enchantLevel: sourceInstance.Lv,
         instanceId: Date.now() + Math.random()
     };
+
+    const possibleSlotIds = SLOT_CATEGORY_TO_IDS[slotCategory];
+    const emptySlotId = possibleSlotIds.find(id => !equippedItems[id]);
 
     if (emptySlotId) {
         equippedItems[emptySlotId] = itemToEquip;
@@ -1034,6 +1035,38 @@ function getCategoryFromType(typeString) {
     return 'unknown';
 }
 
+function setupInventorySearch() {
+    const searchInput = document.getElementById('inventory-search-input');
+    const searchButton = document.getElementById('inventory-search-button');
+
+    if (!searchInput || !searchButton) {
+        console.warn('検索用のUI要素が見つかりませんでした。');
+        return;
+    }
+
+    const applyFilter = () => {
+        // 表示更新関数を呼び出すだけ
+        refreshInventoryView();
+    };
+
+    // 虫眼鏡ボタンクリックで検索実行
+    searchButton.addEventListener('click', applyFilter);
+
+    // テキストボックスでEnterキーを押したら検索実行
+    searchInput.addEventListener('keyup', (event) => {
+        if (event.key === 'Enter') {
+            applyFilter();
+        }
+    });
+
+    // テキストボックスが空になったらリアルタイムでフィルタ解除
+    searchInput.addEventListener('input', () => {
+        if (searchInput.value.trim() === '') {
+            applyFilter();
+        }
+    });
+}
+
 // ▼▼▼【変更箇所】タブ関連の関数を修正・整理 ▼▼▼
 function setupInventoryTabs() {
     document.querySelectorAll('#inventory-tabs .tab-button[data-category]').forEach(button => {
@@ -1065,6 +1098,7 @@ function handleTabClick(event) {
 function refreshInventoryView() {
     let itemsToRender = [...allInventoryItems];
 
+    // 1. タブによるフィルタリング（ソートは後で）
     if (activeTabInfo.type === 'category') {
         const category = activeTabInfo.value;
         if (category !== 'all') {
@@ -1078,11 +1112,30 @@ function refreshInventoryView() {
                     tab.filters.includes(getCategoryFromType(item['タイプ']))
                 );
             } else {
-                itemsToRender = [];
+                itemsToRender = []; // フィルターが空ならアイテムも空
             }
             if (tab.hideZeroStat) {
                 itemsToRender = itemsToRender.filter(item => (parseFloat(item[tab.sortStat]) || 0) > 0);
             }
+            // ソートは検索フィルタの後に行う
+        }
+    }
+
+    // 2. 装備名検索によるフィルタリング
+    const searchInput = document.getElementById('inventory-search-input');
+    if (searchInput) {
+        const searchTerm = searchInput.value.trim().toLowerCase();
+        if (searchTerm) {
+            itemsToRender = itemsToRender.filter(item =>
+                item['名称'].toLowerCase().includes(searchTerm)
+            );
+        }
+    }
+
+    // 3. カスタムタブのソートを適用
+    if (activeTabInfo.type === 'custom') {
+        const tab = customTabs.find(t => t.id === activeTabInfo.value);
+        if (tab) { // tabが存在する場合のみソート
             itemsToRender.sort((a, b) => {
                 const valA = parseFloat(a[tab.sortStat]) || 0;
                 const valB = parseFloat(b[tab.sortStat]) || 0;
@@ -1110,7 +1163,7 @@ function handleAddCustomTab() {
         // 新しいタブをアクティブにする
         document.querySelectorAll('#inventory-tabs .active').forEach(b => b.classList.remove('active'));
         activeTabInfo = { type: 'custom', value: newTab.id };
-        
+
         renderCustomTabs(); // UIを再描画（ここで新しいタブに active クラスが付く）
         refreshInventoryView(); // 表示を更新
     }
