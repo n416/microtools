@@ -2,6 +2,21 @@
 // data-selector.js : UI操作スクリプト
 // ===============================================
 
+const COLUMN_VISIBILITY_KEY = 'equipmentColumnVisibility_v1';
+const ALL_STATS_HEADERS = ['画像URL', '名称', 'ランク', 'タイプ', 'セット名', 'ソーステキスト', '評価数値', '基本攻撃力', '攻撃力増幅', 'クリティカルダメージ増幅', '一般攻撃力', 'スキルダメージ増幅', '近距離攻撃力', '防御力', '武力', 'ガード貫通', '一般ダメージ増幅', '気絶的中', '気絶抵抗', '絶対回避', 'クリティカル発生率', '状態異常抵抗', 'MP回復', '防御貫通', '状態異常的中', 'PvP攻撃力', 'PvPクリティカル発生率', '治癒量増加', '硬直', '近距離クリティカル発生率', '魔法クリティカル発生率', '活力', '忍耐', '聡明', '硬直耐性', '武器攻撃力', '命中', 'ガード', 'クリティカル抵抗', 'クリティカルダメージ耐性', 'HP回復', '最大HP', 'ポーション回復量', 'スキルダメージ耐性', '一般ダメージ耐性', '水属性追加ダメージ', '風属性追加ダメージ', '土属性追加ダメージ', '火属性追加ダメージ', '詠唱速度', '武器攻撃力増幅', '追加ダメージ', '遠距離攻撃力', 'PvE攻撃力', '最大MP', '治癒量増幅', '魔法攻撃力', '攻撃力耐性', '武器ブロック', '追加ダメージ減少', '凍結抵抗', '鈍化抵抗', '失明抵抗', '武器攻撃力耐性', '麻痺抵抗', '沈黙抵抗', '受ける治癒量増加', 'カバン最大重量', 'HP絶対回復', 'PvE防御力', 'PvEクリティカル抵抗', '受ける治癒量増幅', 'PvPクリティカル抵抗', 'MP絶対回復', '遠距離クリティカル発生率', 'PvP防御力', '一般防御力'];
+const COLUMN_GROUPS = {
+  "基本情報": ['画像URL', '名称', 'ランク', 'タイプ', '評価数値'],
+  "セット情報": ['セット名', 'ソーステキスト'],
+  "攻撃系": ['基本攻撃力', '攻撃力増幅', 'クリティカルダメージ増幅', '一般攻撃力', 'スキルダメージ増幅', '近距離攻撃力', '武器攻撃力', '命中', 'PvP攻撃力', 'PvE攻撃力', '遠距離攻撃力', '魔法攻撃力'],
+  "防御系": ['防御力', 'ガード', 'クリティカル抵抗', 'クリティカルダメージ耐性', 'スキルダメージ耐性', '一般ダメージ耐性', '攻撃力耐性', '武器ブロック', '追加ダメージ減少', 'PvP防御力', 'PvE防御力', '武器攻撃力耐性', '一般防御力'],
+  "状態異常・CC": ['気絶的中', '気絶抵抗', '状態異常的中', '状態異常抵抗', '硬直', '硬直耐性', '凍結抵抗', '鈍化抵抗', '失明抵抗', '麻痺抵抗', '沈黙抵抗'],
+  "クリティカル": ['クリティカル発生率', '近距離クリティカル発生率', '魔法クリティカル発生率', '遠距離クリティカル発生率', 'PvPクリティカル発生率', 'PvEクリティカル抵抗', 'PvPクリティカル抵抗'],
+  "HP/MP/回復": ['HP回復', '最大HP', 'MP回復', '最大MP', 'ポーション回復量', '治癒量増加', '治癒量増幅', '受ける治癒量増加', '受ける治癒量増幅', 'HP絶対回復', 'MP絶対回復'],
+  "属性ダメージ": ['水属性追加ダメージ', '風属性追加ダメージ', '土属性追加ダメージ', '火属性追加ダメージ', '追加ダメージ'],
+  "その他": ['武力', 'ガード貫通', '一般ダメージ増幅', '絶対回避', '活力', '忍耐', '聡明', '詠唱速度', '武器攻撃力増幅', 'カバン最大重量']
+};
+
+let visibleColumns = [];
 const DB_NAME = 'GameEquipmentDB';
 const DB_VERSION = 12;
 const STORE_NAME = 'equipment';
@@ -43,6 +58,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     loadSortState();
 
     setupUpdateButton();
+    initializeColumnSettings(); // ★これを追加
     initializeFilters();
 
   } catch (error) {
@@ -197,7 +213,8 @@ function getAllEquipmentFromDB() {
   });
 }
 
-// --- テーブル描画 (ソート機能の反映) ---
+// 既存の renderTable 関数を削除し、↓に置き換える
+
 function renderTable(equipmentData) {
   const tableBody = document.querySelector('#equipment-table tbody');
   const tableHead = document.querySelector('#equipment-table thead');
@@ -209,14 +226,20 @@ function renderTable(equipmentData) {
 
   if (!equipmentData) return;
 
-  const headers = ['画像URL', '名称', 'ランク', 'タイプ', 'セット名', 'ソーステキスト', '評価数値', '基本攻撃力', '攻撃力増幅', 'クリティカルダメージ増幅', '一般攻撃力', 'スキルダメージ増幅', '近距離攻撃力', '防御力', '武力', 'ガード貫通', '一般ダメージ増幅', '気絶的中', '気絶抵抗', '絶対回避', 'クリティカル発生率', '状態異常抵抗', 'MP回復', '防御貫通', '状態異常的中', 'PvP攻撃力', 'PvPクリティカル発生率', '治癒量増加', '硬直', '近距離クリティカル発生率', '魔法クリティカル発生率', '活力', '忍耐', '聡明', '硬直耐性', '武器攻撃力', '命中', 'ガード', 'クリティカル抵抗', 'クリティカルダメージ耐性', 'HP回復', '最大HP', 'ポーション回復量', 'スキルダメージ耐性', '一般ダメージ耐性', '水属性追加ダメージ', '風属性追加ダメージ', '土属性追加ダメージ', '火属性追加ダメージ', '詠唱速度', '武器攻撃力増幅', '追加ダメージ', '遠距離攻撃力', 'PvE攻撃力', '最大MP', '治癒量増幅', '魔法攻撃力', '攻撃力耐性', '武器ブロック', '追加ダメージ減少', '凍結抵抗', '鈍化抵抗', '失明抵抗', '武器攻撃力耐性', '麻痺抵抗', '沈黙抵抗', '受ける治癒量増加', 'カバン最大重量', 'HP絶対回復', 'PvE防御力', 'PvEクリティカル抵抗', '受ける治癒量増幅', 'PvPクリティカル抵抗', 'MP絶対回復', '遠距離クリティカル発生率', 'PvP防御力', '一般防御力'];
-  const displayHeaders = ['✔', ...headers];
-  const sortableKeys = ['ランク', 'タイプ', '名称','名称', 'ランク', 'タイプ', 'セット名', 'ソーステキスト', '評価数値', '基本攻撃力', '攻撃力増幅', 'クリティカルダメージ増幅', '一般攻撃力', 'スキルダメージ増幅', '近距離攻撃力', '防御力', '武力', 'ガード貫通', '一般ダメージ増幅', '気絶的中', '気絶抵抗', '絶対回避', 'クリティカル発生率', '状態異常抵抗', 'MP回復', '防御貫通', '状態異常的中', 'PvP攻撃力', 'PvPクリティカル発生率', '治癒量増加', '硬直', '近距離クリティカル発生率', '魔法クリティカル発生率', '活力', '忍耐', '聡明', '硬直耐性', '武器攻撃力', '命中', 'ガード', 'クリティカル抵抗', 'クリティカルダメージ耐性', 'HP回復', '最大HP', 'ポーション回復量', 'スキルダメージ耐性', '一般ダメージ耐性', '水属性追加ダメージ', '風属性追加ダメージ', '土属性追加ダメージ', '火属性追加ダメージ', '詠唱速度', '武器攻撃力増幅', '追加ダメージ', '遠距離攻撃力', 'PvE攻撃力', '最大MP', '治癒量増幅', '魔法攻撃力', '攻撃力耐性', '武器ブロック', '追加ダメージ減少', '凍結抵抗', '鈍化抵抗', '失明抵抗', '武器攻撃力耐性', '麻痺抵抗', '沈黙抵抗', '受ける治癒量増加', 'カバン最大重量', 'HP絶対回復', 'PvE防御力', 'PvEクリティカル抵抗', '受ける治癒量増幅', 'PvPクリティカル抵抗', 'MP絶対回復', '遠距離クリティカル発生率', 'PvP防御力', '一般防御力'];
+  // ★変更点: ハードコードされたヘッダーではなく、表示設定を使う
+  const displayHeaders = ['✔', ...visibleColumns];
+  const sortableKeys = ALL_STATS_HEADERS; // ソート対象は全ての可能性があるので元のリストを使う
 
   const headerRow = document.createElement('tr');
   displayHeaders.forEach(headerText => {
     const th = document.createElement('th');
-    th.textContent = headerText;
+    if (headerText === '画像URL' ||
+      headerText === 'ソーステキスト'
+    ) {
+      th.textContent = '';
+    } else {
+      th.textContent = headerText;
+    }
 
     if (sortableKeys.includes(headerText)) {
       th.classList.add('sortable');
@@ -229,6 +252,10 @@ function renderTable(equipmentData) {
       th.addEventListener('click', handleSortClick);
     }
 
+    // 固定列用のクラスを付与
+    if (headerText === '✔' || headerText === '名称') {
+      th.classList.add('sticky-col');
+    }
     headerRow.appendChild(th);
   });
   tableHead.appendChild(headerRow);
@@ -237,19 +264,19 @@ function renderTable(equipmentData) {
 
   equipmentData.forEach(item => {
     const row = document.createElement('tr');
+
+    // チェックボックスのセルは常に表示
     const checkCell = document.createElement('td');
+    checkCell.classList.add('sticky-col');
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.dataset.itemId = item['名称'];
-
     if (currentInventory.includes(item['名称'])) {
       checkbox.checked = true;
     }
-
     checkbox.addEventListener('change', (event) => {
       const itemId = event.target.dataset.itemId;
       const isChecked = event.target.checked;
-
       const index = currentInventory.indexOf(itemId);
       if (isChecked && index === -1) {
         currentInventory.push(itemId);
@@ -257,42 +284,46 @@ function renderTable(equipmentData) {
         currentInventory.splice(index, 1);
       }
       saveInventory(currentInventory);
-
       if (filterState.isInventoryOnly) {
         applyFiltersAndSortAndRender();
       }
     });
-
     checkCell.appendChild(checkbox);
     row.appendChild(checkCell);
 
-    headers.forEach(header => {
+    // ★変更点: 表示設定(visibleColumns)に基づいてデータセルを生成
+    visibleColumns.forEach(header => {
       const cell = document.createElement('td');
       if (header === '画像URL' && item[header]) {
         const img = document.createElement('img');
         img.src = item[header];
         img.alt = item['名称'] || '装備画像';
         img.loading = 'lazy';
-        img.width = 40;
-        img.height = 40;
+        img.width = 40; img.height = 40;
         cell.appendChild(img);
       } else {
         cell.textContent = item[header] || '';
       }
+      // 固定列用のクラスを付与
+      if (header === '名称') {
+        cell.classList.add('sticky-col');
+      }
       row.appendChild(cell);
     });
 
-    // 行自体にクリックイベントを設定
-    row.addEventListener('click', function (event) {
-      // クリックされたのがチェックボックス自身や、その他のインタラクティブな要素でない場合のみ処理
-      if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON') {
-        const checkboxInRow = this.querySelector('input[type="checkbox"]');
-        if (checkboxInRow) {
-          // チェック状態を反転
-          checkboxInRow.checked = !checkboxInRow.checked;
-          // 'change' イベントを能動的に発行して、既存の保存ロジックをトリガーする
-          checkboxInRow.dispatchEvent(new Event('change', { 'bubbles': true }));
-        }
+    const clickableCells = [
+      row.querySelector('td:nth-child(1)'),
+      row.querySelector('td:nth-child(2)') // 2列目(名称)もクリック可能にする
+    ];
+    const checkboxInRow = row.querySelector('input[type="checkbox"]');
+    clickableCells.forEach(cell => {
+      if (cell) {
+        cell.addEventListener('click', (event) => {
+          if (event.target.tagName !== 'INPUT') {
+            checkboxInRow.checked = !checkboxInRow.checked;
+            checkboxInRow.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
       }
     });
 
@@ -354,3 +385,147 @@ function setupUpdateButton() {
     }
   });
 }
+// data-selector.js の末尾に追記
+
+// --- 表示列設定モーダルの制御 ---
+
+function initializeColumnSettings() {
+  loadVisibleColumns();
+  createColumnSettingsModal();
+  setupColumnSettingsEventListeners();
+}
+
+function loadVisibleColumns() {
+  const savedColumns = localStorage.getItem(COLUMN_VISIBILITY_KEY);
+  if (savedColumns) {
+    visibleColumns = JSON.parse(savedColumns);
+  } else {
+    // デフォルトで表示する列
+    visibleColumns = ['画像URL', '名称', 'ランク', 'タイプ', 'セット名', '評価数値', '基本攻撃力', '防御力'];
+  }
+}
+
+function createColumnSettingsModal() {
+  let modalBodyHTML = `<input type="text" id="column-search-input" placeholder="表示したい列を検索...">`;
+  for (const groupName in COLUMN_GROUPS) {
+    modalBodyHTML += `
+            <fieldset class="column-group">
+                <legend>${groupName}</legend>
+                <div class="column-group-actions">
+                    <a href="#" data-group-name="${groupName}" class="select-all-link">全て選択</a>
+                    <a href="#" data-group-name="${groupName}" class="deselect-all-link">全て解除</a>
+                </div>
+                <div class="column-list">
+        `;
+    COLUMN_GROUPS[groupName].forEach(colName => {
+      modalBodyHTML += `
+                <div class="column-item">
+                    <label>
+                        <input type="checkbox" class="column-checkbox" value="${colName}" data-group="${groupName}">
+                        ${colName}
+                    </label>
+                </div>
+            `;
+    });
+    modalBodyHTML += `</div></fieldset>`;
+  }
+
+  const modalHTML = `
+        <div id="column-settings-overlay">
+            <div id="column-settings-modal">
+                <div class="cs-modal-header">
+                    <h3>表示列の編集</h3>
+                    <button class="close-button">&times;</button>
+                </div>
+                <div class="cs-modal-body">
+                    ${modalBodyHTML}
+                </div>
+                <div class="cs-modal-footer">
+                    <button id="cs-cancel-button" class="button-like">キャンセル</button>
+                    <button id="cs-save-button" class="button-like" style="background-color: #007bff;">保存して適用</button>
+                </div>
+            </div>
+        </div>
+    `;
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function setupColumnSettingsEventListeners() {
+  const openBtn = document.getElementById('column-settings-button');
+  const overlay = document.getElementById('column-settings-overlay');
+  const modal = document.getElementById('column-settings-modal');
+
+  openBtn.addEventListener('click', openColumnSettingsModal);
+
+  // 閉じる系イベント
+  overlay.addEventListener('click', (e) => { if (e.target.id === 'column-settings-overlay') closeModal(); });
+  modal.querySelector('.close-button').addEventListener('click', closeModal);
+  modal.querySelector('#cs-cancel-button').addEventListener('click', closeModal);
+
+  // 保存イベント
+  modal.querySelector('#cs-save-button').addEventListener('click', saveAndApplyColumnSettings);
+
+  // モーダル内の一括選択・解除リンク
+  modal.querySelectorAll('.select-all-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const groupName = e.target.dataset.groupName;
+      modal.querySelectorAll(`input[data-group="${groupName}"]`).forEach(cb => cb.checked = true);
+    });
+  });
+  modal.querySelectorAll('.deselect-all-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const groupName = e.target.dataset.groupName;
+      modal.querySelectorAll(`input[data-group="${groupName}"]`).forEach(cb => cb.checked = false);
+    });
+  });
+
+  // 検索フィルター
+  modal.querySelector('#column-search-input').addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    modal.querySelectorAll('.column-item').forEach(item => {
+      const labelText = item.querySelector('label').textContent.toLowerCase();
+      if (labelText.includes(searchTerm)) {
+        item.style.display = 'block';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+  });
+
+  function closeModal() {
+    overlay.style.display = 'none';
+  }
+}
+
+function openColumnSettingsModal() {
+  const overlay = document.getElementById('column-settings-overlay');
+  // 現在の設定をチェックボックスに反映
+  overlay.querySelectorAll('.column-checkbox').forEach(cb => {
+    cb.checked = visibleColumns.includes(cb.value);
+  });
+  overlay.style.display = 'flex';
+}
+
+function saveAndApplyColumnSettings() {
+  const newVisibleColumns = [];
+  document.querySelectorAll('#column-settings-modal .column-checkbox:checked').forEach(cb => {
+    newVisibleColumns.push(cb.value);
+  });
+
+  visibleColumns = newVisibleColumns;
+  localStorage.setItem(COLUMN_VISIBILITY_KEY, JSON.stringify(visibleColumns));
+
+  document.getElementById('column-settings-overlay').style.display = 'none';
+  applyFiltersAndSortAndRender(); // テーブルを再描画
+}
+
+// 最後に、DOMContentLoaded内で初期化処理を呼び出す
+window.addEventListener('DOMContentLoaded', async () => {
+  // ... 既存の処理 ...
+
+  // ↓既存のDOMContentLoadedの処理の末尾に追加
+  initializeColumnSettings();
+  // ...
+});
