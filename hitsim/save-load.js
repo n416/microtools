@@ -1,5 +1,5 @@
 // ===============================================
-// save-load.js : セーブ/ロード機能スクリプト
+// save-load.js : セーブ/ロード機能スクリプト (修正版)
 // ===============================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -31,7 +31,7 @@ function addSaveLoadButton() {
     saveLoadButton.textContent = 'セーブ/ロード';
     saveLoadButton.style.backgroundColor = '#28a745'; // 少し目立つ色に
 
-    saveLoadButton.addEventListener('click', openModal);
+    saveLoadButton.addEventListener('click', openSaveLoadModal); // ★変更
 
     headerButtonsContainer.appendChild(saveLoadButton);
 }
@@ -71,10 +71,10 @@ function setupModalEventListeners() {
     const closeButton = document.getElementById('save-load-close-button');
 
     // 閉じるボタンか、モーダルの外側（オーバーレイ）をクリックで閉じる
-    closeButton.addEventListener('click', closeModal);
+    closeButton.addEventListener('click', closeSaveLoadModal); // ★変更
     overlay.addEventListener('click', (event) => {
         if (event.target.id === 'save-load-overlay') {
-            closeModal();
+            closeSaveLoadModal(); // ★変更
         }
     });
 }
@@ -83,7 +83,7 @@ function setupModalEventListeners() {
 /**
  * モーダルを開く
  */
-function openModal() {
+function openSaveLoadModal() { // ★変更
     const overlay = document.getElementById('save-load-overlay');
     renderSlots();
     overlay.classList.remove('hidden');
@@ -92,7 +92,7 @@ function openModal() {
 /**
  * モーダルを閉じる
  */
-function closeModal() {
+function closeSaveLoadModal() { // ★変更
     const overlay = document.getElementById('save-load-overlay');
     overlay.classList.add('hidden');
 }
