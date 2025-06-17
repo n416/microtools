@@ -1148,12 +1148,22 @@ function refreshInventoryView() {
 }
 
 function handleAddCustomTab() {
-    const name = prompt('新しいタブの名前を入力してください:', '');
-    if (name && name.trim()) {
+    const nameInput = prompt('新しいタブの名前を入力してください:', '');
+
+    // promptでキャンセルが押されなかった場合（OKか、空でOKが押された場合）
+    if (nameInput !== null) {
+        let newTabName = nameInput.trim();
+        const defaultSortStat = '評価数値'; // デフォルトのソート基準
+
+        // 名前が空欄だったら、デフォルトのソート基準名をタブ名にする
+        if (!newTabName) {
+            newTabName = defaultSortStat;
+        }
+
         const newTab = {
             id: `custom_${Date.now()}`,
-            name: name.trim(),
-            sortStat: '評価数値',
+            name: newTabName,
+            sortStat: defaultSortStat,
             filters: ['weapon', 'armor', 'accessory'],
             hideZeroStat: false
         };
@@ -1164,10 +1174,11 @@ function handleAddCustomTab() {
         document.querySelectorAll('#inventory-tabs .active').forEach(b => b.classList.remove('active'));
         activeTabInfo = { type: 'custom', value: newTab.id };
 
-        renderCustomTabs(); // UIを再描画（ここで新しいタブに active クラスが付く）
+        renderCustomTabs(); // UIを再描画
         refreshInventoryView(); // 表示を更新
     }
 }
+// ▲▲▲【ここまで変更】▲▲▲
 
 function handleDeleteCustomTab(tabId) {
     const tabToDelete = customTabs.find(t => t.id === tabId);
@@ -1232,11 +1243,9 @@ function renderCustomTabs() {
         container.dataset.tabId = tab.id;
         container.addEventListener('click', handleTabClick);
 
-        // ▼▼▼【修正箇所】アクティブ状態を正しく反映する ▼▼▼
         if (activeTabInfo && activeTabInfo.type === 'custom' && activeTabInfo.value === tab.id) {
             container.classList.add('active');
         }
-        // ▲▲▲【修正箇所】▲▲▲
 
         const label = document.createElement('span');
         label.className = 'tab-label';
@@ -1273,6 +1282,7 @@ function renderCustomTabs() {
     });
 }
 
+// ▼▼▼【ここから変更】▼▼▼
 function openTabSettingsModal(tabId) {
     const tab = customTabs.find(t => t.id === tabId);
     if (!tab) return;
@@ -1373,15 +1383,17 @@ function openTabSettingsModal(tabId) {
             text: '保存',
             class: 'primary',
             onClick: () => {
-                const newName = nameInput.value.trim();
+                let newName = nameInput.value.trim();
+                const newSortStat = sortSelect.value;
+
+                // タブ名が空なら、ソート基準をタブ名にする
                 if (!newName) {
-                    alert('タブ名は空にできません。');
-                    return;
+                    newName = newSortStat;
                 }
 
                 // タブオブジェクトの情報を更新
                 tab.name = newName;
-                tab.sortStat = sortSelect.value;
+                tab.sortStat = newSortStat;
                 tab.hideZeroStat = hideZeroCheckbox.checked;
 
                 const newFilters = [];
@@ -1393,8 +1405,6 @@ function openTabSettingsModal(tabId) {
                 saveCustomTabs();   // 変更をlocalStorageに保存
                 renderCustomTabs(); // タブボタンのUIを再描画
                 closeModal();       // モーダルを閉じる
-
-                // ▼▼▼【ここからが新しい修正コードです】▼▼▼
 
                 // 1. 念のため全てのタブのアクティブ状態を解除
                 document.querySelectorAll('#inventory-tabs .active').forEach(b => b.classList.remove('active'));
@@ -1415,13 +1425,13 @@ function openTabSettingsModal(tabId) {
                     // 万が一要素が見つからなかった場合の安全策
                     document.querySelector('button[data-category="all"]').click();
                 }
-                // ▲▲▲【ここまでが新しい修正コードです】▲▲▲
             }
         }
     ];
 
     showModal(`タブ「${tab.name}」の設定`, content, buttons);
 }
+// ▲▲▲【ここまで変更】▲▲▲
 
 
 function setupShareButton() {
