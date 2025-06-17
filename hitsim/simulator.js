@@ -1147,36 +1147,56 @@ function refreshInventoryView() {
     renderInventory(itemsToRender);
 }
 
+// ▼▼▼【ここから変更】▼▼▼
 function handleAddCustomTab() {
-    const nameInput = prompt('新しいタブの名前を入力してください:', '');
+    const content = document.createElement('div');
+    const p = document.createElement('p');
+    p.textContent = '新しい「自動モード」のタブを追加しますか？';
+    p.style.lineHeight = '1.5';
+    
+    const small = document.createElement('small');
+    small.textContent = 'タブ名は「評価数値」として自動設定されます。後から設定で自由に変更できます。';
+    small.style.display = 'block';
+    small.style.marginTop = '8px';
+    small.style.color = '#ccc';
 
-    // promptでキャンセルが押されなかった場合（OKか、空でOKが押された場合）
-    if (nameInput !== null) {
-        let newTabName = nameInput.trim();
-        const defaultSortStat = '評価数値'; // デフォルトのソート基準
+    content.appendChild(p);
+    content.appendChild(small);
 
-        // 名前が空欄だったら、デフォルトのソート基準名をタブ名にする
-        if (!newTabName) {
-            newTabName = defaultSortStat;
+    const buttons = [
+        {
+            text: 'キャンセル',
+            class: 'secondary',
+            onClick: () => closeModal()
+        },
+        {
+            text: '追加',
+            class: 'primary',
+            onClick: () => {
+                const defaultSortStat = '評価数値';
+                const newTab = {
+                    id: `custom_${Date.now()}`,
+                    name: defaultSortStat,
+                    sortStat: defaultSortStat,
+                    filters: ['weapon', 'armor', 'accessory'],
+                    hideZeroStat: false,
+                    isNameAutomatic: true
+                };
+                customTabs.push(newTab);
+                saveCustomTabs();
+
+                // 新しいタブをアクティブにしてUIを更新
+                document.querySelectorAll('#inventory-tabs .active').forEach(b => b.classList.remove('active'));
+                activeTabInfo = { type: 'custom', value: newTab.id };
+                renderCustomTabs();
+                refreshInventoryView();
+                
+                closeModal();
+            }
         }
+    ];
 
-        const newTab = {
-            id: `custom_${Date.now()}`,
-            name: newTabName,
-            sortStat: defaultSortStat,
-            filters: ['weapon', 'armor', 'accessory'],
-            hideZeroStat: false
-        };
-        customTabs.push(newTab);
-        saveCustomTabs();
-
-        // 新しいタブをアクティブにする
-        document.querySelectorAll('#inventory-tabs .active').forEach(b => b.classList.remove('active'));
-        activeTabInfo = { type: 'custom', value: newTab.id };
-
-        renderCustomTabs(); // UIを再描画
-        refreshInventoryView(); // 表示を更新
-    }
+    showModal('新しいタブの追加', content, buttons);
 }
 // ▲▲▲【ここまで変更】▲▲▲
 
@@ -1185,43 +1205,64 @@ function handleDeleteCustomTab(tabId) {
     if (!tabToDelete) return;
 
     if (confirm(`タブ「${tabToDelete.name}」を削除しますか？`)) {
+        const wasActive = activeTabInfo.type === 'custom' && activeTabInfo.value === tabId;
+
+        // データとlocalStorageから削除
         customTabs = customTabs.filter(t => t.id !== tabId);
         saveCustomTabs();
 
-        if (activeTabInfo.type === 'custom' && activeTabInfo.value === tabId) {
-            document.querySelector('.tab-button[data-category="all"]').click();
-        } else {
-            renderCustomTabs();
+        // 先にカスタムタブのUIを再描画して、削除したタブを画面から消す
+        renderCustomTabs();
+
+        // もし削除したタブがアクティブだった場合は、「全て」タブに切り替える
+        if (wasActive) {
+            // .click()を呼ぶことで、アクティブ状態の管理とインベントリ更新を
+            // handleTabClick関数に一任できる
+            const allButton = document.querySelector('.tab-button[data-category="all"]');
+            if (allButton) {
+                allButton.click();
+            }
         }
+        // 削除したタブがアクティブでなかった場合は、再描画だけでOK。
+        // activeTabInfoは変わらないので、他のタブのアクティブ状態は維持される。
     }
 }
 
 function loadCustomTabs() {
     const savedTabs = localStorage.getItem(CUSTOM_TABS_KEY);
     if (savedTabs) {
-        customTabs = JSON.parse(savedTabs);
+        const loadedTabs = JSON.parse(savedTabs);
+        // 後方互換性のため、isNameAutomaticがないタブにはfalseをセット
+        customTabs = loadedTabs.map(tab => ({
+            ...tab,
+            isNameAutomatic: tab.isNameAutomatic === undefined ? false : tab.isNameAutomatic
+        }));
     } else {
+        // デフォルトタブの定義にも isNameAutomatic を追加
         customTabs = [
             {
                 id: `custom_default_weapon`,
                 name: '武器',
                 sortStat: '評価数値',
                 filters: ['weapon'],
-                hideZeroStat: false
+                hideZeroStat: false,
+                isNameAutomatic: false // 手動設定
             },
             {
                 id: `custom_default_armor`,
                 name: '防具',
                 sortStat: '評価数値',
                 filters: ['armor'],
-                hideZeroStat: false
+                hideZeroStat: false,
+                isNameAutomatic: false // 手動設定
             },
             {
                 id: `custom_default_accessory`,
                 name: 'アクセ',
                 sortStat: '評価数値',
                 filters: ['accessory'],
-                hideZeroStat: false
+                hideZeroStat: false,
+                isNameAutomatic: false // 手動設定
             }
         ];
         saveCustomTabs();
@@ -1282,15 +1323,32 @@ function renderCustomTabs() {
     });
 }
 
-// ▼▼▼【ここから変更】▼▼▼
 function openTabSettingsModal(tabId) {
     const tab = customTabs.find(t => t.id === tabId);
     if (!tab) return;
 
+    // --- ヘルパー関数: 自動タブ名生成ロジック ---
+    const generateAutomaticName = (sortStat, filters) => {
+        let suffix = '';
+        const allFilterKeys = ['weapon', 'armor', 'accessory'];
+        const onFilterKeys = allFilterKeys.filter(f => filters.includes(f));
+
+        if (onFilterKeys.length === 3 || onFilterKeys.length === 0) {
+            suffix = '';
+        } else if (onFilterKeys.length === 1) {
+            const filterMap = { weapon: '武器', armor: '防具', accessory: 'アクセ' };
+            suffix = filterMap[onFilterKeys[0]];
+        } else if (onFilterKeys.length === 2) {
+            const offFilterKey = allFilterKeys.find(f => !filters.includes(f));
+            const filterMap = { weapon: '武器', armor: '防具', accessory: 'アクセ' };
+            suffix = `${filterMap[offFilterKey]}以外`;
+        }
+        return `${sortStat}${suffix}`;
+    };
+
     const content = document.createElement('div');
     content.className = 'tab-settings-modal';
 
-    // --- ヘルパー: 設定グループを作成 ---
     const createSettingGroup = (labelText, childElement) => {
         const group = document.createElement('div');
         group.className = 'setting-group';
@@ -1304,18 +1362,34 @@ function openTabSettingsModal(tabId) {
     // --- 0. 名称変更 ---
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
-    nameInput.id = 'tab-name-input';
     nameInput.value = tab.name;
     content.appendChild(createSettingGroup('タブ名:', nameInput));
 
+    // --- 0.5 「自動」チェックボックス ---
+    const autoNameWrapper = document.createElement('div');
+    autoNameWrapper.className = 'toggle-switch-wrapper';
+    autoNameWrapper.style.paddingLeft = '5px'; // 見た目の調整
+    const autoNameLabelText = document.createElement('span');
+    autoNameLabelText.className = 'label-text';
+    autoNameLabelText.textContent = 'タブ名を自動で設定する';
+    const autoNameToggleSwitch = document.createElement('label');
+    autoNameToggleSwitch.className = 'toggle-switch';
+    const autoNameCheckbox = document.createElement('input');
+    autoNameCheckbox.type = 'checkbox';
+    autoNameCheckbox.checked = tab.isNameAutomatic;
+    const autoNameSlider = document.createElement('span');
+    autoNameSlider.className = 'slider';
+    autoNameToggleSwitch.appendChild(autoNameCheckbox);
+    autoNameToggleSwitch.appendChild(autoNameSlider);
+    autoNameWrapper.appendChild(autoNameLabelText);
+    autoNameWrapper.appendChild(autoNameToggleSwitch);
+    nameInput.parentElement.appendChild(autoNameWrapper); // タブ名グループに追加
+
     // --- 1. ソート設定 ---
     const sortSelect = document.createElement('select');
-    sortSelect.id = 'sort-stat-select';
     STAT_HEADERS.forEach(stat => {
         const option = new Option(stat, stat);
-        if (stat === tab.sortStat) {
-            option.selected = true;
-        }
+        if (stat === tab.sortStat) option.selected = true;
         sortSelect.appendChild(option);
     });
     content.appendChild(createSettingGroup('ソート基準 (降順):', sortSelect));
@@ -1325,23 +1399,19 @@ function openTabSettingsModal(tabId) {
     const filterOptionsWrapper = document.createElement('div');
     filterOptionsWrapper.className = 'filter-options';
     const filterOptions = { 'weapon': '武器', 'armor': '防具', 'accessory': 'アクセサリー' };
+    const filterCheckboxes = [];
 
     for (const key in filterOptions) {
-        const checkboxId = `filter-checkbox-${key}`;
         const wrapper = document.createElement('div');
         wrapper.className = 'toggle-switch-wrapper';
         const labelText = document.createElement('span');
-        labelText.className = 'label-text';
         labelText.textContent = filterOptions[key];
         const toggleSwitch = document.createElement('label');
         toggleSwitch.className = 'toggle-switch';
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.id = checkboxId;
         checkbox.value = key;
-        if (tab.filters.includes(key)) {
-            checkbox.checked = true;
-        }
+        if (tab.filters.includes(key)) checkbox.checked = true;
         const slider = document.createElement('span');
         slider.className = 'slider';
         toggleSwitch.appendChild(checkbox);
@@ -1349,6 +1419,7 @@ function openTabSettingsModal(tabId) {
         wrapper.appendChild(labelText);
         wrapper.appendChild(toggleSwitch);
         filterOptionsWrapper.appendChild(wrapper);
+        filterCheckboxes.push(checkbox);
     }
     filterContainer.appendChild(filterOptionsWrapper);
     content.appendChild(createSettingGroup('カテゴリーフィルター:', filterContainer));
@@ -1365,7 +1436,6 @@ function openTabSettingsModal(tabId) {
     hideZeroToggleSwitch.className = 'toggle-switch';
     const hideZeroCheckbox = document.createElement('input');
     hideZeroCheckbox.type = 'checkbox';
-    hideZeroCheckbox.id = 'hide-zero-stat-toggle';
     hideZeroCheckbox.checked = tab.hideZeroStat;
     const hideZeroSlider = document.createElement('span');
     hideZeroSlider.className = 'slider';
@@ -1373,8 +1443,37 @@ function openTabSettingsModal(tabId) {
     hideZeroToggleSwitch.appendChild(hideZeroSlider);
     hideZeroToggleWrapper.appendChild(hideZeroLabelText);
     hideZeroToggleWrapper.appendChild(hideZeroToggleSwitch);
-    hideZeroWrapper.appendChild(hideZeroToggleWrapper)
+    hideZeroWrapper.appendChild(hideZeroToggleWrapper);
     content.appendChild(createSettingGroup('追加フィルター:', hideZeroWrapper));
+
+    // --- 連動処理 ---
+    const updateAutomaticName = () => {
+        if (autoNameCheckbox.checked) {
+            const currentFilters = filterCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
+            nameInput.value = generateAutomaticName(sortSelect.value, currentFilters);
+        }
+    };
+    const toggleNameInput = () => {
+        nameInput.disabled = autoNameCheckbox.checked;
+        if (autoNameCheckbox.checked) {
+            updateAutomaticName();
+        }
+    };
+    
+    autoNameCheckbox.addEventListener('change', toggleNameInput);
+    sortSelect.addEventListener('change', updateAutomaticName);
+    filterCheckboxes.forEach(cb => {
+        cb.addEventListener('change', (e) => {
+            const checkedCount = filterCheckboxes.filter(c => c.checked).length;
+            if (checkedCount === 0) {
+                e.target.checked = true; // チェックを戻す
+                alert('カテゴリーフィルターは最低1つ選択してください。');
+                return;
+            }
+            updateAutomaticName();
+        });
+    });
+    toggleNameInput(); // 初期状態を設定
 
     // --- モーダルのボタン ---
     const buttons = [
@@ -1383,46 +1482,25 @@ function openTabSettingsModal(tabId) {
             text: '保存',
             class: 'primary',
             onClick: () => {
-                let newName = nameInput.value.trim();
-                const newSortStat = sortSelect.value;
-
-                // タブ名が空なら、ソート基準をタブ名にする
-                if (!newName) {
-                    newName = newSortStat;
-                }
-
                 // タブオブジェクトの情報を更新
-                tab.name = newName;
-                tab.sortStat = newSortStat;
+                tab.name = nameInput.value;
+                tab.isNameAutomatic = autoNameCheckbox.checked;
+                tab.sortStat = sortSelect.value;
                 tab.hideZeroStat = hideZeroCheckbox.checked;
+                tab.filters = filterCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
 
-                const newFilters = [];
-                content.querySelectorAll('.filter-options input[type="checkbox"]:checked').forEach(cb => {
-                    newFilters.push(cb.value);
-                });
-                tab.filters = newFilters;
+                saveCustomTabs();
+                renderCustomTabs();
+                closeModal();
 
-                saveCustomTabs();   // 変更をlocalStorageに保存
-                renderCustomTabs(); // タブボタンのUIを再描画
-                closeModal();       // モーダルを閉じる
-
-                // 1. 念のため全てのタブのアクティブ状態を解除
+                // アクティブ状態の更新
                 document.querySelectorAll('#inventory-tabs .active').forEach(b => b.classList.remove('active'));
-
-                // 2. 保存したタブに対応する、"新しく作られた"ボタン要素を探す
                 const savedTabElement = document.querySelector(`.custom-tab-container[data-tab-id="${tab.id}"]`);
-
                 if (savedTabElement) {
-                    // 3. 見つけたボタンをアクティブにする
                     savedTabElement.classList.add('active');
-
-                    // 4. アプリケーションの状態変数を正しく設定
                     activeTabInfo = { type: 'custom', value: tab.id };
-
-                    // 5. 新しいフィルタ設定でインベントリ表示を更新
                     refreshInventoryView();
                 } else {
-                    // 万が一要素が見つからなかった場合の安全策
                     document.querySelector('button[data-category="all"]').click();
                 }
             }
@@ -1431,7 +1509,6 @@ function openTabSettingsModal(tabId) {
 
     showModal(`タブ「${tab.name}」の設定`, content, buttons);
 }
-// ▲▲▲【ここまで変更】▲▲▲
 
 
 function setupShareButton() {
