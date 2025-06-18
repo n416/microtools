@@ -6,7 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ページにセーブ/ロード機能のUIを追加する
     addSaveLoadButton();
     createSaveLoadModal();
-    setupModalEventListeners();
+    // 関数名を変更
+    setupSaveLoadModalEventListeners();
 });
 
 // --- 定数定義 ---
@@ -31,7 +32,8 @@ function addSaveLoadButton() {
     saveLoadButton.textContent = 'セーブ/ロード';
     saveLoadButton.style.backgroundColor = '#28a745'; // 少し目立つ色に
 
-    saveLoadButton.addEventListener('click', openSaveLoadModal); // ★変更
+    // 呼び出し先を変更
+    saveLoadButton.addEventListener('click', openSaveLoadModalHandler);
 
     headerButtonsContainer.appendChild(saveLoadButton);
 }
@@ -66,15 +68,17 @@ function createSaveLoadModal() {
 /**
  * モーダルの基本的なイベントリスナー（閉じるボタンなど）を設定する
  */
-function setupModalEventListeners() {
+// 関数名を変更
+function setupSaveLoadModalEventListeners() {
     const overlay = document.getElementById('save-load-overlay');
     const closeButton = document.getElementById('save-load-close-button');
 
-    // 閉じるボタンか、モーダルの外側（オーバーレイ）をクリックで閉じる
-    closeButton.addEventListener('click', closeSaveLoadModal); // ★変更
+    // 呼び出し先を変更
+    closeButton.addEventListener('click', closeSaveLoadModalHandler);
     overlay.addEventListener('click', (event) => {
         if (event.target.id === 'save-load-overlay') {
-            closeSaveLoadModal(); // ★変更
+            // 呼び出し先を変更
+            closeSaveLoadModalHandler();
         }
     });
 }
@@ -83,16 +87,19 @@ function setupModalEventListeners() {
 /**
  * モーダルを開く
  */
-function openSaveLoadModal() { // ★変更
+// 関数名を変更
+function openSaveLoadModalHandler() {
     const overlay = document.getElementById('save-load-overlay');
-    renderSlots();
+    // 呼び出し先を変更
+    renderSaveLoadSlots();
     overlay.classList.remove('hidden');
 }
 
 /**
  * モーダルを閉じる
  */
-function closeSaveLoadModal() { // ★変更
+// 関数名を変更
+function closeSaveLoadModalHandler() {
     const overlay = document.getElementById('save-load-overlay');
     overlay.classList.add('hidden');
 }
@@ -100,7 +107,8 @@ function closeSaveLoadModal() { // ★変更
 /**
  * セーブスロットの状態を読み込み、モーダル内に描画する
  */
-function renderSlots() {
+// 関数名を変更
+function renderSaveLoadSlots() {
     const slotsContainer = document.getElementById('save-load-slots');
     slotsContainer.innerHTML = ''; // コンテナをクリア
 
@@ -117,7 +125,7 @@ function renderSlots() {
         const slotTitle = document.createElement('div');
         slotTitle.className = 'sl-slot-title';
         slotTitle.textContent = `スロット ${i}`;
-        
+
         const slotInfo = document.createElement('div');
         slotInfo.className = 'sl-slot-info';
 
@@ -128,12 +136,13 @@ function renderSlots() {
         } else {
             slotInfo.textContent = '空きスロット';
         }
-        
+
         slotElement.appendChild(slotTitle);
         slotElement.appendChild(slotInfo);
 
         // 各スロットにクリックイベントを設定
-        slotElement.addEventListener('click', () => handleSlotClick(i));
+        // 呼び出し先を変更
+        slotElement.addEventListener('click', () => handleSaveLoadSlotClick(i));
         slotsContainer.appendChild(slotElement);
     }
 }
@@ -142,21 +151,25 @@ function renderSlots() {
  * スロットがクリックされた時の処理
  * @param {number} slotNumber - クリックされたスロットの番号
  */
-function handleSlotClick(slotNumber) {
+// 関数名を変更
+function handleSaveLoadSlotClick(slotNumber) {
     const isSaveMode = document.getElementById('sl-tab-save').checked;
 
     if (isSaveMode) {
-        saveData(slotNumber);
+        // 呼び出し先を変更
+        saveDataToSlot(slotNumber);
     } else {
-        loadData(slotNumber);
+        // 呼び出し先を変更
+        loadDataFromSlot(slotNumber);
     }
 }
 
 /**
  * 指定されたスロットに現在の状態をセーブする
- * @param {number} slotNumber 
+ * @param {number} slotNumber
  */
-function saveData(slotNumber) {
+// 関数名を変更
+function saveDataToSlot(slotNumber) {
     if (!confirm(`スロット ${slotNumber} に現在の状態をセーブしますか？\n(既存のデータは上書きされます)`)) {
         return;
     }
@@ -180,14 +193,16 @@ function saveData(slotNumber) {
     localStorage.setItem(SAVE_SLOTS_KEY, JSON.stringify(allSlotsData));
 
     alert(`スロット ${slotNumber} にセーブしました。`);
-    renderSlots(); // スロットの表示を更新
+    // 呼び出し先を変更
+    renderSaveLoadSlots(); // スロットの表示を更新
 }
 
 /**
  * 指定されたスロットから状態をロードする
- * @param {number} slotNumber 
+ * @param {number} slotNumber
  */
-function loadData(slotNumber) {
+// 関数名を変更
+function loadDataFromSlot(slotNumber) {
     const allSlotsData = JSON.parse(localStorage.getItem(SAVE_SLOTS_KEY)) || {};
     const slotDataToLoad = allSlotsData[`slot-${slotNumber}`];
 
