@@ -35,14 +35,24 @@
         button {
             margin: 2px;
             padding: 8px 12px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            cursor: pointer;
         }
+
+        /* ▼▼▼【ここから追加】▼▼▼ */
+        button.active-mode {
+            background-color: #d4eaff;
+            border-color: #007bff;
+            font-weight: bold;
+        }
+        /* ▲▲▲【ここまで】▲▲▲ */
 
         .controls label {
             display: inline-block;
             margin-top: 8px;
         }
 
-        /* styleタグ内に追加 */
         .share-controls {
             position: absolute;
             bottom: 10px;
@@ -80,10 +90,10 @@
         <button id="simplifyBtn" disabled>アンカーを減らす</button>
         <hr>
         <label for="colorPicker">色:</label>
-        <input type="color" id="colorPicker" value="#000000">
+        <input type="color" id="colorPicker" value="#050505">
         <br>
         <label for="opacitySlider">濃さ:</label>
-        <input type="range" id="opacitySlider" min="0" max="100" value="75" style="vertical-align: middle;">
+        <input type="range" id="opacitySlider" min="0" max="100" value="80" style="vertical-align: middle;">
         <hr>
         <button id="shareBtn">共有</button>
     </div>
@@ -92,7 +102,6 @@
         <div class="share-buttons">
             <button id="generateCodeBtn">共有コードを生成</button>
             <button id="loadCodeBtn">コードから読込</button>
-        }
         </div>
     </div>
     <canvas id="myCanvas" resize></canvas>

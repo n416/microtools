@@ -35,7 +35,7 @@ let redoStack = [];
 let beforeState = null;
 let isDrawing = false;
 let inkAmount = 1.0;
-let drawingColor = new paper.Color(0, 0, 0, 0.5); // 描画色を保持する変数
+let drawingColor = new paper.Color(0, 0, 0, 1);
 
 // ===================================================
 // UI要素の取得
@@ -57,7 +57,6 @@ function updateDrawingColor() {
     drawingColor = new paper.Color(hexColor);
     drawingColor.alpha = opacity;
 
-    // もし編集モードでオブジェクトが選択中なら、その色をリアルタイムで更新する
     if (activeStrokeObject) {
         activeStrokeObject.color = drawingColor.clone();
         regenerateStrokeVisual(activeStrokeObject);
@@ -170,7 +169,6 @@ editTool.onMouseDown = function (event) {
             dragTarget = activeStrokeObject.visual;
             beforeState = { data: cloneData(activeStrokeObject.data), color: activeStrokeObject.color.clone() };
             showEditPathFor(activeStrokeObject);
-            // UIの色と濃さを選択中のオブジェクトに合わせる
             colorPicker.value = activeStrokeObject.color.toCSS(true);
             opacitySlider.value = activeStrokeObject.color.alpha * 100;
         }
@@ -180,12 +178,9 @@ editTool.onMouseDown = function (event) {
 editTool.onMouseDrag = function (event) {
     if (!dragTarget) return;
     
-    // アンカーポイントのドラッグ時
     if (dragTarget instanceof paper.Segment) {
-        // 1. 青いガイド線のアンカーを移動
         dragTarget.point = dragTarget.point.add(event.delta);
 
-        // 2. ガイド線の新しい点情報から、実線のデータを作り直す
         const newPoints = editPath.segments.map(s => s.point);
         const sourceData = beforeState.data;
         const newData = [];
@@ -203,10 +198,8 @@ editTool.onMouseDrag = function (event) {
         });
         activeStrokeObject.data = newData;
         
-        // 3. 新しいデータで実線を再描画
         regenerateStrokeVisual(activeStrokeObject);
 
-    // 線全体のドラッグ時
     } else if (dragTarget instanceof paper.Path) {
         const delta = event.delta;
         activeStrokeObject.visual.position = activeStrokeObject.visual.position.add(delta);
@@ -218,7 +211,6 @@ editTool.onMouseDrag = function (event) {
 editTool.onMouseUp = function (event) {
     if (!activeStrokeObject || !beforeState) return;
 
-    // onMouseDragでデータは更新済みなので、ここでは最終状態をUndoスタックに保存するだけ
     const afterState = { data: cloneData(activeStrokeObject.data), color: activeStrokeObject.color.clone() };
     const isChanged = JSON.stringify(beforeState) !== JSON.stringify(afterState);
 
@@ -405,11 +397,23 @@ function redo() {
     undoStack.push(action);
     updateUndoRedoButtons();
 }
+
 function setMode(mode) {
     clearEditState();
-    if (mode === 'draw') { drawTool.activate(); }
-    else if (mode === 'edit') { editTool.activate(); }
+    
+    drawModeBtn.classList.remove('active-mode');
+    editModeBtn.classList.remove('active-mode');
+
+    if (mode === 'draw') { 
+        drawTool.activate(); 
+        drawModeBtn.classList.add('active-mode');
+    }
+    else if (mode === 'edit') { 
+        editTool.activate(); 
+        editModeBtn.classList.add('active-mode');
+    }
 }
+
 drawModeBtn.addEventListener('click', () => setMode('draw'));
 editModeBtn.addEventListener('click', () => setMode('edit'));
 editModeBtn.disabled = false;
@@ -457,6 +461,7 @@ simplifyBtn.addEventListener('click', () => {
 
 // --- UI要素の取得 ---
 const shareBtn = document.getElementById('shareBtn');
+const URL_LENGTH_LIMIT = 8000;
 
 // --- 「共有」ボタンのクリック処理 ---
 shareBtn.addEventListener('click', () => {
@@ -466,14 +471,8 @@ shareBtn.addEventListener('click', () => {
     }
 
     const exportableData = strokes.map(stroke => {
-        const plainData = stroke.data.map(d => {
-            return {
-                point: {x: d.point.x, y: d.point.y},
-                thickness: d.thickness
-            };
-        });
         return {
-            path: plainData.map(d => [
+            path: stroke.data.map(d => [
                 Math.round(d.point.x),
                 Math.round(d.point.y),
                 Math.round(d.thickness * 10) / 10
@@ -489,6 +488,11 @@ shareBtn.addEventListener('click', () => {
     const jsonString = JSON.stringify(exportableData);
     const encodedData = encodeURIComponent(jsonString);
     const url = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
+
+    if (url.length > URL_LENGTH_LIMIT) {
+        alert('この作品は複雑すぎて共有できません。下部の共有コードを使うか、パスを減らしてください');
+        return;
+    }
 
     navigator.clipboard.writeText(url).then(() => {
         alert('共有用URLをクリップボードにコピーしました。');
@@ -572,6 +576,8 @@ generateCodeBtn.addEventListener('click', () => {
                 }
             };
         });
+        // ★★★【バグ修正】★★★
+        // 変数名を修正 (exportable.data -> exportableData)
         const jsonString = JSON.stringify(exportableData);
         const compressedData = pako.deflate(jsonString);
         const base64String = uint8ArrayToBase64(compressedData);
@@ -604,11 +610,11 @@ loadCodeBtn.addEventListener('click', () => {
         const importedStrokesData = JSON.parse(jsonString);
         
         const formattedData = importedStrokesData.map(item => {
-            if (Array.isArray(item.path)) { 
+            if (item.path && item.color) {
                 return item; 
             }
             return {
-                path: item,
+                path: Array.isArray(item) ? item : [],
                 color: { r: 0, g: 0, b: 0, a: 1 } 
             }
         });
