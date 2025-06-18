@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Web書道アプリ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js"></script>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            /* スクロールバーを非表示 */
+        }
+
+        #myCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #f0f0f0;
+            cursor: crosshair;
+        }
+
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        button {
+            margin: 2px;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        /* ▼▼▼【ここから追加】▼▼▼ */
+        button.active-mode {
+            background-color: #d4eaff;
+            border-color: #007bff;
+            font-weight: bold;
+        }
+        /* ▲▲▲【ここまで】▲▲▲ */
+
+        .controls label {
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        .share-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #shareDataTextbox {
+            width: 100%;
+            margin-bottom: 5px;
+            box-sizing: border-box;
+            /* paddingを含めた幅計算に */
+        }
+
+        .share-buttons {
+            display: flex;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="controls">
+        <button id="drawModeBtn">描画モード</button>
+        <button id="editModeBtn">編集モード</button>
+        <hr>
+        <button id="undoBtn">元に戻す (UNDO)</button>
+        <button id="redoBtn">やり直し (REDO)</button>
+        <button id="simplifyBtn" disabled>アンカーを減らす</button>
+        <hr>
+        <label for="colorPicker">色:</label>
+        <input type="color" id="colorPicker" value="#050505">
+        <br>
+        <label for="opacitySlider">濃さ:</label>
+        <input type="range" id="opacitySlider" min="0" max="100" value="80" style="vertical-align: middle;">
+        <hr>
+        <button id="shareBtn">共有</button>
+    </div>
+    <div class="share-controls">
+        <textarea id="shareDataTextbox" rows="4" placeholder="ここに共有コードをペーストして「読込」を押すか、「生成」を押してコードを作成します。"></textarea>
+        <div class="share-buttons">
+            <button id="generateCodeBtn">共有コードを生成</button>
+            <button id="loadCodeBtn">コードから読込</button>
+        </div>
+    </div>
+    <canvas id="myCanvas" resize></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="shodo.js"></script>
+</body>
+
+</html>
