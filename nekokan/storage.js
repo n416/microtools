@@ -181,3 +181,16 @@ export function removeHistoryGetData() {
   url.searchParams.delete('data');
   history.replaceState(null, '', url);  // ブラウザ履歴を更新し、URLからdataパラメータを削除
 }
+
+// storage.js の末尾に追加
+
+// 秒表示チェックボックスの状態を保存
+export function saveSecondsDisplayState(state) {
+  localStorage.setItem('secondsDisplayState', JSON.stringify(state));
+}
+
+// 秒表示チェックボックスの状態を読み込み
+export function loadSecondsDisplayState() {
+  const state = localStorage.getItem('secondsDisplayState');
+  return state ? JSON.parse(state) : false; // デフォルトはfalse
+}

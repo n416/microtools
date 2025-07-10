@@ -1,5 +1,5 @@
 import { updateNoteCard, showToast, updateTimeDisplay, collectAndSortLogEntries } from './ui.js';
-import { saveLogs, loadLogs, saveTimeDisplays, loadTimeDisplays, generateShareableUrl, loadFromUrlParams } from './storage.js';
+import { saveLogs, loadLogs, saveTimeDisplays, loadTimeDisplays, generateShareableUrl, loadFromUrlParams, loadSecondsDisplayState, saveSecondsDisplayState } from './storage.js';
 import { initializeTimePicker } from './timePicker.js';
 // グローバルに actionHistory を定義
 let actionHistory = [];
@@ -27,6 +27,16 @@ export function initializeEventListeners() {
   const resetButton = document.getElementById('resetButton');
   const timePickerModal = document.getElementById('timePickerModal');
   const shareButton = document.getElementById('shareButton');
+  const secondsCheckbox = document.getElementById('secondsCheckbox');
+
+  // ページ読み込み時にチェックボックスの状態を復元
+  secondsCheckbox.checked = loadSecondsDisplayState();
+
+  // チェックボックスの状態が変更されたら、状態を保存してノートカードを更新
+  secondsCheckbox.addEventListener('change', () => {
+    saveSecondsDisplayState(secondsCheckbox.checked);
+    updateNoteCard();
+  });
 
   logTextarea.value = logs.length > 0 ? logs.join('\n') : logTextarea.value;
 

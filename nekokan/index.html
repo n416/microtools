@@ -1,379 +1,635 @@
 <!DOCTYPE html>
 <html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="style.css" rel="stylesheet" />
+    <link href="./fontawesome/css/fontawesome.css" rel="stylesheet" />
+    <link href="./fontawesome/css/solid.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="style.css" rel="stylesheet">
-  <link href="./fontawesome/css/fontawesome.css" rel="stylesheet" />
-  <link href="./fontawesome/css/solid.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
+    <title>NEKO-KAN</title>
+  </head>
 
-  <title>NEKO-KAN</title>
-</head>
-
-<body>
-  <!-- アプリケーションバー -->
-  <div class="header">
-    <div class="top-left-align">
-      <button id="resetButton" class="header-btn"><i class="fas fa-trash"></i></button>
-      <button id="undoButton" class="header-btn"><i class="fa-solid fa-arrow-rotate-left"></i></button>
-      <button id="redoButton" class="header-btn"><i class="fas fa-redo"></i></button>
-      <button id="shareButton" class="header-btn" title="シェア"><i class="fas fa-share-alt"></i></button>
-    </div>
-    <div class="title">NEKO-KAN</div>
-    <div class="top-right-align">
-      <button id="confirmButton" class="confirm-btn" title="ログ画面へ移動">→</button>
-      <button id="backButton" class="back-btn" title="メイン画面に戻る">←</button>
-    </div>
-  </div>
-
-  <!-- メイン画面 -->
-  <div id="mainScreen" class="screen container main-container">
-    <div class="area-container">
-      <!-- テラガード -->
-      <div class="area-tile terraguard">
-        <div class="area-title">テラガード</div>
-        <div class="log-row">
-          <div class="log-label">PVP</div>
-          <div class="log-button-container"><button id="logButtonTerraguardPVP" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch1</div>
-          <div class="log-button-container"><button id="logButtonTerraguardCh1" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch2</div>
-          <div class="log-button-container"><button id="logButtonTerraguardCh2" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch3</div>
-          <div class="log-button-container"><button id="logButtonTerraguardCh3" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch4</div>
-          <div class="log-button-container"><button id="logButtonTerraguardCh4" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch5</div>
-          <div class="log-button-container"><button id="logButtonTerraguardCh5" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch6</div>
-          <div class="log-button-container"><button id="logButtonTerraguardCh6" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <!-- ch7～ch10: 初期は非表示 -->
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch7</div>
-          <div class="log-button-container"><button id="logButtonTerraguardCh7" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch8</div>
-          <div class="log-button-container"><button id="logButtonTerraguardCh8" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch9</div>
-          <div class="log-button-container"><button id="logButtonTerraguardCh9" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch10</div>
-          <div class="log-button-container"><button id="logButtonTerraguardCh10" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
+  <body>
+    <!-- アプリケーションバー -->
+    <div class="header">
+      <div class="top-left-align">
+        <button id="resetButton" class="header-btn">
+          <i class="fas fa-trash"></i>
+        </button>
+        <button id="undoButton" class="header-btn">
+          <i class="fa-solid fa-arrow-rotate-left"></i>
+        </button>
+        <button id="redoButton" class="header-btn">
+          <i class="fas fa-redo"></i>
+        </button>
+        <button id="shareButton" class="header-btn" title="シェア">
+          <i class="fas fa-share-alt"></i>
+        </button>
       </div>
-
-      <!-- トゥリア -->
-      <div class="area-tile turia">
-        <div class="area-title">トゥリア</div>
-        <div class="log-row">
-          <div class="log-label">PVP</div>
-          <div class="log-button-container"><button id="logButtonTuriaPVP" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch1</div>
-          <div class="log-button-container"><button id="logButtonTuriaCh1" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch2</div>
-          <div class="log-button-container"><button id="logButtonTuriaCh2" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch3</div>
-          <div class="log-button-container"><button id="logButtonTuriaCh3" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch4</div>
-          <div class="log-button-container"><button id="logButtonTuriaCh4" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch5</div>
-          <div class="log-button-container"><button id="logButtonTuriaCh5" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch6</div>
-          <div class="log-button-container"><button id="logButtonTuriaCh6" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <!-- ch7～ch10: 初期は非表示 -->
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch7</div>
-          <div class="log-button-container"><button id="logButtonTuriaCh7" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch8</div>
-          <div class="log-button-container"><button id="logButtonTuriaCh8" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch9</div>
-          <div class="log-button-container"><button id="logButtonTuriaCh9" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch10</div>
-          <div class="log-button-container"><button id="logButtonTuriaCh10" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-      </div>
-
-      <!-- アンゲロス -->
-      <div class="area-tile angelos">
-        <div class="area-title">アンゲロス</div>
-        <div class="log-row">
-          <div class="log-label">PVP</div>
-          <div class="log-button-container"><button id="logButtonAngelosPVP" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch1</div>
-          <div class="log-button-container"><button id="logButtonAngelosCh1" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch2</div>
-          <div class="log-button-container"><button id="logButtonAngelosCh2" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch3</div>
-          <div class="log-button-container"><button id="logButtonAngelosCh3" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch4</div>
-          <div class="log-button-container"><button id="logButtonAngelosCh4" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch5</div>
-          <div class="log-button-container"><button id="logButtonAngelosCh5" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch6</div>
-          <div class="log-button-container"><button id="logButtonAngelosCh6" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <!-- ch7～ch10: 初期は非表示 -->
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch7</div>
-          <div class="log-button-container"><button id="logButtonAngelosCh7" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch8</div>
-          <div class="log-button-container"><button id="logButtonAngelosCh8" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch9</div>
-          <div class="log-button-container"><button id="logButtonAngelosCh9" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch10</div>
-          <div class="log-button-container"><button id="logButtonAngelosCh10" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-      </div>
-
-      <!-- フォントゥナス -->
-      <div class="area-tile fontunas">
-        <div class="area-title">フォントゥナス</div>
-        <div class="log-row">
-          <div class="log-label">PVP</div>
-          <div class="log-button-container"><button id="logButtonFontunasPVP" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch1</div>
-          <div class="log-button-container"><button id="logButtonFontunasCh1" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch2</div>
-          <div class="log-button-container"><button id="logButtonFontunasCh2" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch3</div>
-          <div class="log-button-container"><button id="logButtonFontunasCh3" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch4</div>
-          <div class="log-button-container"><button id="logButtonFontunasCh4" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch5</div>
-          <div class="log-button-container"><button id="logButtonFontunasCh5" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch6</div>
-          <div class="log-button-container"><button id="logButtonFontunasCh6" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <!-- ch7～ch10: 初期は非表示 -->
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch7</div>
-          <div class="log-button-container"><button id="logButtonFontunasCh7" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch8</div>
-          <div class="log-button-container"><button id="logButtonFontunasCh8" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch9</div>
-          <div class="log-button-container"><button id="logButtonFontunasCh9" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch10</div>
-          <div class="log-button-container"><button id="logButtonFontunasCh10" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-      </div>
-
-      
-      <!-- モンベラ -->
-      <div class="area-tile monbera">
-        <div class="area-title">モンベラ</div>
-        <div class="log-row">
-          <div class="log-label">PVP</div>
-          <div class="log-button-container"><button id="logButtonMonberaPVP" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch1</div>
-          <div class="log-button-container"><button id="logButtonMonberaCh1" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch2</div>
-          <div class="log-button-container"><button id="logButtonMonberaCh2" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch3</div>
-          <div class="log-button-container"><button id="logButtonMonberaCh3" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch4</div>
-          <div class="log-button-container"><button id="logButtonMonberaCh4" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch5</div>
-          <div class="log-button-container"><button id="logButtonMonberaCh5" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row">
-          <div class="log-label">ch6</div>
-          <div class="log-button-container"><button id="logButtonMonberaCh6" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <!-- ch7～ch10: 初期は非表示 -->
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch7</div>
-          <div class="log-button-container"><button id="logButtonMonberaCh7" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch8</div>
-          <div class="log-button-container"><button id="logButtonMonberaCh8" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch9</div>
-          <div class="log-button-container"><button id="logButtonMonberaCh9" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-        <div class="log-row" style="display:none;">
-          <div class="log-label">ch10</div>
-          <div class="log-button-container"><button id="logButtonMonberaCh10" class="btn log-btn"><i class="fas fa-cat"></i></button></div>
-        </div>
-      </div>
-      
-      <!-- ノート -->
-      <!-- ノートカードとチェックボックスをラップするdivを追加 -->
-      <div id="noteWrapper" class="note-wrapper">
-        <div id="noteCard" class="area-tile">
-          <!-- Noteのコンテンツが表示される部分 -->
-        </div>
-        <div id="toggleTimeDisplay">
-          <i id="checkboxIcon" class="fa-regular fa-square"></i> 時刻を表示しない
-        </div>
-      </div>
-      
-      <!-- ノートカードの下にアラーム設定を追加 -->
-      <div id="alarmSettings" class="alarm-settings">
-        <label><input type="checkbox" id="alarm1min"> 1分前</label>
-        <label><input type="checkbox" id="alarm3min"> 3分前</label>
-        <label><input type="checkbox" id="alarm5min"> 5分前</label>
-        <label><input type="checkbox" id="muteAlarm"> 鳴らさない</label>
+      <div class="title">NEKO-KAN</div>
+      <div class="top-right-align">
+        <button id="confirmButton" class="confirm-btn" title="ログ画面へ移動">
+          →
+        </button>
+        <button id="backButton" class="back-btn" title="メイン画面に戻る">
+          ←
+        </button>
       </div>
     </div>
-  </div>
 
-  <!-- ログ画面 -->
-  <div id="logScreen" class="screen container log-container" style="display:none;">
-    <textarea id="logTextarea" class="log-textarea"></textarea>
-    <button id="saveButton" class="btn save-btn">保存</button>
-    <button id="copyButton" class="btn copy-btn">クリップボードにコピー</button>
-    <button id="clearButton" class="btn clear-btn">全クリア</button>
-  </div>
+    <!-- メイン画面 -->
+    <div id="mainScreen" class="screen container main-container">
+      <div class="area-container">
+        <!-- テラガード -->
+        <div class="area-tile terraguard">
+          <div class="area-title">テラガード</div>
+          <div class="log-row">
+            <div class="log-label">PVP</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardPVP" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch1</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardCh1" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch2</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardCh2" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch3</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardCh3" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch4</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardCh4" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch5</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardCh5" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch6</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardCh6" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <!-- ch7～ch10: 初期は非表示 -->
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch7</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardCh7" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch8</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardCh8" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch9</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardCh9" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch10</div>
+            <div class="log-button-container">
+              <button id="logButtonTerraguardCh10" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+        </div>
 
-  <!-- トースト通知 -->
-  <div id="toast" class="toast">操作完了</div>
+        <!-- トゥリア -->
+        <div class="area-tile turia">
+          <div class="area-title">トゥリア</div>
+          <div class="log-row">
+            <div class="log-label">PVP</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaPVP" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch1</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaCh1" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch2</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaCh2" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch3</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaCh3" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch4</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaCh4" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch5</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaCh5" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch6</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaCh6" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <!-- ch7～ch10: 初期は非表示 -->
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch7</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaCh7" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch8</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaCh8" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch9</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaCh9" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch10</div>
+            <div class="log-button-container">
+              <button id="logButtonTuriaCh10" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+        </div>
 
-  <!-- モーダルウィンドウ -->
-  <div id="modal" class="modal">
-    <div class="modal-content">
-      <span id="modalCloseButton" class="modal-close-btn"></span>
-      <ul id="modalList"></ul>
-    </div>
-  </div>
+        <!-- アンゲロス -->
+        <div class="area-tile angelos">
+          <div class="area-title">アンゲロス</div>
+          <div class="log-row">
+            <div class="log-label">PVP</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosPVP" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch1</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosCh1" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch2</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosCh2" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch3</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosCh3" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch4</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosCh4" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch5</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosCh5" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch6</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosCh6" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <!-- ch7～ch10: 初期は非表示 -->
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch7</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosCh7" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch8</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosCh8" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch9</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosCh9" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch10</div>
+            <div class="log-button-container">
+              <button id="logButtonAngelosCh10" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+        </div>
 
-  <!-- 確認モーダルウィンドウ -->
-  <div id="confirmModal" class="modal">
-    <div class="modal-content">
-      <span id="confirmModalCloseButton" class="modal-close-btn"></span>
-      <p>本当に全てのログをクリアしますか？</p>
-      <button id="confirmYesButton" class="btn">はい</button>
-      <button id="confirmNoButton" class="btn">いいえ</button>
-    </div>
-  </div>
+        <!-- フォントゥナス -->
+        <div class="area-tile fontunas">
+          <div class="area-title">フォントゥナス</div>
+          <div class="log-row">
+            <div class="log-label">PVP</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasPVP" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch1</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasCh1" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch2</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasCh2" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch3</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasCh3" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch4</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasCh4" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch5</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasCh5" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch6</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasCh6" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <!-- ch7～ch10: 初期は非表示 -->
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch7</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasCh7" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch8</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasCh8" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch9</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasCh9" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch10</div>
+            <div class="log-button-container">
+              <button id="logButtonFontunasCh10" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+        </div>
 
-  <!-- チャンネル数設定モーダル -->
-  <div id="channelSettingsModal" class="modal">
-    <div class="modal-content">
-      <!-- 時計の部分をチャンネル設定に変更 -->
-      <label for="channelCountInput">チャンネル数 (1〜10):</label>
-      <input type="number" id="channelCountInput" min="1" max="10" class="time-input">
+        <!-- モンベラ -->
+        <div class="area-tile monbera">
+          <div class="area-title">モンベラ</div>
+          <div class="log-row">
+            <div class="log-label">PVP</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaPVP" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch1</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaCh1" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch2</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaCh2" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch3</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaCh3" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch4</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaCh4" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch5</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaCh5" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row">
+            <div class="log-label">ch6</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaCh6" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <!-- ch7～ch10: 初期は非表示 -->
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch7</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaCh7" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch8</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaCh8" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch9</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaCh9" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+          <div class="log-row" style="display: none">
+            <div class="log-label">ch10</div>
+            <div class="log-button-container">
+              <button id="logButtonMonberaCh10" class="btn log-btn">
+                <i class="fas fa-cat"></i>
+              </button>
+            </div>
+          </div>
+        </div>
 
-      <!-- ボタン類 -->
-      <button id="channelCountOkButton" class="btn">OK</button>
-      <button id="channelSettingsClearButton" class="btn clear-btn">クリア</button>
+        <!-- ノート -->
+        <!-- ノートカードとチェックボックスをラップするdivを追加 -->
+        <div id="noteWrapper" class="note-wrapper">
+          <div id="noteCard" class="area-tile"></div>
+          <div class="note-controls">
+            <div id="toggleTimeDisplay">
+              <i id="checkboxIcon" class="fa-regular fa-square"></i>
+              時刻を表示しない
+            </div>
+            <div id="toggleSecondsDisplay">
+              <input type="checkbox" id="secondsCheckbox" />
+              <label for="secondsCheckbox">秒表示</label>
+            </div>
+          </div>
+        </div>
 
-      <!-- 閉じるボタン -->
-      <button id="channelSettingsModalCloseButton" class="modal-close-btn"></button>
-    </div>
-  </div>
-
-  <!-- 時刻入力モーダル -->
-  <div id="timePickerModal" class="modal">
-    <div class="modal-content">
-      <div class="clock">
-        <div class="hour-hand"></div>
-        <div class="minute-hand"></div>
-        <div class="center-point"></div>
+        <!-- ノートカードの下にアラーム設定を追加 -->
+        <div id="alarmSettings" class="alarm-settings">
+          <label><input type="checkbox" id="alarm1min" /> 1分前</label>
+          <label><input type="checkbox" id="alarm3min" /> 3分前</label>
+          <label><input type="checkbox" id="alarm5min" /> 5分前</label>
+          <label><input type="checkbox" id="muteAlarm" /> 鳴らさない</label>
+        </div>
       </div>
-      <input id="timeInput" type="time" class="time-input">
-      <button id="timePickerOkButton" class="btn">OK</button>
-      <button id="timePickerClearButton" class="btn">クリア</button>
-      <button id="channelToggleButton" class="btn">ボタンを無効にする</button>
-      <!-- 閉じるボタンを追加 -->
-      <button id="timePickerModalCloseButton" class="modal-close-btn"></button>
     </div>
-  </div>
-  <!-- 上書き確認モーダルウィンドウ -->
-  <div id="overwriteModal" class="modal">
-    <div class="modal-content">
-      <span id="overwriteModalCloseButton" class="modal-close-btn"></span>
-      <p>すでに存在するログが上書きされます。宜しいですか？</p>
-      <button id="overwriteYesButton" class="btn">はい</button> <!-- 共通のボタンクラス "btn" を適用 -->
-      <button id="overwriteNoButton" class="btn">キャンセル</button> <!-- 共通のボタンクラス "btn" を適用 -->
-    </div>
-  </div>
-  <script src="main.js" type="module"></script>
-</body>
 
+    <!-- ログ画面 -->
+    <div
+      id="logScreen"
+      class="screen container log-container"
+      style="display: none"
+    >
+      <textarea id="logTextarea" class="log-textarea"></textarea>
+      <button id="saveButton" class="btn save-btn">保存</button>
+      <button id="copyButton" class="btn copy-btn">
+        クリップボードにコピー
+      </button>
+      <button id="clearButton" class="btn clear-btn">全クリア</button>
+    </div>
+
+    <!-- トースト通知 -->
+    <div id="toast" class="toast">操作完了</div>
+
+    <!-- モーダルウィンドウ -->
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <span id="modalCloseButton" class="modal-close-btn"></span>
+        <ul id="modalList"></ul>
+      </div>
+    </div>
+
+    <!-- 確認モーダルウィンドウ -->
+    <div id="confirmModal" class="modal">
+      <div class="modal-content">
+        <span id="confirmModalCloseButton" class="modal-close-btn"></span>
+        <p>本当に全てのログをクリアしますか？</p>
+        <button id="confirmYesButton" class="btn">はい</button>
+        <button id="confirmNoButton" class="btn">いいえ</button>
+      </div>
+    </div>
+
+    <!-- チャンネル数設定モーダル -->
+    <div id="channelSettingsModal" class="modal">
+      <div class="modal-content">
+        <!-- 時計の部分をチャンネル設定に変更 -->
+        <label for="channelCountInput">チャンネル数 (1〜10):</label>
+        <input
+          type="number"
+          id="channelCountInput"
+          min="1"
+          max="10"
+          class="time-input"
+        />
+
+        <!-- ボタン類 -->
+        <button id="channelCountOkButton" class="btn">OK</button>
+        <button id="channelSettingsClearButton" class="btn clear-btn">
+          クリア
+        </button>
+
+        <!-- 閉じるボタン -->
+        <button
+          id="channelSettingsModalCloseButton"
+          class="modal-close-btn"
+        ></button>
+      </div>
+    </div>
+
+    <!-- 時刻入力モーダル -->
+    <div id="timePickerModal" class="modal">
+      <div class="modal-content">
+        <div class="clock">
+          <div class="hour-hand"></div>
+          <div class="minute-hand"></div>
+          <div class="center-point"></div>
+        </div>
+        <input id="timeInput" type="time" class="time-input" />
+        <button id="timePickerOkButton" class="btn">OK</button>
+        <button id="timePickerClearButton" class="btn">クリア</button>
+        <button id="channelToggleButton" class="btn">ボタンを無効にする</button>
+        <!-- 閉じるボタンを追加 -->
+        <button
+          id="timePickerModalCloseButton"
+          class="modal-close-btn"
+        ></button>
+      </div>
+    </div>
+    <!-- 上書き確認モーダルウィンドウ -->
+    <div id="overwriteModal" class="modal">
+      <div class="modal-content">
+        <span id="overwriteModalCloseButton" class="modal-close-btn"></span>
+        <p>すでに存在するログが上書きされます。宜しいですか？</p>
+        <button id="overwriteYesButton" class="btn">はい</button>
+        <!-- 共通のボタンクラス "btn" を適用 -->
+        <button id="overwriteNoButton" class="btn">キャンセル</button>
+        <!-- 共通のボタンクラス "btn" を適用 -->
+      </div>
+    </div>
+    <script src="main.js" type="module"></script>
+  </body>
 </html>
