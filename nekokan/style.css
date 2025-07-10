@@ -713,7 +713,7 @@ body {
 }
 #noteCard {
   position: relative;
-  padding-bottom: 45px;
+  flex-grow: 1;
 }
 
 /* #toggleTimeDisplay の position: absolute などは .note-controls に移動したため削除 */
@@ -725,27 +725,42 @@ body {
 
 .note-wrapper {
   display: flex;
-  position: relative;
+  flex-direction: column; /* 要素を縦に並べる */
   flex: 1;
+  gap: 5px;
 }
 
 .note-controls {
-  position: absolute;
-  bottom: 15px;
-  left: 15px;
+  /* position: absolute; などは不要なので削除 */
+  padding: 10px 15px; /* 上下の余白を調整 */
   display: flex;
-  gap: 15px; /* チェックボックス間の隙間 */
-  align-items: center;
+  flex-direction: row;
+  align-items: flex-start;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  gap: 20px; /* 隙間を少し広げる */
 }
 
 #toggleTimeDisplay,
 #toggleSecondsDisplay {
   color: #666;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem; /* サイズを少し調整 */
 }
 
-#toggleSecondsDisplay input,
-#toggleSecondsDisplay label {
-  cursor: pointer;
-  vertical-align: middle; /* ラベルとチェックボックスの縦位置を揃える */
+/* アイコンとテキストの間のスペース */
+#toggleTimeDisplay i,
+#toggleSecondsDisplay i {
+  margin-right: 8px;
+  font-size: 1.1rem; /* アイコンサイズを少し大きく */
+  width: 1.1rem; /* 幅を固定してガタつきを防ぐ */
+  text-align: center;
+}
+
+/* 「秒表示」チェックボックスとラベルの間のスペース */
+#toggleSecondsDisplay input {
+  margin-right: 5px;
 }
