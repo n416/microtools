@@ -5,6 +5,7 @@ import {
   loadDisabledChannels,
   loadChannelCount,
   saveChannelCount,
+  loadSecondsDisplayState, // インポートに追加
 } from './storage.js';
 let timeDisplays = loadTimeDisplays();
 
@@ -24,38 +25,33 @@ export function updateNoteCard() {
   const formattedEntries = [];
   const hideTime = document
     .getElementById('checkboxIcon')
-    .classList.contains('fa-square-check'); // チェックが入っているか確認
+    .classList.contains('fa-square-check'); // 時刻非表示の状態
+
+  const showSeconds = loadSecondsDisplayState(); // 秒表示の状態を読み込む
 
   orderedLogEntries.forEach((entry, index) => {
+    let timePart = ''; // 表示する時刻部分を格納する変数
+    if (!hideTime) {
+      // showSeconds の状態に応じて表示を切り替える
+      timePart = showSeconds ? entry.time : entry.time.substring(0, 5);
+    }
+
     if (lastArea !== entry.area) {
       if (formattedEntries.length > 0) {
         formattedEntries.push('<hr>');
       }
-      // 時刻を非表示にする場合
-      if (hideTime) {
-        formattedEntries.push(
-          `<span class="${entry.class}">${entry.area} ${entry.channel}</span>`
-        );
-      } else {
-        formattedEntries.push(
-          `<span class="${entry.class}">${entry.area} ${
-            entry.channel
-          } ${entry.time.substring(0, 5)}</span>`
-        );
-      }
+      formattedEntries.push(
+        // hideTime が true なら timePart は空文字列になる
+        `<span class="${entry.class}">${entry.area} ${entry.channel}${
+          timePart ? ' ' + timePart : ''
+        }</span>`
+      );
     } else {
-      if (hideTime) {
-        formattedEntries.push(
-          `<span class="${entry.class}">${entry.channel}</span>`
-        );
-      } else {
-        formattedEntries.push(
-          `<span class="${entry.class}">${entry.channel} ${entry.time.substring(
-            0,
-            5
-          )}</span>`
-        );
-      }
+      formattedEntries.push(
+        `<span class="${entry.class}">${entry.channel}${
+          timePart ? ' ' + timePart : ''
+        }</span>`
+      );
     }
     lastArea = entry.area;
   });
