@@ -3,6 +3,7 @@ import {
   showToast,
   updateTimeDisplay,
   collectAndSortLogEntries,
+  updateAreaCount,
 } from './ui.js';
 import {
   saveLogs,
@@ -13,6 +14,8 @@ import {
   loadFromUrlParams,
   loadSecondsDisplayState,
   saveSecondsDisplayState,
+  saveDefaultChannelCount,
+  loadDefaultChannelCount,
 } from './storage.js';
 import {initializeTimePicker} from './timePicker.js';
 // グローバルに actionHistory を定義
@@ -46,7 +49,44 @@ export function initializeEventListeners() {
   // 上記の代わりにこのコードを貼り付け
   const toggleSecondsBtn = document.getElementById('toggleSecondsDisplay');
   const secondsIcon = document.getElementById('secondsCheckboxIcon');
+  const titleElement = document.querySelector('.title');
+  const defaultChannelModal = document.getElementById('defaultChannelSettingsModal');
+  const defaultChannelCountInput = document.getElementById('defaultChannelCountInput');
+  const defaultChannelOkButton = document.getElementById('defaultChannelCountOkButton');
+  const defaultChannelCloseButton = document.getElementById('defaultChannelSettingsModalCloseButton');
 
+  // タイトルクリックでモーダルを開く
+  titleElement.addEventListener('click', () => {
+    // 現在のデフォルト値を読み込んで入力欄に表示
+    defaultChannelCountInput.value = loadDefaultChannelCount();
+    defaultChannelModal.style.display = 'flex';
+  });
+
+  // OKボタンの処理
+  defaultChannelOkButton.addEventListener('click', () => {
+    const newCount = parseInt(defaultChannelCountInput.value, 10);
+    // 1～6の範囲内かチェック
+    if (newCount >= 1 && newCount <= 6) {
+      saveDefaultChannelCount(newCount); // 新しいデフォルト値を保存
+      updateAreaCount(); // 全エリアの表示を更新
+      defaultChannelModal.style.display = 'none'; // モーダルを閉じる
+      showToast(`デフォルトチャンネル数を ${newCount} に設定しました`);
+    } else {
+      showToast('1から6の数値を入力してください');
+    }
+  });
+
+  // 閉じるボタンの処理
+  defaultChannelCloseButton.addEventListener('click', () => {
+    defaultChannelModal.style.display = 'none';
+  });
+
+  // モーダル外のクリックで閉じる処理
+  defaultChannelModal.addEventListener('click', (event) => {
+    if (event.target === defaultChannelModal) {
+      defaultChannelModal.style.display = 'none';
+    }
+  });
   // ページの読み込み時に、保存された状態に応じてアイコンを復元
   if (loadSecondsDisplayState()) {
     secondsIcon.classList.remove('fa-square');
@@ -396,7 +436,6 @@ export function initializeEventListeners() {
       }
     }
   });
-  
 }
 
 function pushToActionHistory(logs, timeDisplays) {
