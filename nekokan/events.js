@@ -337,6 +337,66 @@ export function initializeEventListeners() {
   });
 
   initializeTimePicker();
+
+  const noteCard = document.getElementById('noteCard');
+
+  // エリア名とチャンネル名から該当する .log-row を見つけるヘルパー関数
+  const findLogRow = (area, channel) => {
+    for (const tile of document.querySelectorAll('.area-tile')) {
+      const title = tile.querySelector('.area-title');
+      if (title && title.textContent.trim() === area) {
+        for (const label of tile.querySelectorAll('.log-label')) {
+          if (label.childNodes[0].nodeValue.trim() === channel) {
+            return label.closest('.log-row');
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  // マウスオーバーで点灯
+  noteCard.addEventListener('mouseover', (e) => {
+    if (e.target.tagName === 'SPAN' && e.target.dataset.area) {
+      const {area, channel} = e.target.dataset;
+      const logRow = findLogRow(area, channel);
+      if (logRow) {
+        logRow.classList.add('log-row-highlight');
+      }
+    }
+  });
+
+  // マウスが離れたら消灯
+  noteCard.addEventListener('mouseout', (e) => {
+    document.querySelectorAll('.log-row-highlight').forEach((row) => {
+      row.classList.remove('log-row-highlight');
+    });
+  });
+
+  // クリックで点滅
+  noteCard.addEventListener('click', (e) => {
+    if (e.target.tagName === 'SPAN' && e.target.dataset.area) {
+      // 既存の点滅があれば一旦リセット
+      document.querySelectorAll('.log-row-blink').forEach((row) => {
+        row.classList.remove('log-row-blink');
+      });
+
+      const {area, channel} = e.target.dataset;
+      const logRow = findLogRow(area, channel);
+      if (logRow) {
+        logRow.classList.add('log-row-blink');
+        // アニメーションが終了したらクラスを削除し、再クリックで点滅できるようにする
+        logRow.addEventListener(
+          'animationend',
+          () => {
+            logRow.classList.remove('log-row-blink');
+          },
+          {once: true}
+        );
+      }
+    }
+  });
+  
 }
 
 function pushToActionHistory(logs, timeDisplays) {
