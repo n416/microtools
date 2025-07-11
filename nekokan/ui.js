@@ -16,6 +16,8 @@ if (!timeDisplays) {
 }
 
 let orderedLogEntries = [];
+let notifiedEvents = new Set();
+
 // ノートを更新
 export function updateNoteCard() {
   timeDisplays = loadTimeDisplays();
@@ -132,6 +134,25 @@ export function collectAndSortLogEntries() {
         let entryClass = '';
         const timeDifference = logTime - now;
         const fiveMinits = 5 * 60 * 1000;
+
+        const originalTitle = "NEKO-KAN"; // 元のタイトル
+
+        // 1. 出現時刻を過ぎて5秒以内、かつ、まだ通知していない場合
+        if (timeDifference < 0 && Math.abs(timeDifference) < 5000 && !notifiedEvents.has(key)) {
+          
+          document.title = `【出現中】${areaTitle} ${channelName}`;
+          notifiedEvents.add(key); // 通知済みとして記録
+
+          // 15秒後にタイトルを元に戻す
+          setTimeout(() => {
+            document.title = originalTitle;
+          }, 15000);
+        }
+
+        // 2. 通知済みイベントが1分以上経過したら、記録から削除して再度通知できるようにする
+        if (timeDifference < -60000 && notifiedEvents.has(key)) {
+            notifiedEvents.delete(key);
+        }
 
         if (timeDifference > 0 && timeDifference <= fiveMinits) {
           // 今から5分以内の未来の時刻は soon-log
