@@ -390,3 +390,15 @@ export function showOverwriteModal(onConfirm, onCancel) {
     }
   });
 }
+
+// デジタル時計を更新する関数
+export function updateDigitalClock() {
+  const clockElement = document.getElementById('digitalClock');
+  if (clockElement) {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+  }
+}

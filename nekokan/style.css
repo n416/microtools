@@ -764,3 +764,33 @@ body {
 #toggleSecondsDisplay input {
   margin-right: 5px;
 }
+
+/* デジタル時計のスタイル */
+#digitalClock {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+  padding: 10px;
+  letter-spacing: 0.05em;
+  flex: none;
+  display: block; /* 時計を常に表示 */
+  color: #fff;
+  background: #777;
+  text-shadow: 0px 1px 3px black;
+}
+
+/* ノートカードのmarginTopを削除 */
+.note-card {
+  margin-top: 0;
+}
+
+/* モバイル表示の調整 */
+@media (max-width: 845px) {
+  #digitalClock {
+    font-size: 1rem;
+    padding: 8px;
+  }
+  .note-wrapper {
+    gap: 10px;
+  }
+}
