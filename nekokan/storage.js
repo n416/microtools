@@ -1,5 +1,9 @@
 // storage.js
-import { updateNoteCard, collectAndSortLogEntries, updateAreaCount } from './ui.js';
+import {
+  updateNoteCard,
+  collectAndSortLogEntries,
+  updateAreaCount,
+} from './ui.js';
 
 export function loadLogs() {
   try {
@@ -22,8 +26,8 @@ export function saveLogs(logs) {
 export function loadTimeDisplays() {
   try {
     const timeDisplays = localStorage.getItem('timeDisplays');
-    if (!timeDisplays || timeDisplays === "undefined") {
-      return {};  // 空のオブジェクトを返す
+    if (!timeDisplays || timeDisplays === 'undefined') {
+      return {}; // 空のオブジェクトを返す
     }
     return JSON.parse(timeDisplays);
   } catch (error) {
@@ -67,7 +71,7 @@ export function saveChannelCount(areaName, channelCount) {
       channelSettings = {};
     }
   } catch (error) {
-    console.error("Invalid JSON in localStorage for channelSettings:", error);
+    console.error('Invalid JSON in localStorage for channelSettings:', error);
     // エラー時は空のオブジェクトにリセット
     channelSettings = {};
   }
@@ -75,7 +79,6 @@ export function saveChannelCount(areaName, channelCount) {
   // チャンネル数を設定し、再度保存
   channelSettings[areaName] = channelCount;
   localStorage.setItem('channelSettings', JSON.stringify(channelSettings));
-
 }
 
 // 各エリアごとのチャンネル数を取得する
@@ -84,7 +87,7 @@ export function loadChannelCount(areaName) {
 
   try {
     const savedSettings = localStorage.getItem('channelSettings');
-    
+
     // 値が存在し、かつ空でないかチェック
     if (savedSettings && savedSettings !== 'undefined') {
       // 有効なJSONをパース
@@ -94,24 +97,24 @@ export function loadChannelCount(areaName) {
       channelSettings = {};
     }
   } catch (error) {
-    console.error("Invalid JSON in localStorage for channelSettings:", error);
+    console.error('Invalid JSON in localStorage for channelSettings:', error);
     // エラー時は空のオブジェクトにリセット
     channelSettings = {};
   }
 
-  // areaNameに対応するチャンネル数を返す。見つからない場合はデフォルトのチャンネル数を返す
-  return channelSettings[areaName] || 5; // 例としてデフォルト値10を返す
+  // ★ areaNameに対応する設定がなければ、グローバルのデフォルト値を返す
+  return channelSettings[areaName] || loadDefaultChannelCount();
 }
 
 // 全エリアのチャンネル数を保存する
 export function saveChannelCounts(channelCounts) {
   console.log(channelCounts);
   if (channelCounts && channelCounts !== 'undefined') {
-    console.log("not undefined");
+    console.log('not undefined');
     localStorage.setItem('channelSettings', JSON.stringify(channelCounts));
   } else {
-    console.log("undefined");
-    localStorage.setItem('channelSettings', "");
+    console.log('undefined');
+    localStorage.setItem('channelSettings', '');
   }
 }
 
@@ -121,7 +124,7 @@ export function loadChannelCounts() {
 
   try {
     const savedSettings = localStorage.getItem('channelSettings');
-    
+
     // 値が存在し、かつ空でないかチェック
     if (savedSettings && savedSettings !== 'undefined') {
       // 有効なJSONをパース
@@ -131,23 +134,25 @@ export function loadChannelCounts() {
       channelSettings = {};
     }
   } catch (error) {
-    console.error("Invalid JSON in localStorage for channelSettings:", error);
+    console.error('Invalid JSON in localStorage for channelSettings:', error);
     // エラー時は空のオブジェクトにリセット
     channelSettings = {};
   }
 
   // areaNameに対応するチャンネル数を返す。見つからない場合はデフォルトのチャンネル数を返す
-  return channelSettings; 
+  return channelSettings;
 }
 
 export function generateShareableUrl() {
   const logs = loadLogs();
   const timeDisplays = loadTimeDisplays();
   const channelCounts = loadChannelCounts();
-  const data = { logs, timeDisplays, channelCounts };
+  const data = {logs, timeDisplays, channelCounts};
 
   // LZStringで圧縮
-  const compressedData = LZString.compressToEncodedURIComponent(JSON.stringify(data));
+  const compressedData = LZString.compressToEncodedURIComponent(
+    JSON.stringify(data)
+  );
   const baseUrl = window.location.origin + window.location.pathname;
 
   // 圧縮したデータをURLに追加
@@ -160,7 +165,8 @@ export function loadFromUrlParams() {
   const compressedData = urlParams.get('data');
 
   if (compressedData) {
-    const decompressedData = LZString.decompressFromEncodedURIComponent(compressedData);
+    const decompressedData =
+      LZString.decompressFromEncodedURIComponent(compressedData);
     const data = JSON.parse(decompressedData);
 
     if (data) {
@@ -168,8 +174,8 @@ export function loadFromUrlParams() {
       saveTimeDisplays(data.timeDisplays);
       saveChannelCounts(data.channelCounts);
       // データ復元後にUIを更新
-      collectAndSortLogEntries();  // ログを整理
-      updateNoteCard();  // ノートカードを更新
+      collectAndSortLogEntries(); // ログを整理
+      updateNoteCard(); // ノートカードを更新
       updateAreaCount();
     }
   }
@@ -179,7 +185,7 @@ export function loadFromUrlParams() {
 export function removeHistoryGetData() {
   const url = new URL(window.location);
   url.searchParams.delete('data');
-  history.replaceState(null, '', url);  // ブラウザ履歴を更新し、URLからdataパラメータを削除
+  history.replaceState(null, '', url); // ブラウザ履歴を更新し、URLからdataパラメータを削除
 }
 
 // storage.js の末尾に追加
@@ -193,4 +199,16 @@ export function saveSecondsDisplayState(state) {
 export function loadSecondsDisplayState() {
   const state = localStorage.getItem('secondsDisplayState');
   return state ? JSON.parse(state) : false; // デフォルトはfalse
+}
+
+// デフォルトのチャンネル数を保存する
+export function saveDefaultChannelCount(count) {
+  localStorage.setItem('defaultChannelCount', count);
+}
+
+// デフォルトのチャンネル数を読み込む
+export function loadDefaultChannelCount() {
+  const count = localStorage.getItem('defaultChannelCount');
+  // 設定がなければ「5」を、あればその数値を返す
+  return count ? parseInt(count, 10) : 2;
 }

@@ -631,6 +631,25 @@
         <!-- 共通のボタンクラス "btn" を適用 -->
       </div>
     </div>
+    <div id="defaultChannelSettingsModal" class="modal">
+      <div class="modal-content">
+        <label for="defaultChannelCountInput"
+          >デフォルトチャンネル数 (1〜6):</label
+        >
+        <input
+          type="number"
+          id="defaultChannelCountInput"
+          min="1"
+          max="6"
+          class="time-input"
+        />
+        <button id="defaultChannelCountOkButton" class="btn">OK</button>
+        <button
+          id="defaultChannelSettingsModalCloseButton"
+          class="modal-close-btn"
+        ></button>
+      </div>
+    </div>
     <script src="main.js" type="module"></script>
   </body>
 </html>
