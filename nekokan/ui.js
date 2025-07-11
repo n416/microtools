@@ -35,20 +35,20 @@ export function updateNoteCard() {
       // showSeconds の状態に応じて表示を切り替える
       timePart = showSeconds ? entry.time : entry.time.substring(0, 5);
     }
-
+    // data属性を追加
+    const dataAttributes = `data-area="${entry.area}" data-channel="${entry.channel}"`;
     if (lastArea !== entry.area) {
       if (formattedEntries.length > 0) {
         formattedEntries.push('<hr>');
       }
       formattedEntries.push(
-        // hideTime が true なら timePart は空文字列になる
-        `<span class="${entry.class}">${entry.area} ${entry.channel}${
-          timePart ? ' ' + timePart : ''
-        }</span>`
+        `<span class="${entry.class}" ${dataAttributes}>${entry.area} ${
+          entry.channel
+        }${timePart ? ' ' + timePart : ''}</span>`
       );
     } else {
       formattedEntries.push(
-        `<span class="${entry.class}">${entry.channel}${
+        `<span class="${entry.class}" ${dataAttributes}>${entry.channel}${
           timePart ? ' ' + timePart : ''
         }</span>`
       );
