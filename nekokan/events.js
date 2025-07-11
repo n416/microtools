@@ -17,7 +17,9 @@ import {
   saveDefaultChannelCount,
   loadDefaultChannelCount,
 } from './storage.js';
+import {scheduleAlarm, rescheduleAllAlarms} from './alarmManager.js';
 import {initializeTimePicker} from './timePicker.js';
+
 // グローバルに actionHistory を定義
 let actionHistory = [];
 let redoHistory = [];
@@ -50,10 +52,18 @@ export function initializeEventListeners() {
   const toggleSecondsBtn = document.getElementById('toggleSecondsDisplay');
   const secondsIcon = document.getElementById('secondsCheckboxIcon');
   const titleElement = document.querySelector('.title');
-  const defaultChannelModal = document.getElementById('defaultChannelSettingsModal');
-  const defaultChannelCountInput = document.getElementById('defaultChannelCountInput');
-  const defaultChannelOkButton = document.getElementById('defaultChannelCountOkButton');
-  const defaultChannelCloseButton = document.getElementById('defaultChannelSettingsModalCloseButton');
+  const defaultChannelModal = document.getElementById(
+    'defaultChannelSettingsModal'
+  );
+  const defaultChannelCountInput = document.getElementById(
+    'defaultChannelCountInput'
+  );
+  const defaultChannelOkButton = document.getElementById(
+    'defaultChannelCountOkButton'
+  );
+  const defaultChannelCloseButton = document.getElementById(
+    'defaultChannelSettingsModalCloseButton'
+  );
 
   // タイトルクリックでモーダルを開く
   titleElement.addEventListener('click', () => {
@@ -126,51 +136,13 @@ export function initializeEventListeners() {
         .textContent.replace('（時刻順）', '');
 
       // ログと時刻を保存する共通関数を呼び出し
-      addLogAndTimeEntry(areaTitle, channelName, currentTime, futureTimeStr);
-
-      // ボタンの表示を変更
-      button.innerHTML = '!<i class="fas fa-skull-crossbones"></i>';
-
-      // 時刻表示の更新
-      let timeDisplay = logLabel.querySelector('.time-display');
-      if (!timeDisplay) {
-        timeDisplay = document.createElement('div');
-        timeDisplay.className = 'time-display';
-        logLabel.appendChild(timeDisplay);
-      }
-      timeDisplay.innerHTML = `<i class="far fa-clock"></i>&nbsp;${futureTimeStr.substring(
-        0,
-        5
-      )}`;
-
-      // 状態の保存
-      const key = `${areaTitle}_${channelName}`;
-      timeDisplays[key] = futureTimeStr;
-      saveTimeDisplays(timeDisplays);
-
-      // アラームのスケジュール設定
-      const alarmTimes = [1, 3, 5]; // アラームの時間（1分前、3分前、5分前）
-      alarmTimes.forEach((alarmTime) => {
-        if (document.getElementById(`alarm${alarmTime}min`).checked) {
-          const alarmScheduleTime = new Date(
-            futureTime.getTime() - alarmTime * 60000
-          );
-          const timeDifference =
-            alarmScheduleTime.getTime() - currentTime.getTime();
-          if (timeDifference > 0) {
-            console.log(`アラーム設定: ${alarmTime}分前`);
-            scheduleAlarm(
-              timeDifference,
-              alarmTime,
-              areaTitle,
-              channelName,
-              'syutugen'
-            );
-          }
-        }
-      });
-      addLogAndTimeEntry;
-      updateNoteCard();
+      addLogAndTimeEntry(
+        areaTitle,
+        channelName,
+        currentTime,
+        futureTimeStr,
+        button
+      );
     });
 
     // マウスオーバーで表示を変更
@@ -436,6 +408,22 @@ export function initializeEventListeners() {
       }
     }
   });
+
+  // アラーム設定チェックボックスのイベントリスナー
+  const alarmCheckboxes = ['alarm1min', 'alarm3min', 'alarm5min', 'muteAlarm'];
+  alarmCheckboxes.forEach((id) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.addEventListener('change', () => {
+        // 「鳴らさない」がチェックされたら既存のアラームをクリア
+        if (id === 'muteAlarm' && checkbox.checked) {
+          muteAlarms(); // alarmManager.js からインポートしておく必要があります
+        } else {
+          rescheduleAllAlarms();
+        }
+      });
+    }
+  });
 }
 
 function pushToActionHistory(logs, timeDisplays) {
@@ -554,47 +542,48 @@ export function addLogAndTimeEntry(
   areaTitle,
   channelName,
   logTime,
-  futureTime
+  futureTime,
+  button
 ) {
+  // --- ▼▼▼ この関数は以下のように完全に書き換えます ▼▼▼ ---
+
   // 新しい操作が発生したのでリドゥ履歴をクリア
   redoHistory = [];
 
-  // 状態の保存は更新前に行う
+  // アンドゥ用に、更新前の状態を保存
   pushToActionHistory(logs, timeDisplays);
 
-  // ログを追加
+  // テキストログを追加
   addLogEntry(areaTitle, channelName, logTime);
 
-  // 時刻表示を更新
+  // 時刻データを更新して保存
   const key = `${areaTitle}_${channelName}`;
   timeDisplays[key] = futureTime;
   saveTimeDisplays(timeDisplays);
 
-  // ここで時刻を表示する部分を修正
-  const labels = document.querySelectorAll('.log-label');
-  labels.forEach((label) => {
-    const currentChannelName = label.childNodes[0].nodeValue.trim();
-    const currentAreaName = label
-      .closest('.area-tile')
-      .querySelector('.area-title')
-      .textContent.replace('（時刻順）', '')
-      .trim(); // エリア名を取得
+  // ボタンの表示を変更
+  button.innerHTML = '!<i class="fas fa-skull-crossbones"></i>';
 
-    // エリア名とチャンネル名の両方が一致する場合のみ更新
-    if (currentChannelName === channelName && currentAreaName === areaTitle) {
-      let timeDisplay = label.querySelector('.time-display');
-      if (!timeDisplay) {
-        timeDisplay = document.createElement('div');
-        timeDisplay.className = 'time-display';
-        label.appendChild(timeDisplay);
-      }
-      timeDisplay.innerHTML = `<i class="far fa-clock"></i>&nbsp;${futureTime.substring(
-        0,
-        5
-      )}`;
-    }
-  });
+  // 時刻表示を更新
+  const logLabel = button.closest('.log-row').querySelector('.log-label');
+  let timeDisplay = logLabel.querySelector('.time-display');
+  if (!timeDisplay) {
+    timeDisplay = document.createElement('div');
+    timeDisplay.className = 'time-display';
+    logLabel.appendChild(timeDisplay);
+  }
+  timeDisplay.innerHTML = `<i class="far fa-clock"></i>&nbsp;${futureTime.substring(
+    0,
+    5
+  )}`;
+
+  // 全てのアラームを再スケジュール
+  rescheduleAllAlarms();
+
+  // ノートカードを更新
+  updateNoteCard();
 }
+
 document.getElementById('shareButton').addEventListener('click', () => {
   const shareUrl = generateShareableUrl(); // ローカルストレージからURLを生成
   navigator.clipboard
