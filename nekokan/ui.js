@@ -15,6 +15,8 @@ if (!timeDisplays) {
   saveTimeDisplays(timeDisplays); // 初期化後に保存
 }
 
+import {rescheduleAllAlarms} from './alarmManager.js';
+
 let orderedLogEntries = [];
 let notifiedEvents = new Set();
 
@@ -282,6 +284,7 @@ function openChannelSettingsModal(areaName) {
     updateNoteCard();
     modal.style.display = 'none';
     showToast(`${areaName} の全時刻ログをクリアしました`);
+    rescheduleAllAlarms();
   };
   document.getElementById('channelSettingsClearButton').onclick = () => {
     // timeDisplaysから該当エリアのデータを削除

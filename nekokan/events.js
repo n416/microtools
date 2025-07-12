@@ -2,7 +2,6 @@ import {
   updateNoteCard,
   showToast,
   updateTimeDisplay,
-  collectAndSortLogEntries,
   updateAreaCount,
 } from './ui.js';
 import {
@@ -21,7 +20,7 @@ import {
   saveAlarmCheckboxesState,
   loadAlarmCheckboxesState,
 } from './storage.js';
-import {scheduleAlarm, rescheduleAllAlarms} from './alarmManager.js';
+import {rescheduleAllAlarms} from './alarmManager.js';
 import {initializeTimePicker} from './timePicker.js';
 
 // グローバルに actionHistory を定義
@@ -234,6 +233,7 @@ export function initializeEventListeners() {
 
       // ノートカードを更新
       updateNoteCard();
+      rescheduleAllAlarms();
     } else {
       showToast('戻る操作はできません');
     }
@@ -269,6 +269,7 @@ export function initializeEventListeners() {
 
       // 時刻ラベルを更新
       updateTimeDisplay();
+      rescheduleAllAlarms();
 
       // ノートカードを更新
       updateNoteCard();

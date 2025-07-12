@@ -8,13 +8,9 @@ import {
   saveDisabledChannels,
 } from './storage.js';
 import {
-  scheduleAlarm,
-  muteAlarms,
-  unmuteAlarms,
   rescheduleAllAlarms,
 } from './alarmManager.js';
 import {
-  addLogEntry,
   getTimeDisplays,
   setTimeDisplays,
   addLogAndTimeEntry,
@@ -29,7 +25,6 @@ export function initializeTimePicker() {
   const timeInput = document.getElementById('timeInput');
   const hourHand = document.querySelector('.hour-hand');
   const minuteHand = document.querySelector('.minute-hand');
-  const muteAlarmCheckbox = document.getElementById('muteAlarm');
 
   let selectedChannelLabel = null;
 
@@ -112,6 +107,7 @@ export function initializeTimePicker() {
 
     timePickerModal.style.display = 'none';
     updateNoteCard();
+    rescheduleAllAlarms();
   });
 
   // 「チャンネル無し」ボタンの処理
