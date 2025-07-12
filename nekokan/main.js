@@ -2,7 +2,7 @@ import {showOverwriteModal} from './ui.js';
 import {loadFromUrlParams, loadLogs, removeHistoryGetData} from './storage.js';
 import {initializeEventListeners} from './events.js';
 import {updateNoteCard, updateAreaCount, updateDigitalClock} from './ui.js';
-
+import {rescheduleAllAlarms} from './alarmManager.js';
 document.addEventListener('DOMContentLoaded', () => {
   const existingData = loadLogs(); // ローカルストレージ内のデータを確認
 
@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateNoteCard();
     updateAreaCount();
     removeHistoryGetData();
+    rescheduleAllAlarms();
   }
   // URLからGETパラメータを削除
   setInterval(updateNoteCard, 5000);
