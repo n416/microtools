@@ -197,22 +197,6 @@ export function initializeTimePicker() {
     updateClockHands(timeInput.value);
   });
 
-  // 鳴らさないチェックボックスの処理
-  muteAlarmCheckbox.addEventListener('change', () => {
-    const alarmCheckboxes = document.querySelectorAll(
-      '#alarm1min, #alarm3min, #alarm5min'
-    );
-    const isDisabled = muteAlarmCheckbox.checked;
-
-    if (isDisabled) {
-      muteAlarms();
-      alarmCheckboxes.forEach((cb) => (cb.disabled = true));
-    } else {
-      unmuteAlarms();
-      alarmCheckboxes.forEach((cb) => (cb.disabled = false));
-    }
-  });
-
   // 時計の針を更新する関数
   function updateClockHands(time) {
     const [hours, minutes] = time.split(':').map(Number);
