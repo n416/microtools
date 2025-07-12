@@ -16,6 +16,10 @@ import {
   saveSecondsDisplayState,
   saveDefaultChannelCount,
   loadDefaultChannelCount,
+  saveHideTimeState,
+  loadHideTimeState,
+  saveAlarmCheckboxesState,
+  loadAlarmCheckboxesState,
 } from './storage.js';
 import {scheduleAlarm, rescheduleAllAlarms} from './alarmManager.js';
 import {initializeTimePicker} from './timePicker.js';
@@ -30,6 +34,12 @@ export function initializeEventListeners() {
   logs = loadLogs();
   timeDisplays = loadTimeDisplays();
 
+  // 「時刻非表示」チェックボックスの状態を復元
+  const hideTimeCheckbox = document.getElementById('checkboxIcon');
+  if (loadHideTimeState()) {
+    hideTimeCheckbox.classList.remove('fa-square');
+    hideTimeCheckbox.classList.add('fa-square-check');
+  }
   const confirmButton = document.getElementById('confirmButton');
   const backButton = document.getElementById('backButton');
   const saveButton = document.getElementById('saveButton');
@@ -409,18 +419,35 @@ export function initializeEventListeners() {
     }
   });
 
-  // アラーム設定チェックボックスのイベントリスナー
-  const alarmCheckboxes = ['alarm1min', 'alarm3min', 'alarm5min', 'muteAlarm'];
-  alarmCheckboxes.forEach((id) => {
+  // アラーム時刻チェックボックスの処理
+  const alarmTimeCheckboxes = ['alarm1min', 'alarm3min', 'alarm5min'];
+  const muteCheckbox = document.getElementById('muteAlarm');
+
+  // 1. ページ読み込み時に状態を復元
+  const savedAlarmState = loadAlarmCheckboxesState();
+  alarmTimeCheckboxes.forEach((id) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.checked =
+        savedAlarmState[id] !== undefined ? savedAlarmState[id] : true;
+    }
+  });
+
+  // 2. 全てのアラーム関連チェックボックスにリスナーを設定
+  [...alarmTimeCheckboxes, 'muteAlarm'].forEach((id) => {
     const checkbox = document.getElementById(id);
     if (checkbox) {
       checkbox.addEventListener('change', () => {
-        // 「鳴らさない」がチェックされたら既存のアラームをクリア
-        if (id === 'muteAlarm' && checkbox.checked) {
-          muteAlarms(); // alarmManager.js からインポートしておく必要があります
-        } else {
-          rescheduleAllAlarms();
-        }
+        // 3. 状態が変更されたら、現在の状態を保存
+        const currentState = {
+          alarm1min: document.getElementById('alarm1min').checked,
+          alarm3min: document.getElementById('alarm3min').checked,
+          alarm5min: document.getElementById('alarm5min').checked,
+        };
+        saveAlarmCheckboxesState(currentState);
+
+        // 4. アラームを再スケジュール
+        rescheduleAllAlarms();
       });
     }
   });
@@ -598,14 +625,12 @@ document.getElementById('shareButton').addEventListener('click', () => {
 
 document.getElementById('toggleTimeDisplay').addEventListener('click', () => {
   const checkboxIcon = document.getElementById('checkboxIcon');
+  // ★ isCheckedの状態で現在の状態を管理
+  const isChecked = checkboxIcon.classList.toggle('fa-square-check');
+  checkboxIcon.classList.toggle('fa-square', !isChecked);
 
-  if (checkboxIcon.classList.contains('fa-square')) {
-    checkboxIcon.classList.remove('fa-square');
-    checkboxIcon.classList.add('fa-square-check');
-  } else {
-    checkboxIcon.classList.remove('fa-square-check');
-    checkboxIcon.classList.add('fa-square');
-  }
+  // ★ 状態を保存する処理を追記
+  saveHideTimeState(isChecked);
 
   // ノートカードを更新
   updateNoteCard();
