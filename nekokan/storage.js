@@ -5,6 +5,8 @@ import {
   updateAreaCount,
 } from './ui.js';
 
+import {rescheduleAllAlarms} from './alarmManager.js';
+
 export function loadLogs() {
   try {
     const logs = localStorage.getItem('logs');
@@ -177,6 +179,7 @@ export function loadFromUrlParams() {
       collectAndSortLogEntries(); // ログを整理
       updateNoteCard(); // ノートカードを更新
       updateAreaCount();
+      rescheduleAllAlarms();
     }
   }
 }
@@ -224,7 +227,6 @@ export function loadHideTimeState() {
   return state ? JSON.parse(state) : false; // デフォルトはfalse（表示）
 }
 
-
 // アラーム時刻設定のチェックボックスの状態を保存
 export function saveAlarmCheckboxesState(state) {
   localStorage.setItem('alarmCheckboxesState', JSON.stringify(state));
@@ -234,5 +236,7 @@ export function saveAlarmCheckboxesState(state) {
 export function loadAlarmCheckboxesState() {
   const state = localStorage.getItem('alarmCheckboxesState');
   // デフォルトでは全てチェックされている状態を返す
-  return state ? JSON.parse(state) : { alarm1min: false, alarm3min: false, alarm5min: false };
+  return state
+    ? JSON.parse(state)
+    : {alarm1min: false, alarm3min: false, alarm5min: false};
 }
