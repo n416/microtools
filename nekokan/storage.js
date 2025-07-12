@@ -212,3 +212,27 @@ export function loadDefaultChannelCount() {
   // 設定がなければ「5」を、あればその数値を返す
   return count ? parseInt(count, 10) : 2;
 }
+
+// 「時刻非表示」の状態を保存
+export function saveHideTimeState(state) {
+  localStorage.setItem('hideTimeState', JSON.stringify(state));
+}
+
+// 「時刻非表示」の状態を読み込み
+export function loadHideTimeState() {
+  const state = localStorage.getItem('hideTimeState');
+  return state ? JSON.parse(state) : false; // デフォルトはfalse（表示）
+}
+
+
+// アラーム時刻設定のチェックボックスの状態を保存
+export function saveAlarmCheckboxesState(state) {
+  localStorage.setItem('alarmCheckboxesState', JSON.stringify(state));
+}
+
+// アラーム時刻設定のチェックボックスの状態を読み込み
+export function loadAlarmCheckboxesState() {
+  const state = localStorage.getItem('alarmCheckboxesState');
+  // デフォルトでは全てチェックされている状態を返す
+  return state ? JSON.parse(state) : { alarm1min: false, alarm3min: false, alarm5min: false };
+}
