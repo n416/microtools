@@ -170,7 +170,6 @@ const COLUMN_GROUPS = {
   ],
 };
 
-// 文字列としてソートする列のリストを定義
 const stringColumns = [
   '画像URL',
   '名称',
@@ -214,8 +213,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     statusDiv.textContent = '装備データを読み込んでいます...';
     allEquipment = await getAllEquipmentFromDB();
 
-    uniqueRanks = [...new Set(allEquipment.map(item => item['ランク']))].sort();
-    uniqueTypes = [...new Set(allEquipment.map(item => item['タイプ']))].sort();
+    uniqueRanks = [
+      ...new Set(allEquipment.map((item) => item['ランク'])),
+    ].sort();
+    uniqueTypes = [
+      ...new Set(allEquipment.map((item) => item['タイプ'])),
+    ].sort();
 
     currentInventory = loadInventory();
     loadFilterState();
@@ -224,6 +227,30 @@ window.addEventListener('DOMContentLoaded', async () => {
     setupUpdateButton();
     initializeColumnSettings();
     initializeFilters();
+    const tableBody = document.querySelector('#equipment-table tbody');
+    tableBody.addEventListener('click', (event) => {
+      // クリックされた要素から最も近い<td>を探す
+      const cell = event.target.closest('td');
+
+      // <td>内でなければ何もしない
+      if (!cell) return;
+
+      // ３列目未満でクリックかを判定
+      console.log("cell.cellIndex",cell.cellIndex);
+      if (cell.cellIndex < 3) {
+        console.log('event.target.tagName ', event.target.tagName); // クリックされたのがチェックボックス自身なら何もしない
+        if (event.target.tagName === 'INPUT') return;
+
+        const row = cell.parentElement;
+        const checkbox = row.querySelector('input[type="checkbox"]');
+
+        if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+          // 既存の保存処理などを呼び出すためにchangeイベントを発行
+          checkbox.dispatchEvent(new Event('change', {bubbles: true}));
+        }
+      }
+    });
   } catch (error) {
     console.error('初期化処理中にエラー:', error);
     statusDiv.textContent = `エラーが発生しました: ${error.message}`;
@@ -281,7 +308,6 @@ function initializeFilters() {
 
   updateTypeFilterOptions();
 
-  // --- イベントリスナー ---
   document.getElementById('category-filter').addEventListener('change', (e) => {
     filterState.category = e.target.value;
     updateTypeFilterOptions();
@@ -372,7 +398,6 @@ function setupFilterButtons() {
 }
 
 function applyFiltersAndSortAndRender() {
-  // 1. フィルタリング
   let processedData = allEquipment.filter(
     (item) =>
       (filterState.ranks.length === 0 ||
@@ -384,10 +409,7 @@ function applyFiltersAndSortAndRender() {
       (!filterState.isInventoryOnly || currentInventory.includes(item['名称']))
   );
 
-  // ▼▼▼【ここから変更点 2/2】ソートロジックを全面的に置き換え ▼▼▼
-  // 2. ソート
   if (sortState.key && sortState.direction !== 'none') {
-    // 列名が stringColumns リストに含まれているかでソートタイプを決定
     const sortType = stringColumns.includes(sortState.key)
       ? 'string'
       : 'number';
@@ -398,25 +420,21 @@ function applyFiltersAndSortAndRender() {
       let comparison = 0;
 
       if (sortType === 'number') {
-        // 数値として比較
         const numA = parseFloat(valA) || -Infinity;
         const numB = parseFloat(valB) || -Infinity;
         comparison = numA - numB;
       } else {
-        // 文字列として比較 (null/undefinedを空文字として扱う)
         comparison = String(valA || '').localeCompare(String(valB || ''), 'ja');
       }
 
       return sortState.direction === 'desc' ? comparison * -1 : comparison;
     });
   }
-  // ▲▲▲【変更ここまで】▲▲▲
 
-  // 3. 描画
   renderTable(processedData);
 }
 
-// --- DB関連 (変更なし) ---
+// --- DB関連 ---
 function getAllEquipmentFromDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -456,15 +474,17 @@ function renderTable(equipmentData) {
       th.textContent = headerText;
     }
 
-    if (ALL_STATS_HEADERS.includes(headerText)) {
-      // ALL_STATS_HEADERSでソート可否を判断
+    if (headerText === '✔') {
+      th.id = 'check-all-header';
+      th.style.cursor = 'pointer';
+      th.title = 'すべて選択/解除';
+    } else if (ALL_STATS_HEADERS.includes(headerText)) {
       th.classList.add('sortable');
       th.dataset.sortKey = headerText;
 
       if (sortState.key === headerText) {
         th.classList.add(`sorted-${sortState.direction}`);
       }
-
       th.addEventListener('click', handleSortClick);
     }
 
@@ -474,6 +494,25 @@ function renderTable(equipmentData) {
     headerRow.appendChild(th);
   });
   tableHead.appendChild(headerRow);
+
+  const checkAllTh = headerRow.querySelector('#check-all-header');
+  if (checkAllTh) {
+    checkAllTh.addEventListener('click', () => {
+      const allCheckboxes = Array.from(
+        tableBody.querySelectorAll('input[type="checkbox"]')
+      );
+      if (allCheckboxes.length === 0) return;
+
+      const shouldCheckAll = allCheckboxes.some((cb) => !cb.checked);
+
+      allCheckboxes.forEach((checkbox) => {
+        if (checkbox.checked !== shouldCheckAll) {
+          checkbox.checked = shouldCheckAll;
+          checkbox.dispatchEvent(new Event('change', {bubbles: true}));
+        }
+      });
+    });
+  }
 
   if (equipmentData.length === 0) return;
 
@@ -524,24 +563,10 @@ function renderTable(equipmentData) {
       row.appendChild(cell);
     });
 
-    const clickableCells = [
-      row.querySelector('td:nth-child(1)'),
-      row.querySelector('td:nth-child(2)'),
-    ];
-    const checkboxInRow = row.querySelector('input[type="checkbox"]');
-    clickableCells.forEach((cell) => {
-      if (cell) {
-        cell.addEventListener('click', (event) => {
-          if (event.target.tagName !== 'INPUT') {
-            checkboxInRow.checked = !checkboxInRow.checked;
-            checkboxInRow.dispatchEvent(new Event('change', {bubbles: true}));
-          }
-        });
-      }
-    });
     tableBody.appendChild(row);
   });
 }
+// ▲▲▲【変更ここまで】▲▲▲
 
 function handleSortClick(event) {
   const clickedKey = event.currentTarget.dataset.sortKey;
