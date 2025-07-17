@@ -1,0 +1,311 @@
+class Game {
+  constructor(canvas, ctx) {
+    this.canvas = canvas;
+    this.ctx = ctx;
+    this.gameState = 'title';
+    this.currentStageNumber = 1;
+    this.scrollSpeed = 2;
+
+    this.player = new Player(this, 100, this.canvas.height / 2);
+    this.stageManager = new StageManager(this);
+    this.saveManager = new SaveManager(this);
+
+    this.enemies = [];
+    this.playerBullets = [];
+    this.enemyBullets = [];
+    this.powerUps = [];
+    this.explosions = [];
+
+    this.score = 0;
+
+    this.keys = {};
+    window.addEventListener('keydown', (e) => {
+      this.keys[e.code] = true;
+      if (e.code === 'KeyS' && this.gameState === 'playing') {
+        this.saveManager.saveGame();
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      this.keys[e.code] = false;
+    });
+  }
+
+  async init() {
+    console.log('Initializing game data...');
+    await this.stageManager.loadData('data/stages.json', 'data/enemies.json');
+    console.log('Data loaded. Ready at title screen.');
+  }
+
+  startNewGame() {
+    this.currentStageNumber = 1;
+    this.score = 0;
+    this.player = new Player(this, 100, this.canvas.height / 2);
+    this.resetEntities();
+    this.stageManager.startStage(this.currentStageNumber);
+    this.gameState = 'playing';
+  }
+
+  continueGame() {
+    if (this.saveManager.loadGame()) {
+      this.resetEntities();
+      this.gameState = 'playing';
+    } else {
+      alert('Save data could not be loaded.');
+    }
+  }
+
+  startNextStage() {
+    this.currentStageNumber++;
+    const nextStageData = this.stageManager.stageData.find(
+      (s) => s.stage === this.currentStageNumber
+    );
+
+    if (nextStageData) {
+      console.log(`Proceeding to stage ${this.currentStageNumber}`);
+      this.resetEntities();
+      this.player.x = 100;
+      this.player.y = this.canvas.height / 2;
+      this.stageManager.startStage(this.currentStageNumber);
+      this.gameState = 'playing';
+    } else {
+      console.log('All stages cleared! Game Clear!');
+      this.gameState = 'gameClear';
+    }
+  }
+
+  resetEntities() {
+    this.enemies = [];
+    this.playerBullets = [];
+    this.enemyBullets = [];
+    this.powerUps = [];
+  }
+
+  update(deltaTime) {
+    if (this.gameState === 'title') {
+      if (this.keys['Enter']) this.startNewGame();
+      if (this.keys['KeyL'] && this.saveManager.hasSaveData())
+        this.continueGame();
+      return;
+    }
+
+    if (this.gameState === 'stageClear') {
+      if (this.keys['Enter']) {
+        this.startNextStage();
+        delete this.keys['Enter'];
+      }
+      return;
+    }
+
+    if (this.gameState === 'gameOver' || this.gameState === 'gameClear') {
+      if (this.keys['Enter']) {
+        this.gameState = 'title';
+      }
+      return;
+    }
+
+    if (this.gameState !== 'playing') return;
+
+    this.player.update(this.keys);
+    this.stageManager.update(deltaTime);
+
+    this.enemies.forEach((enemy) => enemy.update(deltaTime));
+    this.playerBullets.forEach((b) => b.update(deltaTime));
+    this.enemyBullets.forEach((b) => b.update(deltaTime));
+    this.powerUps.forEach((p) => p.update(deltaTime));
+
+    this.checkCollisions();
+
+    this.enemies = this.enemies.filter((e) => e.isAlive);
+    this.playerBullets = this.playerBullets.filter((b) => b.isActive);
+    this.enemyBullets = this.enemyBullets.filter((b) => b.isActive);
+    this.powerUps = this.powerUps.filter((p) => p.isActive);
+  }
+
+  checkCollisions() {
+    // プレイヤーの弾 vs 敵
+    this.playerBullets.forEach((bullet) => {
+      this.enemies.forEach((enemy) => {
+        if (isColliding(bullet, enemy)) {
+          enemy.takeDamage(1);
+          if (!(bullet instanceof LaserBullet)) {
+            bullet.isActive = false;
+          }
+        }
+      });
+    });
+
+    const barrier = this.player.barrier;
+
+    // 敵の弾 vs (バリア or プレイヤー)
+    this.enemyBullets.forEach((bullet) => {
+      const target = barrier && barrier.isActive ? barrier : this.player;
+      if (isColliding(bullet, target)) {
+        target.takeDamage(1);
+        bullet.isActive = false;
+      }
+    });
+
+    // 敵 vs (バリア or プレイヤー)
+    this.enemies.forEach((enemy) => {
+      const target = barrier && barrier.isActive ? barrier : this.player;
+      // 判定対象は常にプレイヤー自身だが、ダメージはtargetが受ける
+      if (isColliding(this.player, enemy)) {
+        target.takeDamage(1);
+        enemy.takeDamage(100);
+      }
+    });
+
+    // プレイヤー vs パワーアップカプセル
+    this.powerUps.forEach((powerUp) => {
+      if (isColliding(this.player, powerUp)) {
+        this.player.addPowerUp();
+        powerUp.isActive = false;
+      }
+    });
+  }
+
+  draw() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    if (this.gameState === 'playing') {
+      this.player.draw();
+      this.player.options.forEach((option) => {
+        option.draw();
+      });
+      if (this.player.barrier) {
+        this.player.barrier.draw();
+      }
+      this.enemies.forEach((enemy) => enemy.draw());
+      this.playerBullets.forEach((b) => b.draw());
+      this.enemyBullets.forEach((b) => b.draw());
+      this.powerUps.forEach((p) => p.draw());
+      this.drawUI();
+    } else if (this.gameState === 'title') this.drawTitleScreen();
+    else if (this.gameState === 'stageClear') this.drawStageClearScreen();
+    else if (this.gameState === 'gameOver') this.drawGameOverScreen();
+    else if (this.gameState === 'gameClear') this.drawGameClearScreen();
+  }
+
+  drawTitleScreen() {
+    this.ctx.fillStyle = 'white';
+    this.ctx.textAlign = 'center';
+    this.ctx.font = '50px Arial';
+    this.ctx.fillText(
+      'ADVANCED SHOOTER',
+      this.canvas.width / 2,
+      this.canvas.height / 2 - 80
+    );
+    this.ctx.font = '24px Arial';
+    this.ctx.fillText(
+      'Press [Enter] to Start New Game',
+      this.canvas.width / 2,
+      this.canvas.height / 2 + 20
+    );
+    if (this.saveManager.hasSaveData()) {
+      this.ctx.fillStyle = 'cyan';
+      this.ctx.fillText(
+        'Press [L] to Continue',
+        this.canvas.width / 2,
+        this.canvas.height / 2 + 70
+      );
+    }
+  }
+
+  drawStageClearScreen() {
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillStyle = 'cyan';
+    this.ctx.font = '50px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText(
+      'STAGE CLEAR',
+      this.canvas.width / 2,
+      this.canvas.height / 2
+    );
+    this.ctx.font = '24px Arial';
+    this.ctx.fillText(
+      'Press [Enter] to Continue',
+      this.canvas.width / 2,
+      this.canvas.height / 2 + 50
+    );
+  }
+
+  drawGameOverScreen() {
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillStyle = 'red';
+    this.ctx.font = '50px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText(
+      'GAME OVER',
+      this.canvas.width / 2,
+      this.canvas.height / 2
+    );
+    this.ctx.font = '24px Arial';
+    this.ctx.fillText(
+      'Press [Enter] to Return to Title',
+      this.canvas.width / 2,
+      this.canvas.height / 2 + 50
+    );
+  }
+
+  drawGameClearScreen() {
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillStyle = 'gold';
+    this.ctx.font = '50px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText(
+      'GAME CLEAR',
+      this.canvas.width / 2,
+      this.canvas.height / 2 - 40
+    );
+    this.ctx.font = '30px Arial';
+    this.ctx.fillText(
+      `Final Score: ${this.score}`,
+      this.canvas.width / 2,
+      this.canvas.height / 2 + 20
+    );
+    this.ctx.font = '24px Arial';
+    this.ctx.fillText(
+      'Press [Enter] to Return to Title',
+      this.canvas.width / 2,
+      this.canvas.height / 2 + 70
+    );
+  }
+
+  drawUI() {
+    this.ctx.fillStyle = 'white';
+    this.ctx.textAlign = 'left';
+    this.ctx.font = '20px Arial';
+    this.ctx.fillText(`Score: ${this.score}`, 10, 30);
+    this.ctx.fillText(`HP: ${this.player.hp}`, 10, 60);
+    this.ctx.fillText(
+      `Stage: ${this.currentStageNumber}`,
+      this.canvas.width - 100,
+      30
+    );
+    this.player.drawPowerUpGauge();
+  }
+
+  addEnemy(type, x, y) {
+    const enemyData = this.stageManager.getEnemyData(type);
+    if (enemyData) {
+      this.enemies.push(new Enemy(this, x, y, enemyData));
+    }
+  }
+
+  addBoss(type) {
+    const bossData = this.stageManager.getEnemyData(type);
+    if (bossData) {
+      this.enemies.push(
+        new Boss(
+          this,
+          this.canvas.width,
+          this.canvas.height / 2 - bossData.height / 2,
+          bossData
+        )
+      );
+    }
+  }
+}

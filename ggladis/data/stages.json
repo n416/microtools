@@ -1,0 +1,36 @@
+[
+  {
+    "stage": 1,
+    "name": "Outer Space",
+    "spawns": [
+      { "time": 2.0, "type": "zako1", "x": 800, "y": 100 },
+      { "time": 4.0, "type": "redZako", "x": 800, "y": 250 },
+      { "time": 5.0, "type": "redZako", "x": 800, "y": 250 },
+      { "time": 6.0, "type": "redZako", "x": 800, "y": 250 },
+      { "time": 7.0, "type": "redZako", "x": 800, "y": 250 },
+      { "time": 8.0, "type": "redZako", "x": 800, "y": 250 },
+      { "time": 9.0, "type": "redZako", "x": 800, "y": 250 },
+      { "time": 10.0, "type": "redZako", "x": 800, "y": 250 },
+      { "time": 11.0, "type": "redZako", "x": 800, "y": 250 },
+      { "time": 12.0, "type": "redZako", "x": 800, "y": 250 },
+      { "time": 15.0, "type": "waveEnemy", "x": 800, "y": 200 }
+    ],
+    "boss": {
+      "time": 8,
+      "type": "bigCore"
+    }
+  },
+  {
+    "stage": 2,
+    "name": "Asteroid Field",
+    "spawns": [
+      { "time": 3.0, "type": "waveEnemy", "x": 800, "y": 150 },
+      { "time": 3.0, "type": "waveEnemy", "x": 800, "y": 450 },
+      { "time": 5.0, "type": "redZako", "x": 800, "y": 300 }
+    ],
+    "boss": {
+      "time": 10,
+      "type": "bigCore"
+    }
+  }
+]
