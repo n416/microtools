@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Autonomous Agents on 2D World</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app-container">
+        <div class="pane" id="control-pane">
+            <h1>Controls & Personas</h1>
+            <div class="control-group">
+                <label for="api-key-input">Gemini API Key</label>
+                <input type="password" id="api-key-input" placeholder="APIキーを入力...">
+                <button id="save-api-key">APIキーを保存</button>
+            </div>
+            <div class="control-group">
+                <label for="model-select">AI Model</label>
+                <div class="model-selector-container">
+                    <select id="model-select">
+                        <option value="">APIキーを入力してください</option>
+                    </select>
+                    <button id="refresh-models-btn" title="モデルリストを再取得">🔄</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <label for="worldview-input">Worldview (世界観設定)</label>
+                <textarea id="worldview-input" rows="5" placeholder="世界の基本的な設定を記述します。"></textarea>
+                <button id="save-worldview-btn">世界観を保存</button>
+            </div>
+            <div class="control-group">
+                <button id="add-persona-btn">ペルソナを追加</button>
+                <button id="proceed-time-btn">時間を進める</button>
+                <button id="clear-world-btn" class="danger-btn">ワールドとログをクリア</button>
+            </div>
+            <h2>Personas</h2>
+            <div id="persona-list"></div>
+        </div>
+
+        <div class="pane" id="world-pane">
+            <h1>World View</h1>
+            <canvas id="world-canvas"></canvas>
+        </div>
+
+        <div class="pane" id="log-pane">
+            <h1>Action Logs</h1>
+            <div id="logs"></div>
+        </div>
+
+        <div class="pane" id="data-pane">
+            <div class="data-container">
+                <h1>World State (world.json)</h1>
+                <pre id="world-json-display"></pre>
+            </div>
+            <div class="data-container">
+                <h1>Collective Knowledge</h1>
+                <pre id="knowledge-json-display"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div id="persona-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-content">
+            <h2>新しいペルソナの作成</h2>
+            <label for="persona-name">名前:</label>
+            <input type="text" id="persona-name">
+            <label for="persona-prompt">基本設定 (AIへの指示):</label>
+            <textarea id="persona-prompt" rows="4" placeholder="例: あなたは優秀な科学者です。常に論理的な結論を求めます。"></textarea>
+            <label for="persona-goals">目的 (優先度順に改行で入力):</label>
+            <textarea id="persona-goals" rows="5" placeholder="例: 未知のアーティファクトを研究する&#10;新しい研究施設を建設する&#10;研究成果を発表する"></textarea>
+            <div class="modal-buttons">
+                <button id="save-persona-btn">作成</button>
+                <button id="cancel-persona-btn">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
