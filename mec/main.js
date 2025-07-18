@@ -22,7 +22,7 @@ scene.add(gridHelper);
 
 const logDisplay = document.getElementById('log-display');
 let logMessages = [];
-let selectedObjectHolder = null;
+let selectedObjectHolder = null; // transformControlsがアタッチしているオブジェクトを保持
 
 let gizmoMode = 'scale';
 const scaleGizmoColor = new THREE.Color(0xffff00);
@@ -55,23 +55,20 @@ handlePositions.forEach((pos) => {
 });
 scene.add(scaleGizmoGroup);
 
-const previewGroup = new THREE.Group(); // プレビュー用グループ
+const previewGroup = new THREE.Group();
 scene.add(previewGroup);
 let isMirrorCopyMode = false;
-// ▼▼▼【複数選択機能】状態管理変数 ▼▼▼
-let selectedObjects = [];
-let multiSelectHelper = new THREE.Object3D(); // 複数選択時の中心となるヘルパー
-scene.add(multiSelectHelper);
-let selectionBoxes = new THREE.Group(); // 選択中のオブジェクトを囲むボックス
-scene.add(selectionBoxes);
-let isMultiSelectMode = false;
-// ▲▲▲【複数選択機能】▲▲▲
 
-// ▼▼▼【コピペ機能】状態管理変数 ▼▼▼
 let clipboard = null;
 let isPasteMode = false;
-let lastPasteInfo = {object: null, offset: new THREE.Vector3()};
-// ▲▲▲【コピペ機能】▲▲▲
+let lastPasteInfo = {objects: [], offset: new THREE.Vector3()};
+
+let selectedObjects = [];
+let multiSelectHelper = new THREE.Object3D();
+scene.add(multiSelectHelper);
+let selectionBoxes = new THREE.Group();
+scene.add(selectionBoxes);
+let isMultiSelectMode = false;
 
 class History {
   constructor() {
@@ -83,17 +80,23 @@ class History {
     this.undoStack.push(command);
     this.redoStack = [];
     if (!(command instanceof AddObjectCommand && command.isPaste)) {
-      lastPasteInfo = {object: null, offset: new THREE.Vector3()};
+      lastPasteInfo = {objects: [], offset: new THREE.Vector3()};
     }
     log(command.message);
     autoSaveScene();
   }
   undo() {
-    lastPasteInfo = {object: null, offset: new THREE.Vector3()};
+    lastPasteInfo = {objects: [], offset: new THREE.Vector3()};
     const command = this.undoStack.pop();
     if (command) {
       command.undo();
       this.redoStack.push(command);
+
+      // ▼▼▼【修正】Undo後に選択をクリアして安全な状態にする ▼▼▼
+      selectedObjects = [];
+      updateSelection();
+      // ▲▲▲【修正】▲▲▲
+
       log(`Undo: ${command.message}`);
       autoSaveScene();
     } else {
@@ -101,11 +104,30 @@ class History {
     }
   }
   redo() {
-    lastPasteInfo = {object: null, offset: new THREE.Vector3()};
+    lastPasteInfo = {objects: [], offset: new THREE.Vector3()};
     const command = this.redoStack.pop();
     if (command) {
       command.execute();
       this.undoStack.push(command);
+
+      // ▼▼▼【修正】Redo後に関連オブジェクトを再選択する ▼▼▼
+      const newSelection = [];
+      if (command instanceof MacroCommand) {
+        command.commands.forEach((cmd) => {
+          // AddObjectCommandやMirrorCopyCommandなど、オブジェクトを持つコマンドが対象
+          if (cmd.object) newSelection.push(cmd.object);
+        });
+      } else if (command.object) {
+        newSelection.push(command.object);
+      }
+      selectedObjects = newSelection;
+      // DeleteコマンドをRedoした後は何も選択しない
+      if (command instanceof DeleteObjectCommand || (command instanceof MacroCommand && command.commands[0] instanceof DeleteObjectCommand)) {
+        selectedObjects = [];
+      }
+      updateSelection();
+      // ▲▲▲【修正】▲▲▲
+
       log(`Redo: ${command.message}`);
       autoSaveScene();
     } else {
@@ -113,6 +135,7 @@ class History {
     }
   }
 }
+
 const history = new History();
 
 // =================================================================
@@ -158,9 +181,11 @@ const wireframeMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, wirefram
 // ◆ 3. オブジェクト操作 / 保存・読込のロジック
 // =================================================================
 function deleteSelectedObject() {
-  const objectToDelete = transformControls.object;
-  if (!objectToDelete) return log('削除対象なし');
-  history.execute(new DeleteObjectCommand(objectToDelete));
+  if (selectedObjects.length === 0) return log('削除対象なし');
+  const commands = selectedObjects.map((obj) => new DeleteObjectCommand(obj));
+  history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトを削除`));
+  selectedObjects = [];
+  updateSelection();
 }
 
 function autoSaveScene() {
@@ -228,7 +253,7 @@ function updateGizmoAppearance() {
 }
 
 function updateScaleGizmo(viewportKey) {
-  const target = transformControls.object;
+  const target = selectedObjects.length === 1 ? selectedObjects[0] : null;
   if (!target || viewportKey === 'perspective') {
     scaleGizmoGroup.visible = false;
     return;
@@ -275,49 +300,75 @@ function updateScaleGizmo(viewportKey) {
 }
 
 function startMirrorCopyMode() {
-  const target = transformControls.object;
-  if (!target) {
+  if (selectedObjects.length === 0) {
     log('コピーするオブジェクトが選択されていません。');
     return;
   }
-  selectedObjectHolder = target;
+
   isMirrorCopyMode = true;
   transformControls.detach();
   log('鏡面コピーモード開始。コピー軸をクリックしてください。');
   document.getElementById('mirrorCopy').style.display = 'none';
   document.getElementById('cancelMirrorCopy').style.display = 'inline-block';
+
   const previewMaterial = new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false});
+
   ['x', 'y', 'z'].forEach((axis) => {
-    const preview = new THREE.Mesh(target.geometry, previewMaterial);
-    preview.position.copy(target.position);
-    preview.scale.copy(target.scale);
-    const reflectedRotation = target.rotation.clone();
-    if (axis === 'x') {
-      reflectedRotation.y *= -1;
-      reflectedRotation.z *= -1;
-    } else if (axis === 'y') {
-      reflectedRotation.x *= -1;
-      reflectedRotation.z *= -1;
-    } else if (axis === 'z') {
-      reflectedRotation.x *= -1;
-      reflectedRotation.y *= -1;
-    }
-    preview.rotation.copy(reflectedRotation);
-    preview.position[axis] *= -1;
-    preview.scale[axis] *= -1;
-    preview.userData.mirrorAxis = axis;
-    previewGroup.add(preview);
+    const axis_preview_group = new THREE.Group();
+    axis_preview_group.userData.mirrorAxis = axis;
+
+    // ▼▼▼【修正】単一・複数に関わらず、常にワールド座標を基準にするロジックに統一 ▼▼▼
+    selectedObjects.forEach((obj) => {
+      const preview = new THREE.Mesh(obj.geometry, previewMaterial);
+
+      preview.position.copy(obj.position);
+      preview.scale.copy(obj.scale);
+
+      // 1. ワールド原点を基準に位置を反転
+      preview.position[axis] *= -1;
+
+      // 2. 角度を反転
+      const reflectedRotation = obj.rotation.clone();
+      if (axis === 'x') {
+        reflectedRotation.y *= -1;
+        reflectedRotation.z *= -1;
+      } else if (axis === 'y') {
+        reflectedRotation.x *= -1;
+        reflectedRotation.z *= -1;
+      } else if (axis === 'z') {
+        reflectedRotation.x *= -1;
+        reflectedRotation.y *= -1;
+      }
+      preview.rotation.copy(reflectedRotation);
+
+      // 3. スケールを反転
+      preview.scale[axis] *= -1;
+
+      axis_preview_group.add(preview);
+    });
+    // ▲▲▲【修正完了】▲▲▲
+
+    previewGroup.add(axis_preview_group);
   });
 }
 
-function performMirrorCopy(previewObject) {
-  const originalObject = selectedObjectHolder;
-  if (!originalObject) return;
-  const newObject = new THREE.Mesh(originalObject.geometry.clone(), originalObject.material.clone());
-  newObject.position.copy(previewObject.position);
-  newObject.rotation.copy(previewObject.rotation);
-  newObject.scale.copy(previewObject.scale);
-  history.execute(new MirrorCopyCommand(newObject, previewObject.userData.mirrorAxis));
+function performMirrorCopy(clickedPreview) {
+  const axis = clickedPreview.parent.userData.mirrorAxis;
+  const commands = [];
+  const newSelection = [];
+
+  clickedPreview.parent.children.forEach((preview, i) => {
+    const newObject = new THREE.Mesh(preview.geometry, selectedObjects[i].material.clone());
+    newObject.position.copy(preview.position);
+    newObject.rotation.copy(preview.rotation);
+    newObject.scale.copy(preview.scale);
+    commands.push(new AddObjectCommand(newObject));
+    newSelection.push(newObject);
+  });
+
+  history.execute(new MacroCommand(commands, `${axis.toUpperCase()}軸に鏡面コピー`));
+  selectedObjects = newSelection;
+  updateSelection();
   cancelMirrorCopyMode();
 }
 
@@ -325,56 +376,47 @@ function cancelMirrorCopyMode() {
   if (!isMirrorCopyMode) return;
   isMirrorCopyMode = false;
   while (previewGroup.children.length > 0) {
-    previewGroup.remove(previewGroup.children[0]);
+    const group = previewGroup.children[0];
+    while (group.children.length > 0) {
+      group.remove(group.children[0]);
+    }
+    previewGroup.remove(group);
   }
   document.getElementById('mirrorCopy').style.display = 'inline-block';
   document.getElementById('cancelMirrorCopy').style.display = 'none';
-  if (selectedObjectHolder) transformControls.attach(selectedObjectHolder);
+  updateSelection();
   log('鏡面コピーモードをキャンセルしました。');
 }
 
-// ▼▼▼【複数選択機能】ボタンのリスナー ▼▼▼
-const multiSelectButton = document.getElementById('multiSelect');
-multiSelectButton.addEventListener('click', () => {
-  isMultiSelectMode = !isMultiSelectMode;
-  if (isMultiSelectMode) {
-    multiSelectButton.style.backgroundColor = '#2ecc71'; // 緑色にしてモード中であることを示す
-    log('複数選択モード開始。SHIFTキーで選択を追加/解除できます。');
-  } else {
-    multiSelectButton.style.backgroundColor = '#f39c12'; // 元の色に戻す
-    selectedObjects = []; // 選択をクリア
-    updateSelection();
-    log('複数選択モード終了。');
-  }
-});
-// ▲▲▲【複数選択機能】▲▲▲
-
-// ▼▼▼【コピペ機能】関連関数 (startPastePreviewを修正) ▼▼▼
 function startPastePreview() {
-  const targetObject = transformControls.object;
-  if (!targetObject) {
+  if (selectedObjects.length === 0) {
     log('貼り付け先のオブジェクトを選択してください。');
+    return;
+  }
+  if (!clipboard || clipboard.length === 0) {
+    log('クリップボードが空です。');
     return;
   }
 
   isPasteMode = true;
   transformControls.detach();
 
-  const targetBox = new THREE.Box3().setFromObject(targetObject);
+  const targetBox = new THREE.Box3();
+  selectedObjects.forEach((obj) => targetBox.expandByObject(obj));
   const targetSize = targetBox.getSize(new THREE.Vector3());
 
-  // クリップボードのジオメトリからサイズを計算
-  if (!clipboard.geometry.boundingBox) {
-    clipboard.geometry.computeBoundingBox();
-  }
-  const sourceSize = clipboard.geometry.boundingBox.getSize(new THREE.Vector3()).multiply(clipboard.source.scale);
-
-  const previewMaterial = new THREE.MeshStandardMaterial({
-    color: 0x00ff00,
-    transparent: true,
-    opacity: 0.5,
-    depthTest: false,
+  const sourceBox = new THREE.Box3();
+  const sourceGroup = new THREE.Group();
+  clipboard.forEach((clip) => {
+    const tempMesh = new THREE.Mesh(clip.geometry);
+    tempMesh.scale.copy(clip.source.scale);
+    tempMesh.position.copy(clip.source.position);
+    sourceGroup.add(tempMesh);
   });
+  sourceBox.setFromObject(sourceGroup);
+  const sourceSize = sourceBox.getSize(new THREE.Vector3());
+
+  const previewMaterial = new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false});
 
   const directions = [
     {axis: 'x', sign: 1},
@@ -390,62 +432,97 @@ function startPastePreview() {
     const offset = new THREE.Vector3();
     offset[dir.axis] = offsetValue * dir.sign;
 
-    const previewObject = new THREE.Mesh(clipboard.geometry, previewMaterial);
-    previewObject.scale.copy(clipboard.source.scale);
-    previewObject.rotation.copy(clipboard.source.rotation);
-    previewObject.position.copy(targetObject.position).add(offset);
+    const axis_preview_group = new THREE.Group();
+    axis_preview_group.userData.offset = offset;
 
-    previewObject.userData.offset = offset;
-    previewGroup.add(previewObject);
+    clipboard.forEach((clip) => {
+      const previewObject = new THREE.Mesh(clip.geometry, previewMaterial);
+      previewObject.scale.copy(clip.source.scale);
+      previewObject.rotation.copy(clip.source.rotation);
+      previewObject.position.copy(clip.source.position).add(offset);
+      axis_preview_group.add(previewObject);
+    });
+    previewGroup.add(axis_preview_group);
   });
-
   log('ペースト先のプレビューをクリックして位置を確定してください。');
 }
 
 function confirmPaste(clickedPreview) {
-  if (!clickedPreview) return;
-  const newObject = new THREE.Mesh(clipboard.geometry, clipboard.material.clone());
-  newObject.position.copy(clickedPreview.position);
-  newObject.rotation.copy(clickedPreview.rotation);
-  newObject.scale.copy(clickedPreview.scale);
+  const offset = clickedPreview.parent.userData.offset;
+  const commands = [];
+  const newPastedObjects = [];
 
-  const command = new AddObjectCommand(newObject, true);
-  history.execute(command);
+  clipboard.forEach((clip) => {
+    const newObject = new THREE.Mesh(clip.geometry, clip.material.clone());
+    newObject.scale.copy(clip.source.scale);
+    newObject.rotation.copy(clip.source.rotation);
+    newObject.position.copy(clip.source.position).add(offset);
+    commands.push(new AddObjectCommand(newObject, true));
+    newPastedObjects.push(newObject);
+  });
 
-  lastPasteInfo = {
-    object: newObject,
-    offset: clickedPreview.userData.offset,
-  };
+  history.execute(new MacroCommand(commands, `${newPastedObjects.length}個のオブジェクトをペースト`));
 
-  transformControls.attach(newObject);
+  lastPasteInfo = {objects: newPastedObjects, offset: offset};
+  selectedObjects = newPastedObjects;
+  updateSelection();
   cancelPasteMode();
 }
 
 function performDirectPaste() {
-  const newObject = new THREE.Mesh(clipboard.geometry, clipboard.material.clone());
-  const lastObject = lastPasteInfo.object;
+  const offset = lastPasteInfo.offset;
+  const commands = [];
+  const newPastedObjects = [];
 
-  newObject.scale.copy(lastObject.scale);
-  newObject.rotation.copy(lastObject.rotation);
-  newObject.position.copy(lastObject.position).add(lastPasteInfo.offset);
+  lastPasteInfo.objects.forEach((lastObj) => {
+    const newObject = new THREE.Mesh(lastObj.geometry, lastObj.material.clone());
+    newObject.scale.copy(lastObj.scale);
+    newObject.rotation.copy(lastObj.rotation);
+    newObject.position.copy(lastObj.position).add(offset);
+    commands.push(new AddObjectCommand(newObject, true));
+    newPastedObjects.push(newObject);
+  });
 
-  const command = new AddObjectCommand(newObject, true);
-  history.execute(command);
-
-  lastPasteInfo.object = newObject;
-  transformControls.attach(newObject);
+  history.execute(new MacroCommand(commands, `${newPastedObjects.length}個のオブジェクトをペースト`));
+  lastPasteInfo.objects = newPastedObjects;
+  selectedObjects = newPastedObjects;
+  updateSelection();
 }
 
 function cancelPasteMode() {
   isPasteMode = false;
   while (previewGroup.children.length > 0) {
-    previewGroup.remove(previewGroup.children[0]);
+    const group = previewGroup.children[0];
+    while (group.children.length > 0) {
+      group.remove(group.children[0]);
+    }
+    previewGroup.remove(group);
   }
-  if (selectedObjectHolder) {
-    transformControls.attach(selectedObjectHolder);
+  updateSelection();
+}
+
+function updateSelection() {
+  while (selectionBoxes.children.length > 0) {
+    selectionBoxes.remove(selectionBoxes.children[0]);
+  }
+  transformControls.detach();
+
+  if (selectedObjects.length === 1) {
+    transformControls.attach(selectedObjects[0]);
+    const helper = new THREE.BoxHelper(selectedObjects[0], 0xffff00);
+    selectionBoxes.add(helper);
+  } else if (selectedObjects.length > 1) {
+    const box = new THREE.Box3();
+    selectedObjects.forEach((obj) => {
+      box.expandByObject(obj);
+      const helper = new THREE.BoxHelper(obj, 0xffff00);
+      selectionBoxes.add(helper);
+    });
+
+    box.getCenter(multiSelectHelper.position);
+    transformControls.attach(multiSelectHelper);
   }
 }
-// ▲▲▲【コピペ機能】▲▲▲
 
 class Command {
   constructor() {
@@ -453,6 +530,22 @@ class Command {
   }
   execute() {}
   undo() {}
+}
+class MacroCommand extends Command {
+  constructor(commands, message) {
+    super();
+    this.commands = commands;
+    this.message = message || '複数の操作';
+  }
+  execute() {
+    this.commands.forEach((c) => c.execute());
+  }
+  undo() {
+    this.commands
+      .slice()
+      .reverse()
+      .forEach((c) => c.undo());
+  }
 }
 class AddObjectCommand extends Command {
   constructor(object, isPaste = false) {
@@ -475,7 +568,6 @@ class DeleteObjectCommand extends Command {
     this.message = `${object.geometry.type.replace('Geometry', '')} を削除`;
   }
   execute() {
-    transformControls.detach();
     mechaGroup.remove(this.object);
   }
   undo() {
@@ -514,35 +606,6 @@ class MirrorCopyCommand extends Command {
     mechaGroup.remove(this.object);
   }
 }
-
-// ▼▼▼【複数選択機能】選択状態を更新する関数 ▼▼▼
-function updateSelection() {
-  // 既存の選択ボックスをクリア
-  while (selectionBoxes.children.length) {
-    selectionBoxes.remove(selectionBoxes.children[0]);
-  }
-  transformControls.detach();
-
-  if (selectedObjects.length === 0) {
-    // 選択なし
-  } else if (selectedObjects.length === 1) {
-    // 1つだけ選択
-    transformControls.attach(selectedObjects[0]);
-  } else {
-    // 複数選択
-    const box = new THREE.Box3();
-    selectedObjects.forEach((obj) => {
-      box.expandByObject(obj);
-      // オブジェクトごとのハイライトを追加
-      const helper = new THREE.BoxHelper(obj, 0x00ff00);
-      selectionBoxes.add(helper);
-    });
-
-    box.getCenter(multiSelectHelper.position);
-    transformControls.attach(multiSelectHelper);
-  }
-}
-// ▲▲▲【複数選択機能】▲▲▲
 
 // =================================================================
 // ◆ 4. イベントリスナー
@@ -591,6 +654,19 @@ fileInput.addEventListener('change', (e) => {
 document.getElementById('deleteObject').addEventListener('click', deleteSelectedObject);
 document.getElementById('mirrorCopy').addEventListener('click', startMirrorCopyMode);
 document.getElementById('cancelMirrorCopy').addEventListener('click', cancelMirrorCopyMode);
+const multiSelectButton = document.getElementById('multiSelect');
+multiSelectButton.addEventListener('click', () => {
+  isMultiSelectMode = !isMultiSelectMode;
+  if (isMultiSelectMode) {
+    multiSelectButton.style.backgroundColor = '#2ecc71';
+    log('複数選択モード開始。SHIFTキーで選択を追加/解除できます。');
+  } else {
+    multiSelectButton.style.backgroundColor = '#f39c12';
+    selectedObjects = [];
+    updateSelection();
+    log('複数選択モード終了。');
+  }
+});
 
 let pointerDownPosition = new THREE.Vector2();
 let isDraggingIn2DView = false;
@@ -600,10 +676,72 @@ let dragStartPointer = new THREE.Vector2();
 let dragStartObjectState = {position: new THREE.Vector3(), scale: new THREE.Vector3(), rotation: new THREE.Euler()};
 let draggedInfo = {viewportKey: null, handleName: null};
 let transformStartCache = null;
+const worldTransforms = new Map();
+
+transformControls.addEventListener('mouseDown', () => {
+  orbitControls.enabled = false;
+  if (selectedObjects.length > 1 && transformControls.object === multiSelectHelper) {
+    // ▼▼▼【ここから修正】▼▼▼
+    transformStartCache = selectedObjects.map((obj) => ({
+      position: obj.position.clone(),
+      rotation: obj.rotation.clone(),
+      scale: obj.scale.clone(),
+    }));
+
+    // ヘルパーの回転とスケールのみをリセット。位置は現在のグループ中心を維持する。
+    multiSelectHelper.rotation.set(0, 0, 0);
+    multiSelectHelper.scale.set(1, 1, 1);
+
+    // 問題の原因だった updateSelection() の呼び出しを削除
+
+    selectedObjects.forEach((obj) => {
+      worldTransforms.set(obj, {parent: obj.parent});
+      multiSelectHelper.attach(obj);
+    });
+    // ▲▲▲【ここまで修正】▲▲▲
+  } else if (selectedObjects.length === 1) {
+    transformStartCache = [
+      {
+        position: selectedObjects[0].position.clone(),
+        rotation: selectedObjects[0].rotation.clone(),
+        scale: selectedObjects[0].scale.clone(),
+      },
+    ];
+  }
+});
+
+transformControls.addEventListener('mouseUp', () => {
+  orbitControls.enabled = true;
+  if (!transformStartCache) return;
+  if (selectedObjects.length > 1 && transformControls.object === multiSelectHelper) {
+    const commands = [];
+    selectedObjects.forEach((obj, i) => {
+      worldTransforms.get(obj).parent.attach(obj);
+      const oldT = transformStartCache[i];
+      const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+      commands.push(new TransformCommand(obj, oldT, newT));
+    });
+    worldTransforms.clear();
+    history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトを変形`));
+    updateSelection();
+  } else if (selectedObjects.length === 1) {
+    const oldT = transformStartCache[0];
+    const obj = selectedObjects[0];
+    const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+    // 位置が実際に変わったかチェック
+    if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) {
+      history.execute(new TransformCommand(obj, oldT, newT));
+    }
+  }
+  transformStartCache = null;
+});
 
 window.addEventListener('pointerdown', (event) => {
   if (event.target.closest('#ui') || transformControls.dragging) return;
   pointerDownPosition.set(event.clientX, event.clientY);
+
+  if (selectedObjects.length > 1) return;
+
   let clickedViewportKey = null;
   let clickedRect = null;
   for (const key in viewports) {
@@ -616,24 +754,18 @@ window.addEventListener('pointerdown', (event) => {
     }
   }
   if (!clickedViewportKey || clickedViewportKey === 'perspective' || !transformControls.object) return;
-
   const clickedViewport = viewports[clickedViewportKey];
   pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
   pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-
   updateScaleGizmo(clickedViewportKey);
   scaleGizmoGroup.updateMatrixWorld(true);
-
   raycaster.setFromCamera(pointer, clickedViewport.camera);
   raycaster.near = 0;
   raycaster.far = 1000;
-
   mechaGroup.visible = false;
   const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
   mechaGroup.visible = true;
-
   updateGizmoAppearance();
-
   if (handleIntersects.length > 0) {
     const hitHandle = handleIntersects[0].object;
     dragStartPointer.set(event.clientX, event.clientY);
@@ -641,7 +773,7 @@ window.addEventListener('pointerdown', (event) => {
     dragStartObjectState.scale.copy(transformControls.object.scale);
     dragStartObjectState.rotation.copy(transformControls.object.rotation);
     orbitControls.enabled = false;
-    transformStartCache = {position: transformControls.object.position.clone(), rotation: transformControls.object.rotation.clone(), scale: transformControls.object.scale.clone()};
+    transformStartCache = [{position: transformControls.object.position.clone(), rotation: transformControls.object.rotation.clone(), scale: transformControls.object.scale.clone()}];
     if (gizmoMode === 'scale') {
       isScalingIn2DView = true;
     } else if (gizmoMode === 'rotate') {
@@ -657,7 +789,7 @@ window.addEventListener('pointerdown', (event) => {
       dragStartPointer.set(event.clientX, event.clientY);
       dragStartObjectState.position.copy(transformControls.object.position);
       orbitControls.enabled = false;
-      transformStartCache = {position: transformControls.object.position.clone(), rotation: transformControls.object.rotation.clone(), scale: transformControls.object.scale.clone()};
+      transformStartCache = [{position: transformControls.object.position.clone(), rotation: transformControls.object.rotation.clone(), scale: transformControls.object.scale.clone()}];
     }
   }
 });
@@ -757,14 +889,13 @@ window.addEventListener('pointermove', (event) => {
   }
 });
 
-window.addEventListener('pointerup', (event) => {
-  // ▼ 1. 鏡面コピーモードの処理
+window.addEventListener('pointerup', (e) => {
   if (isMirrorCopyMode) {
     let clickedViewportKey = null,
       clickedRect = null;
     for (const key in viewports) {
       const rect = viewports[key].element.getBoundingClientRect();
-      if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
         clickedViewportKey = key;
         clickedRect = rect;
         break;
@@ -772,10 +903,10 @@ window.addEventListener('pointerup', (event) => {
     }
     if (!clickedViewportKey) return;
     const clickedViewport = viewports[clickedViewportKey];
-    pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
-    pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+    pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+    pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, clickedViewport.camera);
-    const intersects = raycaster.intersectObjects(previewGroup.children);
+    const intersects = raycaster.intersectObjects(previewGroup.children, true);
     if (intersects.length > 0) {
       performMirrorCopy(intersects[0].object);
     } else {
@@ -783,26 +914,23 @@ window.addEventListener('pointerup', (event) => {
     }
     return;
   }
-
-  // ▼ 2. ペーストモードの処理
   if (isPasteMode) {
     let clickedViewportKey = null,
       clickedRect = null;
     for (const key in viewports) {
       const rect = viewports[key].element.getBoundingClientRect();
-      if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
         clickedViewportKey = key;
         clickedRect = rect;
         break;
       }
     }
     if (!clickedViewportKey) return;
-
     const clickedViewport = viewports[clickedViewportKey];
-    pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
-    pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+    pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+    pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, clickedViewport.camera);
-    const intersects = raycaster.intersectObjects(previewGroup.children);
+    const intersects = raycaster.intersectObjects(previewGroup.children, true);
     if (intersects.length > 0) {
       confirmPaste(intersects[0].object);
     } else {
@@ -810,29 +938,28 @@ window.addEventListener('pointerup', (event) => {
     }
     return;
   }
-
-  // ▼ 3. 2Dビューでのドラッグ操作終了の処理
   if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
     if (transformControls.object && transformStartCache) {
-      const newTransform = {position: transformControls.object.position.clone(), rotation: transformControls.object.rotation.clone(), scale: transformControls.object.scale.clone()};
-      history.execute(new TransformCommand(transformControls.object, transformStartCache, newTransform));
-      transformStartCache = null;
+      const oldT = transformStartCache[0];
+      const obj = transformControls.object;
+      const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+      history.execute(new TransformCommand(obj, oldT, newT));
     }
     isDraggingIn2DView = isScalingIn2DView = isRotatingIn2DView = false;
     orbitControls.enabled = true;
     updateGizmoAppearance();
+    transformStartCache = null;
     return;
   }
 
-  // ▼ 4. 通常のオブジェクト選択処理（複数選択対応）
-  const pointerUpPosition = new THREE.Vector2(event.clientX, event.clientY);
-  if (pointerDownPosition.distanceTo(pointerUpPosition) > 5 || event.target.closest('#ui') || transformControls.dragging) return;
+  const pointerUpPosition = new THREE.Vector2(e.clientX, e.clientY);
+  if (pointerDownPosition.distanceTo(pointerUpPosition) > 5 || e.target.closest('#ui') || transformControls.dragging) return;
 
   let clickedViewportKey = null,
     clickedRect = null;
   for (const key in viewports) {
     const rect = viewports[key].element.getBoundingClientRect();
-    if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+    if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
       clickedViewportKey = key;
       clickedRect = rect;
       break;
@@ -841,16 +968,14 @@ window.addEventListener('pointerup', (event) => {
   if (!clickedViewportKey) return;
 
   const clickedViewport = viewports[clickedViewportKey];
-  pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
-  pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+  pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+  pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, clickedViewport.camera);
 
   const intersects = raycaster.intersectObjects(mechaGroup.children, false);
   const clickedObject = intersects.length > 0 ? intersects[0].object : null;
 
-  const multiSelectButton = document.getElementById('multiSelect');
-
-  if (event.shiftKey || isMultiSelectMode) {
+  if (e.shiftKey || isMultiSelectMode) {
     if (clickedObject) {
       const index = selectedObjects.indexOf(clickedObject);
       if (index > -1) {
@@ -860,17 +985,12 @@ window.addEventListener('pointerup', (event) => {
       }
     }
   } else {
-    if (clickedObject) {
-      selectedObjects = [clickedObject];
-    } else {
-      selectedObjects = [];
-    }
+    selectedObjects = clickedObject ? [clickedObject] : [];
     if (isMultiSelectMode) {
       isMultiSelectMode = false;
       multiSelectButton.style.backgroundColor = '#f39c12';
     }
   }
-
   updateSelection();
   if (selectedObjects.length > 0) {
     log(`${selectedObjects.length}個のオブジェクトを選択中`);
@@ -881,7 +1001,6 @@ window.addEventListener('pointerup', (event) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
   if (e.ctrlKey || e.metaKey) {
     switch (e.key.toLowerCase()) {
       case 'z':
@@ -892,31 +1011,29 @@ window.addEventListener('keydown', (e) => {
         e.preventDefault();
         history.redo();
         return;
-
       case 'c':
         e.preventDefault();
-        if (transformControls.object) {
-          clipboard = {
-            geometry: transformControls.object.geometry,
-            material: transformControls.object.material,
-            source: {
-              scale: transformControls.object.scale.clone(),
-              rotation: transformControls.object.rotation.clone(),
-            },
-          };
-          log('オブジェクトをコピーしました。');
+        if (selectedObjects.length > 0) {
+          clipboard = selectedObjects.map((obj) => ({
+            geometry: obj.geometry,
+            material: obj.material,
+            source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()},
+          }));
+          log(`${selectedObjects.length}個のオブジェクトをコピーしました。`);
         } else {
           log('コピーするオブジェクトが選択されていません。');
         }
         return;
-
       case 'v':
         e.preventDefault();
         if (!clipboard) {
           log('クリップボードが空です。');
           return;
         }
-        if (transformControls.object === lastPasteInfo.object) {
+        const lastSelectedIds = lastPasteInfo.objects.map((o) => o.uuid);
+        const currentSelectedIds = selectedObjects.map((o) => o.uuid);
+        const isSameSelection = lastSelectedIds.length === currentSelectedIds.length && lastSelectedIds.every((id) => currentSelectedIds.includes(id));
+        if (isSameSelection && lastSelectedIds.length > 0) {
           performDirectPaste();
         } else {
           startPastePreview();
@@ -924,7 +1041,6 @@ window.addEventListener('keydown', (e) => {
         return;
     }
   }
-
   if (isMirrorCopyMode && e.key === 'Escape') {
     cancelMirrorCopyMode();
     return;
@@ -953,8 +1069,7 @@ window.addEventListener('keydown', (e) => {
       break;
   }
 
-  const selectedObject = transformControls.object;
-  if (!selectedObject) return;
+  if (selectedObjects.length === 0) return;
   if (e.key === 'Delete' || e.key === 'Backspace') {
     deleteSelectedObject();
     return;
@@ -963,63 +1078,70 @@ window.addEventListener('keydown', (e) => {
   const moveDistance = 0.1,
     rotateAngle = THREE.MathUtils.degToRad(5),
     scaleAmount = 0.05;
-  const oldTransform = {position: selectedObject.position.clone(), rotation: selectedObject.rotation.clone(), scale: selectedObject.scale.clone()};
-  const newTransform = {position: selectedObject.position.clone(), rotation: selectedObject.rotation.clone(), scale: selectedObject.scale.clone()};
-  let operationDone = false;
-  if (e.ctrlKey || e.metaKey) {
-    e.preventDefault();
-    switch (e.key) {
-      case 'ArrowUp':
-        newTransform.rotation.x -= rotateAngle;
-        operationDone = true;
-        break;
-      case 'ArrowDown':
-        newTransform.rotation.x += rotateAngle;
-        operationDone = true;
-        break;
-      case 'ArrowLeft':
-        newTransform.rotation.y -= rotateAngle;
-        operationDone = true;
-        break;
-      case 'ArrowRight':
-        newTransform.rotation.y += rotateAngle;
-        operationDone = true;
-        break;
+  const commands = [];
+  selectedObjects.forEach((obj) => {
+    const oldTransform = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+    const newTransform = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+    let operationDone = false;
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      switch (e.key) {
+        case 'ArrowUp':
+          newTransform.rotation.x -= rotateAngle;
+          operationDone = true;
+          break;
+        case 'ArrowDown':
+          newTransform.rotation.x += rotateAngle;
+          operationDone = true;
+          break;
+        case 'ArrowLeft':
+          newTransform.rotation.y -= rotateAngle;
+          operationDone = true;
+          break;
+        case 'ArrowRight':
+          newTransform.rotation.y += rotateAngle;
+          operationDone = true;
+          break;
+      }
+    } else if (e.altKey) {
+      e.preventDefault();
+      switch (e.key) {
+        case 'ArrowUp':
+          newTransform.scale.addScalar(scaleAmount);
+          operationDone = true;
+          break;
+        case 'ArrowDown':
+          newTransform.scale.addScalar(-scaleAmount);
+          operationDone = true;
+          break;
+      }
+    } else {
+      switch (e.key) {
+        case 'ArrowUp':
+          e.shiftKey ? (newTransform.position.y += moveDistance) : (newTransform.position.z -= moveDistance);
+          operationDone = true;
+          break;
+        case 'ArrowDown':
+          e.shiftKey ? (newTransform.position.y -= moveDistance) : (newTransform.position.z += moveDistance);
+          operationDone = true;
+          break;
+        case 'ArrowLeft':
+          newTransform.position.x -= moveDistance;
+          operationDone = true;
+          break;
+        case 'ArrowRight':
+          newTransform.position.x += moveDistance;
+          operationDone = true;
+          break;
+      }
     }
-  } else if (e.altKey) {
-    e.preventDefault();
-    switch (e.key) {
-      case 'ArrowUp':
-        newTransform.scale.addScalar(scaleAmount);
-        operationDone = true;
-        break;
-      case 'ArrowDown':
-        newTransform.scale.addScalar(-scaleAmount);
-        operationDone = true;
-        break;
+    if (operationDone) {
+      commands.push(new TransformCommand(obj, oldTransform, newTransform));
     }
-  } else {
-    switch (e.key) {
-      case 'ArrowUp':
-        e.shiftKey ? (newTransform.position.y += moveDistance) : (newTransform.position.z -= moveDistance);
-        operationDone = true;
-        break;
-      case 'ArrowDown':
-        e.shiftKey ? (newTransform.position.y -= moveDistance) : (newTransform.position.z += moveDistance);
-        operationDone = true;
-        break;
-      case 'ArrowLeft':
-        newTransform.position.x -= moveDistance;
-        operationDone = true;
-        break;
-      case 'ArrowRight':
-        newTransform.position.x += moveDistance;
-        operationDone = true;
-        break;
-    }
-  }
-  if (operationDone) {
-    history.execute(new TransformCommand(selectedObject, oldTransform, newTransform));
+  });
+
+  if (commands.length > 0) {
+    history.execute(new MacroCommand(commands, `選択した ${commands.length} 個のオブジェクトを変形`));
   }
 });
 
@@ -1059,6 +1181,8 @@ window.addEventListener('load', () => {
 function animate() {
   requestAnimationFrame(animate);
   orbitControls.update();
+  selectionBoxes.children.forEach((box) => box.update());
+
   for (const key in viewports) {
     const view = viewports[key];
     const rect = view.element.getBoundingClientRect();
