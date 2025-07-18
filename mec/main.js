@@ -31,6 +31,7 @@ const axisColors = {x: 0xff0000, y: 0x00ff00, z: 0x0000ff};
 */
 const logDisplay = document.getElementById('log-display');
 let logMessages = [];
+let selectedObjectHolder = null; // 選択中オブジェクトを保持する変数
 
 // ▼▼▼【ステップ1】2Dビューのギズモモード管理と色の定義 ▼▼▼
 let gizmoMode = 'scale'; // 'scale' または 'rotate'
@@ -76,6 +77,12 @@ handlePositions.forEach((pos) => {
 });
 scene.add(scaleGizmoGroup);
 
+// ▼▼▼【対称コピー機能用】▼▼▼
+const symmetryPreviewGroup = new THREE.Group();
+scene.add(symmetryPreviewGroup);
+let isSymmetryCopyMode = false;
+// ▲▲▲【対称コピー機能用】▲▲▲
+
 // =================================================================
 // ◆ 2. ログ機能および3面図モード用の設定
 // =================================================================
@@ -108,6 +115,13 @@ const orbitControls = new OrbitControls(viewports.perspective.camera, viewports.
 orbitControls.enableDamping = true;
 const transformControls = new TransformControls(viewports.perspective.camera, renderer.domElement);
 scene.add(transformControls);
+
+// ▼▼▼【選択オブジェクト保持用】▼▼▼
+transformControls.addEventListener('objectChange', () => {
+  selectedObjectHolder = transformControls.object;
+});
+// ▲▲▲【選択オブジェクト保持用】▲▲▲
+
 const wireframeMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true, transparent: true, opacity: 0.7});
 
 // =================================================================
@@ -236,6 +250,86 @@ function updateScaleGizmo(viewportKey) {
   scaleGizmoGroup.updateMatrixWorld(true);
 }
 
+// ▼▼▼【対称コピー機能用】▼▼▼
+function startSymmetryCopyMode() {
+  const target = transformControls.object;
+  if (!target) {
+    log('コピーするオブジェクトが選択されていません。');
+    return;
+  }
+  selectedObjectHolder = target; // ★追加：モード開始時に選択オブジェクトを保持
+  isSymmetryCopyMode = true;
+  transformControls.detach(); // モード中はギズモを非表示にする
+  log('対称コピーモード開始。コピー軸をクリックしてください。');
+
+  // UIの表示切替
+  document.getElementById('symmetryCopy').style.display = 'none';
+  document.getElementById('cancelSymmetryCopy').style.display = 'inline-block';
+
+  // プレビュー用マテリアル
+  const previewMaterial = new THREE.MeshStandardMaterial({
+    color: 0x00ff00, // 緑色
+    transparent: true,
+    opacity: 0.5,
+    depthTest: false, // 他のオブジェクトに隠れても見えるように
+  });
+
+  const axes = ['x', 'y', 'z'];
+  axes.forEach((axis) => {
+    const preview = new THREE.Mesh(target.geometry, previewMaterial);
+    preview.position.copy(target.position);
+    preview.rotation.copy(target.rotation);
+    preview.scale.copy(target.scale);
+
+    // 軸に対して反転
+    preview.position[axis] *= -1;
+    preview.scale[axis] *= -1;
+
+    preview.userData.mirrorAxis = axis; // どの軸のプレビューか保存
+    symmetryPreviewGroup.add(preview);
+  });
+}
+
+function performSymmetryCopy(previewObject) {
+  const originalObject = selectedObjectHolder;
+  if (!originalObject) return;
+
+  const newObject = new THREE.Mesh(originalObject.geometry.clone(), originalObject.material.clone());
+
+  // プレビューオブジェクトの位置やスケールをコピー
+  newObject.position.copy(previewObject.position);
+  newObject.rotation.copy(previewObject.rotation);
+  newObject.scale.copy(previewObject.scale);
+
+  mechaGroup.add(newObject);
+  log(`${previewObject.userData.mirrorAxis.toUpperCase()}軸に対称コピーしました。`);
+  autoSaveScene();
+
+  cancelSymmetryCopyMode(); // 処理完了後、モードを抜ける
+}
+
+function cancelSymmetryCopyMode() {
+  if (!isSymmetryCopyMode) return;
+
+  isSymmetryCopyMode = false;
+  // プレビューオブジェクトを全て削除
+  while (symmetryPreviewGroup.children.length > 0) {
+    symmetryPreviewGroup.remove(symmetryPreviewGroup.children[0]);
+  }
+
+  // UIを元に戻す
+  document.getElementById('symmetryCopy').style.display = 'inline-block';
+  document.getElementById('cancelSymmetryCopy').style.display = 'none';
+
+  // 保持していたオブジェクトを再度アタッチ
+  if (selectedObjectHolder) {
+    transformControls.attach(selectedObjectHolder);
+  }
+
+  log('対称コピーモードをキャンセルしました。');
+}
+// ▲▲▲【対称コピー機能用】▲▲▲
+
 // =================================================================
 // ◆ 4. イベントリスナー
 // =================================================================
@@ -286,6 +380,11 @@ fileInput.addEventListener('change', (e) => {
   e.target.value = '';
 });
 document.getElementById('deleteObject').addEventListener('click', deleteSelectedObject);
+
+// ▼▼▼【対称コピー機能用】▼▼▼
+document.getElementById('symmetryCopy').addEventListener('click', startSymmetryCopyMode);
+document.getElementById('cancelSymmetryCopy').addEventListener('click', cancelSymmetryCopyMode);
+// ▲▲▲【対称コピー機能用】▲▲▲
 
 let pointerDownPosition = new THREE.Vector2();
 let isDraggingIn2DView = false;
@@ -516,6 +615,37 @@ window.addEventListener('pointermove', (event) => {
 
 // ▼▼▼【ステップ6】`pointerup`イベントを修正 ▼▼▼
 window.addEventListener('pointerup', (event) => {
+  // ▼▼▼【対称コピー機能用】モード中の処理を最優先する ▼▼▼
+  if (isSymmetryCopyMode) {
+    let clickedViewportKey = null;
+    let clickedRect = null;
+    for (const key in viewports) {
+      const rect = viewports[key].element.getBoundingClientRect();
+      if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+        clickedViewportKey = key;
+        clickedRect = rect;
+        break;
+      }
+    }
+    if (!clickedViewportKey) return;
+
+    const clickedViewport = viewports[clickedViewportKey];
+    pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+    pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, clickedViewport.camera);
+
+    const intersects = raycaster.intersectObjects(symmetryPreviewGroup.children);
+    if (intersects.length > 0) {
+      // プレビューがクリックされたらコピーを実行
+      performSymmetryCopy(intersects[0].object);
+    } else {
+      // それ以外ならキャンセル
+      cancelSymmetryCopyMode();
+    }
+    return; // 通常のクリック処理は行わない
+  }
+  // ▲▲▲【対称コピー機能用】▲▲▲
+
   // 回転フラグもチェック対象に追加
   if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
     if (transformControls.object) {
@@ -569,6 +699,13 @@ window.addEventListener('pointerup', (event) => {
 // ▼▼▼【ステップ3】`keydown`イベントを修正 ▼▼▼
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  // ▼▼▼【対称コピー機能用】Escapeキーでキャンセル ▼▼▼
+  if (isSymmetryCopyMode && e.key === 'Escape') {
+    cancelSymmetryCopyMode();
+    return;
+  }
+  // ▲▲▲【対称コピー機能用】▲▲▲
 
   // 2Dビューのギズモモード切替
   switch (e.key.toLowerCase()) {
@@ -727,7 +864,7 @@ function animate() {
     } else {
       scaleGizmoGroup.visible = false;
       // 3Dギズモは、オブジェクトが選択されている場合にのみ表示する
-      transformControls.visible = !!transformControls.object;
+      transformControls.visible = !!transformControls.object && !isSymmetryCopyMode; // 対称コピー中は非表示
       renderer.render(scene, view.camera);
     }
   }
