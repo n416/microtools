@@ -19,21 +19,24 @@ const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const gridHelper = new THREE.GridHelper(20, 20, 0x888888, 0x444444);
 scene.add(gridHelper);
-// ▼▼▼ XYZ軸を可視化するためのヘルパーオブジェクト ▼▼▼
+/*
 const axisColors = {x: 0xff0000, y: 0x00ff00, z: 0x0000ff};
 ['x', 'y', 'z'].forEach((axis) => {
   const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
   const material = new THREE.MeshBasicMaterial({color: axisColors[axis]});
   const cube = new THREE.Mesh(geometry, material);
-  cube.position[axis] = 5; // 各軸のプラス方向5の位置に配置
+  cube.position[axis] = 5;
   scene.add(cube);
 });
-// ▲▲▲ ここまで追加 ▲▲▲
-
+*/
 const logDisplay = document.getElementById('log-display');
 let logMessages = [];
 
-// ▼▼▼ 拡縮ギズモ用の設定（ハンドルサイズ0.5、元のハンドル名） ▼▼▼
+// ▼▼▼【ステップ1】2Dビューのギズモモード管理と色の定義 ▼▼▼
+let gizmoMode = 'scale'; // 'scale' または 'rotate'
+const scaleGizmoColor = new THREE.Color(0xffff00); // 黄色
+const rotateGizmoColor = new THREE.Color(0x00ffff); // シアン
+
 const scaleGizmoGroup = new THREE.Group();
 const gizmoHandles = [];
 
@@ -50,7 +53,6 @@ const gizmoHandleMaterial = new THREE.MeshBasicMaterial({
 });
 
 const handleSize = 0.5;
-
 const handlePositions = [
   {x: -0.5, y: 0.5, name: 'top-left'},
   {x: 0, y: 0.5, name: 'top-center'},
@@ -86,26 +88,10 @@ function log(message) {
 }
 
 const viewports = {
-  top: {
-    element: document.getElementById('view-top'),
-    camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000),
-    background: new THREE.Color(0x1a1a1a),
-  },
-  perspective: {
-    element: document.getElementById('view-perspective'),
-    camera: new THREE.PerspectiveCamera(75, 1, 0.1, 1000),
-    background: new THREE.Color(0x282c34),
-  },
-  side: {
-    element: document.getElementById('view-side'),
-    camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000),
-    background: new THREE.Color(0x1a1a1a),
-  },
-  front: {
-    element: document.getElementById('view-front'),
-    camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000),
-    background: new THREE.Color(0x1a1a1a),
-  },
+  top: {element: document.getElementById('view-top'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
+  perspective: {element: document.getElementById('view-perspective'), camera: new THREE.PerspectiveCamera(75, 1, 0.1, 1000), background: new THREE.Color(0x282c34)},
+  side: {element: document.getElementById('view-side'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
+  front: {element: document.getElementById('view-front'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
 };
 viewports.perspective.camera.position.set(4, 3, 5);
 viewports.perspective.camera.lookAt(0, 0, 0);
@@ -122,22 +108,14 @@ const orbitControls = new OrbitControls(viewports.perspective.camera, viewports.
 orbitControls.enableDamping = true;
 const transformControls = new TransformControls(viewports.perspective.camera, renderer.domElement);
 scene.add(transformControls);
-const wireframeMaterial = new THREE.MeshBasicMaterial({
-  color: 0xffffff,
-  wireframe: true,
-  transparent: true,
-  opacity: 0.7,
-});
+const wireframeMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true, transparent: true, opacity: 0.7});
 
 // =================================================================
 // ◆ 3. オブジェクト操作 / 保存・読込のロジック
 // =================================================================
 function deleteSelectedObject() {
   const objectToDelete = transformControls.object;
-  if (!objectToDelete) {
-    log('削除対象なし');
-    return;
-  }
+  if (!objectToDelete) return log('削除対象なし');
   log(`${objectToDelete.geometry.type} を削除`);
   transformControls.detach();
   mechaGroup.remove(objectToDelete);
@@ -198,62 +176,60 @@ function loadFromData(sceneData) {
   log('データ読込完了');
 }
 
-// ▼▼▼ 修正されたupdateScaleGizmo：TopビューでZ軸を正しくマッピング ▼▼▼
-// ▼▼▼ 修正: updateScaleGizmo（スペルミス修正、ログ抑制） ▼▼▼
+// ▼▼▼【ステップ2】ギズモの外観をモードに応じて更新する関数 ▼▼▼
+function updateGizmoAppearance() {
+  const color = gizmoMode === 'rotate' ? rotateGizmoColor : scaleGizmoColor;
+  gizmoLineMaterial.color.copy(color);
+  gizmoHandles.forEach((handle) => {
+    // 中央のハンドルは回転操作に関係ないので、回転モードでは非表示にする
+    if (handle.name.includes('center')) {
+      handle.visible = gizmoMode === 'scale';
+    }
+    handle.material.color.copy(color);
+  });
+}
+
 function updateScaleGizmo(viewportKey) {
   const target = transformControls.object;
   if (!target || viewportKey === 'perspective') {
     scaleGizmoGroup.visible = false;
     return;
   }
-
   const box = new THREE.Box3().setFromObject(target);
   const size = box.getSize(new THREE.Vector3());
-
   if (size.x === 0) size.x = 0.001;
   if (size.y === 0) size.y = 0.001;
   if (size.z === 0) size.z = 0.001;
-
   scaleGizmoGroup.visible = true;
   scaleGizmoGroup.position.copy(target.position);
   scaleGizmoGroup.renderOrder = 999;
-
   const cam = viewports[viewportKey].camera;
   const dist = target.position.distanceTo(cam.position);
   const frustumSize = 10;
   const handleVisibleSize = Math.max(((frustumSize * handleSize) / dist) * 1.5, 0.15);
-
   switch (viewportKey) {
     case 'top':
       scaleGizmoGroup.scale.set(size.x, size.z, 1);
       scaleGizmoGroup.rotation.set(-Math.PI / 2, 0, 0);
       scaleGizmoGroup.position.z += 0.01;
       scaleGizmoGroup.children.forEach((child) => {
-        if (child.isMesh) {
-          child.scale.set(Math.max(1 / size.x, 0.15), Math.max(1 / size.z, 0.15), 1).multiplyScalar(handleVisibleSize);
-        }
+        if (child.isMesh) child.scale.set(Math.max(1 / size.x, 0.15), Math.max(1 / size.z, 0.15), 1).multiplyScalar(handleVisibleSize);
       });
       break;
-
     case 'front':
       scaleGizmoGroup.scale.set(size.x, size.y, 1);
       scaleGizmoGroup.rotation.set(0, 0, 0);
       scaleGizmoGroup.position.z += 0.01;
       scaleGizmoGroup.children.forEach((child) => {
-        if (child.isMesh) {
-          child.scale.set(Math.max(1 / size.x, 0.15), Math.max(1 / size.y, 0.15), 1).multiplyScalar(handleVisibleSize);
-        }
+        if (child.isMesh) child.scale.set(Math.max(1 / size.x, 0.15), Math.max(1 / size.y, 0.15), 1).multiplyScalar(handleVisibleSize);
       });
       break;
-
     case 'side':
       scaleGizmoGroup.scale.set(size.z, size.y, 1);
       scaleGizmoGroup.rotation.set(0, Math.PI / 2, 0);
       scaleGizmoGroup.position.x += 0.01;
       scaleGizmoGroup.children.forEach((child) => {
-        if (child.isMesh) {
-          child.scale.set(Math.max(1 / size.z, 0.15), Math.max(1 / size.y, 0.15), 1).multiplyScalar(handleVisibleSize);
-        }
+        if (child.isMesh) child.scale.set(Math.max(1 / size.z, 0.15), Math.max(1 / size.y, 0.15), 1).multiplyScalar(handleVisibleSize);
       });
       break;
   }
@@ -314,13 +290,16 @@ document.getElementById('deleteObject').addEventListener('click', deleteSelected
 let pointerDownPosition = new THREE.Vector2();
 let isDraggingIn2DView = false;
 let isScalingIn2DView = false;
+let isRotatingIn2DView = false; // 回転操作中フラグを追加
 let dragStartPointer = new THREE.Vector2();
 let dragStartObjectState = {
   position: new THREE.Vector3(),
   scale: new THREE.Vector3(),
+  rotation: new THREE.Euler(), // 回転状態も保存
 };
 let draggedInfo = {viewportKey: null, handleName: null};
 
+// ▼▼▼【ステップ4】`pointerdown`イベントを修正 ▼▼▼
 window.addEventListener('pointerdown', (event) => {
   if (event.target.closest('#ui') || transformControls.dragging) return;
   pointerDownPosition.set(event.clientX, event.clientY);
@@ -352,47 +331,37 @@ window.addEventListener('pointerdown', (event) => {
   const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
   mechaGroup.visible = true;
 
-  // ハンドル強調表示：すべてのハンドルをリセットし、クリックしたハンドルを赤に
-  gizmoHandles.forEach((handle) => {
-    handle.material.color.set(0xffff00); // 元の色（黄色）にリセット
-  });
+  updateGizmoAppearance(); // ハンドル色を現在のモードに合わせる
 
-  // ハンドル名表示用のdivをリセット
   let handleLabel = document.getElementById('handle-label');
   if (handleLabel) handleLabel.remove();
 
   if (handleIntersects.length > 0) {
     const hitHandle = handleIntersects[0].object;
-    hitHandle.material.color.set(0xff0000); // クリックしたハンドルを赤に
-    log(`Handle hit: ${hitHandle.name}, distance: ${handleIntersects[0].distance.toFixed(2)}`);
-    console.log('Handle Click Position (World Coords):', handleIntersects[0].point);
+    hitHandle.material.color.set(0xff0000);
 
-    // ハンドル名を画面に表示
-    handleLabel = document.createElement('div');
-    handleLabel.id = 'handle-label';
-    handleLabel.style.position = 'absolute';
-    handleLabel.style.left = `${event.clientX + 10}px`;
-    handleLabel.style.top = `${event.clientY + 10}px`;
-    handleLabel.style.background = 'rgba(0, 0, 0, 0.7)';
-    handleLabel.style.color = 'white';
-    handleLabel.style.padding = '5px';
-    handleLabel.style.borderRadius = '3px';
-    handleLabel.style.pointerEvents = 'none';
-    handleLabel.textContent = hitHandle.name;
-    document.body.appendChild(handleLabel);
+    dragStartPointer.set(event.clientX, event.clientY);
+    dragStartObjectState.position.copy(transformControls.object.position);
+    dragStartObjectState.scale.copy(transformControls.object.scale);
+    dragStartObjectState.rotation.copy(transformControls.object.rotation); // 回転も保存
+    orbitControls.enabled = false;
 
-    isScalingIn2DView = true;
+    // 現在のギズモモードに応じて処理を分岐
+    if (gizmoMode === 'scale') {
+      isScalingIn2DView = true;
+      log('拡縮モード開始');
+    } else if (gizmoMode === 'rotate') {
+      // 回転操作に関係ない中央ハンドルは無視
+      if (hitHandle.name.includes('center')) return;
+      isRotatingIn2DView = true;
+      log('回転モード開始');
+    }
+
     draggedInfo = {
       viewportKey: clickedViewportKey,
       handleName: hitHandle.name,
     };
-    dragStartPointer.set(event.clientX, event.clientY);
-    dragStartObjectState.position.copy(transformControls.object.position);
-    dragStartObjectState.scale.copy(transformControls.object.scale);
-    orbitControls.enabled = false;
-    log('拡縮モード開始');
   } else {
-    log('No handle hit');
     const objectIntersects = raycaster.intersectObject(transformControls.object, true);
     if (objectIntersects.length > 0) {
       isDraggingIn2DView = true;
@@ -405,158 +374,165 @@ window.addEventListener('pointerdown', (event) => {
   }
 });
 
-// ▼▼▼ 修正3: pointermove（top-leftのピボットとスケール方向修正） ▼▼▼
+// ▼▼▼【ステップ5】`pointermove`イベントを修正 ▼▼▼
 window.addEventListener('pointermove', (event) => {
-  if (!isDraggingIn2DView && !isScalingIn2DView) return;
+  // 回転フラグもチェック対象に追加
+  if (!isDraggingIn2DView && !isScalingIn2DView && !isRotatingIn2DView) return;
   event.preventDefault();
 
+  const targetObject = transformControls.object;
   const view = viewports[draggedInfo.viewportKey];
   const rect = view.element.getBoundingClientRect();
-  const aspect = rect.width / rect.height;
-  const frustumSize = 10;
-  const worldDeltaX = ((event.clientX - dragStartPointer.x) / rect.width) * frustumSize * aspect;
-  const worldDeltaY = ((event.clientY - dragStartPointer.y) / rect.height) * frustumSize;
-  const targetObject = transformControls.object;
 
-  if (isDraggingIn2DView) {
-    const newPosition = dragStartObjectState.position.clone();
+  if (isDraggingIn2DView || isScalingIn2DView) {
+    const aspect = rect.width / rect.height;
+    const frustumSize = 10;
+    const worldDeltaX = ((event.clientX - dragStartPointer.x) / rect.width) * frustumSize * aspect;
+    const worldDeltaY = ((event.clientY - dragStartPointer.y) / rect.height) * frustumSize;
+
+    if (isDraggingIn2DView) {
+      const newPosition = dragStartObjectState.position.clone();
+      switch (draggedInfo.viewportKey) {
+        case 'top':
+          newPosition.x += worldDeltaX;
+          newPosition.z += worldDeltaY;
+          break;
+        case 'front':
+          newPosition.x += worldDeltaX;
+          newPosition.y -= worldDeltaY;
+          break;
+        case 'side':
+          newPosition.z -= worldDeltaX;
+          newPosition.y -= worldDeltaY;
+          break;
+      }
+      targetObject.position.copy(newPosition);
+    } else if (isScalingIn2DView) {
+      const newPosition = dragStartObjectState.position.clone();
+      const newScale = dragStartObjectState.scale.clone();
+      const handleName = draggedInfo.handleName;
+      let u_change = 0,
+        v_change = 0;
+      let axisU, axisV;
+      switch (draggedInfo.viewportKey) {
+        case 'top':
+          u_change = worldDeltaX;
+          v_change = worldDeltaY;
+          axisU = 'x';
+          axisV = 'z';
+          break;
+        case 'front':
+          u_change = worldDeltaX;
+          v_change = -worldDeltaY;
+          axisU = 'x';
+          axisV = 'y';
+          break;
+        case 'side':
+          u_change = -worldDeltaX;
+          v_change = -worldDeltaY;
+          axisU = 'z';
+          axisV = 'y';
+          break;
+      }
+      const box = new THREE.Box3().setFromObject(targetObject);
+      const size = box.getSize(new THREE.Vector3());
+      const center = targetObject.position.clone();
+      const pivot = center.clone();
+      const halfSizeU = size[axisU] / 2;
+      const halfSizeV = size[axisV] / 2;
+      if (draggedInfo.viewportKey === 'side') {
+        if (handleName.includes('left')) pivot[axisU] -= halfSizeU;
+        else if (handleName.includes('right')) pivot[axisU] += halfSizeU;
+      } else {
+        if (handleName.includes('left')) pivot[axisU] += halfSizeU;
+        else if (handleName.includes('right')) pivot[axisU] -= halfSizeU;
+      }
+      if (draggedInfo.viewportKey === 'top') {
+        if (handleName.includes('top')) pivot[axisV] += halfSizeV;
+        else if (handleName.includes('bottom')) pivot[axisV] -= halfSizeV;
+      } else {
+        if (handleName.includes('top')) pivot[axisV] -= halfSizeV;
+        else if (handleName.includes('bottom')) pivot[axisV] += halfSizeV;
+      }
+      let u_multiplier = 0;
+      if (draggedInfo.viewportKey === 'side') {
+        u_multiplier = handleName.includes('left') ? 1 : handleName.includes('right') ? -1 : 0;
+      } else {
+        u_multiplier = handleName.includes('left') ? -1 : handleName.includes('right') ? 1 : 0;
+      }
+      let v_multiplier = 0;
+      if (draggedInfo.viewportKey === 'top') {
+        v_multiplier = handleName.includes('top') ? -1 : handleName.includes('bottom') ? 1 : 0;
+      } else {
+        v_multiplier = handleName.includes('top') ? 1 : handleName.includes('bottom') ? -1 : 0;
+      }
+      const scaleChangeU = u_change * u_multiplier;
+      const scaleChangeV = v_change * v_multiplier;
+      if (u_multiplier !== 0 && dragStartObjectState.scale[axisU] + scaleChangeU > 0.01) {
+        newScale[axisU] = dragStartObjectState.scale[axisU] + scaleChangeU;
+        newPosition[axisU] = pivot[axisU] + (newScale[axisU] / dragStartObjectState.scale[axisU]) * (dragStartObjectState.position[axisU] - pivot[axisU]);
+      }
+      if (v_multiplier !== 0 && dragStartObjectState.scale[axisV] + scaleChangeV > 0.01) {
+        newScale[axisV] = dragStartObjectState.scale[axisV] + scaleChangeV;
+        newPosition[axisV] = pivot[axisV] + (newScale[axisV] / dragStartObjectState.scale[axisV]) * (dragStartObjectState.position[axisV] - pivot[axisV]);
+      }
+      targetObject.scale.copy(newScale);
+      targetObject.position.copy(newPosition);
+    }
+  } else if (isRotatingIn2DView) {
+    // ▼▼▼ ここからが新しい回転処理 ▼▼▼
+    const center3D = targetObject.position.clone();
+    const centerProjected = center3D.project(view.camera);
+
+    const centerX = (centerProjected.x * 0.5 + 0.5) * rect.width + rect.left;
+    const centerY = (-centerProjected.y * 0.5 + 0.5) * rect.height + rect.top;
+    const centerOnScreen = new THREE.Vector2(centerX, centerY);
+
+    const startVec = new THREE.Vector2().subVectors(dragStartPointer, centerOnScreen);
+    const currentVec = new THREE.Vector2(event.clientX, event.clientY).sub(centerOnScreen);
+
+    const startAngle = Math.atan2(startVec.y, startVec.x);
+    const currentAngle = Math.atan2(currentVec.y, currentVec.x);
+    const deltaAngle = currentAngle - startAngle;
+
+    const newRotation = dragStartObjectState.rotation.clone();
+
+    // 各ビューに応じて正しい軸に回転を適用
     switch (draggedInfo.viewportKey) {
       case 'top':
-        newPosition.x += worldDeltaX;
-        newPosition.z += worldDeltaY;
+        newRotation.y = dragStartObjectState.rotation.y + deltaAngle;
         break;
       case 'front':
-        newPosition.x += worldDeltaX;
-        newPosition.y -= worldDeltaY;
+        newRotation.z = dragStartObjectState.rotation.z + deltaAngle;
         break;
       case 'side':
-        newPosition.z -= worldDeltaX;
-        newPosition.y -= worldDeltaY;
+        newRotation.x = dragStartObjectState.rotation.x + deltaAngle;
         break;
     }
-    targetObject.position.copy(newPosition);
-  } else if (isScalingIn2DView) {
-    const newPosition = dragStartObjectState.position.clone();
-    const newScale = dragStartObjectState.scale.clone();
-    const handleName = draggedInfo.handleName;
-
-    let u_change = 0,
-      v_change = 0;
-    let axisU, axisV;
-
-    switch (draggedInfo.viewportKey) {
-      case 'top':
-        u_change = worldDeltaX;
-        v_change = worldDeltaY;
-        axisU = 'x';
-        axisV = 'z';
-        break;
-      case 'front':
-        u_change = worldDeltaX;
-        v_change = -worldDeltaY;
-        axisU = 'x';
-        axisV = 'y';
-        break;
-      case 'side':
-        u_change = -worldDeltaX;
-        v_change = -worldDeltaY;
-        axisU = 'z';
-        axisV = 'y';
-        break;
-    }
-
-    const box = new THREE.Box3().setFromObject(targetObject);
-    const size = box.getSize(new THREE.Vector3());
-    const center = targetObject.position.clone();
-    const pivot = center.clone(); // ピボット計算ロジック
-    const halfSizeU = size[axisU] / 2;
-    const halfSizeV = size[axisV] / 2; // 水平方向のピボット (これは全ビューで共通)
-
-    if (draggedInfo.viewportKey === 'side') {
-      // SIDEビュー用の水平アンカー計算
-      if (handleName.includes('left')) {
-        pivot[axisU] -= halfSizeU;
-      } else if (handleName.includes('right')) {
-        pivot[axisU] += halfSizeU;
-      }
-    } else {
-      // TOP / FRONT ビュー用の水平アンカー計算 (元のコードのまま)
-      if (handleName.includes('left')) {
-        pivot[axisU] += halfSizeU;
-      } else if (handleName.includes('right')) {
-        pivot[axisU] -= halfSizeU;
-      }
-    }
-
-    if (draggedInfo.viewportKey === 'top') {
-      // TOPビュー用の処理
-      if (handleName.includes('top')) {
-        pivot[axisV] += halfSizeV;
-      } else if (handleName.includes('bottom')) {
-        pivot[axisV] -= halfSizeV;
-      }
-    } else {
-      // FRONT / SIDE ビュー用の処理
-      if (handleName.includes('top')) {
-        pivot[axisV] -= halfSizeV;
-      } else if (handleName.includes('bottom')) {
-        pivot[axisV] += halfSizeV;
-      }
-    }
-
-    // 拡縮計算
-    let u_multiplier = 0;
-    if (draggedInfo.viewportKey === 'side') {
-      // SIDEビュー用の水平乗数
-      u_multiplier = handleName.includes('left') ? 1 : handleName.includes('right') ? -1 : 0;
-    } else {
-      // TOP / FRONT ビュー用の水平乗数
-      u_multiplier = handleName.includes('left') ? -1 : handleName.includes('right') ? 1 : 0;
-    }
-
-    let v_multiplier = 0;
-
-    if (draggedInfo.viewportKey === 'top') {
-      // TOPビュー用の乗数
-      v_multiplier = handleName.includes('top') ? -1 : handleName.includes('bottom') ? 1 : 0;
-    } else {
-      // FRONT / SIDE ビュー用の乗数
-      v_multiplier = handleName.includes('top') ? 1 : handleName.includes('bottom') ? -1 : 0;
-    }
-
-    const scaleChangeU = u_change * u_multiplier;
-    const scaleChangeV = v_change * v_multiplier;
-
-    if (u_multiplier !== 0 && dragStartObjectState.scale[axisU] + scaleChangeU > 0.01) {
-      newScale[axisU] = dragStartObjectState.scale[axisU] + scaleChangeU;
-      newPosition[axisU] = pivot[axisU] + (newScale[axisU] / dragStartObjectState.scale[axisU]) * (dragStartObjectState.position[axisU] - pivot[axisU]);
-    }
-    if (v_multiplier !== 0 && dragStartObjectState.scale[axisV] + scaleChangeV > 0.01) {
-      newScale[axisV] = dragStartObjectState.scale[axisV] + scaleChangeV;
-      newPosition[axisV] = pivot[axisV] + (newScale[axisV] / dragStartObjectState.scale[axisV]) * (dragStartObjectState.position[axisV] - pivot[axisV]);
-    }
-
-    targetObject.scale.copy(newScale);
-    targetObject.position.copy(newPosition);
+    targetObject.rotation.copy(newRotation);
+    // ▲▲▲ ここまでが新しい回転処理 ▲▲▲
   }
 });
 
+// ▼▼▼【ステップ6】`pointerup`イベントを修正 ▼▼▼
 window.addEventListener('pointerup', (event) => {
-  if (isDraggingIn2DView || isScalingIn2DView) {
+  // 回転フラグもチェック対象に追加
+  if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
     if (transformControls.object) {
       autoSaveScene();
-      log(isScalingIn2DView ? '拡縮完了' : '移動完了');
+      // ログメッセージを現在の操作に応じて変更
+      let mode = isScalingIn2DView ? '拡縮' : isRotatingIn2DView ? '回転' : '移動';
+      log(`${mode}完了`);
     }
     isDraggingIn2DView = false;
     isScalingIn2DView = false;
+    isRotatingIn2DView = false; // 回転フラグをリセット
     orbitControls.enabled = true;
-    // ハンドル名表示をクリア
+
     const handleLabel = document.getElementById('handle-label');
     if (handleLabel) handleLabel.remove();
     // ハンドル色をリセット
-    gizmoHandles.forEach((handle) => {
-      handle.material.color.set(0xffff00);
-    });
+    updateGizmoAppearance();
     return;
   }
 
@@ -590,29 +566,36 @@ window.addEventListener('pointerup', (event) => {
   }
 });
 
+// ▼▼▼【ステップ3】`keydown`イベントを修正 ▼▼▼
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  // 2Dビューのギズモモード切替
   switch (e.key.toLowerCase()) {
     case 't':
       transformControls.setMode('translate');
-      log('モード -> 移動');
+      log('モード -> 移動 (3Dビュー)');
       break;
     case 'r':
       transformControls.setMode('rotate');
-      log('モード -> 回転');
+      gizmoMode = 'rotate'; // 2Dギズモモードも回転に
+      updateGizmoAppearance();
+      log('モード -> 回転 (3D/2Dビュー)');
       break;
     case 's':
       transformControls.setMode('scale');
-      log('モード -> 拡大縮小');
+      gizmoMode = 'scale'; // 2Dギズモモードも拡縮に
+      updateGizmoAppearance();
+      log('モード -> 拡縮 (3D/2Dビュー)');
       break;
   }
+
   const selectedObject = transformControls.object;
   if (!selectedObject) return;
   if (e.key === 'Delete' || e.key === 'Backspace') {
     deleteSelectedObject();
     return;
   }
-
   const moveDistance = 0.1,
     rotateAngle = THREE.MathUtils.degToRad(5),
     scaleAmount = 0.05;
@@ -707,56 +690,47 @@ window.addEventListener('load', () => {
 // =================================================================
 function animate() {
   requestAnimationFrame(animate);
-
   orbitControls.update();
-
   for (const key in viewports) {
     const view = viewports[key];
     const rect = view.element.getBoundingClientRect();
     if (rect.bottom < 0 || rect.top > renderer.domElement.clientHeight || rect.right < 0 || rect.left > renderer.domElement.clientWidth) continue;
-
     const width = rect.right - rect.left;
     const height = rect.bottom - rect.top;
     const left = rect.left;
     const bottom = renderer.domElement.clientHeight - rect.bottom;
-
     renderer.setViewport(left, bottom, width, height);
     renderer.setScissor(left, bottom, width, height);
     renderer.setScissorTest(true);
     renderer.setClearColor(view.background);
-
     if (view.camera.isOrthographicCamera) {
       updateScaleGizmo(key);
       scaleGizmoGroup.updateMatrixWorld(true);
       const originalAutoClear = renderer.autoClear;
       renderer.autoClear = false;
       renderer.clear();
-
       mechaGroup.visible = false;
       transformControls.visible = false;
       renderer.render(scene, view.camera);
-
       mechaGroup.visible = true;
       gridHelper.visible = false;
       scene.overrideMaterial = wireframeMaterial;
       renderer.render(scene, view.camera);
       scene.overrideMaterial = null;
-
       gridHelper.visible = true;
       if (transformControls.object) {
-        transformControls.visible = true;
-        renderer.render(transformControls, view.camera);
+        // transformControls.visible = true;
+        // renderer.render(transformControls, view.camera);
         renderer.render(scaleGizmoGroup, view.camera);
       }
-
       renderer.autoClear = originalAutoClear;
     } else {
       scaleGizmoGroup.visible = false;
-      transformControls.visible = true;
+      // 3Dギズモは、オブジェクトが選択されている場合にのみ表示する
+      transformControls.visible = !!transformControls.object;
       renderer.render(scene, view.camera);
     }
   }
-
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
@@ -765,4 +739,5 @@ function animate() {
 // =================================================================
 onWindowResize();
 animate();
+updateGizmoAppearance(); // 初期状態で色を正しく設定
 log('初期化完了');
