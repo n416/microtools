@@ -49,8 +49,9 @@
         width: 100%;
         height: 100%;
         display: grid;
-        grid-template-areas:   'top perspective'
-  'front side';
+        grid-template-areas:
+          'top perspective'
+          'front side';
         grid-template-columns: 1fr 1fr;
         grid-template-rows: 1fr 1fr;
       }
@@ -105,12 +106,8 @@
         <button id="addCube">立方体</button>
         <button id="addSphere">球体</button>
         <button id="addCone">円錐</button>
-        <button
-          id="deleteObject"
-          style="background-color: #c0392b; color: white"
-        >
-          削除
-        </button>
+        <button id="multiSelect" style="background-color: #f39c12; color: white">複数選択</button>
+        <button id="deleteObject" style="background-color: #c0392b; color: white">削除</button>
       </div>
       <div>
         <button id="save">保存</button>
