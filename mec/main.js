@@ -472,11 +472,21 @@ window.addEventListener('pointermove', (event) => {
     const halfSizeU = size[axisU] / 2;
     const halfSizeV = size[axisV] / 2; // 水平方向のピボット (これは全ビューで共通)
 
-    if (handleName.includes('left')) {
-      pivot[axisU] += halfSizeU;
-    } else if (handleName.includes('right')) {
-      pivot[axisU] -= halfSizeU;
-    } // 垂直方向のピボット (TOPビューのみ設定が異なるため分岐)
+    if (draggedInfo.viewportKey === 'side') {
+      // SIDEビュー用の水平アンカー計算
+      if (handleName.includes('left')) {
+        pivot[axisU] -= halfSizeU;
+      } else if (handleName.includes('right')) {
+        pivot[axisU] += halfSizeU;
+      }
+    } else {
+      // TOP / FRONT ビュー用の水平アンカー計算 (元のコードのまま)
+      if (handleName.includes('left')) {
+        pivot[axisU] += halfSizeU;
+      } else if (handleName.includes('right')) {
+        pivot[axisU] -= halfSizeU;
+      }
+    }
 
     if (draggedInfo.viewportKey === 'top') {
       // TOPビュー用の処理
@@ -495,7 +505,15 @@ window.addEventListener('pointermove', (event) => {
     }
 
     // 拡縮計算
-    const u_multiplier = handleName.includes('left') ? -1 : handleName.includes('right') ? 1 : 0;
+    let u_multiplier = 0;
+    if (draggedInfo.viewportKey === 'side') {
+      // SIDEビュー用の水平乗数
+      u_multiplier = handleName.includes('left') ? 1 : handleName.includes('right') ? -1 : 0;
+    } else {
+      // TOP / FRONT ビュー用の水平乗数
+      u_multiplier = handleName.includes('left') ? -1 : handleName.includes('right') ? 1 : 0;
+    }
+
     let v_multiplier = 0;
 
     if (draggedInfo.viewportKey === 'top') {
@@ -505,7 +523,7 @@ window.addEventListener('pointermove', (event) => {
       // FRONT / SIDE ビュー用の乗数
       v_multiplier = handleName.includes('top') ? 1 : handleName.includes('bottom') ? -1 : 0;
     }
-    
+
     const scaleChangeU = u_change * u_multiplier;
     const scaleChangeV = v_change * v_multiplier;
 
