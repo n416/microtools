@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {TransformControls} from 'three/addons/controls/TransformControls.js';
+import {Brush, Evaluator, ADDITION, INTERSECTION, SUBTRACTION} from 'three-bvh-csg';
 
 // =================================================================
 // ◆ 1. 基本設定とシーンの準備
@@ -69,6 +70,18 @@ scene.add(multiSelectHelper);
 let selectionBoxes = new THREE.Group();
 scene.add(selectionBoxes);
 let isMultiSelectMode = false;
+// ▼▼▼【掘削モード用の変数を追加】▼▼▼
+let isSubtractMode = false;
+let subtractTargets = [];
+// ▼▼▼【矩形選択用の変数を追加】▼▼▼
+const selectionBoxElement = document.getElementById('selection-box');
+let isBoxSelecting = false;
+const startPoint = new THREE.Vector2();
+
+// ▼▼▼【ハイライト表示用の変数を追加】▼▼▼
+const highlightMaterial = new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.7, side: THREE.DoubleSide});
+const originalMaterials = new Map();
+
 // ▼▼▼【追加】2Dビューでのグループ変形時に使用する一時的なグループ ▼▼▼
 let transformGroup = null;
 
@@ -224,17 +237,56 @@ function deleteSelectedObject() {
   selectedObjects = [];
   updateSelection();
 }
+
+/**
+ * 【修正】カスタムジオメトリ（合体後の形状）の保存に対応
+ */
 function autoSaveScene() {
   const sceneData = {objects: []};
   mechaGroup.children.forEach((mesh) => {
     let geometryType = '';
-    if (mesh.geometry instanceof THREE.BoxGeometry) geometryType = 'Box';
-    else if (mesh.geometry instanceof THREE.SphereGeometry) geometryType = 'Sphere';
-    else if (mesh.geometry instanceof THREE.ConeGeometry) geometryType = 'Cone';
-    sceneData.objects.push({geometryType, position: mesh.position.toArray(), rotation: mesh.rotation.toArray().slice(0, 3), scale: mesh.scale.toArray(), color: mesh.material.color.getHex()});
+    let geometryData = null;
+    let sides = null;
+
+    if (mesh.geometry instanceof THREE.BoxGeometry) {
+      geometryType = 'Box';
+    } else if (mesh.geometry instanceof THREE.SphereGeometry) {
+      geometryType = 'Sphere';
+    } else if (mesh.geometry instanceof THREE.ConeGeometry) {
+      geometryType = 'Cone';
+    } else if (mesh.geometry instanceof THREE.CylinderGeometry) {
+      // 円柱か多角形柱かを判定
+      if (mesh.geometry.parameters.radialSegments >= 32) {
+        geometryType = 'Cylinder';
+      } else {
+        geometryType = 'Prism';
+        sides = mesh.geometry.parameters.radialSegments;
+      }
+    } else if (mesh.geometry instanceof THREE.BufferGeometry) {
+      geometryType = 'Custom';
+      geometryData = mesh.geometry.toJSON();
+    }
+
+    if (geometryType) {
+      const saveData = {
+        geometryType,
+        position: mesh.position.toArray(),
+        rotation: mesh.rotation.toArray().slice(0, 3),
+        scale: mesh.scale.toArray(),
+        color: mesh.material.color.getHex(),
+      };
+      if (geometryData) {
+        saveData.geometryData = geometryData;
+      }
+      if (sides) {
+        saveData.sides = sides;
+      }
+      sceneData.objects.push(saveData);
+    }
   });
   localStorage.setItem('mechaCreatorAutoSave', JSON.stringify(sceneData));
 }
+
 function loadFromData(sceneData) {
   while (mechaGroup.children.length > 0) {
     const mesh = mechaGroup.children[0];
@@ -243,6 +295,9 @@ function loadFromData(sceneData) {
     if (mesh.material.dispose) mesh.material.dispose();
   }
   transformControls.detach();
+
+  const loader = new THREE.BufferGeometryLoader();
+
   sceneData.objects.forEach((data) => {
     let geometry;
     switch (data.geometryType) {
@@ -255,20 +310,38 @@ function loadFromData(sceneData) {
       case 'Cone':
         geometry = new THREE.ConeGeometry(0.7, 1.5, 32);
         break;
+      case 'Cylinder':
+        geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.5, 32);
+        break;
+      case 'Prism':
+        geometry = new THREE.CylinderGeometry(0.7, 0.7, 1.5, data.sides || 6);
+        break;
+      case 'Custom':
+        if (data.geometryData) {
+          geometry = loader.parse(data.geometryData);
+        }
+        break;
       default:
         return;
     }
-    const material = new THREE.MeshStandardMaterial({color: data.color});
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.fromArray(data.position);
-    mesh.rotation.fromArray(data.rotation);
-    mesh.scale.fromArray(data.scale);
-    mechaGroup.add(mesh);
+
+    if (geometry) {
+      const material = new THREE.MeshStandardMaterial({
+        color: data.color,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.fromArray(data.position);
+      mesh.rotation.fromArray(data.rotation);
+      mesh.scale.fromArray(data.scale);
+      mechaGroup.add(mesh);
+    }
   });
   log('データ読込完了');
   history.undoStack = [];
   history.redoStack = [];
 }
+
 function updateGizmoAppearance() {
   const color = gizmoMode === 'rotate' ? rotateGizmoColor : scaleGizmoColor;
   gizmoLineMaterial.color.copy(color);
@@ -557,6 +630,229 @@ function updateSelection() {
   }
 }
 
+/**
+ * 【最終版】変形焼き込み・法線再計算・両面描画を適用した合体関数
+ */
+function performUnion() {
+  if (selectedObjects.length < 2) {
+    log('合体するにはオブジェクトを2つ以上選択してください。');
+    return;
+  }
+
+  scene.updateMatrixWorld(true);
+
+  const evaluator = new Evaluator();
+  let baseMesh = selectedObjects[0];
+  const finalMaterial = baseMesh.material.clone();
+
+  for (let i = 1; i < selectedObjects.length; i++) {
+    const geometryA = baseMesh.geometry.toNonIndexed().clone().applyMatrix4(baseMesh.matrixWorld);
+    const geometryB = selectedObjects[i].geometry.toNonIndexed().clone().applyMatrix4(selectedObjects[i].matrixWorld);
+
+    const brushA = new Brush(geometryA);
+    const brushB = new Brush(geometryB);
+
+    const resultMesh = evaluator.evaluate(brushA, brushB, ADDITION);
+
+    if (!resultMesh.geometry.attributes.position || resultMesh.geometry.attributes.position.count === 0) {
+      log('エラー: オブジェクトの合体に失敗しました。');
+      return;
+    }
+
+    baseMesh = resultMesh;
+  }
+
+  const newMesh = baseMesh;
+  newMesh.material = finalMaterial;
+
+  // 法線を再計算し、ライティング（光の当たり方）を修正
+  newMesh.geometry.computeVertexNormals();
+
+  // ▼▼▼【追加】マテリアルを両面描画に設定し、穴が見えないようにする ▼▼▼
+  newMesh.material.side = THREE.DoubleSide;
+
+  const commands = [];
+  selectedObjects.forEach((obj) => {
+    commands.push(new DeleteObjectCommand(obj));
+  });
+  commands.push(new AddObjectCommand(newMesh));
+
+  history.execute(new MacroCommand(commands, `${selectedObjects.length}個のオブジェクトを合体`));
+
+  selectedObjects = [newMesh];
+  updateSelection();
+}
+/**
+ * 選択された複数のオブジェクトの重なっている部分（交差）を抽出する関数（焼き込み＆両面描画適用）
+ */
+function performIntersect() {
+  if (selectedObjects.length < 2) {
+    log('交差するにはオブジェクトを2つ以上選択してください。');
+    return;
+  }
+
+  scene.updateMatrixWorld(true);
+
+  const evaluator = new Evaluator();
+  let baseMesh = selectedObjects[0];
+  const finalMaterial = baseMesh.material.clone();
+
+  for (let i = 1; i < selectedObjects.length; i++) {
+    // 1. ジオメトリを複製し、ワールド変形情報（反転含む）を直接頂点に「焼き込む」
+    const geometryA = baseMesh.geometry.toNonIndexed().clone().applyMatrix4(baseMesh.matrixWorld);
+    const geometryB = selectedObjects[i].geometry.toNonIndexed().clone().applyMatrix4(selectedObjects[i].matrixWorld);
+
+    // 2. 変形済みのジオメトリからブラシを作成
+    const brushA = new Brush(geometryA);
+    const brushB = new Brush(geometryB);
+
+    // 3. 交差演算を実行
+    const resultMesh = evaluator.evaluate(brushA, brushB, INTERSECTION);
+
+    if (!resultMesh.geometry.attributes.position || resultMesh.geometry.attributes.position.count === 0) {
+      log('エラー: オブジェクトの交差に失敗しました。重なっている部分がありません。');
+      return;
+    }
+
+    baseMesh = resultMesh;
+  }
+
+  const newMesh = baseMesh;
+  newMesh.material = finalMaterial;
+
+  // 法線を再計算し、ライティング（光の当たり方）を修正
+  newMesh.geometry.computeVertexNormals();
+
+  // ▼▼▼ マテリアルを両面描画に設定し、穴が見えないようにする ▼▼▼
+  newMesh.material.side = THREE.DoubleSide;
+
+  const commands = [];
+  selectedObjects.forEach((obj) => {
+    commands.push(new DeleteObjectCommand(obj));
+  });
+  commands.push(new AddObjectCommand(newMesh));
+
+  history.execute(new MacroCommand(commands, `${selectedObjects.length}個のオブジェクトを交差`));
+
+  selectedObjects = [newMesh];
+  updateSelection();
+}
+
+/**
+ * 掘削モードを開始する
+ */
+function startSubtractMode() {
+  if (selectedObjects.length < 2) {
+    log('掘削するにはオブジェクトを2つ以上選択してください。');
+    return;
+  }
+  isSubtractMode = true;
+  subtractTargets = [...selectedObjects]; // 選択中のオブジェクトを候補として保持
+
+  // ▼▼▼【ハイライト処理を追加】▼▼▼
+  originalMaterials.clear();
+  subtractTargets.forEach((obj) => {
+    originalMaterials.set(obj, obj.material); // 元のマテリアルを記憶
+    obj.material = highlightMaterial; // ハイライト用マテリアルを適用
+  });
+
+  // UIを掘削モードに切り替え
+  document.getElementById('subtractObjects').style.display = 'none';
+  document.getElementById('cancelSubtract').style.display = 'inline-block';
+
+  // いったん全ての選択を解除し、ユーザーにドリルを選択させる
+  selectedObjects = [];
+  updateSelection();
+
+  log('掘削モード: 掘削に使うオブジェクト（ドリル）を1つクリックしてください。Escキーでキャンセル。');
+}
+
+/**
+ * 掘削モードをキャンセルする
+ */
+function cancelSubtractMode() {
+  if (!isSubtractMode) return;
+  isSubtractMode = false;
+  subtractTargets = [];
+
+  // UIを通常モードに戻す
+  document.getElementById('subtractObjects').style.display = 'inline-block';
+  document.getElementById('cancelSubtract').style.display = 'none';
+
+  log('掘削モードをキャンセルしました。');
+}
+
+/**
+ * 【修正】掘削（減算）を実行する
+ * @param {THREE.Mesh[]} baseObjects - 掘削されるオブジェクトの配列
+ * @param {THREE.Mesh} drillObject - 掘削に使うオブジェクト（ドリル）
+ */
+function performSubtract(baseObjects, drillObject) {
+  // 計算前に、必ず全てのマテリアルを元に戻す
+  subtractTargets.forEach((obj) => {
+    if (originalMaterials.has(obj)) {
+      obj.material = originalMaterials.get(obj);
+    }
+  });
+  originalMaterials.clear();
+
+  scene.updateMatrixWorld(true);
+  const evaluator = new Evaluator();
+
+  // 1. 掘削される側のオブジェクト（ベース）を準備する
+  let baseMesh = baseObjects[0];
+  const finalMaterial = baseMesh.material.clone();
+
+  // ベースオブジェクトが複数ある場合は、先にそれらを一つに合体させる
+  if (baseObjects.length > 1) {
+    let combinedMesh = baseObjects[0];
+    for (let i = 1; i < baseObjects.length; i++) {
+      const geomA = combinedMesh.geometry.toNonIndexed().clone().applyMatrix4(combinedMesh.matrixWorld);
+      const geomB = baseObjects[i].geometry.toNonIndexed().clone().applyMatrix4(baseObjects[i].matrixWorld);
+      const brushA = new Brush(geomA);
+      const brushB = new Brush(geomB);
+      combinedMesh = evaluator.evaluate(brushA, brushB, ADDITION);
+      combinedMesh.updateMatrixWorld(true);
+    }
+    baseMesh = combinedMesh;
+  }
+
+  // 2. ベースとドリルの両方で、「変形情報の焼き込み」を行う
+  const finalBaseGeometry = baseMesh.geometry.toNonIndexed().clone().applyMatrix4(baseMesh.matrixWorld);
+  const drillGeometry = drillObject.geometry.toNonIndexed().clone().applyMatrix4(drillObject.matrixWorld);
+
+  const baseBrush = new Brush(finalBaseGeometry);
+  const drillBrush = new Brush(drillGeometry);
+
+  // 3. 減算（掘削）を実行
+  const resultMesh = evaluator.evaluate(baseBrush, drillBrush, SUBTRACTION);
+
+  // 4. 結果を検証
+  if (!resultMesh.geometry.attributes.position || resultMesh.geometry.attributes.position.count === 0) {
+    log('エラー: 掘削に失敗しました。完全にくり抜かれたか、形状が複雑すぎる可能性があります。');
+    cancelSubtractMode();
+    return;
+  }
+
+  // 5. 最終的なメッシュを整えてコマンドとして実行
+  const newMesh = resultMesh;
+  newMesh.material = finalMaterial;
+  newMesh.geometry.computeVertexNormals();
+  newMesh.material.side = THREE.DoubleSide;
+
+  const commands = [];
+  subtractTargets.forEach((obj) => {
+    commands.push(new DeleteObjectCommand(obj));
+  });
+  commands.push(new AddObjectCommand(newMesh));
+
+  history.execute(new MacroCommand(commands, 'オブジェクトを掘削'));
+
+  selectedObjects = [newMesh];
+  updateSelection();
+  cancelSubtractMode(); // モードを終了
+}
+
 class Command {
   constructor() {
     this.message = 'コマンド';
@@ -589,9 +885,20 @@ class AddObjectCommand extends Command {
   }
   execute() {
     mechaGroup.add(this.object);
+
+    // ▼▼▼【修正】ペースト操作以外の場合、生成したオブジェクトを選択状態にする ▼▼▼
+    // ブーリアンや鏡面コピーなど、独自の選択ロジックを持つ操作は、
+    // この後の処理で選択状態が上書きされるので、このままで問題ありません。
+    if (!this.isPaste) {
+      selectedObjects = [this.object];
+      updateSelection();
+    }
   }
   undo() {
     mechaGroup.remove(this.object);
+    // Undo後は安全のため選択をクリア
+    selectedObjects = [];
+    updateSelection();
   }
 }
 class DeleteObjectCommand extends Command {
@@ -655,6 +962,42 @@ document.getElementById('addCone').addEventListener('click', () => {
   const cone = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.5, 32), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff}));
   history.execute(new AddObjectCommand(cone));
 });
+
+// ... addConeのリスナーの後など ...
+document.getElementById('addCylinder').addEventListener('click', () => {
+  const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5, 32), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff}));
+  history.execute(new AddObjectCommand(cylinder));
+});
+document.getElementById('addPrism').addEventListener('click', () => {
+  document.getElementById('prismModal').style.display = 'flex';
+});
+document.getElementById('cancelPrism').addEventListener('click', () => {
+  document.getElementById('prismModal').style.display = 'none';
+});
+document.getElementById('confirmPrism').addEventListener('click', () => {
+  const sidesInput = document.getElementById('sidesInput');
+  let sides = parseInt(sidesInput.value, 10);
+  if (isNaN(sides) || sides < 3) {
+    sides = 3; // 不正な値の場合は三角形にする
+  }
+  if (sides > 64) {
+    sides = 64; // 上限
+  }
+  sidesInput.value = sides;
+
+  const prism = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.5, sides), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff}));
+  history.execute(new AddObjectCommand(prism));
+
+  document.getElementById('prismModal').style.display = 'none';
+});
+
+// ▼▼▼【「合体」ボタンのイベントリスナーを追加】▼▼▼
+document.getElementById('unionObjects').addEventListener('click', performUnion);
+document.getElementById('intersectObjects').addEventListener('click', performIntersect);
+
+document.getElementById('subtractObjects').addEventListener('click', startSubtractMode);
+document.getElementById('cancelSubtract').addEventListener('click', cancelSubtractMode);
+
 document.getElementById('save').addEventListener('click', () => {
   const dataString = localStorage.getItem('mechaCreatorAutoSave');
   if (!dataString) return log('保存データなし');
@@ -752,8 +1095,17 @@ transformControls.addEventListener('mouseUp', () => {
 });
 
 window.addEventListener('pointerdown', (event) => {
+  // UIやドラッグ中の3Dギズモ操作は何もしない
   if (event.target.closest('#ui') || transformControls.dragging) return;
-  pointerDownPosition.set(event.clientX, event.clientY);
+
+  startPoint.set(event.clientX, event.clientY);
+
+  // 特殊モード（鏡面コピー、掘削、ペースト）中は、クリック判定をpointerupに任せる
+  if (isMirrorCopyMode || isSubtractMode || isPasteMode) {
+    return;
+  }
+
+  // クリックされたビューポートを特定
   let clickedViewportKey = null;
   let clickedRect = null;
   for (const key in viewports) {
@@ -765,142 +1117,86 @@ window.addEventListener('pointerdown', (event) => {
       break;
     }
   }
-  if (!clickedViewportKey || clickedViewportKey === 'perspective' || selectedObjects.length === 0) return;
+  if (!clickedViewportKey) return;
+
+  // マウス座標からRaycasterを準備
   const clickedViewport = viewports[clickedViewportKey];
   pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
   pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-  updateScaleGizmo(clickedViewportKey);
-  scaleGizmoGroup.updateMatrixWorld(true);
   raycaster.setFromCamera(pointer, clickedViewport.camera);
-  raycaster.near = 0;
-  raycaster.far = 1000;
-  mechaGroup.visible = false;
-  const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
-  mechaGroup.visible = true;
-  updateGizmoAppearance();
 
-  const setupTransform = () => {
-    dragStartPointer.set(event.clientX, event.clientY);
+  // --- 判定の優先順位 ---
+  // 1. 2Dギズモのアンカーがクリックされたか？
+  if (clickedViewportKey !== 'perspective' && selectedObjects.length > 0) {
+    mechaGroup.visible = false; // アンカーのみに当たるように一時的に隠す
+    const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
+    mechaGroup.visible = true;
+
+    if (handleIntersects.length > 0) {
+      // アンカーがクリックされたので、2D変形処理を開始する
+      orbitControls.enabled = false;
+      dragStartPointer.set(event.clientX, event.clientY);
+      transformStartCache = selectedObjects.map((obj) => ({
+        position: obj.position.clone(),
+        rotation: obj.rotation.clone(),
+        scale: obj.scale.clone(),
+      }));
+
+      if (selectedObjects.length === 1) {
+        const target = selectedObjects[0];
+        dragStartObjectState.position.copy(target.position);
+        dragStartObjectState.scale.copy(target.scale);
+        dragStartObjectState.rotation.copy(target.rotation);
+      } else {
+        const groupBounds = new THREE.Box3();
+        selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
+        dragStartObjectState.position.copy(groupBounds.getCenter(new THREE.Vector3()));
+        dragStartObjectState.scale.copy(groupBounds.getSize(new THREE.Vector3()));
+        dragStartObjectState.rotation.set(0, 0, 0);
+      }
+
+      if (gizmoMode === 'scale') {
+        isScalingIn2DView = true;
+      } else if (gizmoMode === 'rotate') {
+        isRotatingIn2DView = true;
+      }
+      draggedInfo = {viewportKey: clickedViewportKey, handleName: handleIntersects[0].object.name};
+      return; // 他の処理は行わない
+    }
+  }
+
+  // 2. オブジェクトがクリックされたか？
+  const intersects = raycaster.intersectObjects(mechaGroup.children, false);
+
+  // 3. 何もクリックされなかった場合、矩形選択を開始
+  if (intersects.length === 0) {
+    isBoxSelecting = true;
+    selectionBoxElement.style.display = 'block';
     orbitControls.enabled = false;
-
-    if (selectedObjects.length > 1) {
-      const groupBounds = new THREE.Box3();
-      selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
-      dragStartObjectState.position.copy(groupBounds.getCenter(new THREE.Vector3()));
-      dragStartObjectState.scale.copy(groupBounds.getSize(new THREE.Vector3()));
-      dragStartObjectState.rotation.set(0, 0, 0);
-
-      // ★元の親を記憶
-      worldTransforms.clear();
-      selectedObjects.forEach((obj) => {
-        worldTransforms.set(obj, {parent: obj.parent});
-      });
-
-      if (transformGroup) scene.remove(transformGroup);
-      transformGroup = new THREE.Group();
-      transformGroup.position.copy(dragStartObjectState.position);
-      scene.add(transformGroup);
-      selectedObjects.forEach((obj) => {
-        transformGroup.attach(obj);
-      });
-    } else {
-      // 単体選択
-      const target = selectedObjects[0];
-      dragStartObjectState.position.copy(target.position);
-      dragStartObjectState.scale.copy(target.scale);
-      dragStartObjectState.rotation.copy(target.rotation);
-    }
-
-    transformStartCache = selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
-  };
-
-  if (handleIntersects.length > 0) {
-    setupTransform();
-    const hitHandle = handleIntersects[0].object;
-    if (gizmoMode === 'scale') {
-      isScalingIn2DView = true;
-    } else if (gizmoMode === 'rotate') {
-      if (hitHandle.name.includes('center')) return;
-      isRotatingIn2DView = true;
-    }
-    draggedInfo = {viewportKey: clickedViewportKey, handleName: hitHandle.name};
-  } else {
-    const objectIntersects = raycaster.intersectObjects(selectedObjects, true);
-    if (objectIntersects.length > 0) {
-      setupTransform();
-      isDraggingIn2DView = true;
-      draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
-    }
   }
-});
 
-window.addEventListener('pointerdown', (event) => {
-  if (event.target.closest('#ui') || transformControls.dragging) return;
-  pointerDownPosition.set(event.clientX, event.clientY);
-  let clickedViewportKey = null;
-  let clickedRect = null;
-  for (const key in viewports) {
-    const view = viewports[key];
-    const rect = view.element.getBoundingClientRect();
-    if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
-      clickedViewportKey = key;
-      clickedRect = rect;
-      break;
-    }
-  }
-  if (!clickedViewportKey || clickedViewportKey === 'perspective' || selectedObjects.length === 0) return;
-  const clickedViewport = viewports[clickedViewportKey];
-  pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
-  pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-  updateScaleGizmo(clickedViewportKey);
-  scaleGizmoGroup.updateMatrixWorld(true);
-  raycaster.setFromCamera(pointer, clickedViewport.camera);
-  raycaster.near = 0;
-  raycaster.far = 1000;
-  mechaGroup.visible = false;
-  const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
-  mechaGroup.visible = true;
-  updateGizmoAppearance();
-  const setupTransform = () => {
-    dragStartPointer.set(event.clientX, event.clientY);
-    orbitControls.enabled = false;
-    if (selectedObjects.length === 1) {
-      const target = selectedObjects[0];
-      dragStartObjectState.position.copy(target.position);
-      dragStartObjectState.scale.copy(target.scale);
-      dragStartObjectState.rotation.copy(target.rotation);
-      transformStartCache = [{position: target.position.clone(), rotation: target.rotation.clone(), scale: target.scale.clone()}];
-    } else {
-      const groupBounds = new THREE.Box3();
-      selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
-      dragStartObjectState.position.copy(groupBounds.getCenter(new THREE.Vector3()));
-      dragStartObjectState.scale.copy(groupBounds.getSize(new THREE.Vector3()));
-      dragStartObjectState.rotation.set(0, 0, 0);
-      transformStartCache = selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
-    }
-  };
-  if (handleIntersects.length > 0) {
-    setupTransform();
-    const hitHandle = handleIntersects[0].object;
-    if (gizmoMode === 'scale') {
-      isScalingIn2DView = true;
-    } else if (gizmoMode === 'rotate') {
-      if (hitHandle.name.includes('center')) return;
-      isRotatingIn2DView = true;
-    }
-    draggedInfo = {viewportKey: clickedViewportKey, handleName: hitHandle.name};
-  } else {
-    const objectIntersects = raycaster.intersectObjects(selectedObjects, true);
-    if (objectIntersects.length > 0) {
-      setupTransform();
-      isDraggingIn2DView = true;
-      draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
-    }
-  }
+  // 注: オブジェクトがクリックされた場合の選択状態の更新は、ドラッグ距離が短い場合にpointerupで行われる
 });
 
 // ▼▼▼【修正】pointermove: 拡縮ロジックを transformGroup を操作するように変更 ▼▼▼
 window.addEventListener('pointermove', (event) => {
+  // ▼▼▼【矩形選択中の処理を追加】▼▼▼
+  if (isBoxSelecting) {
+    // 矩形の位置とサイズを更新
+    const currentX = event.clientX;
+    const currentY = event.clientY;
+    const left = Math.min(startPoint.x, currentX);
+    const top = Math.min(startPoint.y, currentY);
+    const width = Math.abs(startPoint.x - currentX);
+    const height = Math.abs(startPoint.y - currentY);
+
+    selectionBoxElement.style.left = `${left}px`;
+    selectionBoxElement.style.top = `${top}px`;
+    selectionBoxElement.style.width = `${width}px`;
+    selectionBoxElement.style.height = `${height}px`;
+    return; // 矩形選択中は他のドラッグ処理を行わない
+  }
+
   if (!isDraggingIn2DView && !isScalingIn2DView && !isRotatingIn2DView) return;
   event.preventDefault();
   const view = viewports[draggedInfo.viewportKey];
@@ -1086,132 +1382,165 @@ window.addEventListener('pointermove', (event) => {
   }
 });
 
-// ▼▼▼【修正】pointerup: オブジェクトを元の親に戻す処理を追加 ▼▼▼
 window.addEventListener('pointerup', (e) => {
-  if (isMirrorCopyMode) {
-    let clickedViewportKey = null,
-      clickedRect = null;
-    for (const key in viewports) {
-      const rect = viewports[key].element.getBoundingClientRect();
-      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-        clickedViewportKey = key;
-        clickedRect = rect;
-        break;
-      }
-    }
-    if (!clickedViewportKey) return;
-    const clickedViewport = viewports[clickedViewportKey];
-    pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
-    pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-    raycaster.setFromCamera(pointer, clickedViewport.camera);
-    const intersects = raycaster.intersectObjects(previewGroup.children, true);
-    if (intersects.length > 0) {
-      performMirrorCopy(intersects[0].object);
-    } else {
-      cancelMirrorCopyMode();
-    }
-    return;
-  }
-  if (isPasteMode) {
-    let clickedViewportKey = null,
-      clickedRect = null;
-    for (const key in viewports) {
-      const rect = viewports[key].element.getBoundingClientRect();
-      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-        clickedViewportKey = key;
-        clickedRect = rect;
-        break;
-      }
-    }
-    if (!clickedViewportKey) return;
-    const clickedViewport = viewports[clickedViewportKey];
-    pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
-    pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-    raycaster.setFromCamera(pointer, clickedViewport.camera);
-    const intersects = raycaster.intersectObjects(previewGroup.children, true);
-    if (intersects.length > 0) {
-      confirmPaste(intersects[0].object);
-    } else {
-      cancelPasteMode();
-    }
-    return;
-  }
+  // --- 矩形選択の完了処理 ---
+  if (isBoxSelecting) {
+    selectionBoxElement.style.display = 'none';
+    isBoxSelecting = false;
+    orbitControls.enabled = true;
 
+    const endPoint = new THREE.Vector2(e.clientX, e.clientY);
+    if (startPoint.distanceTo(endPoint) < 5) {
+      if (!e.shiftKey && !isMultiSelectMode) {
+        selectedObjects = [];
+        updateSelection();
+        log('待機中');
+      }
+      return;
+    }
+
+    const boxRect = {
+      left: Math.min(startPoint.x, endPoint.x),
+      right: Math.max(startPoint.x, endPoint.x),
+      top: Math.min(startPoint.y, endPoint.y),
+      bottom: Math.max(startPoint.y, endPoint.y),
+    };
+    
+    const newSelection = [];
+    
+    for (const key in viewports) {
+        const view = viewports[key];
+        const rect = view.element.getBoundingClientRect();
+        
+        if (boxRect.left > rect.right || boxRect.right < rect.left || boxRect.top > rect.bottom || boxRect.bottom < rect.top) {
+            continue;
+        }
+
+        mechaGroup.children.forEach(mesh => {
+            const pos = new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld);
+            pos.project(view.camera);
+            
+            const screenX = ((pos.x + 1) / 2) * rect.width + rect.left;
+            const screenY = ((-pos.y + 1) / 2) * rect.height + rect.top;
+
+            if (screenX >= boxRect.left && screenX <= boxRect.right && screenY >= boxRect.top && screenY <= boxRect.bottom) {
+                if (!newSelection.includes(mesh)) {
+                    newSelection.push(mesh);
+                }
+            }
+        });
+    }
+
+    // ▼▼▼【修正】Shiftキー押下時のロジックを選択の「トグル」に変更 ▼▼▼
+    if (e.shiftKey || isMultiSelectMode) {
+        // 矩形内に入ったオブジェクトの選択状態を反転させる
+        newSelection.forEach(obj => {
+            const index = selectedObjects.indexOf(obj);
+            if (index > -1) {
+                // 既に選択されていた場合は、選択から外す
+                selectedObjects.splice(index, 1);
+            } else {
+                // 未選択だった場合は、選択に加える
+                selectedObjects.push(obj);
+            }
+        });
+    } else {
+        // Shiftキーが押されていない場合は、単純に矩形内のオブジェクトを選択
+        selectedObjects = newSelection;
+    }
+    updateSelection();
+    log(`${selectedObjects.length}個のオブジェクトを選択中`);
+    return;
+  }
+  
+  // --- 通常のクリックによる選択処理（ドラッグ距離が短い場合） ---
+  if (startPoint.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) < 5) {
+      if (isSubtractMode) {
+        let clickedViewportKey = null; let clickedRect = null;
+        for (const key in viewports) { const rect = viewports[key].element.getBoundingClientRect(); if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) { clickedViewportKey = key; clickedRect = rect; break; } }
+        if (!clickedViewportKey) { cancelSubtractMode(); return; }
+        const clickedViewport = viewports[clickedViewportKey]; pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1; pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, clickedViewport.camera);
+        const intersects = raycaster.intersectObjects(mechaGroup.children, true);
+        let drillObject = null;
+        if (intersects.length > 0) { if (subtractTargets.includes(intersects[0].object)) { drillObject = intersects[0].object; } }
+        if (drillObject) {
+          const baseObjects = subtractTargets.filter(obj => obj !== drillObject);
+          if (baseObjects.length > 0) { performSubtract(baseObjects, drillObject); } else { cancelSubtractMode(); }
+        } else { log('掘削操作をキャンセルしました。'); cancelSubtractMode(); }
+        return;
+      }
+      
+      if (isMirrorCopyMode) {
+        let clickedViewportKey = null; let clickedRect = null;
+        for (const key in viewports) { const rect = viewports[key].element.getBoundingClientRect(); if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) { clickedViewportKey = key; clickedRect = rect; break; } }
+        if (!clickedViewportKey) return;
+        const clickedViewport = viewports[clickedViewportKey]; pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1; pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, clickedViewport.camera);
+        const intersects = raycaster.intersectObjects(previewGroup.children, true);
+        if (intersects.length > 0) { performMirrorCopy(intersects[0].object); } else { cancelMirrorCopyMode(); }
+        return;
+      }
+      
+      if (isPasteMode) {
+        let clickedViewportKey = null, clickedRect = null;
+        for (const key in viewports) {
+          const rect = viewports[key].element.getBoundingClientRect();
+          if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+            clickedViewportKey = key; clickedRect = rect; break;
+          }
+        }
+        if (!clickedViewportKey) return;
+        const clickedViewport = viewports[clickedViewportKey];
+        pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+        pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, clickedViewport.camera);
+        const intersects = raycaster.intersectObjects(previewGroup.children, true);
+        if (intersects.length > 0) {
+          confirmPaste(intersects[0].object);
+        } else {
+          cancelPasteMode();
+        }
+        return;
+      }
+      
+      // 通常のオブジェクト選択処理
+      let clickedViewportKey = null; let clickedRect = null;
+      for (const key in viewports) { const rect = viewports[key].element.getBoundingClientRect(); if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) { clickedViewportKey = key; clickedRect = rect; break; } }
+      if (!clickedViewportKey) return;
+      const clickedViewport = viewports[clickedViewportKey]; pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1; pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, clickedViewport.camera);
+      const intersects = raycaster.intersectObjects(mechaGroup.children, false);
+      const clickedObject = intersects.length > 0 ? intersects[0].object : null;
+      
+      if (e.shiftKey || isMultiSelectMode) {
+        if (clickedObject) { const index = selectedObjects.indexOf(clickedObject); if (index > -1) { selectedObjects.splice(index, 1); } else { selectedObjects.push(clickedObject); } }
+      } else {
+        selectedObjects = clickedObject ? [clickedObject] : [];
+        if (isMultiSelectMode && !clickedObject) { isMultiSelectMode = false; multiSelectButton.style.backgroundColor = '#f39c12'; }
+      }
+      updateSelection();
+      log(selectedObjects.length > 0 ? `${selectedObjects.length}個のオブジェクトを選択中` : '待機中');
+      return;
+  }
+  
+  // --- 2Dギズモ操作の完了処理 ---
   if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
     if (transformGroup) {
-      // ★記憶しておいた元の親にオブジェクトを戻す
-      selectedObjects.forEach((obj) => {
-        worldTransforms.get(obj).parent.attach(obj);
-      });
-      scene.remove(transformGroup);
-      transformGroup = null;
-      worldTransforms.clear();
+      selectedObjects.forEach(obj => { worldTransforms.get(obj).parent.attach(obj); });
+      scene.remove(transformGroup); transformGroup = null; worldTransforms.clear();
     }
-
     if (transformStartCache) {
       if (selectedObjects.length === 1) {
-        const oldT = transformStartCache[0];
-        const obj = selectedObjects[0];
-        const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
-        if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) {
-          history.execute(new TransformCommand(obj, oldT, newT));
-        }
+        const oldT = transformStartCache[0]; const obj = selectedObjects[0]; const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+        if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) { history.execute(new TransformCommand(obj, oldT, newT)); }
       } else if (selectedObjects.length > 1) {
-        const commands = selectedObjects.map((obj, i) => {
-          const oldT = transformStartCache[i];
-          const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
-          return new TransformCommand(obj, oldT, newT);
-        });
-        history.execute(new MacroCommand(commands, `選択した ${commands.length} 個のオブジェクトをグループ変形`));
+        const commands = selectedObjects.map((obj, i) => { const oldT = transformStartCache[i]; const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}; return new TransformCommand(obj, oldT, newT); });
+        history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトをグループ変形`));
       }
     }
-    isDraggingIn2DView = isScalingIn2DView = isRotatingIn2DView = false;
-    orbitControls.enabled = true;
-    updateGizmoAppearance();
-    transformStartCache = null;
-    updateSelection();
+    isDraggingIn2DView = isScalingIn2DView = isRotatingIn2DView = false; orbitControls.enabled = true; updateGizmoAppearance(); transformStartCache = null; updateSelection();
     return;
-  }
-  const pointerUpPosition = new THREE.Vector2(e.clientX, e.clientY);
-  if (pointerDownPosition.distanceTo(pointerUpPosition) > 5 || e.target.closest('#ui') || transformControls.dragging) return;
-  let clickedViewportKey = null,
-    clickedRect = null;
-  for (const key in viewports) {
-    const rect = viewports[key].element.getBoundingClientRect();
-    if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-      clickedViewportKey = key;
-      clickedRect = rect;
-      break;
-    }
-  }
-  if (!clickedViewportKey) return;
-  const clickedViewport = viewports[clickedViewportKey];
-  pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
-  pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-  raycaster.setFromCamera(pointer, clickedViewport.camera);
-  const intersects = raycaster.intersectObjects(mechaGroup.children, false);
-  const clickedObject = intersects.length > 0 ? intersects[0].object : null;
-  if (e.shiftKey || isMultiSelectMode) {
-    if (clickedObject) {
-      const index = selectedObjects.indexOf(clickedObject);
-      if (index > -1) {
-        selectedObjects.splice(index, 1);
-      } else {
-        selectedObjects.push(clickedObject);
-      }
-    }
-  } else {
-    selectedObjects = clickedObject ? [clickedObject] : [];
-    if (isMultiSelectMode) {
-      isMultiSelectMode = false;
-      multiSelectButton.style.backgroundColor = '#f39c12';
-    }
-  }
-  updateSelection();
-  if (selectedObjects.length > 0) {
-    log(`${selectedObjects.length}個のオブジェクトを選択中`);
-  } else {
-    log('待機中');
   }
 });
 
