@@ -22,7 +22,7 @@ scene.add(gridHelper);
 
 const logDisplay = document.getElementById('log-display');
 let logMessages = [];
-let selectedObjectHolder = null; // transformControlsがアタッチしているオブジェクトを保持
+let selectedObjectHolder = null;
 
 let gizmoMode = 'scale';
 const scaleGizmoColor = new THREE.Color(0xffff00);
@@ -69,6 +69,57 @@ scene.add(multiSelectHelper);
 let selectionBoxes = new THREE.Group();
 scene.add(selectionBoxes);
 let isMultiSelectMode = false;
+// ▼▼▼【追加】2Dビューでのグループ変形時に使用する一時的なグループ ▼▼▼
+let transformGroup = null;
+
+// ▼▼▼【修正】グループ全体を囲むための、目に見えないメッシュを保持する変数 ▼▼▼
+let groupBoundingBoxMesh = null;
+
+/**
+ * 【修正】デバッグ関数をエラーが出ないように修正
+ */
+function debugSelectionHelpers() {
+  console.clear();
+  console.log('================ DEBUG REPORT ================');
+
+  if (selectedObjects.length < 2) {
+    console.log('複数選択されていません。オブジェクトを2つ以上選択してください。');
+    console.log('==============================================');
+    return;
+  }
+
+  console.log(`タイムスタンプ: ${new Date().toLocaleTimeString()}`);
+  console.log(`選択中のオブジェクト数: ${selectedObjects.length}`);
+  console.log(`selectionBoxes内のヘルパー数: ${selectionBoxes.children.length}`);
+  console.log('---');
+
+  selectionBoxes.children.forEach((box, index) => {
+    // BoxHelperのobjectプロパティで黄色か緑かを判断
+    const isYellowHelper = selectedObjects.includes(box.object);
+    const helperType = isYellowHelper ? '黄色 (個別)' : '緑色 (グループ)';
+
+    // ヘルパーのジオメトリからバウンディングボックスを計算してサイズを取得
+    const boundingBox = new THREE.Box3();
+    if (box.geometry && box.geometry.attributes.position) {
+      boundingBox.setFromBufferAttribute(box.geometry.attributes.position);
+    }
+    const size = boundingBox.getSize(new THREE.Vector3());
+
+    console.log(`%c[ヘルパー ${index + 1}/${selectionBoxes.children.length}] - ${helperType}`, `color: ${isYellowHelper ? '#CCCC00' : '#00FF00'}; font-weight: bold;`);
+    console.log(`  - 表示フラグ (visible): ${box.visible}`);
+    console.log(`  - マテリアルの色: #${box.material.color.getHexString()}`);
+    console.log(`  - ボックスのサイズ: W=${size.x.toFixed(2)}, H=${size.y.toFixed(2)}, D=${size.z.toFixed(2)}`);
+
+    if (size.length() === 0) {
+      // size.x,y,zが全て0の場合
+      console.warn('  - 警告: このヘルパーはサイズがゼロのため、表示されません。');
+    }
+    console.log('  - 関連付けられたオブジェクト:', box.object);
+    console.log('---');
+  });
+  console.log('==============================================');
+  log('デバッグ情報をコンソールに出力しました。');
+}
 
 class History {
   constructor() {
@@ -91,12 +142,8 @@ class History {
     if (command) {
       command.undo();
       this.redoStack.push(command);
-
-      // ▼▼▼【修正】Undo後に選択をクリアして安全な状態にする ▼▼▼
       selectedObjects = [];
       updateSelection();
-      // ▲▲▲【修正】▲▲▲
-
       log(`Undo: ${command.message}`);
       autoSaveScene();
     } else {
@@ -109,25 +156,24 @@ class History {
     if (command) {
       command.execute();
       this.undoStack.push(command);
-
-      // ▼▼▼【修正】Redo後に関連オブジェクトを再選択する ▼▼▼
       const newSelection = [];
       if (command instanceof MacroCommand) {
         command.commands.forEach((cmd) => {
-          // AddObjectCommandやMirrorCopyCommandなど、オブジェクトを持つコマンドが対象
           if (cmd.object) newSelection.push(cmd.object);
+          else if (cmd.commands) {
+            cmd.commands.forEach((nestedCmd) => {
+              if (nestedCmd.object) newSelection.push(nestedCmd.object);
+            });
+          }
         });
       } else if (command.object) {
         newSelection.push(command.object);
       }
       selectedObjects = newSelection;
-      // DeleteコマンドをRedoした後は何も選択しない
       if (command instanceof DeleteObjectCommand || (command instanceof MacroCommand && command.commands[0] instanceof DeleteObjectCommand)) {
         selectedObjects = [];
       }
       updateSelection();
-      // ▲▲▲【修正】▲▲▲
-
       log(`Redo: ${command.message}`);
       autoSaveScene();
     } else {
@@ -135,12 +181,8 @@ class History {
     }
   }
 }
-
 const history = new History();
 
-// =================================================================
-// ◆ 2. ログ機能および3面図モード用の設定
-// =================================================================
 function log(message) {
   const timestamp = new Date().toLocaleTimeString('ja-JP');
   logMessages.unshift(`[${timestamp}] ${message}`);
@@ -170,16 +212,11 @@ const orbitControls = new OrbitControls(viewports.perspective.camera, viewports.
 orbitControls.enableDamping = true;
 const transformControls = new TransformControls(viewports.perspective.camera, renderer.domElement);
 scene.add(transformControls);
-
 transformControls.addEventListener('objectChange', () => {
   selectedObjectHolder = transformControls.object;
 });
-
 const wireframeMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true, transparent: true, opacity: 0.7});
 
-// =================================================================
-// ◆ 3. オブジェクト操作 / 保存・読込のロジック
-// =================================================================
 function deleteSelectedObject() {
   if (selectedObjects.length === 0) return log('削除対象なし');
   const commands = selectedObjects.map((obj) => new DeleteObjectCommand(obj));
@@ -187,7 +224,6 @@ function deleteSelectedObject() {
   selectedObjects = [];
   updateSelection();
 }
-
 function autoSaveScene() {
   const sceneData = {objects: []};
   mechaGroup.children.forEach((mesh) => {
@@ -195,17 +231,10 @@ function autoSaveScene() {
     if (mesh.geometry instanceof THREE.BoxGeometry) geometryType = 'Box';
     else if (mesh.geometry instanceof THREE.SphereGeometry) geometryType = 'Sphere';
     else if (mesh.geometry instanceof THREE.ConeGeometry) geometryType = 'Cone';
-    sceneData.objects.push({
-      geometryType,
-      position: mesh.position.toArray(),
-      rotation: mesh.rotation.toArray().slice(0, 3),
-      scale: mesh.scale.toArray(),
-      color: mesh.material.color.getHex(),
-    });
+    sceneData.objects.push({geometryType, position: mesh.position.toArray(), rotation: mesh.rotation.toArray().slice(0, 3), scale: mesh.scale.toArray(), color: mesh.material.color.getHex()});
   });
   localStorage.setItem('mechaCreatorAutoSave', JSON.stringify(sceneData));
 }
-
 function loadFromData(sceneData) {
   while (mechaGroup.children.length > 0) {
     const mesh = mechaGroup.children[0];
@@ -240,7 +269,6 @@ function loadFromData(sceneData) {
   history.undoStack = [];
   history.redoStack = [];
 }
-
 function updateGizmoAppearance() {
   const color = gizmoMode === 'rotate' ? rotateGizmoColor : scaleGizmoColor;
   gizmoLineMaterial.color.copy(color);
@@ -251,23 +279,29 @@ function updateGizmoAppearance() {
     handle.material.color.copy(color);
   });
 }
-
 function updateScaleGizmo(viewportKey) {
-  const target = selectedObjects.length === 1 ? selectedObjects[0] : null;
-  if (!target || viewportKey === 'perspective') {
+  if (selectedObjects.length === 0 || viewportKey === 'perspective') {
     scaleGizmoGroup.visible = false;
     return;
   }
-  const box = new THREE.Box3().setFromObject(target);
+  const box = new THREE.Box3();
+  selectedObjects.forEach((obj) => {
+    box.expandByObject(obj);
+  });
+  if (box.isEmpty()) {
+    scaleGizmoGroup.visible = false;
+    return;
+  }
+  const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
   if (size.x === 0) size.x = 0.001;
   if (size.y === 0) size.y = 0.001;
   if (size.z === 0) size.z = 0.001;
   scaleGizmoGroup.visible = true;
-  scaleGizmoGroup.position.copy(target.position);
+  scaleGizmoGroup.position.copy(center);
   scaleGizmoGroup.renderOrder = 999;
   const cam = viewports[viewportKey].camera;
-  const dist = target.position.distanceTo(cam.position);
+  const dist = center.distanceTo(cam.position);
   const frustumSize = 10;
   const handleVisibleSize = Math.max(((frustumSize * handleSize) / dist) * 1.5, 0.15);
   switch (viewportKey) {
@@ -298,36 +332,25 @@ function updateScaleGizmo(viewportKey) {
   }
   scaleGizmoGroup.updateMatrixWorld(true);
 }
-
 function startMirrorCopyMode() {
   if (selectedObjects.length === 0) {
     log('コピーするオブジェクトが選択されていません。');
     return;
   }
-
   isMirrorCopyMode = true;
   transformControls.detach();
   log('鏡面コピーモード開始。コピー軸をクリックしてください。');
   document.getElementById('mirrorCopy').style.display = 'none';
   document.getElementById('cancelMirrorCopy').style.display = 'inline-block';
-
   const previewMaterial = new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false});
-
   ['x', 'y', 'z'].forEach((axis) => {
     const axis_preview_group = new THREE.Group();
     axis_preview_group.userData.mirrorAxis = axis;
-
-    // ▼▼▼【修正】単一・複数に関わらず、常にワールド座標を基準にするロジックに統一 ▼▼▼
     selectedObjects.forEach((obj) => {
       const preview = new THREE.Mesh(obj.geometry, previewMaterial);
-
       preview.position.copy(obj.position);
       preview.scale.copy(obj.scale);
-
-      // 1. ワールド原点を基準に位置を反転
       preview.position[axis] *= -1;
-
-      // 2. 角度を反転
       const reflectedRotation = obj.rotation.clone();
       if (axis === 'x') {
         reflectedRotation.y *= -1;
@@ -340,23 +363,16 @@ function startMirrorCopyMode() {
         reflectedRotation.y *= -1;
       }
       preview.rotation.copy(reflectedRotation);
-
-      // 3. スケールを反転
       preview.scale[axis] *= -1;
-
       axis_preview_group.add(preview);
     });
-    // ▲▲▲【修正完了】▲▲▲
-
     previewGroup.add(axis_preview_group);
   });
 }
-
 function performMirrorCopy(clickedPreview) {
   const axis = clickedPreview.parent.userData.mirrorAxis;
   const commands = [];
   const newSelection = [];
-
   clickedPreview.parent.children.forEach((preview, i) => {
     const newObject = new THREE.Mesh(preview.geometry, selectedObjects[i].material.clone());
     newObject.position.copy(preview.position);
@@ -365,13 +381,11 @@ function performMirrorCopy(clickedPreview) {
     commands.push(new AddObjectCommand(newObject));
     newSelection.push(newObject);
   });
-
   history.execute(new MacroCommand(commands, `${axis.toUpperCase()}軸に鏡面コピー`));
   selectedObjects = newSelection;
   updateSelection();
   cancelMirrorCopyMode();
 }
-
 function cancelMirrorCopyMode() {
   if (!isMirrorCopyMode) return;
   isMirrorCopyMode = false;
@@ -387,7 +401,6 @@ function cancelMirrorCopyMode() {
   updateSelection();
   log('鏡面コピーモードをキャンセルしました。');
 }
-
 function startPastePreview() {
   if (selectedObjects.length === 0) {
     log('貼り付け先のオブジェクトを選択してください。');
@@ -397,14 +410,11 @@ function startPastePreview() {
     log('クリップボードが空です。');
     return;
   }
-
   isPasteMode = true;
   transformControls.detach();
-
   const targetBox = new THREE.Box3();
   selectedObjects.forEach((obj) => targetBox.expandByObject(obj));
   const targetSize = targetBox.getSize(new THREE.Vector3());
-
   const sourceBox = new THREE.Box3();
   const sourceGroup = new THREE.Group();
   clipboard.forEach((clip) => {
@@ -415,9 +425,7 @@ function startPastePreview() {
   });
   sourceBox.setFromObject(sourceGroup);
   const sourceSize = sourceBox.getSize(new THREE.Vector3());
-
   const previewMaterial = new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false});
-
   const directions = [
     {axis: 'x', sign: 1},
     {axis: 'x', sign: -1},
@@ -426,15 +434,12 @@ function startPastePreview() {
     {axis: 'z', sign: 1},
     {axis: 'z', sign: -1},
   ];
-
   directions.forEach((dir) => {
     const offsetValue = targetSize[dir.axis] / 2 + sourceSize[dir.axis] / 2 + 0.2;
     const offset = new THREE.Vector3();
     offset[dir.axis] = offsetValue * dir.sign;
-
     const axis_preview_group = new THREE.Group();
     axis_preview_group.userData.offset = offset;
-
     clipboard.forEach((clip) => {
       const previewObject = new THREE.Mesh(clip.geometry, previewMaterial);
       previewObject.scale.copy(clip.source.scale);
@@ -446,12 +451,10 @@ function startPastePreview() {
   });
   log('ペースト先のプレビューをクリックして位置を確定してください。');
 }
-
 function confirmPaste(clickedPreview) {
   const offset = clickedPreview.parent.userData.offset;
   const commands = [];
   const newPastedObjects = [];
-
   clipboard.forEach((clip) => {
     const newObject = new THREE.Mesh(clip.geometry, clip.material.clone());
     newObject.scale.copy(clip.source.scale);
@@ -460,20 +463,16 @@ function confirmPaste(clickedPreview) {
     commands.push(new AddObjectCommand(newObject, true));
     newPastedObjects.push(newObject);
   });
-
   history.execute(new MacroCommand(commands, `${newPastedObjects.length}個のオブジェクトをペースト`));
-
   lastPasteInfo = {objects: newPastedObjects, offset: offset};
   selectedObjects = newPastedObjects;
   updateSelection();
   cancelPasteMode();
 }
-
 function performDirectPaste() {
   const offset = lastPasteInfo.offset;
   const commands = [];
   const newPastedObjects = [];
-
   lastPasteInfo.objects.forEach((lastObj) => {
     const newObject = new THREE.Mesh(lastObj.geometry, lastObj.material.clone());
     newObject.scale.copy(lastObj.scale);
@@ -482,13 +481,11 @@ function performDirectPaste() {
     commands.push(new AddObjectCommand(newObject, true));
     newPastedObjects.push(newObject);
   });
-
   history.execute(new MacroCommand(commands, `${newPastedObjects.length}個のオブジェクトをペースト`));
   lastPasteInfo.objects = newPastedObjects;
   selectedObjects = newPastedObjects;
   updateSelection();
 }
-
 function cancelPasteMode() {
   isPasteMode = false;
   while (previewGroup.children.length > 0) {
@@ -501,26 +498,62 @@ function cancelPasteMode() {
   updateSelection();
 }
 
+/**
+ * 【修正】オブジェクトの選択状態が変更されたときに呼び出されます。
+ * 選択状態に応じて、適切なヘルパー（黄色・緑の矩形）を生成・破棄します。
+ */
 function updateSelection() {
+  // 既存のヘルパーと、グループ用の不可視メッシュを全てクリア
   while (selectionBoxes.children.length > 0) {
-    selectionBoxes.remove(selectionBoxes.children[0]);
+    const box = selectionBoxes.children[0];
+    selectionBoxes.remove(box);
+    box.geometry.dispose();
+    box.material.dispose();
+  }
+  if (groupBoundingBoxMesh) {
+    scene.remove(groupBoundingBoxMesh);
+    groupBoundingBoxMesh.geometry.dispose();
+    groupBoundingBoxMesh.material.dispose();
+    groupBoundingBoxMesh = null;
   }
   transformControls.detach();
 
+  // 単体選択の場合（変更なし）
   if (selectedObjects.length === 1) {
     transformControls.attach(selectedObjects[0]);
     const helper = new THREE.BoxHelper(selectedObjects[0], 0xffff00);
     selectionBoxes.add(helper);
-  } else if (selectedObjects.length > 1) {
-    const box = new THREE.Box3();
+  }
+  // 複数選択の場合
+  else if (selectedObjects.length > 1) {
+    // 1. 各オブジェクトに対応する「黄色い」ヘルパーを追加
     selectedObjects.forEach((obj) => {
-      box.expandByObject(obj);
-      const helper = new THREE.BoxHelper(obj, 0xffff00);
-      selectionBoxes.add(helper);
+      selectionBoxes.add(new THREE.BoxHelper(obj, 0xffff00));
     });
 
-    box.getCenter(multiSelectHelper.position);
-    transformControls.attach(multiSelectHelper);
+    // 2. グループ全体を囲む「緑の」ヘルパーを追加
+    const groupBox3 = new THREE.Box3();
+    selectedObjects.forEach((obj) => {
+      groupBox3.expandByObject(obj);
+    });
+
+    if (!groupBox3.isEmpty()) {
+      // 2a. グループのバウンディングボックスに合わせた、目に見えないメッシュを作成
+      //    ジオメトリは1x1x1で作成し、スケールでサイズを調整するのが効率的
+      groupBoundingBoxMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({visible: false, transparent: true}));
+      // 2b. メッシュの位置とスケールをボックスに合わせる
+      groupBox3.getCenter(groupBoundingBoxMesh.position);
+      groupBox3.getSize(groupBoundingBoxMesh.scale);
+      scene.add(groupBoundingBoxMesh);
+
+      // 2c. この不可視メッシュを追跡するヘルパー（緑の線）を作成
+      const groupHelper = new THREE.BoxHelper(groupBoundingBoxMesh, 0x00ff00);
+      selectionBoxes.add(groupHelper);
+
+      // 3. TransformControlsをグループの中心に設定
+      multiSelectHelper.position.copy(groupBoundingBoxMesh.position);
+      transformControls.attach(multiSelectHelper);
+    }
   }
 }
 
@@ -667,6 +700,7 @@ multiSelectButton.addEventListener('click', () => {
     log('複数選択モード終了。');
   }
 });
+document.getElementById('debugLog').addEventListener('click', debugSelectionHelpers);
 
 let pointerDownPosition = new THREE.Vector2();
 let isDraggingIn2DView = false;
@@ -681,35 +715,17 @@ const worldTransforms = new Map();
 transformControls.addEventListener('mouseDown', () => {
   orbitControls.enabled = false;
   if (selectedObjects.length > 1 && transformControls.object === multiSelectHelper) {
-    // ▼▼▼【ここから修正】▼▼▼
-    transformStartCache = selectedObjects.map((obj) => ({
-      position: obj.position.clone(),
-      rotation: obj.rotation.clone(),
-      scale: obj.scale.clone(),
-    }));
-
-    // ヘルパーの回転とスケールのみをリセット。位置は現在のグループ中心を維持する。
+    transformStartCache = selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
     multiSelectHelper.rotation.set(0, 0, 0);
     multiSelectHelper.scale.set(1, 1, 1);
-
-    // 問題の原因だった updateSelection() の呼び出しを削除
-
     selectedObjects.forEach((obj) => {
       worldTransforms.set(obj, {parent: obj.parent});
       multiSelectHelper.attach(obj);
     });
-    // ▲▲▲【ここまで修正】▲▲▲
   } else if (selectedObjects.length === 1) {
-    transformStartCache = [
-      {
-        position: selectedObjects[0].position.clone(),
-        rotation: selectedObjects[0].rotation.clone(),
-        scale: selectedObjects[0].scale.clone(),
-      },
-    ];
+    transformStartCache = [{position: selectedObjects[0].position.clone(), rotation: selectedObjects[0].rotation.clone(), scale: selectedObjects[0].scale.clone()}];
   }
 });
-
 transformControls.addEventListener('mouseUp', () => {
   orbitControls.enabled = true;
   if (!transformStartCache) return;
@@ -728,7 +744,6 @@ transformControls.addEventListener('mouseUp', () => {
     const oldT = transformStartCache[0];
     const obj = selectedObjects[0];
     const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
-    // 位置が実際に変わったかチェック
     if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) {
       history.execute(new TransformCommand(obj, oldT, newT));
     }
@@ -739,9 +754,6 @@ transformControls.addEventListener('mouseUp', () => {
 window.addEventListener('pointerdown', (event) => {
   if (event.target.closest('#ui') || transformControls.dragging) return;
   pointerDownPosition.set(event.clientX, event.clientY);
-
-  if (selectedObjects.length > 1) return;
-
   let clickedViewportKey = null;
   let clickedRect = null;
   for (const key in viewports) {
@@ -753,7 +765,7 @@ window.addEventListener('pointerdown', (event) => {
       break;
     }
   }
-  if (!clickedViewportKey || clickedViewportKey === 'perspective' || !transformControls.object) return;
+  if (!clickedViewportKey || clickedViewportKey === 'perspective' || selectedObjects.length === 0) return;
   const clickedViewport = viewports[clickedViewportKey];
   pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
   pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
@@ -766,14 +778,45 @@ window.addEventListener('pointerdown', (event) => {
   const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
   mechaGroup.visible = true;
   updateGizmoAppearance();
-  if (handleIntersects.length > 0) {
-    const hitHandle = handleIntersects[0].object;
+
+  const setupTransform = () => {
     dragStartPointer.set(event.clientX, event.clientY);
-    dragStartObjectState.position.copy(transformControls.object.position);
-    dragStartObjectState.scale.copy(transformControls.object.scale);
-    dragStartObjectState.rotation.copy(transformControls.object.rotation);
     orbitControls.enabled = false;
-    transformStartCache = [{position: transformControls.object.position.clone(), rotation: transformControls.object.rotation.clone(), scale: transformControls.object.scale.clone()}];
+
+    if (selectedObjects.length > 1) {
+      const groupBounds = new THREE.Box3();
+      selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
+      dragStartObjectState.position.copy(groupBounds.getCenter(new THREE.Vector3()));
+      dragStartObjectState.scale.copy(groupBounds.getSize(new THREE.Vector3()));
+      dragStartObjectState.rotation.set(0, 0, 0);
+
+      // ★元の親を記憶
+      worldTransforms.clear();
+      selectedObjects.forEach((obj) => {
+        worldTransforms.set(obj, {parent: obj.parent});
+      });
+
+      if (transformGroup) scene.remove(transformGroup);
+      transformGroup = new THREE.Group();
+      transformGroup.position.copy(dragStartObjectState.position);
+      scene.add(transformGroup);
+      selectedObjects.forEach((obj) => {
+        transformGroup.attach(obj);
+      });
+    } else {
+      // 単体選択
+      const target = selectedObjects[0];
+      dragStartObjectState.position.copy(target.position);
+      dragStartObjectState.scale.copy(target.scale);
+      dragStartObjectState.rotation.copy(target.rotation);
+    }
+
+    transformStartCache = selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
+  };
+
+  if (handleIntersects.length > 0) {
+    setupTransform();
+    const hitHandle = handleIntersects[0].object;
     if (gizmoMode === 'scale') {
       isScalingIn2DView = true;
     } else if (gizmoMode === 'rotate') {
@@ -782,29 +825,94 @@ window.addEventListener('pointerdown', (event) => {
     }
     draggedInfo = {viewportKey: clickedViewportKey, handleName: hitHandle.name};
   } else {
-    const objectIntersects = raycaster.intersectObject(transformControls.object, true);
+    const objectIntersects = raycaster.intersectObjects(selectedObjects, true);
     if (objectIntersects.length > 0) {
+      setupTransform();
       isDraggingIn2DView = true;
-      draggedInfo.viewportKey = clickedViewportKey;
-      dragStartPointer.set(event.clientX, event.clientY);
-      dragStartObjectState.position.copy(transformControls.object.position);
-      orbitControls.enabled = false;
-      transformStartCache = [{position: transformControls.object.position.clone(), rotation: transformControls.object.rotation.clone(), scale: transformControls.object.scale.clone()}];
+      draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
     }
   }
 });
 
+window.addEventListener('pointerdown', (event) => {
+  if (event.target.closest('#ui') || transformControls.dragging) return;
+  pointerDownPosition.set(event.clientX, event.clientY);
+  let clickedViewportKey = null;
+  let clickedRect = null;
+  for (const key in viewports) {
+    const view = viewports[key];
+    const rect = view.element.getBoundingClientRect();
+    if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+      clickedViewportKey = key;
+      clickedRect = rect;
+      break;
+    }
+  }
+  if (!clickedViewportKey || clickedViewportKey === 'perspective' || selectedObjects.length === 0) return;
+  const clickedViewport = viewports[clickedViewportKey];
+  pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+  pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+  updateScaleGizmo(clickedViewportKey);
+  scaleGizmoGroup.updateMatrixWorld(true);
+  raycaster.setFromCamera(pointer, clickedViewport.camera);
+  raycaster.near = 0;
+  raycaster.far = 1000;
+  mechaGroup.visible = false;
+  const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
+  mechaGroup.visible = true;
+  updateGizmoAppearance();
+  const setupTransform = () => {
+    dragStartPointer.set(event.clientX, event.clientY);
+    orbitControls.enabled = false;
+    if (selectedObjects.length === 1) {
+      const target = selectedObjects[0];
+      dragStartObjectState.position.copy(target.position);
+      dragStartObjectState.scale.copy(target.scale);
+      dragStartObjectState.rotation.copy(target.rotation);
+      transformStartCache = [{position: target.position.clone(), rotation: target.rotation.clone(), scale: target.scale.clone()}];
+    } else {
+      const groupBounds = new THREE.Box3();
+      selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
+      dragStartObjectState.position.copy(groupBounds.getCenter(new THREE.Vector3()));
+      dragStartObjectState.scale.copy(groupBounds.getSize(new THREE.Vector3()));
+      dragStartObjectState.rotation.set(0, 0, 0);
+      transformStartCache = selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
+    }
+  };
+  if (handleIntersects.length > 0) {
+    setupTransform();
+    const hitHandle = handleIntersects[0].object;
+    if (gizmoMode === 'scale') {
+      isScalingIn2DView = true;
+    } else if (gizmoMode === 'rotate') {
+      if (hitHandle.name.includes('center')) return;
+      isRotatingIn2DView = true;
+    }
+    draggedInfo = {viewportKey: clickedViewportKey, handleName: hitHandle.name};
+  } else {
+    const objectIntersects = raycaster.intersectObjects(selectedObjects, true);
+    if (objectIntersects.length > 0) {
+      setupTransform();
+      isDraggingIn2DView = true;
+      draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
+    }
+  }
+});
+
+// ▼▼▼【修正】pointermove: 拡縮ロジックを transformGroup を操作するように変更 ▼▼▼
 window.addEventListener('pointermove', (event) => {
   if (!isDraggingIn2DView && !isScalingIn2DView && !isRotatingIn2DView) return;
   event.preventDefault();
-  const targetObject = transformControls.object;
   const view = viewports[draggedInfo.viewportKey];
   const rect = view.element.getBoundingClientRect();
-  if (isDraggingIn2DView || isScalingIn2DView) {
-    const aspect = rect.width / rect.height;
-    const frustumSize = 10;
-    const worldDeltaX = ((event.clientX - dragStartPointer.x) / rect.width) * frustumSize * aspect;
-    const worldDeltaY = ((event.clientY - dragStartPointer.y) / rect.height) * frustumSize;
+  const aspect = rect.width / rect.height;
+  const frustumSize = 10;
+  const worldDeltaX = ((event.clientX - dragStartPointer.x) / rect.width) * frustumSize * aspect;
+  const worldDeltaY = ((event.clientY - dragStartPointer.y) / rect.height) * frustumSize;
+
+  // 単体選択時のロジック（変更なし）
+  if (selectedObjects.length === 1) {
+    const targetObject = selectedObjects[0];
     if (isDraggingIn2DView) {
       const newPosition = dragStartObjectState.position.clone();
       switch (draggedInfo.viewportKey) {
@@ -827,8 +935,9 @@ window.addEventListener('pointermove', (event) => {
       const newScale = dragStartObjectState.scale.clone();
       const handleName = draggedInfo.handleName;
       let u_change = 0,
-        v_change = 0;
-      let axisU, axisV;
+        v_change = 0,
+        axisU,
+        axisV;
       switch (draggedInfo.viewportKey) {
         case 'top':
           u_change = worldDeltaX;
@@ -863,32 +972,121 @@ window.addEventListener('pointermove', (event) => {
       }
       targetObject.scale.copy(newScale);
       targetObject.position.copy(newPosition);
+    } else if (isRotatingIn2DView) {
+      const center3D = targetObject.position.clone();
+      const centerProjected = center3D.project(view.camera);
+      const centerX = (centerProjected.x * 0.5 + 0.5) * rect.width + rect.left;
+      const centerY = (-centerProjected.y * 0.5 + 0.5) * rect.height + rect.top;
+      const centerOnScreen = new THREE.Vector2(centerX, centerY);
+      const startVec = new THREE.Vector2().subVectors(dragStartPointer, centerOnScreen);
+      const currentVec = new THREE.Vector2(event.clientX, event.clientY).sub(centerOnScreen);
+      const deltaAngle = Math.atan2(currentVec.y, currentVec.x) - Math.atan2(startVec.y, startVec.x);
+      const newRotation = dragStartObjectState.rotation.clone();
+      switch (draggedInfo.viewportKey) {
+        case 'top':
+          newRotation.y = dragStartObjectState.rotation.y + deltaAngle;
+          break;
+        case 'front':
+          newRotation.z = dragStartObjectState.rotation.z + deltaAngle;
+          break;
+        case 'side':
+          newRotation.x = dragStartObjectState.rotation.x + deltaAngle;
+          break;
+      }
+      targetObject.rotation.copy(newRotation);
     }
-  } else if (isRotatingIn2DView) {
-    const center3D = targetObject.position.clone();
-    const centerProjected = center3D.project(view.camera);
-    const centerX = (centerProjected.x * 0.5 + 0.5) * rect.width + rect.left;
-    const centerY = (-centerProjected.y * 0.5 + 0.5) * rect.height + rect.top;
-    const centerOnScreen = new THREE.Vector2(centerX, centerY);
-    const startVec = new THREE.Vector2().subVectors(dragStartPointer, centerOnScreen);
-    const currentVec = new THREE.Vector2(event.clientX, event.clientY).sub(centerOnScreen);
-    const deltaAngle = Math.atan2(currentVec.y, currentVec.x) - Math.atan2(startVec.y, startVec.x);
-    const newRotation = dragStartObjectState.rotation.clone();
-    switch (draggedInfo.viewportKey) {
-      case 'top':
-        newRotation.y = dragStartObjectState.rotation.y + deltaAngle;
-        break;
-      case 'front':
-        newRotation.z = dragStartObjectState.rotation.z + deltaAngle;
-        break;
-      case 'side':
-        newRotation.x = dragStartObjectState.rotation.x + deltaAngle;
-        break;
+  }
+  // 複数選択時のロジック
+  else if (selectedObjects.length > 1) {
+    if (isDraggingIn2DView && transformGroup) {
+      const worldDelta = new THREE.Vector3();
+      switch (draggedInfo.viewportKey) {
+        case 'top':
+          worldDelta.set(worldDeltaX, 0, worldDeltaY);
+          break;
+        case 'front':
+          worldDelta.set(worldDeltaX, -worldDeltaY, 0);
+          break;
+        case 'side':
+          worldDelta.set(0, -worldDeltaY, -worldDeltaX);
+          break;
+      }
+      transformGroup.position.copy(dragStartObjectState.position).add(worldDelta);
+    } else if (isRotatingIn2DView && transformGroup) {
+      const center3D = dragStartObjectState.position;
+      const centerProjected = center3D.clone().project(view.camera);
+      const centerX = (centerProjected.x * 0.5 + 0.5) * rect.width + rect.left;
+      const centerY = (-centerProjected.y * 0.5 + 0.5) * rect.height + rect.top;
+      const centerOnScreen = new THREE.Vector2(centerX, centerY);
+      const startVec = new THREE.Vector2().subVectors(dragStartPointer, centerOnScreen);
+      const currentVec = new THREE.Vector2(event.clientX, event.clientY).sub(centerOnScreen);
+      const deltaAngle = Math.atan2(currentVec.y, currentVec.x) - Math.atan2(startVec.y, startVec.x);
+      const axis = new THREE.Vector3();
+      switch (draggedInfo.viewportKey) {
+        case 'top':
+          axis.set(0, 1, 0);
+          break;
+        case 'front':
+          axis.set(0, 0, 1);
+          break;
+        case 'side':
+          axis.set(1, 0, 0);
+          break;
+      }
+      transformGroup.quaternion.setFromAxisAngle(axis, deltaAngle);
+    } else if (isScalingIn2DView && transformGroup) {
+      const oldSize = dragStartObjectState.scale;
+      const newSize = oldSize.clone();
+      const newCenter = dragStartObjectState.position.clone();
+      const handleName = draggedInfo.handleName;
+      let u_change = 0,
+        v_change = 0,
+        axisU,
+        axisV;
+
+      switch (draggedInfo.viewportKey) {
+        case 'top':
+          u_change = worldDeltaX;
+          v_change = worldDeltaY;
+          axisU = 'x';
+          axisV = 'z';
+          break;
+        case 'front':
+          u_change = worldDeltaX;
+          v_change = -worldDeltaY;
+          axisU = 'x';
+          axisV = 'y';
+          break;
+        case 'side':
+          u_change = -worldDeltaX;
+          v_change = -worldDeltaY;
+          axisU = 'z';
+          axisV = 'y';
+          break;
+      }
+      const u_multiplier = draggedInfo.viewportKey === 'side' ? (handleName.includes('left') ? 1 : handleName.includes('right') ? -1 : 0) : handleName.includes('left') ? -1 : handleName.includes('right') ? 1 : 0;
+      const v_multiplier = draggedInfo.viewportKey === 'top' ? (handleName.includes('top') ? -1 : handleName.includes('bottom') ? 1 : 0) : handleName.includes('top') ? 1 : handleName.includes('bottom') ? -1 : 0;
+      const scaleChangeU = u_change * u_multiplier;
+      const scaleChangeV = v_change * v_multiplier;
+
+      if (u_multiplier !== 0 && oldSize[axisU] + scaleChangeU > 0.01) {
+        newSize[axisU] = oldSize[axisU] + scaleChangeU;
+        newCenter[axisU] = dragStartObjectState.position[axisU] - (oldSize[axisU] / 2) * u_multiplier + (newSize[axisU] / 2) * u_multiplier;
+      }
+      if (v_multiplier !== 0 && oldSize[axisV] + scaleChangeV > 0.01) {
+        newSize[axisV] = oldSize[axisV] + scaleChangeV;
+        newCenter[axisV] = dragStartObjectState.position[axisV] - (oldSize[axisV] / 2) * v_multiplier + (newSize[axisV] / 2) * v_multiplier;
+      }
+
+      const scaleFactor = new THREE.Vector3(oldSize.x !== 0 ? newSize.x / oldSize.x : 1, oldSize.y !== 0 ? newSize.y / oldSize.y : 1, oldSize.z !== 0 ? newSize.z / oldSize.z : 1);
+
+      transformGroup.position.copy(newCenter);
+      transformGroup.scale.copy(scaleFactor);
     }
-    targetObject.rotation.copy(newRotation);
   }
 });
 
+// ▼▼▼【修正】pointerup: オブジェクトを元の親に戻す処理を追加 ▼▼▼
 window.addEventListener('pointerup', (e) => {
   if (isMirrorCopyMode) {
     let clickedViewportKey = null,
@@ -938,23 +1136,44 @@ window.addEventListener('pointerup', (e) => {
     }
     return;
   }
+
   if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
-    if (transformControls.object && transformStartCache) {
-      const oldT = transformStartCache[0];
-      const obj = transformControls.object;
-      const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
-      history.execute(new TransformCommand(obj, oldT, newT));
+    if (transformGroup) {
+      // ★記憶しておいた元の親にオブジェクトを戻す
+      selectedObjects.forEach((obj) => {
+        worldTransforms.get(obj).parent.attach(obj);
+      });
+      scene.remove(transformGroup);
+      transformGroup = null;
+      worldTransforms.clear();
+    }
+
+    if (transformStartCache) {
+      if (selectedObjects.length === 1) {
+        const oldT = transformStartCache[0];
+        const obj = selectedObjects[0];
+        const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+        if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) {
+          history.execute(new TransformCommand(obj, oldT, newT));
+        }
+      } else if (selectedObjects.length > 1) {
+        const commands = selectedObjects.map((obj, i) => {
+          const oldT = transformStartCache[i];
+          const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+          return new TransformCommand(obj, oldT, newT);
+        });
+        history.execute(new MacroCommand(commands, `選択した ${commands.length} 個のオブジェクトをグループ変形`));
+      }
     }
     isDraggingIn2DView = isScalingIn2DView = isRotatingIn2DView = false;
     orbitControls.enabled = true;
     updateGizmoAppearance();
     transformStartCache = null;
+    updateSelection();
     return;
   }
-
   const pointerUpPosition = new THREE.Vector2(e.clientX, e.clientY);
   if (pointerDownPosition.distanceTo(pointerUpPosition) > 5 || e.target.closest('#ui') || transformControls.dragging) return;
-
   let clickedViewportKey = null,
     clickedRect = null;
   for (const key in viewports) {
@@ -966,15 +1185,12 @@ window.addEventListener('pointerup', (e) => {
     }
   }
   if (!clickedViewportKey) return;
-
   const clickedViewport = viewports[clickedViewportKey];
   pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
   pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, clickedViewport.camera);
-
   const intersects = raycaster.intersectObjects(mechaGroup.children, false);
   const clickedObject = intersects.length > 0 ? intersects[0].object : null;
-
   if (e.shiftKey || isMultiSelectMode) {
     if (clickedObject) {
       const index = selectedObjects.indexOf(clickedObject);
@@ -1014,11 +1230,7 @@ window.addEventListener('keydown', (e) => {
       case 'c':
         e.preventDefault();
         if (selectedObjects.length > 0) {
-          clipboard = selectedObjects.map((obj) => ({
-            geometry: obj.geometry,
-            material: obj.material,
-            source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()},
-          }));
+          clipboard = selectedObjects.map((obj) => ({geometry: obj.geometry, material: obj.material, source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()}}));
           log(`${selectedObjects.length}個のオブジェクトをコピーしました。`);
         } else {
           log('コピーするオブジェクトが選択されていません。');
@@ -1049,7 +1261,6 @@ window.addEventListener('keydown', (e) => {
     cancelPasteMode();
     return;
   }
-
   switch (e.key.toLowerCase()) {
     case 't':
       transformControls.setMode('translate');
@@ -1068,13 +1279,11 @@ window.addEventListener('keydown', (e) => {
       log('モード -> 拡縮 (3D/2Dビュー)');
       break;
   }
-
   if (selectedObjects.length === 0) return;
   if (e.key === 'Delete' || e.key === 'Backspace') {
     deleteSelectedObject();
     return;
   }
-
   const moveDistance = 0.1,
     rotateAngle = THREE.MathUtils.degToRad(5),
     scaleAmount = 0.05;
@@ -1139,12 +1348,10 @@ window.addEventListener('keydown', (e) => {
       commands.push(new TransformCommand(obj, oldTransform, newTransform));
     }
   });
-
   if (commands.length > 0) {
     history.execute(new MacroCommand(commands, `選択した ${commands.length} 個のオブジェクトを変形`));
   }
 });
-
 function onWindowResize() {
   for (const key in viewports) {
     const view = viewports[key];
@@ -1178,9 +1385,28 @@ window.addEventListener('load', () => {
 // =================================================================
 // ◆ 5. アニメーションループ
 // =================================================================
+/**
+ * 【修正】アニメーションループ。
+ * 毎フレーム、グループ選択用の不可視メッシュのサイズと位置を更新してから、
+ * 全てのヘルパーを更新します。
+ */
 function animate() {
   requestAnimationFrame(animate);
   orbitControls.update();
+
+  // 複数選択されている場合、グループ用の不可視メッシュを更新する
+  if (groupBoundingBoxMesh) {
+    const groupBox3 = new THREE.Box3();
+    selectedObjects.forEach((obj) => {
+      groupBox3.expandByObject(obj);
+    });
+    if (!groupBox3.isEmpty()) {
+      groupBox3.getCenter(groupBoundingBoxMesh.position);
+      groupBox3.getSize(groupBoundingBoxMesh.scale);
+    }
+  }
+
+  // 全てのヘルパーを更新する
   selectionBoxes.children.forEach((box) => box.update());
 
   for (const key in viewports) {
@@ -1201,16 +1427,21 @@ function animate() {
       const originalAutoClear = renderer.autoClear;
       renderer.autoClear = false;
       renderer.clear();
+
       mechaGroup.visible = false;
       transformControls.visible = false;
       renderer.render(scene, view.camera);
+
       mechaGroup.visible = true;
       gridHelper.visible = false;
+      selectionBoxes.visible = false;
       scene.overrideMaterial = wireframeMaterial;
       renderer.render(scene, view.camera);
       scene.overrideMaterial = null;
+      selectionBoxes.visible = true;
       gridHelper.visible = true;
-      if (transformControls.object) {
+
+      if (selectedObjects.length > 0) {
         renderer.render(scaleGizmoGroup, view.camera);
       }
       renderer.autoClear = originalAutoClear;

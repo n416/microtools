@@ -5,99 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>メカドットクリエイター - デバッグモード</title>
     <style>
-      /* CSSの変更はログ表示部分のみ */
-      body {
-        margin: 0;
-        font-family: sans-serif;
-        background-color: #111;
-      }
-      #ui,
-      #instructions {
-        position: absolute;
-        background-color: rgba(0, 0, 0, 0.5);
-        padding: 10px;
-        border-radius: 5px;
-        z-index: 10;
-      }
-      #ui {
-        top: 10px;
-        left: 10px;
-        display: flex;
-        flex-direction: column;
-      }
-      #ui div {
-        margin-bottom: 5px;
-      }
-      #ui button {
-        margin: 2px;
-      }
-      #instructions {
-        bottom: 80px;
-        left: 10px;
-        color: white;
-        background-color: rgba(0, 0, 0, 0.5);
-        padding: 8px;
-        border-radius: 5px;
-        z-index: 10;
-        font-size: 12px;
-        max-width: 300px;
-      }
-      #viewport-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: grid;
-        grid-template-areas:
-          'top perspective'
-          'front side';
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
-      }
-      .viewport {
-        position: relative;
-        border: 1px solid #555;
-        overflow: hidden;
-      }
-      #view-top {
-        grid-area: top;
-      }
-      #view-perspective {
-        grid-area: perspective;
-      }
-      #view-side {
-        grid-area: side;
-      }
-      #view-front {
-        grid-area: front;
-      }
-      .viewport-label {
-        position: absolute;
-        bottom: 5px;
-        left: 5px;
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 14px;
-        font-weight: bold;
-        pointer-events: none;
-      }
-
-      /* ▼▼▼【変更】ログ表示エリアのスタイル ▼▼▼ */
-      #log-display {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        color: #2ecc71;
-        font-family: monospace;
-        font-size: 12px;
-        background-color: rgba(0, 0, 0, 0.8);
-        padding: 5px 10px;
-        border-radius: 3px;
-        z-index: 10;
-        max-height: 60px; /* 高さを指定 */
-        overflow-y: hidden; /* スクロールはさせない */
-        writing-mode: horizontal-tb;
-      }
+      body { margin: 0; font-family: sans-serif; background-color: #111; }
+      #ui, #instructions { position: absolute; background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; z-index: 10; }
+      #ui { top: 10px; left: 10px; display: flex; flex-direction: column; }
+      #ui div { margin-bottom: 5px; }
+      #ui button { margin: 2px; }
+      #instructions { bottom: 80px; left: 10px; color: white; background-color: rgba(0, 0, 0, 0.5); padding: 8px; border-radius: 5px; z-index: 10; font-size: 12px; max-width: 300px; }
+      #viewport-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: grid; grid-template-areas: 'top perspective' 'front side'; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+      .viewport { position: relative; border: 1px solid #555; overflow: hidden; }
+      #view-top { grid-area: top; }
+      #view-perspective { grid-area: perspective; }
+      #view-side { grid-area: side; }
+      #view-front { grid-area: front; }
+      .viewport-label { position: absolute; bottom: 5px; left: 5px; color: rgba(255, 255, 255, 0.5); font-size: 14px; font-weight: bold; pointer-events: none; }
+      #log-display { position: absolute; bottom: 10px; left: 10px; color: #2ecc71; font-family: monospace; font-size: 12px; background-color: rgba(0, 0, 0, 0.8); padding: 5px 10px; border-radius: 3px; z-index: 10; max-height: 60px; overflow-y: hidden; writing-mode: horizontal-tb; }
     </style>
   </head>
   <body>
@@ -116,6 +37,9 @@
         <button id="cancelMirrorCopy" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
         <input type="file" id="fileInput" style="display: none" />
       </div>
+      <div style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px;">
+        <button id="debugLog" style="background-color: #8e44ad; color: white;">デバッグログ</button>
+      </div>
     </div>
     <div id="instructions">
       <b>操作方法:</b><br />
@@ -125,18 +49,10 @@
     </div>
     <div id="log-display"></div>
     <div id="viewport-container">
-      <div id="view-top" class="viewport">
-        <div class="viewport-label">Top (Y-up)</div>
-      </div>
-      <div id="view-perspective" class="viewport">
-        <div class="viewport-label">Perspective</div>
-      </div>
-      <div id="view-side" class="viewport">
-        <div class="viewport-label">Side (X-up)</div>
-      </div>
-      <div id="view-front" class="viewport">
-        <div class="viewport-label">Front (Z-up)</div>
-      </div>
+      <div id="view-top" class="viewport"><div class="viewport-label">Top (Y-up)</div></div>
+      <div id="view-perspective" class="viewport"><div class="viewport-label">Perspective</div></div>
+      <div id="view-side" class="viewport"><div class="viewport-label">Side (X-up)</div></div>
+      <div id="view-front" class="viewport"><div class="viewport-label">Front (Z-up)</div></div>
     </div>
     <script type="importmap">
       {
