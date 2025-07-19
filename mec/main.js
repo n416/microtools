@@ -1390,8 +1390,10 @@ window.addEventListener('pointerup', (e) => {
     orbitControls.enabled = true;
 
     const endPoint = new THREE.Vector2(e.clientX, e.clientY);
+    // ドラッグ距離が短すぎる場合は、通常のクリック処理に回す
     if (startPoint.distanceTo(endPoint) < 5) {
-      if (!e.shiftKey && !isMultiSelectMode) {
+      // (何もない空間をクリックしたのと同じなので、修飾キーがなければ選択解除)
+      if (!e.ctrlKey && !e.shiftKey && !isMultiSelectMode) {
         selectedObjects = [];
         updateSelection();
         log('待機中');
@@ -1406,47 +1408,45 @@ window.addEventListener('pointerup', (e) => {
       bottom: Math.max(startPoint.y, endPoint.y),
     };
     
-    const newSelection = [];
-    
+    const objectsInBox = [];
     for (const key in viewports) {
         const view = viewports[key];
         const rect = view.element.getBoundingClientRect();
-        
-        if (boxRect.left > rect.right || boxRect.right < rect.left || boxRect.top > rect.bottom || boxRect.bottom < rect.top) {
-            continue;
-        }
-
+        if (boxRect.left > rect.right || boxRect.right < rect.left || boxRect.top > rect.bottom || boxRect.bottom < rect.top) { continue; }
         mechaGroup.children.forEach(mesh => {
             const pos = new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld);
             pos.project(view.camera);
-            
             const screenX = ((pos.x + 1) / 2) * rect.width + rect.left;
             const screenY = ((-pos.y + 1) / 2) * rect.height + rect.top;
-
             if (screenX >= boxRect.left && screenX <= boxRect.right && screenY >= boxRect.top && screenY <= boxRect.bottom) {
-                if (!newSelection.includes(mesh)) {
-                    newSelection.push(mesh);
+                if (!objectsInBox.includes(mesh)) {
+                    objectsInBox.push(mesh);
                 }
             }
         });
     }
 
-    // ▼▼▼【修正】Shiftキー押下時のロジックを選択の「トグル」に変更 ▼▼▼
-    if (e.shiftKey || isMultiSelectMode) {
-        // 矩形内に入ったオブジェクトの選択状態を反転させる
-        newSelection.forEach(obj => {
+    // ▼▼▼【Windows標準の選択ロジックを実装】▼▼▼
+    if (e.ctrlKey) {
+        // Ctrlキー: 矩形内のオブジェクトの選択状態を「トグル（反転）」させる
+        objectsInBox.forEach(obj => {
             const index = selectedObjects.indexOf(obj);
             if (index > -1) {
-                // 既に選択されていた場合は、選択から外す
-                selectedObjects.splice(index, 1);
+                selectedObjects.splice(index, 1); // 選択済みなら解除
             } else {
-                // 未選択だった場合は、選択に加える
+                selectedObjects.push(obj); // 未選択なら追加
+            }
+        });
+    } else if (e.shiftKey || isMultiSelectMode) {
+        // Shiftキー: 矩形内のオブジェクトを現在の選択に「追加」する
+        objectsInBox.forEach(obj => {
+            if (!selectedObjects.includes(obj)) {
                 selectedObjects.push(obj);
             }
         });
     } else {
-        // Shiftキーが押されていない場合は、単純に矩形内のオブジェクトを選択
-        selectedObjects = newSelection;
+        // 修飾キーなし: 矩形内のオブジェクトで選択を「置き換え」る
+        selectedObjects = objectsInBox;
     }
     updateSelection();
     log(`${selectedObjects.length}個のオブジェクトを選択中`);
@@ -1513,12 +1513,30 @@ window.addEventListener('pointerup', (e) => {
       const intersects = raycaster.intersectObjects(mechaGroup.children, false);
       const clickedObject = intersects.length > 0 ? intersects[0].object : null;
       
-      if (e.shiftKey || isMultiSelectMode) {
-        if (clickedObject) { const index = selectedObjects.indexOf(clickedObject); if (index > -1) { selectedObjects.splice(index, 1); } else { selectedObjects.push(clickedObject); } }
+      // ▼▼▼【Windows標準の選択ロジックを実装】▼▼▼
+      if (e.ctrlKey) {
+          // Ctrlキー: クリックしたオブジェクトの選択状態を「トグル」
+          if (clickedObject) {
+              const index = selectedObjects.indexOf(clickedObject);
+              if (index > -1) {
+                  selectedObjects.splice(index, 1);
+              } else {
+                  selectedObjects.push(clickedObject);
+              }
+          }
+      } else if (e.shiftKey || isMultiSelectMode) {
+          // Shiftキー: クリックしたオブジェクトを選択に「追加」
+          if (clickedObject && !selectedObjects.includes(clickedObject)) {
+              selectedObjects.push(clickedObject);
+          }
       } else {
-        selectedObjects = clickedObject ? [clickedObject] : [];
-        if (isMultiSelectMode && !clickedObject) { isMultiSelectMode = false; multiSelectButton.style.backgroundColor = '#f39c12'; }
+          // 修飾キーなし: クリックしたオブジェクトで選択を「置き換え」
+          //             何もない場所をクリックした場合は全解除
+          selectedObjects = clickedObject ? [clickedObject] : [];
       }
+      
+      if (isMultiSelectMode && !clickedObject) { isMultiSelectMode = false; multiSelectButton.style.backgroundColor = '#f39c12'; }
+      
       updateSelection();
       log(selectedObjects.length > 0 ? `${selectedObjects.length}個のオブジェクトを選択中` : '待機中');
       return;
