@@ -123,13 +123,12 @@
         margin: 5px;
       }
 
-      /* ▼▼▼【矩形選択用のCSSを追加】▼▼▼ */
       #selection-box {
         position: absolute;
         border: 1px solid #55aaff;
         background-color: rgba(85, 170, 255, 0.3);
         z-index: 100;
-        pointer-events: none; /* マウスイベントが下のビューポートに透過するように */
+        pointer-events: none;
       }
     </style>
   </head>
@@ -153,6 +152,7 @@
         <button id="intersectObjects" style="background-color: #f1c40f; color: white">交差 (Intersect)</button>
         <button id="subtractObjects" style="background-color: #e74c3c; color: white">掘削 (Subtract)</button>
         <button id="mirrorCopy" style="background-color: #2980b9; color: white">鏡面コピー</button>
+        <button id="paintModeButton" style="background-color: #9b59b6; color: white">ペイント</button>
         <button id="cancelMirrorCopy" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
         <button id="cancelSubtract" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
       </div>
@@ -160,6 +160,14 @@
         <button id="save">保存</button>
         <button id="load">読込</button>
         <input type="file" id="fileInput" style="display: none" />
+      </div>
+      <div id="paint-controls" style="display: none; border-top: 1px solid #555; padding-top: 5px; margin-top: 5px; color: white; align-items: center;">
+        <span>選択中の色: 
+          <span id="currentColorDisplay" style="display: inline-block; width: 16px; height: 16px; border: 1px solid white; vertical-align: middle; margin-right: 10px;"></span>
+        </span>
+        <button id="eyedropperButton" style="vertical-align: middle; margin-right: 10px;">スポイト</button>
+        <div id="colorPalette" style="display: inline-block; vertical-align: middle;">
+        </div>
       </div>
       <div style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px">
         <button id="debugLog" style="background-color: #8e44ad; color: white">デバッグログ</button>
