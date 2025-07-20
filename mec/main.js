@@ -1050,15 +1050,17 @@ multiSelectButton.addEventListener('click', () => {
 });
 document.getElementById('debugLog').addEventListener('click', debugSelectionHelpers);
 
-// ▼▼▼【追加】パンモードボタンの処理 ▼▼▼
+// ▼▼▼【修正】パンモードボタンの処理 ▼▼▼
 const panModeButton = document.getElementById('panModeButton');
 panModeButton.addEventListener('click', () => {
   isPanModeActive = !isPanModeActive;
   if (isPanModeActive) {
     panModeButton.style.backgroundColor = '#2ecc71'; // 有効時は緑色に
-    log('パンモード開始。左ドラッグで視点を移動できます。');
+    orbitControls.mouseButtons.LEFT = THREE.MOUSE.PAN; // 左クリックの操作を「パン」に設定
+    log('パンモード開始。3Dビューの左ドラッグで視点を移動できます。');
   } else {
     panModeButton.style.backgroundColor = '#3498db'; // 無効時は青色に
+    orbitControls.mouseButtons.LEFT = THREE.MOUSE.ROTATE; // 左クリックの操作を「回転」に戻す
     log('パンモード終了。');
   }
 });
@@ -1068,6 +1070,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === ' ' && !isSpacebarDown) {
     e.preventDefault(); // ページのスクロールを防止
     isSpacebarDown = true;
+    orbitControls.mouseButtons.LEFT = THREE.MOUSE.PAN; // 左クリックの操作を「パン」に設定
     // カーソルを「掴む」形状に変更して、ユーザーに状態を伝える
     for (const key in viewports) {
       viewports[key].element.style.cursor = 'grab';
@@ -1078,6 +1081,10 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => {
   if (e.key === ' ') {
     isSpacebarDown = false;
+    // パンモードが有効でない場合のみ、左クリックの操作を「回転」に戻す
+    if (!isPanModeActive) {
+      orbitControls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+    }
     // カーソルを元に戻す
     for (const key in viewports) {
       viewports[key].element.style.cursor = 'default';
@@ -1170,12 +1177,24 @@ window.addEventListener('pointerdown', (event) => {
 
   // 左クリックの処理
   if (event.button === 0) {
-    // ▼▼▼【追加】パンモードまたはスペースキーが有効な場合の処理を最優先 ▼▼▼
-    if (isPanModeActive || isSpacebarDown) {
-      start2DPan(event);
-      return; // パン操作を開始し、オブジェクト選択処理などをスキップ
+    let clickedViewportKey = null;
+    for (const key in viewports) {
+      const rect = viewports[key].element.getBoundingClientRect();
+      if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+        clickedViewportKey = key;
+        break;
+      }
     }
 
+    // パンモードが有効で、クリックされたのが3Dビューなら、OrbitControlsに処理を委ねて終了
+    if ((isPanModeActive || isSpacebarDown) && clickedViewportKey === 'perspective') {
+      return;
+    }
+    // パンモードが有効で、クリックされたのが2Dビューなら、2Dパンを開始して終了
+    if ((isPanModeActive || isSpacebarDown) && clickedViewportKey !== 'perspective' && clickedViewportKey !== null) {
+      start2DPan(event);
+      return;
+    }
     // --- 以下は既存の左クリック処理 ---
     startPoint.set(event.clientX, event.clientY);
 
@@ -1184,7 +1203,6 @@ window.addEventListener('pointerdown', (event) => {
       return;
     }
 
-    let clickedViewportKey = null;
     let clickedRect = null;
     for (const key in viewports) {
       const view = viewports[key];
