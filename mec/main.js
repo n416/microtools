@@ -1124,8 +1124,14 @@ window.addEventListener('pointerdown', (event) => {
   pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, clickedViewport.camera);
 
+  updateScaleGizmo(clickedViewportKey);
+
   // ▼▼▼【ここからが修正箇所】▼▼▼
   const is2DView = clickedViewportKey !== 'perspective';
+
+  // 最初に全てのオブジェクトに対する当たり判定を一度だけ行う
+  const allObjectIntersects = raycaster.intersectObjects(mechaGroup.children, true);
+  const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
 
   // 1. 2Dビューでの操作（移動、拡縮、回転）を先に判定する
   if (is2DView && selectedObjects.length > 0) {
@@ -1146,7 +1152,6 @@ window.addEventListener('pointerdown', (event) => {
       groupBounds.getCenter(dragStartObjectState.position);
       groupBounds.getSize(dragStartObjectState.scale);
 
-      // グループ操作のための一時的な親オブジェクト(transformGroup)を作成する
       worldTransforms.clear();
       selectedObjects.forEach((obj) => worldTransforms.set(obj, {parent: obj.parent}));
 
@@ -1157,10 +1162,10 @@ window.addEventListener('pointerdown', (event) => {
       selectedObjects.forEach((obj) => transformGroup.attach(obj));
     };
 
+    // 1a. ギズモのハンドルがクリックされたか (最優先)
     if (handleIntersects.length > 0) {
       // --- 拡縮・回転ドラッグを開始 ---
       setupTransformState();
-
       if (selectedObjects.length === 1) {
         const target = selectedObjects[0];
         dragStartObjectState.position.copy(target.position);
@@ -1169,47 +1174,38 @@ window.addEventListener('pointerdown', (event) => {
       } else {
         setupMultiSelectGroup();
       }
-
       if (gizmoMode === 'scale') isScalingIn2DView = true;
       else if (gizmoMode === 'rotate') isRotatingIn2DView = true;
-
       draggedInfo = {viewportKey: clickedViewportKey, handleName: handleIntersects[0].object.name};
-      return;
+      return; // 操作が確定したので終了
     }
 
-    // オブジェクト本体のクリック（移動ドラッグ）をチェック
-    const objectIntersects = raycaster.intersectObjects(selectedObjects, true);
-        // 修飾キーが押されている場合は選択操作なので、移動モードにしない
-    if (objectIntersects.length > 0 && !event.shiftKey && !event.ctrlKey) {
-        
-      if (objectIntersects.length > 0) {
-        // --- 移動ドラッグを開始 ---
-        setupTransformState();
-        isDraggingIn2DView = true;
-
-        if (selectedObjects.length === 1) {
-          dragStartObjectState.position.copy(selectedObjects[0].position);
-        } else {
-          setupMultiSelectGroup();
-        }
-
-        draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
-        return;
+    // 1b. 「移動」操作かどうかの判定を厳密化
+    // 条件：(1)何らかのオブジェクトをクリックし、(2)そのオブジェクトが既に選択されており、(3)Shift/Ctrlキーが押されていない
+    if (clickedObject && selectedObjects.includes(clickedObject) && !event.shiftKey && !event.ctrlKey) {
+      // --- 移動ドラッグを開始 ---
+      setupTransformState();
+      isDraggingIn2DView = true;
+      if (selectedObjects.length === 1) {
+        dragStartObjectState.position.copy(selectedObjects[0].position);
+      } else {
+        setupMultiSelectGroup();
       }
+      draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
+      return; // 操作が確定したので終了
     }
   }
 
   // 2. 3Dビューでの操作、または「何もない空間」のクリック
-  const intersects = raycaster.intersectObjects(mechaGroup.children, false);
   let gizmoIntersects = [];
-
   // パースビュー、かつ、3Dギズモが有効な場合のみ判定する
   if (!is2DView && transformControls.object) {
     gizmoIntersects = raycaster.intersectObjects(transformControls.children, true);
   }
 
   // 3. オブジェクトにも（アクティブな）ギズモにも当たらなかった場合、矩形選択を開始
-  if (intersects.length === 0 && gizmoIntersects.length === 0) {
+  //    (オブジェクトクリックの場合は、pointerupで選択が処理されるので、ここでは何もしない)
+  if (!clickedObject && gizmoIntersects.length === 0) {
     isBoxSelecting = true;
     selectionBoxElement.style.display = 'block';
     orbitControls.enabled = false;
@@ -1428,9 +1424,7 @@ window.addEventListener('pointerup', (e) => {
     orbitControls.enabled = true;
 
     const endPoint = new THREE.Vector2(e.clientX, e.clientY);
-    // ドラッグ距離が短すぎる場合は、通常のクリック処理に回す
     if (startPoint.distanceTo(endPoint) < 5) {
-      // (何もない空間をクリックしたのと同じなので、修飾キーがなければ選択解除)
       if (!e.ctrlKey && !e.shiftKey && !isMultiSelectMode) {
         selectedObjects = [];
         updateSelection();
@@ -1466,26 +1460,22 @@ window.addEventListener('pointerup', (e) => {
       });
     }
 
-    // ▼▼▼【Windows標準の選択ロジックを実装】▼▼▼
     if (e.ctrlKey) {
-      // Ctrlキー: 矩形内のオブジェクトの選択状態を「トグル（反転）」させる
       objectsInBox.forEach((obj) => {
         const index = selectedObjects.indexOf(obj);
         if (index > -1) {
-          selectedObjects.splice(index, 1); // 選択済みなら解除
+          selectedObjects.splice(index, 1);
         } else {
-          selectedObjects.push(obj); // 未選択なら追加
+          selectedObjects.push(obj);
         }
       });
     } else if (e.shiftKey || isMultiSelectMode) {
-      // Shiftキー: 矩形内のオブジェクトを現在の選択に「追加」する
       objectsInBox.forEach((obj) => {
         if (!selectedObjects.includes(obj)) {
           selectedObjects.push(obj);
         }
       });
     } else {
-      // 修飾キーなし: 矩形内のオブジェクトで選択を「置き換え」る
       selectedObjects = objectsInBox;
     }
     updateSelection();
@@ -1493,7 +1483,46 @@ window.addEventListener('pointerup', (e) => {
     return;
   }
 
-  // --- 通常のクリックによる選択処理（ドラッグ距離が短い場合） ---
+  // ▼▼▼【バグ修正】ここからロジックの順序を修正 ▼▼▼
+  // 最初に「ドラッグ操作の終了判定」を行う。
+  // これにより、たとえ移動距離が短くても、一度開始されたドラッグ操作は必ずここで終了される。
+  if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
+    if (transformGroup) {
+      selectedObjects.forEach((obj) => {
+        worldTransforms.get(obj).parent.attach(obj);
+      });
+      scene.remove(transformGroup);
+      transformGroup = null;
+      worldTransforms.clear();
+    }
+    if (transformStartCache) {
+      if (selectedObjects.length === 1) {
+        const oldT = transformStartCache[0];
+        const obj = selectedObjects[0];
+        const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+        if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) {
+          history.execute(new TransformCommand(obj, oldT, newT));
+        }
+      } else if (selectedObjects.length > 1) {
+        const commands = selectedObjects.map((obj, i) => {
+          const oldT = transformStartCache[i];
+          const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+          return new TransformCommand(obj, oldT, newT);
+        });
+        history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトをグループ変形`));
+      }
+    }
+    // 各種フラグをリセットして、ドラッグ操作を完全に終了する
+    isDraggingIn2DView = isScalingIn2DView = isRotatingIn2DView = false;
+    orbitControls.enabled = true;
+    updateGizmoAppearance();
+    transformStartCache = null;
+    updateSelection();
+    return; // 処理が完了したのでここで終了
+  }
+  // ▲▲▲【バグ修正】ここまで ▲▲▲
+
+  // --- 通常のクリックによる選択処理（ドラッグ操作が行われなかった場合のみ、この処理が実行される） ---
   if (startPoint.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) < 5) {
     if (isSubtractMode) {
       let clickedViewportKey = null;
@@ -1604,9 +1633,7 @@ window.addEventListener('pointerup', (e) => {
     const intersects = raycaster.intersectObjects(mechaGroup.children, false);
     const clickedObject = intersects.length > 0 ? intersects[0].object : null;
 
-    // ▼▼▼【Windows標準の選択ロジックを実装】▼▼▼
     if (e.ctrlKey) {
-      // Ctrlキー: クリックしたオブジェクトの選択状態を「トグル」
       if (clickedObject) {
         const index = selectedObjects.indexOf(clickedObject);
         if (index > -1) {
@@ -1616,13 +1643,10 @@ window.addEventListener('pointerup', (e) => {
         }
       }
     } else if (e.shiftKey || isMultiSelectMode) {
-      // Shiftキー: クリックしたオブジェクトを選択に「追加」
       if (clickedObject && !selectedObjects.includes(clickedObject)) {
         selectedObjects.push(clickedObject);
       }
     } else {
-      // 修飾キーなし: クリックしたオブジェクトで選択を「置き換え」
-      //             何もない場所をクリックした場合は全解除
       selectedObjects = clickedObject ? [clickedObject] : [];
     }
 
@@ -1633,41 +1657,6 @@ window.addEventListener('pointerup', (e) => {
 
     updateSelection();
     log(selectedObjects.length > 0 ? `${selectedObjects.length}個のオブジェクトを選択中` : '待機中');
-    return;
-  }
-
-  // --- 2Dギズモ操作の完了処理 ---
-  if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
-    if (transformGroup) {
-      selectedObjects.forEach((obj) => {
-        worldTransforms.get(obj).parent.attach(obj);
-      });
-      scene.remove(transformGroup);
-      transformGroup = null;
-      worldTransforms.clear();
-    }
-    if (transformStartCache) {
-      if (selectedObjects.length === 1) {
-        const oldT = transformStartCache[0];
-        const obj = selectedObjects[0];
-        const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
-        if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) {
-          history.execute(new TransformCommand(obj, oldT, newT));
-        }
-      } else if (selectedObjects.length > 1) {
-        const commands = selectedObjects.map((obj, i) => {
-          const oldT = transformStartCache[i];
-          const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
-          return new TransformCommand(obj, oldT, newT);
-        });
-        history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトをグループ変形`));
-      }
-    }
-    isDraggingIn2DView = isScalingIn2DView = isRotatingIn2DView = false;
-    orbitControls.enabled = true;
-    updateGizmoAppearance();
-    transformStartCache = null;
-    updateSelection();
     return;
   }
 });
