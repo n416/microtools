@@ -70,6 +70,12 @@ scene.add(multiSelectHelper);
 let selectionBoxes = new THREE.Group();
 scene.add(selectionBoxes);
 let isMultiSelectMode = false;
+let isPanning2D = false;
+let panStart = {x: 0, y: 0};
+let cameraStartPos = new THREE.Vector3();
+let panningViewportKey = null;
+let isPanModeActive = false;
+let isSpacebarDown = false;
 // ▼▼▼【掘削モード用の変数を追加】▼▼▼
 let isSubtractMode = false;
 let subtractTargets = [];
@@ -1044,6 +1050,41 @@ multiSelectButton.addEventListener('click', () => {
 });
 document.getElementById('debugLog').addEventListener('click', debugSelectionHelpers);
 
+// ▼▼▼【追加】パンモードボタンの処理 ▼▼▼
+const panModeButton = document.getElementById('panModeButton');
+panModeButton.addEventListener('click', () => {
+  isPanModeActive = !isPanModeActive;
+  if (isPanModeActive) {
+    panModeButton.style.backgroundColor = '#2ecc71'; // 有効時は緑色に
+    log('パンモード開始。左ドラッグで視点を移動できます。');
+  } else {
+    panModeButton.style.backgroundColor = '#3498db'; // 無効時は青色に
+    log('パンモード終了。');
+  }
+});
+
+// ▼▼▼【追加】スペースキーでのパンモード一時切り替え ▼▼▼
+window.addEventListener('keydown', (e) => {
+  if (e.key === ' ' && !isSpacebarDown) {
+    e.preventDefault(); // ページのスクロールを防止
+    isSpacebarDown = true;
+    // カーソルを「掴む」形状に変更して、ユーザーに状態を伝える
+    for (const key in viewports) {
+      viewports[key].element.style.cursor = 'grab';
+    }
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if (e.key === ' ') {
+    isSpacebarDown = false;
+    // カーソルを元に戻す
+    for (const key in viewports) {
+      viewports[key].element.style.cursor = 'default';
+    }
+  }
+});
+
 let pointerDownPosition = new THREE.Vector2();
 let isDraggingIn2DView = false;
 let isScalingIn2DView = false;
@@ -1097,126 +1138,178 @@ window.addEventListener('pointerdown', (event) => {
   // UIやドラッグ中の3Dギズモ操作は何もしない
   if (event.target.closest('#ui') || transformControls.dragging) return;
 
-  startPoint.set(event.clientX, event.clientY);
+  // 2Dパン操作を開始する共通関数
+  const start2DPan = (e) => {
+    let clickedViewportKey = null;
+    for (const key in viewports) {
+      if (key === 'perspective') continue;
+      const rect = viewports[key].element.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        clickedViewportKey = key;
+        break;
+      }
+    }
 
-  // 特殊モード（鏡面コピー、掘削、ペースト）中は、クリック判定をpointerupに任せる
-  if (isMirrorCopyMode || isSubtractMode || isPasteMode) {
+    if (clickedViewportKey) {
+      isPanning2D = true;
+      panningViewportKey = clickedViewportKey;
+      panStart.x = e.clientX;
+      panStart.y = e.clientY;
+      cameraStartPos.copy(viewports[panningViewportKey].camera.position);
+      orbitControls.enabled = false;
+      // ドラッグ中はカーソルを「掴んでいる」形状に
+      viewports[clickedViewportKey].element.style.cursor = 'grabbing';
+    }
+  };
+
+  // 右クリックでのパン処理
+  if (event.button === 2) {
+    start2DPan(event);
     return;
   }
 
-  // クリックされたビューポートを特定
-  let clickedViewportKey = null;
-  let clickedRect = null;
-  for (const key in viewports) {
-    const view = viewports[key];
-    const rect = view.element.getBoundingClientRect();
-    if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
-      clickedViewportKey = key;
-      clickedRect = rect;
-      break;
+  // 左クリックの処理
+  if (event.button === 0) {
+    // ▼▼▼【追加】パンモードまたはスペースキーが有効な場合の処理を最優先 ▼▼▼
+    if (isPanModeActive || isSpacebarDown) {
+      start2DPan(event);
+      return; // パン操作を開始し、オブジェクト選択処理などをスキップ
     }
-  }
-  if (!clickedViewportKey) return;
 
-  // マウス座標からRaycasterを準備
-  const clickedViewport = viewports[clickedViewportKey];
-  pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
-  pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-  raycaster.setFromCamera(pointer, clickedViewport.camera);
+    // --- 以下は既存の左クリック処理 ---
+    startPoint.set(event.clientX, event.clientY);
 
-  updateScaleGizmo(clickedViewportKey);
+    // 特殊モード（鏡面コピー、掘削、ペースト）中は、クリック判定をpointerupに任せる
+    if (isMirrorCopyMode || isSubtractMode || isPasteMode) {
+      return;
+    }
 
-  // ▼▼▼【ここからが修正箇所】▼▼▼
-  const is2DView = clickedViewportKey !== 'perspective';
+    let clickedViewportKey = null;
+    let clickedRect = null;
+    for (const key in viewports) {
+      const view = viewports[key];
+      const rect = view.element.getBoundingClientRect();
+      if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+        clickedViewportKey = key;
+        clickedRect = rect;
+        break;
+      }
+    }
+    if (!clickedViewportKey) return;
 
-  // 最初に全てのオブジェクトに対する当たり判定を一度だけ行う
-  const allObjectIntersects = raycaster.intersectObjects(mechaGroup.children, true);
-  const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
+    const clickedViewport = viewports[clickedViewportKey];
+    pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+    pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, clickedViewport.camera);
 
-  // 1. 2Dビューでの操作（移動、拡縮、回転）を先に判定する
-  if (is2DView && selectedObjects.length > 0) {
-    // 2Dギズモのハンドル（アンカー）のクリックをチェック
-    mechaGroup.visible = false;
-    const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
-    mechaGroup.visible = true;
+    updateScaleGizmo(clickedViewportKey);
 
-    const setupTransformState = () => {
+    const is2DView = clickedViewportKey !== 'perspective';
+
+    const allObjectIntersects = raycaster.intersectObjects(mechaGroup.children, true);
+    const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
+
+    if (is2DView && selectedObjects.length > 0) {
+      mechaGroup.visible = false;
+      const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
+      mechaGroup.visible = true;
+
+      const setupTransformState = () => {
+        orbitControls.enabled = false;
+        dragStartPointer.set(event.clientX, event.clientY);
+        transformStartCache = selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
+      };
+
+      const setupMultiSelectGroup = () => {
+        const groupBounds = new THREE.Box3();
+        selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
+        groupBounds.getCenter(dragStartObjectState.position);
+        groupBounds.getSize(dragStartObjectState.scale);
+
+        worldTransforms.clear();
+        selectedObjects.forEach((obj) => worldTransforms.set(obj, {parent: obj.parent}));
+
+        if (transformGroup) scene.remove(transformGroup);
+        transformGroup = new THREE.Group();
+        transformGroup.position.copy(dragStartObjectState.position);
+        scene.add(transformGroup);
+        selectedObjects.forEach((obj) => transformGroup.attach(obj));
+      };
+
+      if (handleIntersects.length > 0) {
+        setupTransformState();
+        if (selectedObjects.length === 1) {
+          const target = selectedObjects[0];
+          dragStartObjectState.position.copy(target.position);
+          dragStartObjectState.scale.copy(target.scale);
+          dragStartObjectState.rotation.copy(target.rotation);
+        } else {
+          setupMultiSelectGroup();
+        }
+        if (gizmoMode === 'scale') isScalingIn2DView = true;
+        else if (gizmoMode === 'rotate') isRotatingIn2DView = true;
+        draggedInfo = {viewportKey: clickedViewportKey, handleName: handleIntersects[0].object.name};
+        return;
+      }
+
+      if (clickedObject && selectedObjects.includes(clickedObject) && !event.shiftKey && !event.ctrlKey) {
+        setupTransformState();
+        isDraggingIn2DView = true;
+        if (selectedObjects.length === 1) {
+          dragStartObjectState.position.copy(selectedObjects[0].position);
+        } else {
+          setupMultiSelectGroup();
+        }
+        draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
+        return;
+      }
+    }
+
+    let gizmoIntersects = [];
+    if (!is2DView && transformControls.object) {
+      gizmoIntersects = raycaster.intersectObjects(transformControls.children, true);
+    }
+
+    if (!clickedObject && gizmoIntersects.length === 0) {
+      isBoxSelecting = true;
+      selectionBoxElement.style.display = 'block';
       orbitControls.enabled = false;
-      dragStartPointer.set(event.clientX, event.clientY);
-      transformStartCache = selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
-    };
-
-    const setupMultiSelectGroup = () => {
-      const groupBounds = new THREE.Box3();
-      selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
-      groupBounds.getCenter(dragStartObjectState.position);
-      groupBounds.getSize(dragStartObjectState.scale);
-
-      worldTransforms.clear();
-      selectedObjects.forEach((obj) => worldTransforms.set(obj, {parent: obj.parent}));
-
-      if (transformGroup) scene.remove(transformGroup);
-      transformGroup = new THREE.Group();
-      transformGroup.position.copy(dragStartObjectState.position);
-      scene.add(transformGroup);
-      selectedObjects.forEach((obj) => transformGroup.attach(obj));
-    };
-
-    // 1a. ギズモのハンドルがクリックされたか (最優先)
-    if (handleIntersects.length > 0) {
-      // --- 拡縮・回転ドラッグを開始 ---
-      setupTransformState();
-      if (selectedObjects.length === 1) {
-        const target = selectedObjects[0];
-        dragStartObjectState.position.copy(target.position);
-        dragStartObjectState.scale.copy(target.scale);
-        dragStartObjectState.rotation.copy(target.rotation);
-      } else {
-        setupMultiSelectGroup();
-      }
-      if (gizmoMode === 'scale') isScalingIn2DView = true;
-      else if (gizmoMode === 'rotate') isRotatingIn2DView = true;
-      draggedInfo = {viewportKey: clickedViewportKey, handleName: handleIntersects[0].object.name};
-      return; // 操作が確定したので終了
     }
-
-    // 1b. 「移動」操作かどうかの判定を厳密化
-    // 条件：(1)何らかのオブジェクトをクリックし、(2)そのオブジェクトが既に選択されており、(3)Shift/Ctrlキーが押されていない
-    if (clickedObject && selectedObjects.includes(clickedObject) && !event.shiftKey && !event.ctrlKey) {
-      // --- 移動ドラッグを開始 ---
-      setupTransformState();
-      isDraggingIn2DView = true;
-      if (selectedObjects.length === 1) {
-        dragStartObjectState.position.copy(selectedObjects[0].position);
-      } else {
-        setupMultiSelectGroup();
-      }
-      draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
-      return; // 操作が確定したので終了
-    }
-  }
-
-  // 2. 3Dビューでの操作、または「何もない空間」のクリック
-  let gizmoIntersects = [];
-  // パースビュー、かつ、3Dギズモが有効な場合のみ判定する
-  if (!is2DView && transformControls.object) {
-    gizmoIntersects = raycaster.intersectObjects(transformControls.children, true);
-  }
-
-  // 3. オブジェクトにも（アクティブな）ギズモにも当たらなかった場合、矩形選択を開始
-  //    (オブジェクトクリックの場合は、pointerupで選択が処理されるので、ここでは何もしない)
-  if (!clickedObject && gizmoIntersects.length === 0) {
-    isBoxSelecting = true;
-    selectionBoxElement.style.display = 'block';
-    orbitControls.enabled = false;
   }
 });
 
-// ▼▼▼【修正】pointermove: 拡縮ロジックを transformGroup を操作するように変更 ▼▼▼
 window.addEventListener('pointermove', (event) => {
-  // ▼▼▼【矩形選択中の処理を追加】▼▼▼
+  // ▼▼▼【修正】2Dビューのパン操作中の処理を追加 ▼▼▼
+  if (isPanning2D) {
+    const view = viewports[panningViewportKey];
+    const rect = view.element.getBoundingClientRect();
+    const frustumSize = 10;
+
+    // マウスの移動量をスクリーン座標からワールド座標の移動量に変換
+    const aspect = rect.width / rect.height;
+    const deltaX = ((event.clientX - panStart.x) / rect.width) * frustumSize * aspect;
+    const deltaY = ((event.clientY - panStart.y) / rect.height) * frustumSize;
+
+    const camera = view.camera;
+    // 開始時のカメラ位置を基準に、マウスの移動量だけカメラをずらす
+    switch (panningViewportKey) {
+      case 'top':
+        camera.position.x = cameraStartPos.x - deltaX;
+        camera.position.z = cameraStartPos.z - deltaY;
+        break;
+      case 'front':
+        camera.position.x = cameraStartPos.x - deltaX;
+        camera.position.y = cameraStartPos.y + deltaY;
+        break;
+      case 'side':
+        camera.position.z = cameraStartPos.z + deltaX;
+        camera.position.y = cameraStartPos.y + deltaY;
+        break;
+    }
+    return; // パン操作中は他の処理を行わない
+  }
+
   if (isBoxSelecting) {
-    // 矩形の位置とサイズを更新
     const currentX = event.clientX;
     const currentY = event.clientY;
     const left = Math.min(startPoint.x, currentX);
@@ -1228,7 +1321,7 @@ window.addEventListener('pointermove', (event) => {
     selectionBoxElement.style.top = `${top}px`;
     selectionBoxElement.style.width = `${width}px`;
     selectionBoxElement.style.height = `${height}px`;
-    return; // 矩形選択中は他のドラッグ処理を行わない
+    return;
   }
 
   if (!isDraggingIn2DView && !isScalingIn2DView && !isRotatingIn2DView) return;
@@ -1240,7 +1333,6 @@ window.addEventListener('pointermove', (event) => {
   const worldDeltaX = ((event.clientX - dragStartPointer.x) / rect.width) * frustumSize * aspect;
   const worldDeltaY = ((event.clientY - dragStartPointer.y) / rect.height) * frustumSize;
 
-  // 単体選択時のロジック（変更なし）
   if (selectedObjects.length === 1) {
     const targetObject = selectedObjects[0];
     if (isDraggingIn2DView) {
@@ -1325,9 +1417,7 @@ window.addEventListener('pointermove', (event) => {
       }
       targetObject.rotation.copy(newRotation);
     }
-  }
-  // 複数選択時のロジック
-  else if (selectedObjects.length > 1) {
+  } else if (selectedObjects.length > 1) {
     if (isDraggingIn2DView && transformGroup) {
       const worldDelta = new THREE.Vector3();
       switch (draggedInfo.viewportKey) {
@@ -1417,7 +1507,18 @@ window.addEventListener('pointermove', (event) => {
 });
 
 window.addEventListener('pointerup', (e) => {
-  // --- 矩形選択の完了処理 ---
+  if (isPanning2D) {
+    // ▼▼▼【修正】カーソルを元に戻す処理を追加 ▼▼▼
+    // スペースキーが押されていれば「掴む」に、そうでなければ「デフォルト」に戻す
+    const newCursor = isSpacebarDown ? 'grab' : 'default';
+    viewports[panningViewportKey].element.style.cursor = newCursor;
+
+    isPanning2D = false;
+    panningViewportKey = null;
+    orbitControls.enabled = true;
+    return;
+  }
+
   if (isBoxSelecting) {
     selectionBoxElement.style.display = 'none';
     isBoxSelecting = false;
@@ -1483,9 +1584,6 @@ window.addEventListener('pointerup', (e) => {
     return;
   }
 
-  // ▼▼▼【バグ修正】ここからロジックの順序を修正 ▼▼▼
-  // 最初に「ドラッグ操作の終了判定」を行う。
-  // これにより、たとえ移動距離が短くても、一度開始されたドラッグ操作は必ずここで終了される。
   if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
     if (transformGroup) {
       selectedObjects.forEach((obj) => {
@@ -1512,17 +1610,14 @@ window.addEventListener('pointerup', (e) => {
         history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトをグループ変形`));
       }
     }
-    // 各種フラグをリセットして、ドラッグ操作を完全に終了する
     isDraggingIn2DView = isScalingIn2DView = isRotatingIn2DView = false;
     orbitControls.enabled = true;
     updateGizmoAppearance();
     transformStartCache = null;
     updateSelection();
-    return; // 処理が完了したのでここで終了
+    return;
   }
-  // ▲▲▲【バグ修正】ここまで ▲▲▲
 
-  // --- 通常のクリックによる選択処理（ドラッグ操作が行われなかった場合のみ、この処理が実行される） ---
   if (startPoint.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) < 5) {
     if (isSubtractMode) {
       let clickedViewportKey = null;
@@ -1614,7 +1709,6 @@ window.addEventListener('pointerup', (e) => {
       return;
     }
 
-    // 通常のオブジェクト選択処理
     let clickedViewportKey = null;
     let clickedRect = null;
     for (const key in viewports) {
@@ -1658,6 +1752,24 @@ window.addEventListener('pointerup', (e) => {
     updateSelection();
     log(selectedObjects.length > 0 ? `${selectedObjects.length}個のオブジェクトを選択中` : '待機中');
     return;
+  }
+});
+
+// ▼▼▼【追加】2Dビューでの右クリックメニューを抑制する処理 ▼▼▼
+window.addEventListener('contextmenu', (event) => {
+  // 2Dビューポートのキーを配列で定義
+  const twoDViewKeys = ['top', 'front', 'side'];
+
+  for (const key of twoDViewKeys) {
+    const view = viewports[key];
+    const rect = view.element.getBoundingClientRect();
+
+    // イベントが発生した座標が、いずれかの2Dビューの範囲内かチェック
+    if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+      // 範囲内であれば、デフォルトのメニュー表示をキャンセル
+      event.preventDefault();
+      return; // 処理を終了
+    }
   }
 });
 

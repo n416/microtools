@@ -5,25 +5,123 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>メカドットクリエイター - デバッグモード</title>
     <style>
-      body { margin: 0; font-family: sans-serif; background-color: #111; }
-      #ui, #instructions { position: absolute; background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; z-index: 10; }
-      #ui { top: 10px; left: 10px; display: flex; flex-direction: column; }
-      #ui div { margin-bottom: 5px; }
-      #ui button { margin: 2px; }
-      #instructions { bottom: 80px; left: 10px; color: white; background-color: rgba(0, 0, 0, 0.5); padding: 8px; border-radius: 5px; z-index: 10; font-size: 12px; max-width: 300px; }
-      #viewport-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: grid; grid-template-areas: 'top perspective' 'front side'; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
-      .viewport { position: relative; border: 1px solid #555; overflow: hidden; }
-      #view-top { grid-area: top; }
-      #view-perspective { grid-area: perspective; }
-      #view-side { grid-area: side; }
-      #view-front { grid-area: front; }
-      .viewport-label { position: absolute; bottom: 5px; left: 5px; color: rgba(255, 255, 255, 0.5); font-size: 14px; font-weight: bold; pointer-events: none; }
-      #log-display { position: absolute; bottom: 10px; left: 10px; color: #2ecc71; font-family: monospace; font-size: 12px; background-color: rgba(0, 0, 0, 0.8); padding: 5px 10px; border-radius: 3px; z-index: 10; max-height: 60px; overflow-y: hidden; writing-mode: horizontal-tb; }
-      .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 20; display: flex; justify-content: center; align-items: center; }
-      .modal-content { background-color: #333; padding: 20px; border-radius: 5px; color: white; text-align: center; }
-      .modal-content h3 { margin-top: 0; }
-      .modal-content input { margin: 10px; padding: 5px; }
-      .modal-content button { margin: 5px; }
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        background-color: #111;
+      }
+      #ui,
+      #instructions {
+        position: absolute;
+        background-color: rgba(0, 0, 0, 0.5);
+        padding: 10px;
+        border-radius: 5px;
+        z-index: 10;
+      }
+      #ui {
+        top: 10px;
+        left: 10px;
+        display: flex;
+        flex-direction: column;
+      }
+      #ui div {
+        margin-bottom: 5px;
+      }
+      #ui button {
+        margin: 2px;
+      }
+      #instructions {
+        bottom: 80px;
+        left: 10px;
+        color: white;
+        background-color: rgba(0, 0, 0, 0.5);
+        padding: 8px;
+        border-radius: 5px;
+        z-index: 10;
+        font-size: 12px;
+        max-width: 300px;
+      }
+      #viewport-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-areas: 'top perspective' 'front side';
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+      }
+      .viewport {
+        position: relative;
+        border: 1px solid #555;
+        overflow: hidden;
+      }
+      #view-top {
+        grid-area: top;
+      }
+      #view-perspective {
+        grid-area: perspective;
+      }
+      #view-side {
+        grid-area: side;
+      }
+      #view-front {
+        grid-area: front;
+      }
+      .viewport-label {
+        position: absolute;
+        bottom: 5px;
+        left: 5px;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 14px;
+        font-weight: bold;
+        pointer-events: none;
+      }
+      #log-display {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        color: #2ecc71;
+        font-family: monospace;
+        font-size: 12px;
+        background-color: rgba(0, 0, 0, 0.8);
+        padding: 5px 10px;
+        border-radius: 3px;
+        z-index: 10;
+        max-height: 60px;
+        overflow-y: hidden;
+        writing-mode: horizontal-tb;
+      }
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        z-index: 20;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content {
+        background-color: #333;
+        padding: 20px;
+        border-radius: 5px;
+        color: white;
+        text-align: center;
+      }
+      .modal-content h3 {
+        margin-top: 0;
+      }
+      .modal-content input {
+        margin: 10px;
+        padding: 5px;
+      }
+      .modal-content button {
+        margin: 5px;
+      }
 
       /* ▼▼▼【矩形選択用のCSSを追加】▼▼▼ */
       #selection-box {
@@ -36,7 +134,7 @@
     </style>
   </head>
   <body>
-    <div id="selection-box" style="display: none;"></div>
+    <div id="selection-box" style="display: none"></div>
 
     <div id="ui">
       <div>
@@ -45,13 +143,15 @@
         <button id="addCone">円錐</button>
         <button id="addCylinder">円柱</button>
         <button id="addPrism">多角形柱</button>
+
         <button id="multiSelect" style="background-color: #f39c12; color: white">複数選択</button>
+        <button id="panModeButton" style="background-color: #3498db; color: white">パン</button>
         <button id="deleteObject" style="background-color: #c0392b; color: white">削除</button>
       </div>
       <div>
-        <button id="unionObjects" style="background-color: #16a085; color: white;">合体 (Union)</button>
-        <button id="intersectObjects" style="background-color: #f1c40f; color: white;">交差 (Intersect)</button>
-        <button id="subtractObjects" style="background-color: #e74c3c; color: white;">掘削 (Subtract)</button>
+        <button id="unionObjects" style="background-color: #16a085; color: white">合体 (Union)</button>
+        <button id="intersectObjects" style="background-color: #f1c40f; color: white">交差 (Intersect)</button>
+        <button id="subtractObjects" style="background-color: #e74c3c; color: white">掘削 (Subtract)</button>
         <button id="mirrorCopy" style="background-color: #2980b9; color: white">鏡面コピー</button>
         <button id="cancelMirrorCopy" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
         <button id="cancelSubtract" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
@@ -61,8 +161,8 @@
         <button id="load">読込</button>
         <input type="file" id="fileInput" style="display: none" />
       </div>
-      <div style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px;">
-        <button id="debugLog" style="background-color: #8e44ad; color: white;">デバッグログ</button>
+      <div style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px">
+        <button id="debugLog" style="background-color: #8e44ad; color: white">デバッグログ</button>
       </div>
     </div>
     <div id="instructions">
@@ -73,15 +173,15 @@
     </div>
     <div id="log-display"></div>
     <div id="viewport-container">
-      <div id="view-top" class="viewport"><div class="viewport-label">Top (Y-up)</div></div>
-      <div id="view-perspective" class="viewport"><div class="viewport-label">Perspective</div></div>
-      <div id="view-side" class="viewport"><div class="viewport-label">Side (X-up)</div></div>
-      <div id="view-front" class="viewport"><div class="viewport-label">Front (Z-up)</div></div>
+      <div id="view-top" class="viewport"><div class="viewport-label">平面図 (横:X / 縦:Z)</div></div>
+      <div id="view-perspective" class="viewport"><div class="viewport-label">プレビュー (3D)</div></div>
+      <div id="view-side" class="viewport"><div class="viewport-label">側面図 (横:Z / 縦:Y)</div></div>
+      <div id="view-front" class="viewport"><div class="viewport-label">正面図 (横:X / 縦:Y)</div></div>
     </div>
-    <div id="prismModal" class="modal-overlay" style="display: none;">
+    <div id="prismModal" class="modal-overlay" style="display: none">
       <div class="modal-content">
         <h3>多角形柱の辺の数を入力</h3>
-        <input type="number" id="sidesInput" value="6" min="3" max="64">
+        <input type="number" id="sidesInput" value="6" min="3" max="64" />
         <div>
           <button id="confirmPrism">OK</button>
           <button id="cancelPrism">キャンセル</button>
@@ -89,14 +189,14 @@
       </div>
     </div>
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/",
-                "three-bvh-csg": "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.17/build/index.module.js",
-                "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.1/build/index.module.js"
-            }
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/",
+          "three-bvh-csg": "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.17/build/index.module.js",
+          "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.1/build/index.module.js"
         }
+      }
     </script>
     <script type="module" src="main.js"></script>
   </body>
