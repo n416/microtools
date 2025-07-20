@@ -182,7 +182,6 @@ class History {
       } else if (command.object) {
         newSelection.push(command.object);
       }
-      selectedObjects = newSelection;
       if (command instanceof DeleteObjectCommand || (command instanceof MacroCommand && command.commands[0] instanceof DeleteObjectCommand)) {
         selectedObjects = [];
       }
@@ -1125,22 +1124,42 @@ window.addEventListener('pointerdown', (event) => {
   pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, clickedViewport.camera);
 
-  // --- 判定の優先順位 ---
-  // 1. 2Dギズモのアンカーがクリックされたか？
-  if (clickedViewportKey !== 'perspective' && selectedObjects.length > 0) {
-    mechaGroup.visible = false; // アンカーのみに当たるように一時的に隠す
+  // ▼▼▼【ここからが修正箇所】▼▼▼
+  const is2DView = clickedViewportKey !== 'perspective';
+
+  // 1. 2Dビューでの操作（移動、拡縮、回転）を先に判定する
+  if (is2DView && selectedObjects.length > 0) {
+    // 2Dギズモのハンドル（アンカー）のクリックをチェック
+    mechaGroup.visible = false;
     const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
     mechaGroup.visible = true;
 
-    if (handleIntersects.length > 0) {
-      // アンカーがクリックされたので、2D変形処理を開始する
+    const setupTransformState = () => {
       orbitControls.enabled = false;
       dragStartPointer.set(event.clientX, event.clientY);
-      transformStartCache = selectedObjects.map((obj) => ({
-        position: obj.position.clone(),
-        rotation: obj.rotation.clone(),
-        scale: obj.scale.clone(),
-      }));
+      transformStartCache = selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
+    };
+
+    const setupMultiSelectGroup = () => {
+      const groupBounds = new THREE.Box3();
+      selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
+      groupBounds.getCenter(dragStartObjectState.position);
+      groupBounds.getSize(dragStartObjectState.scale);
+
+      // グループ操作のための一時的な親オブジェクト(transformGroup)を作成する
+      worldTransforms.clear();
+      selectedObjects.forEach((obj) => worldTransforms.set(obj, {parent: obj.parent}));
+
+      if (transformGroup) scene.remove(transformGroup);
+      transformGroup = new THREE.Group();
+      transformGroup.position.copy(dragStartObjectState.position);
+      scene.add(transformGroup);
+      selectedObjects.forEach((obj) => transformGroup.attach(obj));
+    };
+
+    if (handleIntersects.length > 0) {
+      // --- 拡縮・回転ドラッグを開始 ---
+      setupTransformState();
 
       if (selectedObjects.length === 1) {
         const target = selectedObjects[0];
@@ -1148,34 +1167,53 @@ window.addEventListener('pointerdown', (event) => {
         dragStartObjectState.scale.copy(target.scale);
         dragStartObjectState.rotation.copy(target.rotation);
       } else {
-        const groupBounds = new THREE.Box3();
-        selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
-        dragStartObjectState.position.copy(groupBounds.getCenter(new THREE.Vector3()));
-        dragStartObjectState.scale.copy(groupBounds.getSize(new THREE.Vector3()));
-        dragStartObjectState.rotation.set(0, 0, 0);
+        setupMultiSelectGroup();
       }
 
-      if (gizmoMode === 'scale') {
-        isScalingIn2DView = true;
-      } else if (gizmoMode === 'rotate') {
-        isRotatingIn2DView = true;
-      }
+      if (gizmoMode === 'scale') isScalingIn2DView = true;
+      else if (gizmoMode === 'rotate') isRotatingIn2DView = true;
+
       draggedInfo = {viewportKey: clickedViewportKey, handleName: handleIntersects[0].object.name};
-      return; // 他の処理は行わない
+      return;
+    }
+
+    // オブジェクト本体のクリック（移動ドラッグ）をチェック
+    const objectIntersects = raycaster.intersectObjects(selectedObjects, true);
+        // 修飾キーが押されている場合は選択操作なので、移動モードにしない
+    if (objectIntersects.length > 0 && !event.shiftKey && !event.ctrlKey) {
+        
+      if (objectIntersects.length > 0) {
+        // --- 移動ドラッグを開始 ---
+        setupTransformState();
+        isDraggingIn2DView = true;
+
+        if (selectedObjects.length === 1) {
+          dragStartObjectState.position.copy(selectedObjects[0].position);
+        } else {
+          setupMultiSelectGroup();
+        }
+
+        draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
+        return;
+      }
     }
   }
 
-  // 2. オブジェクトがクリックされたか？
+  // 2. 3Dビューでの操作、または「何もない空間」のクリック
   const intersects = raycaster.intersectObjects(mechaGroup.children, false);
+  let gizmoIntersects = [];
 
-  // 3. 何もクリックされなかった場合、矩形選択を開始
-  if (intersects.length === 0) {
+  // パースビュー、かつ、3Dギズモが有効な場合のみ判定する
+  if (!is2DView && transformControls.object) {
+    gizmoIntersects = raycaster.intersectObjects(transformControls.children, true);
+  }
+
+  // 3. オブジェクトにも（アクティブな）ギズモにも当たらなかった場合、矩形選択を開始
+  if (intersects.length === 0 && gizmoIntersects.length === 0) {
     isBoxSelecting = true;
     selectionBoxElement.style.display = 'block';
     orbitControls.enabled = false;
   }
-
-  // 注: オブジェクトがクリックされた場合の選択状態の更新は、ドラッグ距離が短い場合にpointerupで行われる
 });
 
 // ▼▼▼【修正】pointermove: 拡縮ロジックを transformGroup を操作するように変更 ▼▼▼
@@ -1407,157 +1445,229 @@ window.addEventListener('pointerup', (e) => {
       top: Math.min(startPoint.y, endPoint.y),
       bottom: Math.max(startPoint.y, endPoint.y),
     };
-    
+
     const objectsInBox = [];
     for (const key in viewports) {
-        const view = viewports[key];
-        const rect = view.element.getBoundingClientRect();
-        if (boxRect.left > rect.right || boxRect.right < rect.left || boxRect.top > rect.bottom || boxRect.bottom < rect.top) { continue; }
-        mechaGroup.children.forEach(mesh => {
-            const pos = new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld);
-            pos.project(view.camera);
-            const screenX = ((pos.x + 1) / 2) * rect.width + rect.left;
-            const screenY = ((-pos.y + 1) / 2) * rect.height + rect.top;
-            if (screenX >= boxRect.left && screenX <= boxRect.right && screenY >= boxRect.top && screenY <= boxRect.bottom) {
-                if (!objectsInBox.includes(mesh)) {
-                    objectsInBox.push(mesh);
-                }
-            }
-        });
+      const view = viewports[key];
+      const rect = view.element.getBoundingClientRect();
+      if (boxRect.left > rect.right || boxRect.right < rect.left || boxRect.top > rect.bottom || boxRect.bottom < rect.top) {
+        continue;
+      }
+      mechaGroup.children.forEach((mesh) => {
+        const pos = new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld);
+        pos.project(view.camera);
+        const screenX = ((pos.x + 1) / 2) * rect.width + rect.left;
+        const screenY = ((-pos.y + 1) / 2) * rect.height + rect.top;
+        if (screenX >= boxRect.left && screenX <= boxRect.right && screenY >= boxRect.top && screenY <= boxRect.bottom) {
+          if (!objectsInBox.includes(mesh)) {
+            objectsInBox.push(mesh);
+          }
+        }
+      });
     }
 
     // ▼▼▼【Windows標準の選択ロジックを実装】▼▼▼
     if (e.ctrlKey) {
-        // Ctrlキー: 矩形内のオブジェクトの選択状態を「トグル（反転）」させる
-        objectsInBox.forEach(obj => {
-            const index = selectedObjects.indexOf(obj);
-            if (index > -1) {
-                selectedObjects.splice(index, 1); // 選択済みなら解除
-            } else {
-                selectedObjects.push(obj); // 未選択なら追加
-            }
-        });
+      // Ctrlキー: 矩形内のオブジェクトの選択状態を「トグル（反転）」させる
+      objectsInBox.forEach((obj) => {
+        const index = selectedObjects.indexOf(obj);
+        if (index > -1) {
+          selectedObjects.splice(index, 1); // 選択済みなら解除
+        } else {
+          selectedObjects.push(obj); // 未選択なら追加
+        }
+      });
     } else if (e.shiftKey || isMultiSelectMode) {
-        // Shiftキー: 矩形内のオブジェクトを現在の選択に「追加」する
-        objectsInBox.forEach(obj => {
-            if (!selectedObjects.includes(obj)) {
-                selectedObjects.push(obj);
-            }
-        });
+      // Shiftキー: 矩形内のオブジェクトを現在の選択に「追加」する
+      objectsInBox.forEach((obj) => {
+        if (!selectedObjects.includes(obj)) {
+          selectedObjects.push(obj);
+        }
+      });
     } else {
-        // 修飾キーなし: 矩形内のオブジェクトで選択を「置き換え」る
-        selectedObjects = objectsInBox;
+      // 修飾キーなし: 矩形内のオブジェクトで選択を「置き換え」る
+      selectedObjects = objectsInBox;
     }
     updateSelection();
     log(`${selectedObjects.length}個のオブジェクトを選択中`);
     return;
   }
-  
+
   // --- 通常のクリックによる選択処理（ドラッグ距離が短い場合） ---
   if (startPoint.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) < 5) {
-      if (isSubtractMode) {
-        let clickedViewportKey = null; let clickedRect = null;
-        for (const key in viewports) { const rect = viewports[key].element.getBoundingClientRect(); if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) { clickedViewportKey = key; clickedRect = rect; break; } }
-        if (!clickedViewportKey) { cancelSubtractMode(); return; }
-        const clickedViewport = viewports[clickedViewportKey]; pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1; pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, clickedViewport.camera);
-        const intersects = raycaster.intersectObjects(mechaGroup.children, true);
-        let drillObject = null;
-        if (intersects.length > 0) { if (subtractTargets.includes(intersects[0].object)) { drillObject = intersects[0].object; } }
-        if (drillObject) {
-          const baseObjects = subtractTargets.filter(obj => obj !== drillObject);
-          if (baseObjects.length > 0) { performSubtract(baseObjects, drillObject); } else { cancelSubtractMode(); }
-        } else { log('掘削操作をキャンセルしました。'); cancelSubtractMode(); }
-        return;
-      }
-      
-      if (isMirrorCopyMode) {
-        let clickedViewportKey = null; let clickedRect = null;
-        for (const key in viewports) { const rect = viewports[key].element.getBoundingClientRect(); if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) { clickedViewportKey = key; clickedRect = rect; break; } }
-        if (!clickedViewportKey) return;
-        const clickedViewport = viewports[clickedViewportKey]; pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1; pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, clickedViewport.camera);
-        const intersects = raycaster.intersectObjects(previewGroup.children, true);
-        if (intersects.length > 0) { performMirrorCopy(intersects[0].object); } else { cancelMirrorCopyMode(); }
-        return;
-      }
-      
-      if (isPasteMode) {
-        let clickedViewportKey = null, clickedRect = null;
-        for (const key in viewports) {
-          const rect = viewports[key].element.getBoundingClientRect();
-          if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-            clickedViewportKey = key; clickedRect = rect; break;
-          }
+    if (isSubtractMode) {
+      let clickedViewportKey = null;
+      let clickedRect = null;
+      for (const key in viewports) {
+        const rect = viewports[key].element.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          clickedViewportKey = key;
+          clickedRect = rect;
+          break;
         }
-        if (!clickedViewportKey) return;
-        const clickedViewport = viewports[clickedViewportKey];
-        pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
-        pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, clickedViewport.camera);
-        const intersects = raycaster.intersectObjects(previewGroup.children, true);
-        if (intersects.length > 0) {
-          confirmPaste(intersects[0].object);
-        } else {
-          cancelPasteMode();
-        }
+      }
+      if (!clickedViewportKey) {
+        cancelSubtractMode();
         return;
       }
-      
-      // 通常のオブジェクト選択処理
-      let clickedViewportKey = null; let clickedRect = null;
-      for (const key in viewports) { const rect = viewports[key].element.getBoundingClientRect(); if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) { clickedViewportKey = key; clickedRect = rect; break; } }
-      if (!clickedViewportKey) return;
-      const clickedViewport = viewports[clickedViewportKey]; pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1; pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+      const clickedViewport = viewports[clickedViewportKey];
+      pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+      pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, clickedViewport.camera);
-      const intersects = raycaster.intersectObjects(mechaGroup.children, false);
-      const clickedObject = intersects.length > 0 ? intersects[0].object : null;
-      
-      // ▼▼▼【Windows標準の選択ロジックを実装】▼▼▼
-      if (e.ctrlKey) {
-          // Ctrlキー: クリックしたオブジェクトの選択状態を「トグル」
-          if (clickedObject) {
-              const index = selectedObjects.indexOf(clickedObject);
-              if (index > -1) {
-                  selectedObjects.splice(index, 1);
-              } else {
-                  selectedObjects.push(clickedObject);
-              }
-          }
-      } else if (e.shiftKey || isMultiSelectMode) {
-          // Shiftキー: クリックしたオブジェクトを選択に「追加」
-          if (clickedObject && !selectedObjects.includes(clickedObject)) {
-              selectedObjects.push(clickedObject);
-          }
-      } else {
-          // 修飾キーなし: クリックしたオブジェクトで選択を「置き換え」
-          //             何もない場所をクリックした場合は全解除
-          selectedObjects = clickedObject ? [clickedObject] : [];
+      const intersects = raycaster.intersectObjects(mechaGroup.children, true);
+      let drillObject = null;
+      if (intersects.length > 0) {
+        if (subtractTargets.includes(intersects[0].object)) {
+          drillObject = intersects[0].object;
+        }
       }
-      
-      if (isMultiSelectMode && !clickedObject) { isMultiSelectMode = false; multiSelectButton.style.backgroundColor = '#f39c12'; }
-      
-      updateSelection();
-      log(selectedObjects.length > 0 ? `${selectedObjects.length}個のオブジェクトを選択中` : '待機中');
+      if (drillObject) {
+        const baseObjects = subtractTargets.filter((obj) => obj !== drillObject);
+        if (baseObjects.length > 0) {
+          performSubtract(baseObjects, drillObject);
+        } else {
+          cancelSubtractMode();
+        }
+      } else {
+        log('掘削操作をキャンセルしました。');
+        cancelSubtractMode();
+      }
       return;
+    }
+
+    if (isMirrorCopyMode) {
+      let clickedViewportKey = null;
+      let clickedRect = null;
+      for (const key in viewports) {
+        const rect = viewports[key].element.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          clickedViewportKey = key;
+          clickedRect = rect;
+          break;
+        }
+      }
+      if (!clickedViewportKey) return;
+      const clickedViewport = viewports[clickedViewportKey];
+      pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+      pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, clickedViewport.camera);
+      const intersects = raycaster.intersectObjects(previewGroup.children, true);
+      if (intersects.length > 0) {
+        performMirrorCopy(intersects[0].object);
+      } else {
+        cancelMirrorCopyMode();
+      }
+      return;
+    }
+
+    if (isPasteMode) {
+      let clickedViewportKey = null,
+        clickedRect = null;
+      for (const key in viewports) {
+        const rect = viewports[key].element.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          clickedViewportKey = key;
+          clickedRect = rect;
+          break;
+        }
+      }
+      if (!clickedViewportKey) return;
+      const clickedViewport = viewports[clickedViewportKey];
+      pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+      pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, clickedViewport.camera);
+      const intersects = raycaster.intersectObjects(previewGroup.children, true);
+      if (intersects.length > 0) {
+        confirmPaste(intersects[0].object);
+      } else {
+        cancelPasteMode();
+      }
+      return;
+    }
+
+    // 通常のオブジェクト選択処理
+    let clickedViewportKey = null;
+    let clickedRect = null;
+    for (const key in viewports) {
+      const rect = viewports[key].element.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        clickedViewportKey = key;
+        clickedRect = rect;
+        break;
+      }
+    }
+    if (!clickedViewportKey) return;
+    const clickedViewport = viewports[clickedViewportKey];
+    pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
+    pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, clickedViewport.camera);
+    const intersects = raycaster.intersectObjects(mechaGroup.children, false);
+    const clickedObject = intersects.length > 0 ? intersects[0].object : null;
+
+    // ▼▼▼【Windows標準の選択ロジックを実装】▼▼▼
+    if (e.ctrlKey) {
+      // Ctrlキー: クリックしたオブジェクトの選択状態を「トグル」
+      if (clickedObject) {
+        const index = selectedObjects.indexOf(clickedObject);
+        if (index > -1) {
+          selectedObjects.splice(index, 1);
+        } else {
+          selectedObjects.push(clickedObject);
+        }
+      }
+    } else if (e.shiftKey || isMultiSelectMode) {
+      // Shiftキー: クリックしたオブジェクトを選択に「追加」
+      if (clickedObject && !selectedObjects.includes(clickedObject)) {
+        selectedObjects.push(clickedObject);
+      }
+    } else {
+      // 修飾キーなし: クリックしたオブジェクトで選択を「置き換え」
+      //             何もない場所をクリックした場合は全解除
+      selectedObjects = clickedObject ? [clickedObject] : [];
+    }
+
+    if (isMultiSelectMode && !clickedObject) {
+      isMultiSelectMode = false;
+      multiSelectButton.style.backgroundColor = '#f39c12';
+    }
+
+    updateSelection();
+    log(selectedObjects.length > 0 ? `${selectedObjects.length}個のオブジェクトを選択中` : '待機中');
+    return;
   }
-  
+
   // --- 2Dギズモ操作の完了処理 ---
   if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
     if (transformGroup) {
-      selectedObjects.forEach(obj => { worldTransforms.get(obj).parent.attach(obj); });
-      scene.remove(transformGroup); transformGroup = null; worldTransforms.clear();
+      selectedObjects.forEach((obj) => {
+        worldTransforms.get(obj).parent.attach(obj);
+      });
+      scene.remove(transformGroup);
+      transformGroup = null;
+      worldTransforms.clear();
     }
     if (transformStartCache) {
       if (selectedObjects.length === 1) {
-        const oldT = transformStartCache[0]; const obj = selectedObjects[0]; const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
-        if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) { history.execute(new TransformCommand(obj, oldT, newT)); }
+        const oldT = transformStartCache[0];
+        const obj = selectedObjects[0];
+        const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+        if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) {
+          history.execute(new TransformCommand(obj, oldT, newT));
+        }
       } else if (selectedObjects.length > 1) {
-        const commands = selectedObjects.map((obj, i) => { const oldT = transformStartCache[i]; const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}; return new TransformCommand(obj, oldT, newT); });
+        const commands = selectedObjects.map((obj, i) => {
+          const oldT = transformStartCache[i];
+          const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+          return new TransformCommand(obj, oldT, newT);
+        });
         history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトをグループ変形`));
       }
     }
-    isDraggingIn2DView = isScalingIn2DView = isRotatingIn2DView = false; orbitControls.enabled = true; updateGizmoAppearance(); transformStartCache = null; updateSelection();
+    isDraggingIn2DView = isScalingIn2DView = isRotatingIn2DView = false;
+    orbitControls.enabled = true;
+    updateGizmoAppearance();
+    transformStartCache = null;
+    updateSelection();
     return;
   }
 });
