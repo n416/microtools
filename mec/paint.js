@@ -1,25 +1,4 @@
 import * as THREE from 'three';
-// ▼▼▼【追加】Command.jsから基本クラスをインポート ▼▼▼
-import { command } from './command.js';
-
-// ▼▼▼【追加】ChangeColorCommandをここに定義し、エクスポート ▼▼▼
-export class ChangeColorCommand extends command {
-  constructor(object, newColor) {
-      super();
-      this.object = object;
-      this.oldColor = object.material.color.clone();
-      this.newColor = newColor.clone();
-      this.message = 'オブジェクトの色を変更';
-  }
-
-  execute() {
-      this.object.material.color.copy(this.newColor);
-  }
-
-  undo() {
-      this.object.material.color.copy(this.oldColor);
-  }
-}
 
 /**
  * 指定された基本色から、明度を変化させたカラーパレットの行を生成します。
