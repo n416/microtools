@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { MirrorCopyCommand, AddObjectCommand } from './command-create.js';
-import { MacroCommand } from './command-edit.js';
+import {MirrorCopyCommand, AddObjectCommand} from './command-create.js';
+import {MacroCommand} from './command-edit.js';
 
 export function startMirrorCopyMode(context) {
-  const { log, transformControls, previewGroup, selectionManager, modes } = context;
+  const {log, transformControls, previewGroup, selectionManager, modes} = context;
   const selectedObjects = selectionManager.get();
 
   if (selectedObjects.length === 0) {
@@ -15,7 +15,7 @@ export function startMirrorCopyMode(context) {
   log('鏡面コピーモード開始。コピー軸をクリックしてください。');
   document.getElementById('mirrorCopy').style.display = 'none';
   document.getElementById('cancelMirrorCopy').style.display = 'inline-block';
-  const previewMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false });
+  const previewMaterial = new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false});
   ['x', 'y', 'z'].forEach((axis) => {
     const axis_preview_group = new THREE.Group();
     axis_preview_group.userData.mirrorAxis = axis;
@@ -25,9 +25,16 @@ export function startMirrorCopyMode(context) {
       preview.scale.copy(obj.scale);
       preview.position[axis] *= -1;
       const reflectedRotation = obj.rotation.clone();
-      if (axis === 'x') { reflectedRotation.y *= -1; reflectedRotation.z *= -1; }
-      else if (axis === 'y') { reflectedRotation.x *= -1; reflectedRotation.z *= -1; }
-      else if (axis === 'z') { reflectedRotation.x *= -1; reflectedRotation.y *= -1; }
+      if (axis === 'x') {
+        reflectedRotation.y *= -1;
+        reflectedRotation.z *= -1;
+      } else if (axis === 'y') {
+        reflectedRotation.x *= -1;
+        reflectedRotation.z *= -1;
+      } else if (axis === 'z') {
+        reflectedRotation.x *= -1;
+        reflectedRotation.y *= -1;
+      }
       preview.rotation.copy(reflectedRotation);
       preview.scale[axis] *= -1;
       axis_preview_group.add(preview);
@@ -37,40 +44,43 @@ export function startMirrorCopyMode(context) {
 }
 
 export function performMirrorCopy(clickedPreview, context) {
-    const { mechaGroup, history, selectionManager } = context;
-    const selectedObjects = selectionManager.get();
-    const axis = clickedPreview.parent.userData.mirrorAxis;
-    const commands = [], newSelection = [];
-    clickedPreview.parent.children.forEach((preview, i) => {
-        const newObject = new THREE.Mesh(preview.geometry, selectedObjects[i].material.clone());
-        newObject.position.copy(preview.position);
-        newObject.rotation.copy(preview.rotation);
-        newObject.scale.copy(preview.scale);
-        commands.push(new MirrorCopyCommand(newObject, mechaGroup, axis));
-        newSelection.push(newObject);
-    });
-    history.execute(new MacroCommand(commands, `${axis.toUpperCase()}軸に${newSelection.length}個のオブジェクトを鏡面コピー`));
-    selectionManager.set(newSelection);
-    cancelMirrorCopyMode(context);
+  const {mechaGroup, history, selectionManager} = context;
+  const selectedObjects = selectionManager.get();
+  const axis = clickedPreview.parent.userData.mirrorAxis;
+  const commands = [],
+    newSelection = [];
+  clickedPreview.parent.children.forEach((preview, i) => {
+    const newObject = new THREE.Mesh(preview.geometry, selectedObjects[i].material.clone());
+    newObject.position.copy(preview.position);
+    newObject.rotation.copy(preview.rotation);
+    newObject.scale.copy(preview.scale);
+    commands.push(new MirrorCopyCommand(newObject, mechaGroup, axis));
+    newSelection.push(newObject);
+  });
+  history.execute(new MacroCommand(commands, `${axis.toUpperCase()}軸に${newSelection.length}個のオブジェクトを鏡面コピー`));
+  selectionManager.set(newSelection);
+  cancelMirrorCopyMode(context);
 }
 
 export function cancelMirrorCopyMode(context) {
-    const { modes, previewGroup, updateSelection, log } = context;
-    if (!modes.isMirrorCopyMode) return;
-    modes.isMirrorCopyMode = false;
-    while (previewGroup.children.length > 0) {
-        const group = previewGroup.children[0];
-        while (group.children.length > 0) { group.remove(group.children[0]); }
-        previewGroup.remove(group);
+  const {modes, previewGroup, state, log} = context; // ★ updateSelection の代わりに state を取得
+  if (!modes.isMirrorCopyMode) return;
+  modes.isMirrorCopyMode = false;
+  while (previewGroup.children.length > 0) {
+    const group = previewGroup.children[0];
+    while (group.children.length > 0) {
+      group.remove(group.children[0]);
     }
-    document.getElementById('mirrorCopy').style.display = 'inline-block';
-    document.getElementById('cancelMirrorCopy').style.display = 'none';
-    updateSelection();
-    log('鏡面コピーモードをキャンセルしました。');
+    previewGroup.remove(group);
+  }
+  document.getElementById('mirrorCopy').style.display = 'inline-block';
+  document.getElementById('cancelMirrorCopy').style.display = 'none';
+  // ★★★ 修正: UI更新を直接呼ぶのではなく、状態変更を通知する ★★★
+  state.notifySelectionChange();
 }
 
 export function startPastePreview(context) {
-  const { log, transformControls, previewGroup, selectionManager, modes } = context;
+  const {log, transformControls, previewGroup, selectionManager, modes} = context;
   const selectedObjects = selectionManager.get();
   if (selectedObjects.length === 0) {
     log('貼り付け先のオブジェクトを選択してください。');
@@ -95,11 +105,14 @@ export function startPastePreview(context) {
   });
   sourceBox.setFromObject(sourceGroup);
   const sourceSize = sourceBox.getSize(new THREE.Vector3());
-  const previewMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false });
+  const previewMaterial = new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false});
   const directions = [
-    { axis: 'x', sign: 1 }, { axis: 'x', sign: -1 },
-    { axis: 'y', sign: 1 }, { axis: 'y', sign: -1 },
-    { axis: 'z', sign: 1 }, { axis: 'z', sign: -1 },
+    {axis: 'x', sign: 1},
+    {axis: 'x', sign: -1},
+    {axis: 'y', sign: 1},
+    {axis: 'y', sign: -1},
+    {axis: 'z', sign: 1},
+    {axis: 'z', sign: -1},
   ];
   directions.forEach((dir) => {
     const offsetValue = targetSize[dir.axis] / 2 + sourceSize[dir.axis] / 2 + 0.2;
@@ -120,7 +133,7 @@ export function startPastePreview(context) {
 }
 
 export function confirmPaste(clickedPreview, context) {
-  const { mechaGroup, history, selectionManager, modes } = context;
+  const {mechaGroup, history, selectionManager, modes} = context;
   const offset = clickedPreview.parent.userData.offset;
   const commands = [];
   const newPastedObjects = [];
@@ -133,13 +146,13 @@ export function confirmPaste(clickedPreview, context) {
     newPastedObjects.push(newObject);
   });
   history.execute(new MacroCommand(commands, `${newPastedObjects.length}個のオブジェクトをペースト`));
-  modes.lastPasteInfo = { objects: newPastedObjects, offset: offset };
+  modes.lastPasteInfo = {objects: newPastedObjects, offset: offset};
   selectionManager.set(newPastedObjects);
   cancelPasteMode(context);
 }
 
 export function performDirectPaste(context) {
-  const { mechaGroup, history, selectionManager, modes } = context;
+  const {mechaGroup, history, selectionManager, modes} = context;
   const offset = modes.lastPasteInfo.offset;
   const commands = [];
   const newPastedObjects = [];
@@ -157,12 +170,15 @@ export function performDirectPaste(context) {
 }
 
 export function cancelPasteMode(context) {
-  const { modes, previewGroup, updateSelection } = context;
+  const {modes, previewGroup, state} = context; // ★ updateSelection の代わりに state を取得
   modes.isPasteMode = false;
   while (previewGroup.children.length > 0) {
     const group = previewGroup.children[0];
-    while (group.children.length > 0) { group.remove(group.children[0]); }
+    while (group.children.length > 0) {
+      group.remove(group.children[0]);
+    }
     previewGroup.remove(group);
   }
-  updateSelection();
+  // ★★★ 修正: UI更新を直接呼ぶのではなく、状態変更を通知する ★★★
+  state.notifySelectionChange();
 }
