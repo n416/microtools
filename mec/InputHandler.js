@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import {TransformCommand, MacroCommand, DeleteObjectCommand} from './command-edit.js';
-import {ChangeColorCommand} from './command-paint.js';
-import * as CsgOperations from './csg-operations.js';
-import * as ClipboardFeatures from './clipboard-features.js';
+import {TransformCommand, MacroCommand, DeleteObjectCommand} from './CommandEdit.js';
+import {ChangeColorCommand} from './CommandPaint.js';
+import * as CsgOperations from './CsgOperations.js';
+import * as ClipboardFeatures from './ClipboardFeatures.js';
 
 export class InputHandler {
   constructor(appContext) {
