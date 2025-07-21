@@ -342,14 +342,8 @@ export class InputHandler {
 
         if (handleIntersects.length > 0) {
           setupTransformState();
-          if (this.appState.selectedObjects.length === 1) {
-            const target = this.appState.selectedObjects[0];
-            this.dragStartObjectState.position.copy(target.position);
-            this.dragStartObjectState.scale.copy(target.scale);
-            this.dragStartObjectState.rotation.copy(target.rotation);
-          } else {
-            setupMultiSelectGroup();
-          }
+          // ★★★ 修正: 単体選択でもグループ化処理を呼ぶように統一 ★★★
+          setupMultiSelectGroup();
           if (this.appContext.gizmoMode === 'scale') this.isScalingIn2DView = true;
           else if (this.appContext.gizmoMode === 'rotate') this.isRotatingIn2DView = true;
           this.draggedInfo = {viewportKey: clickedViewportKey, handleName: handleIntersects[0].object.name};
@@ -359,11 +353,8 @@ export class InputHandler {
         if (clickedObject && this.appState.selectedObjects.includes(clickedObject) && !event.shiftKey && !event.ctrlKey) {
           setupTransformState();
           this.isDraggingIn2DView = true;
-          if (this.appState.selectedObjects.length === 1) {
-            this.dragStartObjectState.position.copy(this.appState.selectedObjects[0].position);
-          } else {
-            setupMultiSelectGroup();
-          }
+          // ★★★ 修正: 単体選択でもグループ化処理を呼ぶように統一 ★★★
+          setupMultiSelectGroup();
           this.draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
           return;
         }
@@ -429,91 +420,9 @@ export class InputHandler {
     const worldDeltaX = ((event.clientX - this.dragStartPointer.x) / rect.width) * frustumSize * aspect;
     const worldDeltaY = ((event.clientY - this.dragStartPointer.y) / rect.height) * frustumSize;
 
-    if (this.appState.selectedObjects.length === 1) {
-      const targetObject = this.appState.selectedObjects[0];
+    // ★★★ 修正: 単体選択時のロジックを削除し、グループ操作に一本化 ★★★
+    if (this.transformGroup) {
       if (this.isDraggingIn2DView) {
-        const newPosition = this.dragStartObjectState.position.clone();
-        switch (this.draggedInfo.viewportKey) {
-          case 'top':
-            newPosition.x += worldDeltaX;
-            newPosition.z += worldDeltaY;
-            break;
-          case 'front':
-            newPosition.x += worldDeltaX;
-            newPosition.y -= worldDeltaY;
-            break;
-          case 'side':
-            newPosition.z -= worldDeltaX;
-            newPosition.y -= worldDeltaY;
-            break;
-        }
-        targetObject.position.copy(newPosition);
-      } else if (this.isScalingIn2DView) {
-        const newPosition = this.dragStartObjectState.position.clone();
-        const newScale = this.dragStartObjectState.scale.clone();
-        let u_change = 0,
-          v_change = 0,
-          axisU,
-          axisV;
-        switch (this.draggedInfo.viewportKey) {
-          case 'top':
-            u_change = worldDeltaX;
-            v_change = worldDeltaY;
-            axisU = 'x';
-            axisV = 'z';
-            break;
-          case 'front':
-            u_change = worldDeltaX;
-            v_change = -worldDeltaY;
-            axisU = 'x';
-            axisV = 'y';
-            break;
-          case 'side':
-            u_change = -worldDeltaX;
-            v_change = -worldDeltaY;
-            axisU = 'z';
-            axisV = 'y';
-            break;
-        }
-        const u_multiplier = this.draggedInfo.viewportKey === 'side' ? (this.draggedInfo.handleName.includes('left') ? 1 : this.draggedInfo.handleName.includes('right') ? -1 : 0) : this.draggedInfo.handleName.includes('left') ? -1 : this.draggedInfo.handleName.includes('right') ? 1 : 0;
-        const v_multiplier = this.draggedInfo.viewportKey === 'top' ? (this.draggedInfo.handleName.includes('top') ? -1 : this.draggedInfo.handleName.includes('bottom') ? 1 : 0) : this.draggedInfo.handleName.includes('top') ? 1 : this.draggedInfo.handleName.includes('bottom') ? -1 : 0;
-        const scaleChangeU = u_change * u_multiplier;
-        const scaleChangeV = v_change * v_multiplier;
-        if (u_multiplier !== 0 && this.dragStartObjectState.scale[axisU] + scaleChangeU > 0.01) {
-          newScale[axisU] = this.dragStartObjectState.scale[axisU] + scaleChangeU;
-          newPosition[axisU] = this.dragStartObjectState.position[axisU] - (this.dragStartObjectState.scale[axisU] / 2) * u_multiplier + (newScale[axisU] / 2) * u_multiplier;
-        }
-        if (v_multiplier !== 0 && this.dragStartObjectState.scale[axisV] + scaleChangeV > 0.01) {
-          newScale[axisV] = this.dragStartObjectState.scale[axisV] + scaleChangeV;
-          newPosition[axisV] = this.dragStartObjectState.position[axisV] - (this.dragStartObjectState.scale[axisV] / 2) * v_multiplier + (newScale[axisV] / 2) * v_multiplier;
-        }
-        targetObject.scale.copy(newScale);
-        targetObject.position.copy(newPosition);
-      } else if (this.isRotatingIn2DView) {
-        const center3D = targetObject.position.clone();
-        const centerProjected = center3D.project(view.camera);
-        const centerX = (centerProjected.x * 0.5 + 0.5) * rect.width + rect.left;
-        const centerY = (-centerProjected.y * 0.5 + 0.5) * rect.height + rect.top;
-        const centerOnScreen = new THREE.Vector2(centerX, centerY);
-        const startVec = new THREE.Vector2().subVectors(this.dragStartPointer, centerOnScreen);
-        const currentVec = new THREE.Vector2(event.clientX, event.clientY).sub(centerOnScreen);
-        const deltaAngle = Math.atan2(currentVec.y, currentVec.x) - Math.atan2(startVec.y, startVec.x);
-        const newRotation = this.dragStartObjectState.rotation.clone();
-        switch (this.draggedInfo.viewportKey) {
-          case 'top':
-            newRotation.y = this.dragStartObjectState.rotation.y + deltaAngle;
-            break;
-          case 'front':
-            newRotation.z = this.dragStartObjectState.rotation.z + deltaAngle;
-            break;
-          case 'side':
-            newRotation.x = this.dragStartObjectState.rotation.x + deltaAngle;
-            break;
-        }
-        targetObject.rotation.copy(newRotation);
-      }
-    } else if (this.appState.selectedObjects.length > 1) {
-      if (this.isDraggingIn2DView && this.transformGroup) {
         const worldDelta = new THREE.Vector3();
         switch (this.draggedInfo.viewportKey) {
           case 'top':
@@ -527,7 +436,7 @@ export class InputHandler {
             break;
         }
         this.transformGroup.position.copy(this.dragStartObjectState.position).add(worldDelta);
-      } else if (this.isRotatingIn2DView && this.transformGroup) {
+      } else if (this.isRotatingIn2DView) {
         const center3D = this.dragStartObjectState.position;
         const centerProjected = center3D.clone().project(view.camera);
         const centerX = (centerProjected.x * 0.5 + 0.5) * rect.width + rect.left;
@@ -549,7 +458,7 @@ export class InputHandler {
             break;
         }
         this.transformGroup.quaternion.setFromAxisAngle(axis, deltaAngle);
-      } else if (this.isScalingIn2DView && this.transformGroup) {
+      } else if (this.isScalingIn2DView) {
         const oldSize = this.dragStartObjectState.scale;
         const newSize = oldSize.clone();
         const newCenter = this.dragStartObjectState.position.clone();
