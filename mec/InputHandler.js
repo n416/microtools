@@ -51,15 +51,12 @@ export class InputHandler {
   }
 
   onKeyDown(e) {
-    // ★★★ 修正箇所: Escapeキーの処理を最優先で、かつ詳細に実装 ★★★
     if (e.key === 'Escape') {
       e.preventDefault();
-      // 1. ライブペイントプレビューモードの場合
       if (this.appState.isLivePaintPreviewMode) {
         document.getElementById('cancelPaint').click();
         return;
       }
-      // 2. CSGやクリップボードなどの特殊な操作モードの場合
       if (this.appState.modes.isMirrorCopyMode) {
         document.getElementById('cancelMirrorCopy').click();
         return;
@@ -73,28 +70,23 @@ export class InputHandler {
         document.getElementById('cancelSubtract').click();
         return;
       }
-      // 3. 連続ペイントモードの場合
       if (this.appState.isPaintMode) {
-        document.getElementById('paintModeButton').click(); // トグルで終了
+        document.getElementById('paintModeButton').click();
         return;
       }
-      // 4. パンモードの場合
       if (this.appContext.isPanModeActive) {
-        document.getElementById('panModeButton').click(); // トグルで終了
+        document.getElementById('panModeButton').click();
         return;
       }
-      // 5. 複数選択モードの場合
       if (this.appState.isMultiSelectMode) {
-        document.getElementById('multiSelect').click(); // トグルで終了
+        document.getElementById('multiSelect').click();
         return;
       }
-      // 6. オブジェクトが選択されている通常モードの場合
       if (this.appState.selectedObjects.length > 0) {
         this.appState.clearSelection();
         this.log('選択を解除しました。');
         return;
       }
-      // 上記のどれでもない場合は何もしない
       this.log('通常モードです。');
       return;
     }
