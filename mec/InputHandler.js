@@ -444,7 +444,15 @@ export class InputHandler {
         const centerOnScreen = new THREE.Vector2(centerX, centerY);
         const startVec = new THREE.Vector2().subVectors(this.dragStartPointer, centerOnScreen);
         const currentVec = new THREE.Vector2(event.clientX, event.clientY).sub(centerOnScreen);
-        const deltaAngle = Math.atan2(currentVec.y, currentVec.x) - Math.atan2(startVec.y, startVec.x);
+        // ★ 修正: 変数を let で宣言し、回転方向を修正
+        let deltaAngle = Math.atan2(startVec.y, startVec.x) - Math.atan2(currentVec.y, currentVec.x);
+
+        // ★ 追加: SHIFTキーが押されている場合、角度を22.5度単位でスナップさせる
+        if (event.shiftKey) {
+          const snapAngle = THREE.MathUtils.degToRad(22.5);
+          deltaAngle = Math.round(deltaAngle / snapAngle) * snapAngle;
+        }
+        
         const axis = new THREE.Vector3();
         switch (this.draggedInfo.viewportKey) {
           case 'top':
