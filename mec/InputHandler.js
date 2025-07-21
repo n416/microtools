@@ -36,6 +36,7 @@ export class InputHandler {
     this.transformGroup = null;
 
     this.isSpacebarDown = false;
+    this.activePointerId = null;
 
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
@@ -272,6 +273,8 @@ export class InputHandler {
 
   onPointerDown(event) {
     if (event.target.closest('#ui') || this.transformControls.dragging) return;
+    if (this.activePointerId !== null) return; // ★ 追加：他のポインターがアクティブな場合は無視
+    this.activePointerId = event.pointerId; // ★ 追加：ポインターIDを記録
 
     const clickedViewportInfo = this.viewportManager.getViewportFromEvent(event);
 
@@ -363,6 +366,10 @@ export class InputHandler {
       const isGizmoHit = !is2DView && this.transformControls.object && this.transformControls.pointerOver;
       if (!clickedObject && !isGizmoHit) {
         this.isBoxSelecting = true;
+        this.selectionBoxElement.style.left = `${this.startPoint.x}px`;
+        this.selectionBoxElement.style.top = `${this.startPoint.y}px`;
+        this.selectionBoxElement.style.width = '0px';
+        this.selectionBoxElement.style.height = '0px';
         this.selectionBoxElement.style.display = 'block';
         this.appContext.orbitControls.enabled = false;
       }
@@ -566,71 +573,23 @@ export class InputHandler {
   }
 
   onPointerUp(e) {
+    if (e.pointerId !== this.activePointerId) {
+      // 自分が管理していないポインターイベントは無視
+      return;
+    }
+
+    // --- 2Dパンニング終了処理 ---
     if (this.isPanning2D) {
       const newCursor = this.isSpacebarDown ? 'grab' : 'default';
       this.viewportManager.viewports[this.panningViewportKey].element.style.cursor = newCursor;
       this.isPanning2D = false;
       this.panningViewportKey = null;
       this.appContext.orbitControls.enabled = true;
+      this.activePointerId = null;
       return;
     }
 
-    if (this.isBoxSelecting) {
-      this.selectionBoxElement.style.display = 'none';
-      this.isBoxSelecting = false;
-      this.appContext.orbitControls.enabled = true;
-      const endPoint = new THREE.Vector2(e.clientX, e.clientY);
-      if (this.startPoint.distanceTo(endPoint) < 5) {
-        if (!e.ctrlKey && !e.shiftKey && !this.appState.isMultiSelectMode) {
-          this.appState.clearSelection();
-          this.log('待機中');
-        }
-        return;
-      }
-      const boxRect = {left: Math.min(this.startPoint.x, endPoint.x), right: Math.max(this.startPoint.x, endPoint.x), top: Math.min(this.startPoint.y, endPoint.y), bottom: Math.max(this.startPoint.y, endPoint.y)};
-      const objectsInBox = [];
-      for (const key in this.viewportManager.viewports) {
-        const view = this.viewportManager.viewports[key];
-        const rect = view.element.getBoundingClientRect();
-        if (boxRect.left > rect.right || boxRect.right < rect.left || boxRect.top > rect.bottom || boxRect.bottom < rect.top) continue;
-        this.mechaGroup.children.forEach((mesh) => {
-          const pos = new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld);
-          pos.project(view.camera);
-          const screenX = ((pos.x + 1) / 2) * rect.width + rect.left;
-          const screenY = ((-pos.y + 1) / 2) * rect.height + rect.top;
-          if (screenX >= boxRect.left && screenX <= boxRect.right && screenY >= boxRect.top && screenY <= boxRect.bottom) {
-            if (!objectsInBox.includes(mesh)) {
-              objectsInBox.push(mesh);
-            }
-          }
-        });
-      }
-
-      const currentSelection = this.appState.selectedObjects.slice();
-      if (e.ctrlKey) {
-        objectsInBox.forEach((obj) => {
-          const index = currentSelection.indexOf(obj);
-          if (index > -1) {
-            currentSelection.splice(index, 1);
-          } else {
-            currentSelection.push(obj);
-          }
-        });
-        this.appState.setSelection(currentSelection);
-      } else if (e.shiftKey || this.appState.isMultiSelectMode) {
-        objectsInBox.forEach((obj) => {
-          if (!currentSelection.includes(obj)) {
-            currentSelection.push(obj);
-          }
-        });
-        this.appState.setSelection(currentSelection);
-      } else {
-        this.appState.setSelection(objectsInBox);
-      }
-      this.log(`${this.appState.selectedObjects.length}個のオブジェクトを選択中`);
-      return;
-    }
-
+    // --- 2Dビューでの変形操作終了処理 ---
     if (this.isDraggingIn2DView || this.isScalingIn2DView || this.isRotatingIn2DView) {
       const selectedObjects = this.appState.selectedObjects;
       if (this.transformGroup) {
@@ -663,12 +622,75 @@ export class InputHandler {
       document.dispatchEvent(new CustomEvent('updateGizmoAppearance'));
       this.transformStartCache = null;
       this.appState.notifySelectionChange();
+      this.activePointerId = null;
       return;
     }
 
-    if (this.startPoint.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) < 5) {
+    const endPoint = new THREE.Vector2(e.clientX, e.clientY);
+    const isClick = this.startPoint.distanceTo(endPoint) < 5;
+
+    // --- ボックス選択終了処理 ---
+    if (this.isBoxSelecting) {
+      this.selectionBoxElement.style.display = 'none';
+      this.isBoxSelecting = false;
+      this.appContext.orbitControls.enabled = true;
+
+      if (!isClick) {
+        // ドラッグによるボックス選択の場合
+        const boxRect = {left: Math.min(this.startPoint.x, endPoint.x), right: Math.max(this.startPoint.x, endPoint.x), top: Math.min(this.startPoint.y, endPoint.y), bottom: Math.max(this.startPoint.y, endPoint.y)};
+        const objectsInBox = [];
+        for (const key in this.viewportManager.viewports) {
+          const view = this.viewportManager.viewports[key];
+          const rect = view.element.getBoundingClientRect();
+          if (boxRect.left > rect.right || boxRect.right < rect.left || boxRect.top > rect.bottom || boxRect.bottom < rect.top) continue;
+          this.mechaGroup.children.forEach((mesh) => {
+            const pos = new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld);
+            pos.project(view.camera);
+            const screenX = ((pos.x + 1) / 2) * rect.width + rect.left;
+            const screenY = ((-pos.y + 1) / 2) * rect.height + rect.top;
+            if (screenX >= boxRect.left && screenX <= boxRect.right && screenY >= boxRect.top && screenY <= boxRect.bottom) {
+              if (!objectsInBox.includes(mesh)) {
+                objectsInBox.push(mesh);
+              }
+            }
+          });
+        }
+
+        const currentSelection = this.appState.selectedObjects.slice();
+        if (e.ctrlKey) {
+          objectsInBox.forEach((obj) => {
+            const index = currentSelection.indexOf(obj);
+            if (index > -1) {
+              currentSelection.splice(index, 1);
+            } else {
+              currentSelection.push(obj);
+            }
+          });
+          this.appState.setSelection(currentSelection);
+        } else if (e.shiftKey || this.appState.isMultiSelectMode) {
+          objectsInBox.forEach((obj) => {
+            if (!currentSelection.includes(obj)) {
+              currentSelection.push(obj);
+            }
+          });
+          this.appState.setSelection(currentSelection);
+        } else {
+          this.appState.setSelection(objectsInBox);
+        }
+        this.log(`${this.appState.selectedObjects.length}個のオブジェクトを選択中`);
+        this.activePointerId = null;
+        return;
+      }
+      // isClickがtrueの場合は、そのまま下のクリック処理に流す
+    }
+
+    // --- クリック処理 ---
+    if (isClick) {
       const clickedViewportInfo = this.viewportManager.getViewportFromEvent(e);
-      if (!clickedViewportInfo) return;
+      if (!clickedViewportInfo) {
+        this.activePointerId = null;
+        return;
+      }
 
       const {key: clickedViewportKey, rect: clickedRect} = clickedViewportInfo;
       const clickedViewport = this.viewportManager.viewports[clickedViewportKey];
@@ -676,6 +698,7 @@ export class InputHandler {
       this.pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
       this.raycaster.setFromCamera(this.pointer, clickedViewport.camera);
 
+      // 各種モードごとの処理
       if (this.appState.isEyedropperMode) {
         const intersects = this.raycaster.intersectObjects(this.mechaGroup.children, false);
         if (intersects.length > 0) {
@@ -685,10 +708,7 @@ export class InputHandler {
           this.log(`色を抽出: #${this.appState.currentColor.getHexString()}`);
         }
         document.dispatchEvent(new CustomEvent('setEyedropperMode', {detail: false}));
-        return;
-      }
-
-      if (this.appState.isPaintMode) {
+      } else if (this.appState.isPaintMode) {
         const intersects = this.raycaster.intersectObjects(this.mechaGroup.children, false);
         if (intersects.length > 0) {
           const clickedObject = intersects[0].object;
@@ -696,17 +716,9 @@ export class InputHandler {
             this.history.execute(new ChangeColorCommand(clickedObject, this.appState.currentColor));
           }
         }
-        return;
-      }
-
-      if (this.appState.modes.isSubtractMode) {
+      } else if (this.appState.modes.isSubtractMode) {
         const intersects = this.raycaster.intersectObjects(this.mechaGroup.children, true);
-        let drillObject = null;
-        if (intersects.length > 0) {
-          if (this.appState.modes.subtractTargets.includes(intersects[0].object)) {
-            drillObject = intersects[0].object;
-          }
-        }
+        const drillObject = intersects.length > 0 && this.appState.modes.subtractTargets.includes(intersects[0].object) ? intersects[0].object : null;
         if (drillObject) {
           const baseObjects = this.appState.modes.subtractTargets.filter((obj) => obj !== drillObject);
           if (baseObjects.length > 0) {
@@ -718,10 +730,7 @@ export class InputHandler {
           this.log('掘削操作をキャンセルしました。');
           CsgOperations.cancelSubtractMode(this.appContext);
         }
-        return;
-      }
-
-      if (this.appState.modes.isMirrorCopyMode) {
+      } else if (this.appState.modes.isMirrorCopyMode) {
         const intersects = this.raycaster.intersectObjects(this.previewGroup.children, true);
         if (intersects.length > 0) {
           ClipboardFeatures.performMirrorCopy(intersects[0].object, this.appContext);
@@ -729,10 +738,7 @@ export class InputHandler {
           ClipboardFeatures.cancelMirrorCopyMode(this.appContext);
           this.log('鏡面コピーモードをキャンセルしました。');
         }
-        return;
-      }
-
-      if (this.appState.modes.isPasteMode) {
+      } else if (this.appState.modes.isPasteMode) {
         const intersects = this.raycaster.intersectObjects(this.previewGroup.children, true);
         if (intersects.length > 0) {
           ClipboardFeatures.confirmPaste(intersects[0].object, this.appContext);
@@ -740,28 +746,36 @@ export class InputHandler {
           ClipboardFeatures.cancelPasteMode(this.appContext);
           this.log('貼り付けをキャンセルしました。');
         }
-        return;
-      }
-
-      const intersects = this.raycaster.intersectObjects(this.mechaGroup.children, false);
-      const clickedObject = intersects.length > 0 ? intersects[0].object : null;
-
-      if (e.ctrlKey) {
-        this.appState.toggleSelection(clickedObject);
-      } else if (e.shiftKey || this.appState.isMultiSelectMode) {
-        this.appState.addSelection(clickedObject);
       } else {
-        this.appState.setSelection(clickedObject);
-      }
+        // 通常の選択処理
+        const intersects = this.raycaster.intersectObjects(this.mechaGroup.children, false);
+        const clickedObject = intersects.length > 0 ? intersects[0].object : null;
 
-      if (this.appState.isMultiSelectMode && !clickedObject) {
-        document.dispatchEvent(new CustomEvent('setMultiSelectMode', {detail: false}));
-      }
+        if (e.ctrlKey) {
+          this.appState.toggleSelection(clickedObject);
+        } else if (e.shiftKey || this.appState.isMultiSelectMode) {
+          this.appState.addSelection(clickedObject);
+        } else {
+          this.appState.setSelection(clickedObject);
+        }
 
-      this.log(this.appState.selectedObjects.length > 0 ? `${this.appState.selectedObjects.length}個のオブジェクトを選択中` : '待機中');
+        if (this.appState.isMultiSelectMode && !clickedObject) {
+          document.dispatchEvent(new CustomEvent('setMultiSelectMode', {detail: false}));
+        }
+
+        this.log(this.appState.selectedObjects.length > 0 ? `${this.appState.selectedObjects.length}個のオブジェクトを選択中` : '待機中');
+      }
+    } else {
+      // ボックス選択後、何も選択されなかった場合に選択をクリアする
+      if (!e.ctrlKey && !e.shiftKey && !this.appState.isMultiSelectMode) {
+        this.appState.clearSelection();
+        this.log('待機中');
+      }
     }
-  }
 
+    // 最後に必ずポインターIDをリセット
+    this.activePointerId = null;
+  }
   onContextMenu(event) {
     const clickedViewportInfo = this.viewportManager.getViewportFromEvent(event);
     if (clickedViewportInfo && clickedViewportInfo.key !== 'perspective') {
