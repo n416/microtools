@@ -5,14 +5,12 @@ import {TransformControls} from 'three/addons/controls/TransformControls.js';
 import {AppState} from './AppState.js';
 import {ViewportManager} from './ViewportManager.js';
 import {InputHandler} from './InputHandler.js';
+import {UIControl} from './UIControl.js'; // ★ UIControlをインポート
 
-import {createColorPalette} from './paint.js';
 import {AddObjectCommand} from './command-create.js';
 import {MacroCommand, DeleteObjectCommand, TransformCommand} from './command-edit.js';
 
-import * as CsgOperations from './csg-operations.js';
 import * as SceneIO from './scene-io.js';
-import * as ClipboardFeatures from './clipboard-features.js';
 
 // =================================================================
 // ◆ 1. 基本設定とシーンの準備
@@ -87,7 +85,6 @@ viewportManager.setSelectionBoxes(selectionBoxes);
 
 let groupBoundingBoxMesh = null;
 
-// ★★★ 修正: Historyクラスの定義を、インスタンス化より前に移動 ★★★
 export class History {
   constructor() {
     this.undoStack = [];
@@ -135,7 +132,6 @@ export class History {
     }
   }
 }
-
 const history = new History();
 
 const appContext = {
@@ -167,6 +163,7 @@ const appContext = {
 };
 
 const inputHandler = new InputHandler(appContext);
+const uiControl = new UIControl(appContext); // ★ UIControlをインスタンス化
 
 function log(message) {
   const timestamp = new Date().toLocaleTimeString('ja-JP');
@@ -210,7 +207,6 @@ function updateSelection() {
       const center = groupBox3.getCenter(new THREE.Vector3());
       const size = groupBox3.getSize(new THREE.Vector3());
 
-      // 透明なメッシュをバウンディングボックスとして使う
       const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({visible: false}));
       boxMesh.position.copy(center);
       boxMesh.scale.copy(size);
@@ -235,163 +231,6 @@ function updateGizmoAppearance() {
 }
 
 // =================================================================
-// ◆ 4. UIイベントリスナー設定
-// =================================================================
-function setupUIEventListeners() {
-  const fileInput = document.getElementById('fileInput');
-
-  document.getElementById('addCube').addEventListener('click', () => history.execute(new AddObjectCommand(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff})), mechaGroup, appContext.selectionManager)));
-  document.getElementById('addSphere').addEventListener('click', () => history.execute(new AddObjectCommand(new THREE.Mesh(new THREE.SphereGeometry(0.7, 32, 16), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff})), mechaGroup, appContext.selectionManager)));
-  document.getElementById('addCone').addEventListener('click', () => history.execute(new AddObjectCommand(new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.5, 32), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff})), mechaGroup, appContext.selectionManager)));
-  document.getElementById('addCylinder').addEventListener('click', () => history.execute(new AddObjectCommand(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5, 32), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff})), mechaGroup, appContext.selectionManager)));
-
-  document.getElementById('addPrism').addEventListener('click', () => {
-    document.getElementById('prismModal').style.display = 'flex';
-  });
-  document.getElementById('cancelPrism').addEventListener('click', () => {
-    document.getElementById('prismModal').style.display = 'none';
-  });
-  document.getElementById('confirmPrism').addEventListener('click', () => {
-    const sidesInput = document.getElementById('sidesInput');
-    let sides = parseInt(sidesInput.value, 10);
-    sides = Math.max(3, Math.min(64, sides || 6));
-    sidesInput.value = sides;
-    history.execute(new AddObjectCommand(new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.5, sides), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff})), mechaGroup, appContext.selectionManager));
-    document.getElementById('prismModal').style.display = 'none';
-  });
-
-  document.getElementById('unionObjects').addEventListener('click', () => CsgOperations.performUnion(appContext));
-  document.getElementById('intersectObjects').addEventListener('click', () => CsgOperations.performIntersect(appContext));
-  document.getElementById('subtractObjects').addEventListener('click', () => CsgOperations.startSubtractMode(appContext));
-  document.getElementById('cancelSubtract').addEventListener('click', () => CsgOperations.cancelSubtractMode(appContext));
-  document.getElementById('mirrorCopy').addEventListener('click', () => ClipboardFeatures.startMirrorCopyMode(appContext));
-  document.getElementById('cancelMirrorCopy').addEventListener('click', () => ClipboardFeatures.cancelMirrorCopyMode(appContext));
-  document.getElementById('deleteObject').addEventListener('click', () => {
-    const selected = appState.selectedObjects;
-    if (selected.length === 0) return log('削除対象なし');
-    history.execute(
-      new MacroCommand(
-        selected.map((obj) => new DeleteObjectCommand(obj, mechaGroup)),
-        `選択した ${selected.length} 個のオブジェクトを削除`
-      )
-    );
-    appState.clearSelection();
-  });
-
-  document.getElementById('save').addEventListener('click', () => {
-    const dataString = localStorage.getItem('mechaCreatorAutoSave');
-    if (!dataString) return log('保存データなし');
-    const blob = new Blob([dataString], {type: 'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'mecha-data.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    log('データ保存');
-  });
-  document.getElementById('load').addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (re) => {
-      try {
-        SceneIO.loadFromData(appContext, JSON.parse(re.target.result));
-      } catch (err) {
-        log('ファイル読込失敗');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  });
-
-  const multiSelectButton = document.getElementById('multiSelect');
-  const panModeButton = document.getElementById('panModeButton');
-  document.addEventListener('setMultiSelectMode', (e) => {
-    appState.isMultiSelectMode = e.detail;
-    multiSelectButton.style.backgroundColor = e.detail ? '#2ecc71' : '#f39c12';
-  });
-  multiSelectButton.addEventListener('click', () => {
-    appState.isMultiSelectMode = !appState.isMultiSelectMode;
-    multiSelectButton.style.backgroundColor = appState.isMultiSelectMode ? '#2ecc71' : '#f39c12';
-    log(appState.isMultiSelectMode ? '複数選択モード開始。SHIFTキーで選択を追加/解除できます。' : '複数選択モード終了。');
-    if (!appState.isMultiSelectMode) appState.clearSelection();
-  });
-  panModeButton.addEventListener('click', () => {
-    isPanModeActive = !isPanModeActive;
-    panModeButton.style.backgroundColor = isPanModeActive ? '#2ecc71' : '#3498db';
-    orbitControls.mouseButtons.LEFT = isPanModeActive ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
-    log(isPanModeActive ? 'パンモード開始。3Dビューの左ドラッグで視点を移動できます。' : 'パンモード終了。');
-  });
-
-  const paintModeButton = document.getElementById('paintModeButton');
-  const eyedropperButton = document.getElementById('eyedropperButton');
-  const paintControls = document.getElementById('paint-controls');
-  const colorPaletteContainer = document.getElementById('colorPalette');
-  const currentColorDisplay = document.getElementById('currentColorDisplay');
-
-  function updateCurrentColorDisplayUI() {
-    currentColorDisplay.style.backgroundColor = `#${appState.currentColor.getHexString()}`;
-  }
-  document.addEventListener('updateCurrentColorDisplay', updateCurrentColorDisplayUI);
-
-  colorPaletteContainer.appendChild(createColorPalette([0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff, 0x999999], 5));
-  colorPaletteContainer.addEventListener('click', (e) => {
-    if (e.target.dataset.color) {
-      appState.currentColor.set(parseInt(e.target.dataset.color, 10));
-      updateCurrentColorDisplayUI();
-      log(`色を選択: #${appState.currentColor.getHexString()}`);
-    }
-  });
-  updateCurrentColorDisplayUI();
-
-  paintModeButton.addEventListener('click', () => {
-    appState.isPaintMode = !appState.isPaintMode;
-    if (appState.isPaintMode) {
-      paintModeButton.style.backgroundColor = '#2ecc71';
-      paintControls.style.display = 'flex';
-      if (appState.isMultiSelectMode) multiSelectButton.click();
-      ClipboardFeatures.cancelMirrorCopyMode(appContext);
-      ClipboardFeatures.cancelPasteMode(appContext);
-      CsgOperations.cancelSubtractMode(appContext);
-      appState.clearSelection();
-      log('ペイントモード開始。オブジェクトをクリックして着色します。');
-    } else {
-      paintModeButton.style.backgroundColor = '#9b59b6';
-      paintControls.style.display = 'none';
-      appState.isEyedropperMode = false;
-      for (const key in viewportManager.viewports) {
-        viewportManager.viewports[key].element.style.cursor = 'default';
-      }
-      log('ペイントモード終了。');
-    }
-  });
-
-  document.addEventListener('setEyedropperMode', (e) => {
-    appState.isEyedropperMode = e.detail;
-    for (const key in viewportManager.viewports) {
-      viewportManager.viewports[key].element.style.cursor = e.detail ? 'crosshair' : 'default';
-    }
-  });
-  eyedropperButton.addEventListener('click', () => {
-    appState.isEyedropperMode = true;
-    if (!appState.isPaintMode) {
-      paintModeButton.click();
-    }
-    log('スポイトモード開始。オブジェクトをクリックして色を抽出します。');
-    for (const key in viewportManager.viewports) {
-      viewportManager.viewports[key].element.style.cursor = 'crosshair';
-    }
-  });
-
-  document.addEventListener('setGizmoMode', (e) => {
-    gizmoMode = e.detail;
-    updateGizmoAppearance();
-  });
-  document.addEventListener('updateGizmoAppearance', updateGizmoAppearance);
-}
-
-// =================================================================
 // ◆ 5. アニメーションループ
 // =================================================================
 function animate() {
@@ -399,32 +238,20 @@ function animate() {
   orbitControls.update();
 
   if (groupBoundingBoxMesh) {
+    // グループ選択時のバウンディングボックス更新ロジックを簡素化
     const groupBox3 = new THREE.Box3();
     appState.selectedObjects.forEach((obj) => {
-      const worldPosition = new THREE.Vector3();
-      const worldQuaternion = new THREE.Quaternion();
-      const worldScale = new THREE.Vector3();
-      obj.matrixWorld.decompose(worldPosition, worldQuaternion, worldScale);
-
-      const box = new THREE.Box3();
-      if (obj.geometry.boundingBox) {
-        box.copy(obj.geometry.boundingBox);
-        box.applyMatrix4(obj.matrixWorld);
-        groupBox3.union(box);
-      } else {
-        groupBox3.expandByObject(obj);
-      }
+      groupBox3.expandByObject(obj);
     });
     if (!groupBox3.isEmpty()) {
       groupBox3.getCenter(groupBoundingBoxMesh.position);
       groupBox3.getSize(groupBoundingBoxMesh.scale);
+      groupBoundingBoxMesh.updateMatrixWorld(true);
     }
   }
 
   selectionBoxes.children.forEach((box) => box.update());
-
   viewportManager.render(appState);
-
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
@@ -432,8 +259,18 @@ function animate() {
 // ◆ 6. 初期化
 // =================================================================
 appState.onSelectionChange.add(updateSelection);
-setupUIEventListeners();
 inputHandler.initialize();
+uiControl.initialize(); // ★ UIControlのイベントリスナーを起動
+
+// カスタムイベントのリスナーをここに集約
+document.addEventListener('setGizmoMode', (e) => {
+  gizmoMode = e.detail;
+  updateGizmoAppearance();
+});
+document.addEventListener('setPanMode', (e) => {
+  isPanModeActive = e.detail;
+});
+
 updateGizmoAppearance();
 updateSelection();
 

@@ -150,6 +150,7 @@ export class InputHandler {
     }
     if (this.appState.modes.isPasteMode && e.key === 'Escape') {
       ClipboardFeatures.cancelPasteMode(this.appContext);
+      this.log('貼り付けをキャンセルしました。');
       return;
     }
     if (this.appState.modes.isSubtractMode && e.key === 'Escape') {
@@ -635,10 +636,25 @@ export class InputHandler {
           }
         });
       }
+
+      const currentSelection = this.appState.selectedObjects.slice();
       if (e.ctrlKey) {
-        this.appState.toggleSelection(objectsInBox);
+        objectsInBox.forEach((obj) => {
+          const index = currentSelection.indexOf(obj);
+          if (index > -1) {
+            currentSelection.splice(index, 1);
+          } else {
+            currentSelection.push(obj);
+          }
+        });
+        this.appState.setSelection(currentSelection);
       } else if (e.shiftKey || this.appState.isMultiSelectMode) {
-        objectsInBox.forEach((obj) => this.appState.addSelection(obj));
+        objectsInBox.forEach((obj) => {
+          if (!currentSelection.includes(obj)) {
+            currentSelection.push(obj);
+          }
+        });
+        this.appState.setSelection(currentSelection);
       } else {
         this.appState.setSelection(objectsInBox);
       }
@@ -742,6 +758,7 @@ export class InputHandler {
           ClipboardFeatures.performMirrorCopy(intersects[0].object, this.appContext);
         } else {
           ClipboardFeatures.cancelMirrorCopyMode(this.appContext);
+          this.log('鏡面コピーモードをキャンセルしました。');
         }
         return;
       }
@@ -752,6 +769,7 @@ export class InputHandler {
           ClipboardFeatures.confirmPaste(intersects[0].object, this.appContext);
         } else {
           ClipboardFeatures.cancelPasteMode(this.appContext);
+          this.log('貼り付けをキャンセルしました。');
         }
         return;
       }
