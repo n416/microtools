@@ -7,7 +7,7 @@ import { ViewportManager } from './ViewportManager.js';
 import { InputHandler } from './InputHandler.js';
 import { UIControl } from './UIControl.js';
 import { History } from './History.js';
-import * as SceneIO from './scene-io.js';
+import * as SceneIO from './SceneIo.js';
 
 export class MechaCreatorApp {
   constructor() {

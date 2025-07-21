@@ -1,4 +1,4 @@
-import { command } from './command.js';
+import { command } from './Command.js';
 
 /**
  * オブジェクトの色を変更するコマンド。
