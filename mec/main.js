@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {TransformControls} from 'three/addons/controls/TransformControls.js';
 
+// 状態管理クラスのインポート
+import {AppState} from './AppState.js';
+
 // コマンド関連のインポート
 import {command} from './command.js';
 import {createColorPalette} from './paint.js';
@@ -70,22 +73,13 @@ scene.add(scaleGizmoGroup);
 const previewGroup = new THREE.Group();
 scene.add(previewGroup);
 
-// アプリケーションの状態を一元管理
-let selectedObjects = [];
-const modes = {
-  isMirrorCopyMode: false,
-  isPasteMode: false,
-  isSubtractMode: false,
-  subtractTargets: [],
-  clipboard: null,
-  lastPasteInfo: {objects: [], offset: new THREE.Vector3()},
-};
+// ★ アプリケーションの状態を一元管理
+const appState = new AppState();
 
 let multiSelectHelper = new THREE.Object3D();
 scene.add(multiSelectHelper);
 let selectionBoxes = new THREE.Group();
 scene.add(selectionBoxes);
-let isMultiSelectMode = false;
 let isPanning2D = false;
 let panStart = {x: 0, y: 0};
 let cameraStartPos = new THREE.Vector3();
@@ -103,9 +97,6 @@ let transformStartCache = null;
 let draggedInfo = null;
 const dragStartObjectState = {position: new THREE.Vector3(), scale: new THREE.Vector3(), rotation: new THREE.Euler()};
 const worldTransforms = new Map();
-let isPaintMode = false;
-let isEyedropperMode = false;
-let currentColor = new THREE.Color(0xffffff);
 let isDraggingIn2DView = false;
 let isScalingIn2DView = false;
 let isRotatingIn2DView = false;
@@ -152,18 +143,18 @@ export class History {
     this.undoStack.push(command);
     this.redoStack = [];
     if (!(command instanceof AddObjectCommand && command.isInternal)) {
-      modes.lastPasteInfo = {objects: [], offset: new THREE.Vector3()};
+      appState.modes.lastPasteInfo = {objects: [], offset: new THREE.Vector3()};
     }
     log(command.message);
     SceneIO.autoSaveScene(appContext);
   }
   undo() {
-    modes.lastPasteInfo = {objects: [], offset: new THREE.Vector3()};
+    appState.modes.lastPasteInfo = {objects: [], offset: new THREE.Vector3()};
     const command = this.undoStack.pop();
     if (command) {
       command.undo();
       this.redoStack.push(command);
-      appContext.selectionManager.clear();
+      appState.clearSelection();
       log(`Undo: ${command.message}`);
       SceneIO.autoSaveScene(appContext);
     } else {
@@ -171,19 +162,19 @@ export class History {
     }
   }
   redo() {
-    modes.lastPasteInfo = {objects: [], offset: new THREE.Vector3()};
+    appState.modes.lastPasteInfo = {objects: [], offset: new THREE.Vector3()};
     const command = this.redoStack.pop();
     if (command) {
       command.execute();
       this.undoStack.push(command);
       if (command instanceof DeleteObjectCommand || (command instanceof MacroCommand && command.commands[0] instanceof DeleteObjectCommand)) {
-        appContext.selectionManager.clear();
+        appState.clearSelection();
       } else if (command instanceof MacroCommand) {
         const newSelection = [];
         command.commands.forEach((cmd) => {
           if (cmd.object) newSelection.push(cmd.object);
         });
-        if (newSelection.length > 0) appContext.selectionManager.set(newSelection);
+        if (newSelection.length > 0) appState.setSelection(newSelection);
       }
       log(`Redo: ${command.message}`);
       SceneIO.autoSaveScene(appContext);
@@ -202,23 +193,18 @@ const appContext = {
   previewGroup,
   viewports,
   transformControls,
-  modes,
+  state: appState, // ★ AppStateインスタンスをコンテキストに追加
+  modes: appState.modes, // ★ 互換性のために残すが、基本はstate経由
   originalMaterials,
   selectionManager: {
-    get: () => selectedObjects,
-    set: (newSelection) => {
-      selectedObjects = newSelection;
-      updateSelection();
-    },
-    clear: () => {
-      selectedObjects = [];
-      updateSelection();
-    },
+    get: () => appState.selectedObjects,
+    set: (newSelection) => appState.setSelection(newSelection),
+    clear: () => appState.clearSelection(),
   },
   log,
   history,
   highlightMaterial,
-  updateSelection,
+  updateSelection, // ★ 当面は直接渡すが、将来的にはこれも分離
 };
 
 function log(message) {
@@ -229,7 +215,12 @@ function log(message) {
   console.log(message);
 }
 
+// ★ updateSelectionはAppStateの変更通知に紐付ける
+appState.onSelectionChange.add(updateSelection);
+
 function updateSelection() {
+  const selectedObjects = appState.selectedObjects; // ★ stateから取得
+
   while (selectionBoxes.children.length > 0) {
     const box = selectionBoxes.children[0];
     selectionBoxes.remove(box);
@@ -279,6 +270,7 @@ function updateGizmoAppearance() {
 }
 
 function updateScaleGizmo(viewportKey) {
+  const selectedObjects = appState.selectedObjects; // ★ stateから取得
   if (selectedObjects.length === 0 || viewportKey === 'perspective') {
     scaleGizmoGroup.visible = false;
     return;
@@ -334,6 +326,7 @@ function updateScaleGizmo(viewportKey) {
 
 function debugSelectionHelpers() {
   console.clear();
+  const selectedObjects = appState.selectedObjects; // ★ stateから取得
   console.log('================ DEBUG REPORT ================');
   if (selectedObjects.length < 2) {
     console.log('複数選択されていません。オブジェクトを2つ以上選択してください。');
@@ -414,10 +407,11 @@ function setupEventListeners() {
   document.getElementById('mirrorCopy').addEventListener('click', () => ClipboardFeatures.startMirrorCopyMode(appContext));
   document.getElementById('cancelMirrorCopy').addEventListener('click', () => ClipboardFeatures.cancelMirrorCopyMode(appContext));
   document.getElementById('deleteObject').addEventListener('click', () => {
+    const selectedObjects = appState.selectedObjects; // ★ stateから取得
     if (selectedObjects.length === 0) return log('削除対象なし');
     const commands = selectedObjects.map((obj) => new DeleteObjectCommand(obj, mechaGroup));
     history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトを削除`));
-    appContext.selectionManager.clear();
+    appState.clearSelection();
   });
 
   // --- ファイルIO ---
@@ -452,13 +446,13 @@ function setupEventListeners() {
   document.getElementById('debugLog').addEventListener('click', debugSelectionHelpers);
   const multiSelectButton = document.getElementById('multiSelect');
   multiSelectButton.addEventListener('click', () => {
-    isMultiSelectMode = !isMultiSelectMode;
-    if (isMultiSelectMode) {
+    appState.isMultiSelectMode = !appState.isMultiSelectMode;
+    if (appState.isMultiSelectMode) {
       multiSelectButton.style.backgroundColor = '#2ecc71';
       log('複数選択モード開始。SHIFTキーで選択を追加/解除できます。');
     } else {
       multiSelectButton.style.backgroundColor = '#f39c12';
-      appContext.selectionManager.clear();
+      appState.clearSelection();
       log('複数選択モード終了。');
     }
   });
@@ -488,30 +482,30 @@ function setupEventListeners() {
   colorPaletteContainer.addEventListener('click', (e) => {
     if (e.target.dataset.color) {
       const colorHex = parseInt(e.target.dataset.color, 10);
-      currentColor.set(colorHex);
+      appState.currentColor.set(colorHex);
       updateCurrentColorDisplay();
-      log(`色を選択: #${currentColor.getHexString()}`);
+      log(`色を選択: #${appState.currentColor.getHexString()}`);
     }
   });
   function updateCurrentColorDisplay() {
-    currentColorDisplay.style.backgroundColor = `#${currentColor.getHexString()}`;
+    currentColorDisplay.style.backgroundColor = `#${appState.currentColor.getHexString()}`;
   }
   updateCurrentColorDisplay();
   paintModeButton.addEventListener('click', () => {
-    isPaintMode = !isPaintMode;
-    if (isPaintMode) {
+    appState.isPaintMode = !appState.isPaintMode;
+    if (appState.isPaintMode) {
       paintModeButton.style.backgroundColor = '#2ecc71';
       paintControls.style.display = 'flex';
-      if (isMultiSelectMode) multiSelectButton.click();
+      if (appState.isMultiSelectMode) multiSelectButton.click();
       ClipboardFeatures.cancelMirrorCopyMode(appContext);
       ClipboardFeatures.cancelPasteMode(appContext);
       CsgOperations.cancelSubtractMode(appContext);
-      appContext.selectionManager.clear();
+      appState.clearSelection();
       log('ペイントモード開始。オブジェクトをクリックして着色します。');
     } else {
       paintModeButton.style.backgroundColor = '#9b59b6';
       paintControls.style.display = 'none';
-      isEyedropperMode = false;
+      appState.isEyedropperMode = false;
       for (const key in viewports) {
         viewports[key].element.style.cursor = 'default';
       }
@@ -519,8 +513,8 @@ function setupEventListeners() {
     }
   });
   eyedropperButton.addEventListener('click', () => {
-    isEyedropperMode = true;
-    if (!isPaintMode) {
+    appState.isEyedropperMode = true;
+    if (!appState.isPaintMode) {
       paintModeButton.click();
     }
     log('スポイトモード開始。オブジェクトをクリックして色を抽出します。');
@@ -533,10 +527,10 @@ function setupEventListeners() {
   window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-    if (isPaintMode && !isEyedropperMode) {
+    if (appState.isPaintMode && !appState.isEyedropperMode) {
       let colorChanged = false;
       const hsl = {};
-      currentColor.getHSL(hsl);
+      appState.currentColor.getHSL(hsl);
       const hueStep = 0.01;
       const lightnessStep = 0.02;
 
@@ -562,7 +556,7 @@ function setupEventListeners() {
 
       if (colorChanged) {
         e.preventDefault();
-        currentColor.setHSL(hsl.h, hsl.s, hsl.l);
+        appState.currentColor.setHSL(hsl.h, hsl.s, hsl.l);
         updateCurrentColorDisplay();
         log(`色調整: H:${hsl.h.toFixed(2)} S:${hsl.s.toFixed(2)} L:${hsl.l.toFixed(2)}`);
         return;
@@ -581,8 +575,9 @@ function setupEventListeners() {
           return;
         case 'c':
           e.preventDefault();
+          const selectedObjects = appState.selectedObjects; // ★ stateから取得
           if (selectedObjects.length > 0) {
-            modes.clipboard = selectedObjects.map((obj) => ({geometry: obj.geometry, material: obj.material, source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()}}));
+            appState.modes.clipboard = selectedObjects.map((obj) => ({geometry: obj.geometry, material: obj.material, source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()}}));
             log(`${selectedObjects.length}個のオブジェクトをコピーしました。`);
           } else {
             log('コピーするオブジェクトが選択されていません。');
@@ -590,12 +585,12 @@ function setupEventListeners() {
           return;
         case 'v':
           e.preventDefault();
-          if (!modes.clipboard) {
+          if (!appState.modes.clipboard) {
             log('クリップボードが空です。');
             return;
           }
-          const lastSelectedIds = modes.lastPasteInfo.objects.map((o) => o.uuid);
-          const currentSelectedIds = selectedObjects.map((o) => o.uuid);
+          const lastSelectedIds = appState.modes.lastPasteInfo.objects.map((o) => o.uuid);
+          const currentSelectedIds = appState.selectedObjects.map((o) => o.uuid);
           const isSameSelection = lastSelectedIds.length === currentSelectedIds.length && lastSelectedIds.every((id) => currentSelectedIds.includes(id));
           if (isSameSelection && lastSelectedIds.length > 0) {
             ClipboardFeatures.performDirectPaste(appContext);
@@ -616,11 +611,11 @@ function setupEventListeners() {
       return;
     }
 
-    if (modes.isMirrorCopyMode && e.key === 'Escape') {
+    if (appState.modes.isMirrorCopyMode && e.key === 'Escape') {
       ClipboardFeatures.cancelMirrorCopyMode(appContext);
       return;
     }
-    if (modes.isPasteMode && e.key === 'Escape') {
+    if (appState.modes.isPasteMode && e.key === 'Escape') {
       ClipboardFeatures.cancelPasteMode(appContext);
       return;
     }
@@ -644,12 +639,13 @@ function setupEventListeners() {
         break;
     }
 
+    const selectedObjects = appState.selectedObjects; // ★ stateから取得
     if (selectedObjects.length === 0) return;
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (selectedObjects.length > 0) {
         const commands = selectedObjects.map((obj) => new DeleteObjectCommand(obj, mechaGroup));
         history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトを削除`));
-        appContext.selectionManager.clear();
+        appState.clearSelection();
       }
       return;
     }
@@ -782,7 +778,7 @@ function setupEventListeners() {
 
       startPoint.set(event.clientX, event.clientY);
 
-      if (modes.isMirrorCopyMode || modes.isSubtractMode || modes.isPasteMode || isPaintMode || isEyedropperMode) return;
+      if (appState.modes.isMirrorCopyMode || appState.modes.isSubtractMode || appState.modes.isPasteMode || appState.isPaintMode || appState.isEyedropperMode) return;
 
       let clickedRect = null;
       for (const key in viewports) {
@@ -805,32 +801,32 @@ function setupEventListeners() {
       const allObjectIntersects = raycaster.intersectObjects(mechaGroup.children, true);
       const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
 
-      if (is2DView && selectedObjects.length > 0) {
+      if (is2DView && appState.selectedObjects.length > 0) {
         mechaGroup.visible = false;
         const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
         mechaGroup.visible = true;
         const setupTransformState = () => {
           orbitControls.enabled = false;
           dragStartPointer.set(event.clientX, event.clientY);
-          transformStartCache = selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
+          transformStartCache = appState.selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
         };
         const setupMultiSelectGroup = () => {
           const groupBounds = new THREE.Box3();
-          selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
+          appState.selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
           groupBounds.getCenter(dragStartObjectState.position);
           groupBounds.getSize(dragStartObjectState.scale);
           worldTransforms.clear();
-          selectedObjects.forEach((obj) => worldTransforms.set(obj, {parent: obj.parent}));
+          appState.selectedObjects.forEach((obj) => worldTransforms.set(obj, {parent: obj.parent}));
           if (transformGroup) scene.remove(transformGroup);
           transformGroup = new THREE.Group();
           transformGroup.position.copy(dragStartObjectState.position);
           scene.add(transformGroup);
-          selectedObjects.forEach((obj) => transformGroup.attach(obj));
+          appState.selectedObjects.forEach((obj) => transformGroup.attach(obj));
         };
         if (handleIntersects.length > 0) {
           setupTransformState();
-          if (selectedObjects.length === 1) {
-            const target = selectedObjects[0];
+          if (appState.selectedObjects.length === 1) {
+            const target = appState.selectedObjects[0];
             dragStartObjectState.position.copy(target.position);
             dragStartObjectState.scale.copy(target.scale);
             dragStartObjectState.rotation.copy(target.rotation);
@@ -842,11 +838,11 @@ function setupEventListeners() {
           draggedInfo = {viewportKey: clickedViewportKey, handleName: handleIntersects[0].object.name};
           return;
         }
-        if (clickedObject && selectedObjects.includes(clickedObject) && !event.shiftKey && !event.ctrlKey) {
+        if (clickedObject && appState.selectedObjects.includes(clickedObject) && !event.shiftKey && !event.ctrlKey) {
           setupTransformState();
           isDraggingIn2DView = true;
-          if (selectedObjects.length === 1) {
-            dragStartObjectState.position.copy(selectedObjects[0].position);
+          if (appState.selectedObjects.length === 1) {
+            dragStartObjectState.position.copy(appState.selectedObjects[0].position);
           } else {
             setupMultiSelectGroup();
           }
@@ -915,8 +911,8 @@ function setupEventListeners() {
     const worldDeltaX = ((event.clientX - dragStartPointer.x) / rect.width) * frustumSize * aspect;
     const worldDeltaY = ((event.clientY - dragStartPointer.y) / rect.height) * frustumSize;
 
-    if (selectedObjects.length === 1) {
-      const targetObject = selectedObjects[0];
+    if (appState.selectedObjects.length === 1) {
+      const targetObject = appState.selectedObjects[0];
       if (isDraggingIn2DView) {
         const newPosition = dragStartObjectState.position.clone();
         switch (draggedInfo.viewportKey) {
@@ -999,7 +995,7 @@ function setupEventListeners() {
         }
         targetObject.rotation.copy(newRotation);
       }
-    } else if (selectedObjects.length > 1) {
+    } else if (appState.selectedObjects.length > 1) {
       if (isDraggingIn2DView && transformGroup) {
         const worldDelta = new THREE.Vector3();
         switch (draggedInfo.viewportKey) {
@@ -1100,8 +1096,8 @@ function setupEventListeners() {
       orbitControls.enabled = true;
       const endPoint = new THREE.Vector2(e.clientX, e.clientY);
       if (startPoint.distanceTo(endPoint) < 5) {
-        if (!e.ctrlKey && !e.shiftKey && !isMultiSelectMode) {
-          appContext.selectionManager.clear();
+        if (!e.ctrlKey && !e.shiftKey && !appState.isMultiSelectMode) {
+          appState.clearSelection();
           log('待機中');
         }
         return;
@@ -1125,7 +1121,7 @@ function setupEventListeners() {
         });
       }
       if (e.ctrlKey) {
-        const currentSelection = [...selectedObjects];
+        const currentSelection = [...appState.selectedObjects];
         objectsInBox.forEach((obj) => {
           const index = currentSelection.indexOf(obj);
           if (index > -1) {
@@ -1134,23 +1130,24 @@ function setupEventListeners() {
             currentSelection.push(obj);
           }
         });
-        appContext.selectionManager.set(currentSelection);
-      } else if (e.shiftKey || isMultiSelectMode) {
-        const newSelection = [...selectedObjects];
+        appState.setSelection(currentSelection);
+      } else if (e.shiftKey || appState.isMultiSelectMode) {
+        const newSelection = [...appState.selectedObjects];
         objectsInBox.forEach((obj) => {
           if (!newSelection.includes(obj)) {
             newSelection.push(obj);
           }
         });
-        appContext.selectionManager.set(newSelection);
+        appState.setSelection(newSelection);
       } else {
-        appContext.selectionManager.set(objectsInBox);
+        appState.setSelection(objectsInBox);
       }
-      log(`${selectedObjects.length}個のオブジェクトを選択中`);
+      log(`${appState.selectedObjects.length}個のオブジェクトを選択中`);
       return;
     }
 
     if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
+      const selectedObjects = appState.selectedObjects; // ★ 参照をローカルに
       if (transformGroup) {
         selectedObjects.forEach((obj) => {
           worldTransforms.get(obj).parent.attach(obj);
@@ -1180,7 +1177,7 @@ function setupEventListeners() {
       orbitControls.enabled = true;
       updateGizmoAppearance();
       transformStartCache = null;
-      updateSelection();
+      updateSelection(); // ★ ドラッグ終了時に明示的に呼ぶ
       return;
     }
 
@@ -1201,42 +1198,42 @@ function setupEventListeners() {
       pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, clickedViewport.camera);
 
-      if (isEyedropperMode) {
+      if (appState.isEyedropperMode) {
         const intersects = raycaster.intersectObjects(mechaGroup.children, false);
         if (intersects.length > 0) {
           const clickedObject = intersects[0].object;
-          currentColor.copy(clickedObject.material.color);
+          appState.currentColor.copy(clickedObject.material.color);
           updateCurrentColorDisplay();
-          log(`色を抽出: #${currentColor.getHexString()}`);
+          log(`色を抽出: #${appState.currentColor.getHexString()}`);
         }
-        isEyedropperMode = false;
+        appState.isEyedropperMode = false;
         for (const key in viewports) {
           viewports[key].element.style.cursor = 'default';
         }
         return;
       }
 
-      if (isPaintMode) {
+      if (appState.isPaintMode) {
         const intersects = raycaster.intersectObjects(mechaGroup.children, false);
         if (intersects.length > 0) {
           const clickedObject = intersects[0].object;
-          if (clickedObject.material.color.getHex() !== currentColor.getHex()) {
-            history.execute(new ChangeColorCommand(clickedObject, currentColor));
+          if (clickedObject.material.color.getHex() !== appState.currentColor.getHex()) {
+            history.execute(new ChangeColorCommand(clickedObject, appState.currentColor));
           }
         }
         return;
       }
 
-      if (modes.isSubtractMode) {
+      if (appState.modes.isSubtractMode) {
         const intersects = raycaster.intersectObjects(mechaGroup.children, true);
         let drillObject = null;
         if (intersects.length > 0) {
-          if (modes.subtractTargets.includes(intersects[0].object)) {
+          if (appState.modes.subtractTargets.includes(intersects[0].object)) {
             drillObject = intersects[0].object;
           }
         }
         if (drillObject) {
-          const baseObjects = modes.subtractTargets.filter((obj) => obj !== drillObject);
+          const baseObjects = appState.modes.subtractTargets.filter((obj) => obj !== drillObject);
           if (baseObjects.length > 0) {
             CsgOperations.performSubtract(baseObjects, drillObject, appContext);
           } else {
@@ -1249,7 +1246,7 @@ function setupEventListeners() {
         return;
       }
 
-      if (modes.isMirrorCopyMode) {
+      if (appState.modes.isMirrorCopyMode) {
         const intersects = raycaster.intersectObjects(previewGroup.children, true);
         if (intersects.length > 0) {
           ClipboardFeatures.performMirrorCopy(intersects[0].object, appContext);
@@ -1259,7 +1256,7 @@ function setupEventListeners() {
         return;
       }
 
-      if (modes.isPasteMode) {
+      if (appState.modes.isPasteMode) {
         const intersects = raycaster.intersectObjects(previewGroup.children, true);
         if (intersects.length > 0) {
           ClipboardFeatures.confirmPaste(intersects[0].object, appContext);
@@ -1273,31 +1270,19 @@ function setupEventListeners() {
       const clickedObject = intersects.length > 0 ? intersects[0].object : null;
 
       if (e.ctrlKey) {
-        const newSelection = [...selectedObjects];
-        if (clickedObject) {
-          const index = newSelection.indexOf(clickedObject);
-          if (index > -1) {
-            newSelection.splice(index, 1);
-          } else {
-            newSelection.push(clickedObject);
-          }
-        }
-        appContext.selectionManager.set(newSelection);
-      } else if (e.shiftKey || isMultiSelectMode) {
-        if (clickedObject && !selectedObjects.includes(clickedObject)) {
-          const newSelection = [...selectedObjects, clickedObject];
-          appContext.selectionManager.set(newSelection);
-        }
+        appState.toggleSelection(clickedObject);
+      } else if (e.shiftKey || appState.isMultiSelectMode) {
+        appState.addSelection(clickedObject);
       } else {
-        appContext.selectionManager.set(clickedObject ? [clickedObject] : []);
+        appState.setSelection(clickedObject);
       }
 
-      if (isMultiSelectMode && !clickedObject) {
-        isMultiSelectMode = false;
+      if (appState.isMultiSelectMode && !clickedObject) {
+        appState.isMultiSelectMode = false;
         document.getElementById('multiSelect').style.backgroundColor = '#f39c12';
       }
 
-      log(selectedObjects.length > 0 ? `${selectedObjects.length}個のオブジェクトを選択中` : '待機中');
+      log(appState.selectedObjects.length > 0 ? `${appState.selectedObjects.length}個のオブジェクトを選択中` : '待機中');
       return;
     }
   });
@@ -1356,7 +1341,7 @@ function animate() {
 
   if (groupBoundingBoxMesh) {
     const groupBox3 = new THREE.Box3();
-    selectedObjects.forEach((obj) => {
+    appState.selectedObjects.forEach((obj) => {
       groupBox3.expandByObject(obj);
     });
     if (!groupBox3.isEmpty()) {
@@ -1399,13 +1384,13 @@ function animate() {
       selectionBoxes.visible = true;
       gridHelper.visible = true;
 
-      if (selectedObjects.length > 0) {
+      if (appState.selectedObjects.length > 0) {
         renderer.render(scaleGizmoGroup, view.camera);
       }
       renderer.autoClear = originalAutoClear;
     } else {
       scaleGizmoGroup.visible = false;
-      transformControls.visible = !!transformControls.object && !modes.isMirrorCopyMode && !modes.isPasteMode && !isPaintMode;
+      transformControls.visible = !!transformControls.object && !appState.modes.isMirrorCopyMode && !appState.modes.isPasteMode && !appState.isPaintMode;
       renderer.render(scene, view.camera);
     }
   }
@@ -1417,4 +1402,6 @@ function animate() {
 // =================================================================
 setupEventListeners();
 updateGizmoAppearance();
+// ★ 初回描画のために一度呼び出す
+updateSelection();
 animate();
