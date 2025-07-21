@@ -452,7 +452,7 @@ export class InputHandler {
           const snapAngle = THREE.MathUtils.degToRad(22.5);
           deltaAngle = Math.round(deltaAngle / snapAngle) * snapAngle;
         }
-        
+
         const axis = new THREE.Vector3();
         switch (this.draggedInfo.viewportKey) {
           case 'top':
@@ -468,8 +468,8 @@ export class InputHandler {
         this.transformGroup.quaternion.setFromAxisAngle(axis, deltaAngle);
       } else if (this.isScalingIn2DView) {
         const oldSize = this.dragStartObjectState.scale;
-        const newSize = oldSize.clone();
-        const newCenter = this.dragStartObjectState.position.clone();
+        const oldCenter = this.dragStartObjectState.position;
+
         let u_change = 0,
           v_change = 0,
           axisU,
@@ -494,19 +494,71 @@ export class InputHandler {
             axisV = 'y';
             break;
         }
+
         const u_multiplier = this.draggedInfo.viewportKey === 'side' ? (this.draggedInfo.handleName.includes('left') ? 1 : this.draggedInfo.handleName.includes('right') ? -1 : 0) : this.draggedInfo.handleName.includes('left') ? -1 : this.draggedInfo.handleName.includes('right') ? 1 : 0;
         const v_multiplier = this.draggedInfo.viewportKey === 'top' ? (this.draggedInfo.handleName.includes('top') ? -1 : this.draggedInfo.handleName.includes('bottom') ? 1 : 0) : this.draggedInfo.handleName.includes('top') ? 1 : this.draggedInfo.handleName.includes('bottom') ? -1 : 0;
-        const scaleChangeU = u_change * u_multiplier;
-        const scaleChangeV = v_change * v_multiplier;
-        if (u_multiplier !== 0 && oldSize[axisU] + scaleChangeU > 0.01) {
-          newSize[axisU] = oldSize[axisU] + scaleChangeU;
-          newCenter[axisU] = this.dragStartObjectState.position[axisU] - (oldSize[axisU] / 2) * u_multiplier + (newSize[axisU] / 2) * u_multiplier;
+
+        let scaleChangeU = u_change * u_multiplier;
+        let scaleChangeV = v_change * v_multiplier;
+
+        const newSize = oldSize.clone();
+        const newCenter = oldCenter.clone();
+
+        // SHIFTキー: 3Dアスペクト比を維持
+        if (event.shiftKey) {
+          let scaleRatio = 1.0;
+          // U軸(横)とV軸(縦)のどちらの変化量が大きいかを判断し、スケール比率を計算
+          if (u_multiplier !== 0 && (v_multiplier === 0 || Math.abs(scaleChangeU / (oldSize[axisU] || 1)) > Math.abs(scaleChangeV / (oldSize[axisV] || 1)))) {
+            scaleRatio = (oldSize[axisU] + scaleChangeU) / (oldSize[axisU] || 1);
+          } else if (v_multiplier !== 0) {
+            scaleRatio = (oldSize[axisV] + scaleChangeV) / (oldSize[axisV] || 1);
+          }
+
+          // 全ての軸に同じ比率を適用
+          newSize.copy(oldSize).multiplyScalar(scaleRatio);
+
+          // Altキー: 中心をアンカー
+          if (event.altKey) {
+            // newCenter は oldCenter のまま
+          } else {
+            // デフォルト: 対角をアンカー
+            const sizeDelta = newSize.clone().sub(oldSize);
+            const multipliers = new THREE.Vector3(0, 0, 0);
+            if (u_multiplier !== 0) multipliers[axisU] = u_multiplier;
+            if (v_multiplier !== 0) multipliers[axisV] = v_multiplier;
+
+            // 中心の移動量を計算 (sizeDeltaにはXYZすべての変化量が含まれている)
+            newCenter.add(sizeDelta.multiply(multipliers).multiplyScalar(0.5));
+          }
+        } else {
+          // SHIFTキーなし (個別拡縮)
+
+          // Altキー: 中心をアンカー
+          if (event.altKey) {
+            if (u_multiplier !== 0) newSize[axisU] = oldSize[axisU] + scaleChangeU * 2;
+            if (v_multiplier !== 0) newSize[axisV] = oldSize[axisV] + scaleChangeV * 2;
+            // newCenter は oldCenter のまま
+          } else {
+            // デフォルト: 対角をアンカー
+            if (u_multiplier !== 0) {
+              newSize[axisU] = oldSize[axisU] + scaleChangeU;
+              newCenter[axisU] = oldCenter[axisU] + (scaleChangeU / 2) * u_multiplier;
+            }
+            if (v_multiplier !== 0) {
+              newSize[axisV] = oldSize[axisV] + scaleChangeV;
+              newCenter[axisV] = oldCenter[axisV] + (scaleChangeV / 2) * v_multiplier;
+            }
+          }
         }
-        if (v_multiplier !== 0 && oldSize[axisV] + scaleChangeV > 0.01) {
-          newSize[axisV] = oldSize[axisV] + scaleChangeV;
-          newCenter[axisV] = this.dragStartObjectState.position[axisV] - (oldSize[axisV] / 2) * v_multiplier + (newSize[axisV] / 2) * v_multiplier;
-        }
+
+        // オブジェクトが反転したり、サイズが0以下になったりするのを防ぐ
+        if (newSize.x < 0.01) newSize.x = 0.01;
+        if (newSize.y < 0.01) newSize.y = 0.01;
+        if (newSize.z < 0.01) newSize.z = 0.01;
+
+        // 最終的なスケール係数と位置を計算
         const scaleFactor = new THREE.Vector3(oldSize.x !== 0 ? newSize.x / oldSize.x : 1, oldSize.y !== 0 ? newSize.y / oldSize.y : 1, oldSize.z !== 0 ? newSize.z / oldSize.z : 1);
+
         this.transformGroup.position.copy(newCenter);
         this.transformGroup.scale.copy(scaleFactor);
       }
