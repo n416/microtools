@@ -4,6 +4,8 @@ import {TransformControls} from 'three/addons/controls/TransformControls.js';
 
 // 状態管理クラスのインポート
 import {AppState} from './AppState.js';
+// ビューポート管理クラスのインポート
+import {ViewportManager} from './ViewportManager.js';
 
 // コマンド関連のインポート
 import {command} from './command.js';
@@ -33,6 +35,7 @@ scene.add(mechaGroup);
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const gridHelper = new THREE.GridHelper(20, 20, 0x888888, 0x444444);
+gridHelper.name = 'GridHelper';
 scene.add(gridHelper);
 
 const logDisplay = document.getElementById('log-display');
@@ -73,7 +76,7 @@ scene.add(scaleGizmoGroup);
 const previewGroup = new THREE.Group();
 scene.add(previewGroup);
 
-// ★ アプリケーションの状態を一元管理
+// アプリケーションの状態を一元管理
 const appState = new AppState();
 
 let multiSelectHelper = new THREE.Object3D();
@@ -103,35 +106,25 @@ let isRotatingIn2DView = false;
 const dragStartPointer = new THREE.Vector2();
 
 // =================================================================
-// ◆ 2. ビューポートとカメラ設定
-// =================================================================
-const viewports = {
-  top: {element: document.getElementById('view-top'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
-  perspective: {element: document.getElementById('view-perspective'), camera: new THREE.PerspectiveCamera(75, 1, 0.1, 1000), background: new THREE.Color(0x282c34)},
-  side: {element: document.getElementById('view-side'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
-  front: {element: document.getElementById('view-front'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
-};
-viewports.perspective.camera.position.set(4, 3, 5);
-viewports.perspective.camera.lookAt(0, 0, 0);
-viewports.top.camera.position.set(0, 10, 0);
-viewports.top.camera.lookAt(0, 0, 0);
-viewports.top.camera.up.set(0, 0, -1);
-viewports.front.camera.position.set(0, 0, 10);
-viewports.front.camera.lookAt(0, 0, 0);
-viewports.side.camera.position.set(10, 0, 0);
-viewports.side.camera.lookAt(0, 0, 0);
-viewports.side.camera.up.set(0, 1, 0);
-
-// =================================================================
 // ◆ 3. コントロールと主要機能
 // =================================================================
-const orbitControls = new OrbitControls(viewports.perspective.camera, viewports.perspective.element);
+const viewportContainer = document.getElementById('viewport-container');
+
+// ViewportManager を先にインスタンス化してカメラを準備
+const viewportManager = new ViewportManager(viewportContainer, scene, mechaGroup, selectionBoxes, scaleGizmoGroup);
+viewportManager.setRenderer(renderer);
+
+// カメラが利用可能になった後で Controls をインスタンス化
+const orbitControls = new OrbitControls(viewportManager.viewports.perspective.camera, viewportManager.viewports.perspective.element);
 orbitControls.enableDamping = true;
-const transformControls = new TransformControls(viewports.perspective.camera, renderer.domElement);
+const transformControls = new TransformControls(viewportManager.viewports.perspective.camera, renderer.domElement);
+
+// ViewportManager にインスタンス化した controls を渡す
+viewportManager.setControls(transformControls, orbitControls);
+
 transformControls.addEventListener('objectChange', () => {
   selectedObjectHolder = transformControls.object;
 });
-const wireframeMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true, transparent: true, opacity: 0.7});
 
 export class History {
   constructor() {
@@ -191,10 +184,10 @@ const appContext = {
   renderer,
   mechaGroup,
   previewGroup,
-  viewports,
+  viewportManager,
   transformControls,
-  state: appState, // ★ AppStateインスタンスをコンテキストに追加
-  modes: appState.modes, // ★ 互換性のために残すが、基本はstate経由
+  state: appState,
+  modes: appState.modes,
   originalMaterials,
   selectionManager: {
     get: () => appState.selectedObjects,
@@ -204,7 +197,7 @@ const appContext = {
   log,
   history,
   highlightMaterial,
-  updateSelection, // ★ 当面は直接渡すが、将来的にはこれも分離
+  updateSelection,
 };
 
 function log(message) {
@@ -215,11 +208,10 @@ function log(message) {
   console.log(message);
 }
 
-// ★ updateSelectionはAppStateの変更通知に紐付ける
 appState.onSelectionChange.add(updateSelection);
 
 function updateSelection() {
-  const selectedObjects = appState.selectedObjects; // ★ stateから取得
+  const selectedObjects = appState.selectedObjects;
 
   while (selectionBoxes.children.length > 0) {
     const box = selectionBoxes.children[0];
@@ -269,64 +261,9 @@ function updateGizmoAppearance() {
   });
 }
 
-function updateScaleGizmo(viewportKey) {
-  const selectedObjects = appState.selectedObjects; // ★ stateから取得
-  if (selectedObjects.length === 0 || viewportKey === 'perspective') {
-    scaleGizmoGroup.visible = false;
-    return;
-  }
-  const box = new THREE.Box3();
-  selectedObjects.forEach((obj) => {
-    box.expandByObject(obj);
-  });
-  if (box.isEmpty()) {
-    scaleGizmoGroup.visible = false;
-    return;
-  }
-  const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
-  if (size.x === 0) size.x = 0.001;
-  if (size.y === 0) size.y = 0.001;
-  if (size.z === 0) size.z = 0.001;
-  scaleGizmoGroup.visible = true;
-  scaleGizmoGroup.position.copy(center);
-  scaleGizmoGroup.renderOrder = 999;
-  const cam = viewports[viewportKey].camera;
-  const dist = center.distanceTo(cam.position);
-  const frustumSize = 10;
-  const handleVisibleSize = Math.max(((frustumSize * handleSize) / dist) * 1.5, 0.15);
-  switch (viewportKey) {
-    case 'top':
-      scaleGizmoGroup.scale.set(size.x, size.z, 1);
-      scaleGizmoGroup.rotation.set(-Math.PI / 2, 0, 0);
-      scaleGizmoGroup.position.z += 0.01;
-      scaleGizmoGroup.children.forEach((child) => {
-        if (child.isMesh) child.scale.set(Math.max(1 / size.x, 0.15), Math.max(1 / size.z, 0.15), 1).multiplyScalar(handleVisibleSize);
-      });
-      break;
-    case 'front':
-      scaleGizmoGroup.scale.set(size.x, size.y, 1);
-      scaleGizmoGroup.rotation.set(0, 0, 0);
-      scaleGizmoGroup.position.z += 0.01;
-      scaleGizmoGroup.children.forEach((child) => {
-        if (child.isMesh) child.scale.set(Math.max(1 / size.x, 0.15), Math.max(1 / size.y, 0.15), 1).multiplyScalar(handleVisibleSize);
-      });
-      break;
-    case 'side':
-      scaleGizmoGroup.scale.set(size.z, size.y, 1);
-      scaleGizmoGroup.rotation.set(0, Math.PI / 2, 0);
-      scaleGizmoGroup.position.x += 0.01;
-      scaleGizmoGroup.children.forEach((child) => {
-        if (child.isMesh) child.scale.set(Math.max(1 / size.z, 0.15), Math.max(1 / size.y, 0.15), 1).multiplyScalar(handleVisibleSize);
-      });
-      break;
-  }
-  scaleGizmoGroup.updateMatrixWorld(true);
-}
-
 function debugSelectionHelpers() {
   console.clear();
-  const selectedObjects = appState.selectedObjects; // ★ stateから取得
+  const selectedObjects = appState.selectedObjects;
   console.log('================ DEBUG REPORT ================');
   if (selectedObjects.length < 2) {
     console.log('複数選択されていません。オブジェクトを2つ以上選択してください。');
@@ -407,7 +344,7 @@ function setupEventListeners() {
   document.getElementById('mirrorCopy').addEventListener('click', () => ClipboardFeatures.startMirrorCopyMode(appContext));
   document.getElementById('cancelMirrorCopy').addEventListener('click', () => ClipboardFeatures.cancelMirrorCopyMode(appContext));
   document.getElementById('deleteObject').addEventListener('click', () => {
-    const selectedObjects = appState.selectedObjects; // ★ stateから取得
+    const selectedObjects = appState.selectedObjects;
     if (selectedObjects.length === 0) return log('削除対象なし');
     const commands = selectedObjects.map((obj) => new DeleteObjectCommand(obj, mechaGroup));
     history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトを削除`));
@@ -506,8 +443,8 @@ function setupEventListeners() {
       paintModeButton.style.backgroundColor = '#9b59b6';
       paintControls.style.display = 'none';
       appState.isEyedropperMode = false;
-      for (const key in viewports) {
-        viewports[key].element.style.cursor = 'default';
+      for (const key in viewportManager.viewports) {
+        viewportManager.viewports[key].element.style.cursor = 'default';
       }
       log('ペイントモード終了。');
     }
@@ -518,8 +455,8 @@ function setupEventListeners() {
       paintModeButton.click();
     }
     log('スポイトモード開始。オブジェクトをクリックして色を抽出します。');
-    for (const key in viewports) {
-      viewports[key].element.style.cursor = 'crosshair';
+    for (const key in viewportManager.viewports) {
+      viewportManager.viewports[key].element.style.cursor = 'crosshair';
     }
   });
 
@@ -575,7 +512,7 @@ function setupEventListeners() {
           return;
         case 'c':
           e.preventDefault();
-          const selectedObjects = appState.selectedObjects; // ★ stateから取得
+          const selectedObjects = appState.selectedObjects;
           if (selectedObjects.length > 0) {
             appState.modes.clipboard = selectedObjects.map((obj) => ({geometry: obj.geometry, material: obj.material, source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()}}));
             log(`${selectedObjects.length}個のオブジェクトをコピーしました。`);
@@ -605,8 +542,8 @@ function setupEventListeners() {
       e.preventDefault();
       isSpacebarDown = true;
       orbitControls.mouseButtons.LEFT = THREE.MOUSE.PAN;
-      for (const key in viewports) {
-        viewports[key].element.style.cursor = 'grab';
+      for (const key in viewportManager.viewports) {
+        viewportManager.viewports[key].element.style.cursor = 'grab';
       }
       return;
     }
@@ -639,7 +576,7 @@ function setupEventListeners() {
         break;
     }
 
-    const selectedObjects = appState.selectedObjects; // ★ stateから取得
+    const selectedObjects = appState.selectedObjects;
     if (selectedObjects.length === 0) return;
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (selectedObjects.length > 0) {
@@ -725,8 +662,8 @@ function setupEventListeners() {
       if (!isPanModeActive) {
         orbitControls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
       }
-      for (const key in viewports) {
-        viewports[key].element.style.cursor = 'default';
+      for (const key in viewportManager.viewports) {
+        viewportManager.viewports[key].element.style.cursor = 'default';
       }
     }
   });
@@ -734,45 +671,34 @@ function setupEventListeners() {
   window.addEventListener('pointerdown', (event) => {
     if (event.target.closest('#ui') || transformControls.dragging) return;
 
-    const start2DPan = (e) => {
-      let clickedViewportKey = null;
-      for (const key in viewports) {
-        if (key === 'perspective') continue;
-        const rect = viewports[key].element.getBoundingClientRect();
-        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-          clickedViewportKey = key;
-          break;
-        }
-      }
-      if (clickedViewportKey) {
+    const clickedViewportInfo = viewportManager.getViewportFromEvent(event);
+
+    const start2DPan = (e, viewportKey) => {
+      if (viewportKey && viewportKey !== 'perspective') {
         isPanning2D = true;
-        panningViewportKey = clickedViewportKey;
+        panningViewportKey = viewportKey;
         panStart.x = e.clientX;
         panStart.y = e.clientY;
-        cameraStartPos.copy(viewports[panningViewportKey].camera.position);
+        cameraStartPos.copy(viewportManager.viewports[panningViewportKey].camera.position);
         orbitControls.enabled = false;
-        viewports[clickedViewportKey].element.style.cursor = 'grabbing';
+        viewportManager.viewports[clickedViewportInfo.key].element.style.cursor = 'grabbing';
       }
     };
 
     if (event.button === 2) {
-      start2DPan(event);
+      if (clickedViewportInfo) {
+        start2DPan(event, clickedViewportInfo.key);
+      }
       return;
     }
 
     if (event.button === 0) {
-      let clickedViewportKey = null;
-      for (const key in viewports) {
-        const rect = viewports[key].element.getBoundingClientRect();
-        if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
-          clickedViewportKey = key;
-          break;
-        }
-      }
+      if (!clickedViewportInfo) return;
+      const {key: clickedViewportKey, rect: clickedRect} = clickedViewportInfo;
 
       if ((isPanModeActive || isSpacebarDown) && clickedViewportKey === 'perspective') return;
       if ((isPanModeActive || isSpacebarDown) && clickedViewportKey !== 'perspective' && clickedViewportKey !== null) {
-        start2DPan(event);
+        start2DPan(event, clickedViewportKey);
         return;
       }
 
@@ -780,31 +706,21 @@ function setupEventListeners() {
 
       if (appState.modes.isMirrorCopyMode || appState.modes.isSubtractMode || appState.modes.isPasteMode || appState.isPaintMode || appState.isEyedropperMode) return;
 
-      let clickedRect = null;
-      for (const key in viewports) {
-        const view = viewports[key];
-        const rect = view.element.getBoundingClientRect();
-        if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
-          clickedViewportKey = key;
-          clickedRect = rect;
-          break;
-        }
-      }
-      if (!clickedViewportKey) return;
-
-      const clickedViewport = viewports[clickedViewportKey];
+      const clickedViewport = viewportManager.viewports[clickedViewportKey];
       pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
       pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, clickedViewport.camera);
-      updateScaleGizmo(clickedViewportKey);
+
+      // クリックした瞬間にギズモの状態を更新する
+      viewportManager.updateScaleGizmo(clickedViewportKey, appState);
+
       const is2DView = clickedViewportKey !== 'perspective';
       const allObjectIntersects = raycaster.intersectObjects(mechaGroup.children, true);
       const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
 
       if (is2DView && appState.selectedObjects.length > 0) {
-        mechaGroup.visible = false;
         const handleIntersects = raycaster.intersectObjects(gizmoHandles, true);
-        mechaGroup.visible = true;
+
         const setupTransformState = () => {
           orbitControls.enabled = false;
           dragStartPointer.set(event.clientX, event.clientY);
@@ -862,7 +778,7 @@ function setupEventListeners() {
 
   window.addEventListener('pointermove', (event) => {
     if (isPanning2D) {
-      const view = viewports[panningViewportKey];
+      const view = viewportManager.viewports[panningViewportKey];
       const rect = view.element.getBoundingClientRect();
       const frustumSize = 10;
       const aspect = rect.width / rect.height;
@@ -904,7 +820,7 @@ function setupEventListeners() {
     if (!isDraggingIn2DView && !isScalingIn2DView && !isRotatingIn2DView) return;
     event.preventDefault();
 
-    const view = viewports[draggedInfo.viewportKey];
+    const view = viewportManager.viewports[draggedInfo.viewportKey];
     const rect = view.element.getBoundingClientRect();
     const aspect = rect.width / rect.height;
     const frustumSize = 10;
@@ -1083,7 +999,7 @@ function setupEventListeners() {
   window.addEventListener('pointerup', (e) => {
     if (isPanning2D) {
       const newCursor = isSpacebarDown ? 'grab' : 'default';
-      viewports[panningViewportKey].element.style.cursor = newCursor;
+      viewportManager.viewports[panningViewportKey].element.style.cursor = newCursor;
       isPanning2D = false;
       panningViewportKey = null;
       orbitControls.enabled = true;
@@ -1104,8 +1020,8 @@ function setupEventListeners() {
       }
       const boxRect = {left: Math.min(startPoint.x, endPoint.x), right: Math.max(startPoint.x, endPoint.x), top: Math.min(startPoint.y, endPoint.y), bottom: Math.max(startPoint.y, endPoint.y)};
       const objectsInBox = [];
-      for (const key in viewports) {
-        const view = viewports[key];
+      for (const key in viewportManager.viewports) {
+        const view = viewportManager.viewports[key];
         const rect = view.element.getBoundingClientRect();
         if (boxRect.left > rect.right || boxRect.right < rect.left || boxRect.top > rect.bottom || boxRect.bottom < rect.top) continue;
         mechaGroup.children.forEach((mesh) => {
@@ -1147,7 +1063,7 @@ function setupEventListeners() {
     }
 
     if (isDraggingIn2DView || isScalingIn2DView || isRotatingIn2DView) {
-      const selectedObjects = appState.selectedObjects; // ★ 参照をローカルに
+      const selectedObjects = appState.selectedObjects;
       if (transformGroup) {
         selectedObjects.forEach((obj) => {
           worldTransforms.get(obj).parent.attach(obj);
@@ -1177,23 +1093,16 @@ function setupEventListeners() {
       orbitControls.enabled = true;
       updateGizmoAppearance();
       transformStartCache = null;
-      updateSelection(); // ★ ドラッグ終了時に明示的に呼ぶ
+      updateSelection();
       return;
     }
 
     if (startPoint.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) < 5) {
-      let clickedViewportKey = null,
-        clickedRect = null;
-      for (const key in viewports) {
-        const rect = viewports[key].element.getBoundingClientRect();
-        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-          clickedViewportKey = key;
-          clickedRect = rect;
-          break;
-        }
-      }
-      if (!clickedViewportKey) return;
-      const clickedViewport = viewports[clickedViewportKey];
+      const clickedViewportInfo = viewportManager.getViewportFromEvent(e);
+      if (!clickedViewportInfo) return;
+
+      const {key: clickedViewportKey, rect: clickedRect} = clickedViewportInfo;
+      const clickedViewport = viewportManager.viewports[clickedViewportKey];
       pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
       pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, clickedViewport.camera);
@@ -1207,8 +1116,8 @@ function setupEventListeners() {
           log(`色を抽出: #${appState.currentColor.getHexString()}`);
         }
         appState.isEyedropperMode = false;
-        for (const key in viewports) {
-          viewports[key].element.style.cursor = 'default';
+        for (const key in viewportManager.viewports) {
+          viewportManager.viewports[key].element.style.cursor = 'default';
         }
         return;
       }
@@ -1288,34 +1197,11 @@ function setupEventListeners() {
   });
 
   window.addEventListener('contextmenu', (event) => {
-    const twoDViewKeys = ['top', 'front', 'side'];
-    for (const key of twoDViewKeys) {
-      const view = viewports[key];
-      const rect = view.element.getBoundingClientRect();
-      if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
-        event.preventDefault();
-        return;
-      }
+    const clickedViewportInfo = viewportManager.getViewportFromEvent(event);
+    if (clickedViewportInfo && clickedViewportInfo.key !== 'perspective') {
+      event.preventDefault();
     }
   });
-
-  function onWindowResize() {
-    for (const key in viewports) {
-      const view = viewports[key];
-      const rect = view.element.getBoundingClientRect();
-      const aspect = rect.width / rect.height;
-      if (view.camera.isPerspectiveCamera) {
-        view.camera.aspect = aspect;
-      } else {
-        const frustumSize = 10;
-        view.camera.left = (-frustumSize * aspect) / 2;
-        view.camera.right = (frustumSize * aspect) / 2;
-        view.camera.top = frustumSize / 2;
-        view.camera.bottom = -frustumSize / 2;
-      }
-      view.camera.updateProjectionMatrix();
-    }
-  }
 
   window.addEventListener('load', () => {
     const data = localStorage.getItem('mechaCreatorAutoSave');
@@ -1327,9 +1213,8 @@ function setupEventListeners() {
       }
     }
     log('初期化完了');
-    onWindowResize();
+    viewportManager.onWindowResize();
   });
-  window.addEventListener('resize', onWindowResize);
 }
 
 // =================================================================
@@ -1352,48 +1237,9 @@ function animate() {
 
   selectionBoxes.children.forEach((box) => box.update());
 
-  for (const key in viewports) {
-    const view = viewports[key];
-    const rect = view.element.getBoundingClientRect();
-    if (rect.bottom < 0 || rect.top > renderer.domElement.clientHeight || rect.right < 0 || rect.left > renderer.domElement.clientWidth) continue;
-    const width = rect.right - rect.left;
-    const height = rect.bottom - rect.top;
-    const left = rect.left;
-    const bottom = renderer.domElement.clientHeight - rect.bottom;
-    renderer.setViewport(left, bottom, width, height);
-    renderer.setScissor(left, bottom, width, height);
-    renderer.setScissorTest(true);
-    renderer.setClearColor(view.background);
-    if (view.camera.isOrthographicCamera) {
-      updateScaleGizmo(key);
-      scaleGizmoGroup.updateMatrixWorld(true);
-      const originalAutoClear = renderer.autoClear;
-      renderer.autoClear = false;
-      renderer.clear();
+  // レンダリング処理をViewportManagerに委譲
+  viewportManager.render(appState);
 
-      mechaGroup.visible = false;
-      transformControls.visible = false;
-      renderer.render(scene, view.camera);
-
-      mechaGroup.visible = true;
-      gridHelper.visible = false;
-      selectionBoxes.visible = false;
-      scene.overrideMaterial = wireframeMaterial;
-      renderer.render(scene, view.camera);
-      scene.overrideMaterial = null;
-      selectionBoxes.visible = true;
-      gridHelper.visible = true;
-
-      if (appState.selectedObjects.length > 0) {
-        renderer.render(scaleGizmoGroup, view.camera);
-      }
-      renderer.autoClear = originalAutoClear;
-    } else {
-      scaleGizmoGroup.visible = false;
-      transformControls.visible = !!transformControls.object && !appState.modes.isMirrorCopyMode && !appState.modes.isPasteMode && !appState.isPaintMode;
-      renderer.render(scene, view.camera);
-    }
-  }
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
