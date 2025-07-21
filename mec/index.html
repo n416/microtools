@@ -41,6 +41,25 @@
         font-size: 12px;
         max-width: 300px;
       }
+      /* ★★★ 追加箇所 ★★★ */
+      #cancel-container {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 15;
+      }
+      #escapeButton {
+        background-color: #e67e22;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      #escapeButton:hover {
+        background-color: #d35400;
+      }
+      /* ★★★ ここまで ★★★ */
       #viewport-container {
         position: fixed;
         top: 0;
@@ -131,12 +150,16 @@
         pointer-events: none;
       }
       .light-direction-label {
-          display: inline-block;
-          width: 70px;
+        display: inline-block;
+        width: 70px;
       }
     </style>
   </head>
   <body>
+    <div id="cancel-container">
+      <button id="escapeButton">キャンセル (Esc)</button>
+    </div>
+
     <div id="selection-box" style="display: none"></div>
 
     <div id="ui">
@@ -165,47 +188,44 @@
         <button id="load">読込</button>
         <input type="file" id="fileInput" style="display: none" />
       </div>
-      <div id="paint-controls" style="display: none; border: 2px solid #2ecc71; padding: 8px; margin-top: 5px; color: white; background-color: #2c3e50;">
+      <div id="paint-controls" style="display: none; border: 2px solid #2ecc71; padding: 8px; margin-top: 5px; color: white; background-color: #2c3e50">
         <div id="paint-settings">
+          <div>
+            <span
+              >色:
+              <span id="currentColorDisplay" style="display: inline-block; width: 16px; height: 16px; border: 1px solid white; vertical-align: middle; margin-right: 10px"></span>
+            </span>
+            <button id="eyedropperButton" style="vertical-align: middle; margin-right: 10px">スポイト</button>
+            <div id="colorPalette" style="display: inline-block; vertical-align: middle"></div>
+          </div>
+          <div style="margin-top: 5px">
+            <label for="metalnessSlider">金属度: </label>
+            <input type="range" id="metalnessSlider" min="0" max="1" step="0.01" value="1.0" style="vertical-align: middle" />
+          </div>
+          <div style="margin-top: 5px">
+            <input type="checkbox" id="emissiveCheckbox" style="vertical-align: middle" />
+            <label for="emissiveCheckbox">光源にする</label>
+          </div>
+          <div id="emissive-controls" style="display: none; margin-top: 5px; padding-top: 5px; border-top: 1px solid #444">
             <div>
-                <span>色:
-                <span id="currentColorDisplay" style="display: inline-block; width: 16px; height: 16px; border: 1px solid white; vertical-align: middle; margin-right: 10px;"></span>
-                </span>
-                <button id="eyedropperButton" style="vertical-align: middle; margin-right: 10px;">スポイト</button>
-                <div id="colorPalette" style="display: inline-block; vertical-align: middle;">
-                </div>
+              <label for="emissiveColor">光の色: </label>
+              <input type="color" id="emissiveColor" value="#ffffff" />
+              <label for="emissiveIntensity">光の強さ: </label>
+              <input type="range" id="emissiveIntensity" min="0" max="10" step="0.1" value="1.0" />
+              <label for="emissivePenumbra">光のボケ: </label>
+              <input type="range" id="emissivePenumbra" min="0" max="1" step="0.01" value="0.2" />
             </div>
-            <div style="margin-top: 5px;">
-                <label for="metalnessSlider">金属度: </label>
-                <input type="range" id="metalnessSlider" min="0" max="1" step="0.01" value="1.0" style="vertical-align: middle;">
+            <div style="margin-top: 5px">
+              <b>光の出る方向:</b><br />
+              <input type="radio" id="dir-pos-x" name="lightDirection" value="pos-x" /><label for="dir-pos-x" class="light-direction-label">X (右)</label> <input type="radio" id="dir-neg-x" name="lightDirection" value="neg-x" /><label for="dir-neg-x" class="light-direction-label">-X (左)</label><br />
+              <input type="radio" id="dir-pos-y" name="lightDirection" value="pos-y" /><label for="dir-pos-y" class="light-direction-label">Y (上)</label> <input type="radio" id="dir-neg-y" name="lightDirection" value="neg-y" /><label for="dir-neg-y" class="light-direction-label">-Y (下)</label><br />
+              <input type="radio" id="dir-pos-z" name="lightDirection" value="pos-z" /><label for="dir-pos-z" class="light-direction-label">Z (奥)</label> <input type="radio" id="dir-neg-z" name="lightDirection" value="neg-z" checked /><label for="dir-neg-z" class="light-direction-label">-Z (手前)</label>
             </div>
-            <div style="margin-top: 5px;">
-                <input type="checkbox" id="emissiveCheckbox" style="vertical-align: middle;">
-                <label for="emissiveCheckbox">光源にする</label>
-            </div>
-            <div id="emissive-controls" style="display: none; margin-top: 5px; padding-top: 5px; border-top: 1px solid #444;">
-                <div>
-                    <label for="emissiveColor">光の色: </label>
-                    <input type="color" id="emissiveColor" value="#ffffff">
-                    <label for="emissiveIntensity">光の強さ: </label>
-                    <input type="range" id="emissiveIntensity" min="0" max="10" step="0.1" value="1.0">
-                    <label for="emissivePenumbra">光のボケ: </label>
-                    <input type="range" id="emissivePenumbra" min="0" max="1" step="0.01" value="0.2">
-                </div>
-                <div style="margin-top: 5px;">
-                    <b>光の出る方向:</b><br>
-                    <input type="radio" id="dir-pos-x" name="lightDirection" value="pos-x"><label for="dir-pos-x" class="light-direction-label">X (右)</label>
-                    <input type="radio" id="dir-neg-x" name="lightDirection" value="neg-x"><label for="dir-neg-x" class="light-direction-label">-X (左)</label><br>
-                    <input type="radio" id="dir-pos-y" name="lightDirection" value="pos-y"><label for="dir-pos-y" class="light-direction-label">Y (上)</label>
-                    <input type="radio" id="dir-neg-y" name="lightDirection" value="neg-y"><label for="dir-neg-y" class="light-direction-label">-Y (下)</label><br>
-                    <input type="radio" id="dir-pos-z" name="lightDirection" value="pos-z"><label for="dir-pos-z" class="light-direction-label">Z (奥)</label>
-                    <input type="radio" id="dir-neg-z" name="lightDirection" value="neg-z" checked><label for="dir-neg-z" class="light-direction-label">-Z (手前)</label>
-                </div>
-            </div>
+          </div>
         </div>
-        <div id="paint-confirm-buttons" style="display: none; margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; text-align: right;">
-            <button id="cancelPaint" style="background-color: #e74c3c; color: white;">キャンセル (Esc)</button>
-            <button id="confirmPaint" style="background-color: #2ecc71; color: white;">OK (Enter)</button>
+        <div id="paint-confirm-buttons" style="display: none; margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; text-align: right">
+          <button id="cancelPaint" style="background-color: #e74c3c; color: white">キャンセル (Esc)</button>
+          <button id="confirmPaint" style="background-color: #2ecc71; color: white">OK (Enter)</button>
         </div>
       </div>
       <div style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px">
