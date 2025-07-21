@@ -7,17 +7,17 @@ export class ViewportManager {
     this.mechaGroup = mechaGroup;
     this.selectionBoxes = selectionBoxes;
     this.scaleGizmoGroup = scaleGizmoGroup;
-    this.renderer = null; 
-    this.transformControls = null; 
-    this.orbitControls = null; 
+    this.renderer = null;
+    this.transformControls = null;
+    this.orbitControls = null;
     this.gridHelper = this.scene.getObjectByName('GridHelper');
-    this.wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.7 });
+    this.wireframeMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true, transparent: true, opacity: 0.7});
 
     this.viewports = {
-      top: { element: document.getElementById('view-top'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a) },
-      perspective: { element: document.getElementById('view-perspective'), camera: new THREE.PerspectiveCamera(75, 1, 0.1, 1000), background: new THREE.Color(0x282c34) },
-      side: { element: document.getElementById('view-side'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a) },
-      front: { element: document.getElementById('view-front'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a) },
+      top: {element: document.getElementById('view-top'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
+      perspective: {element: document.getElementById('view-perspective'), camera: new THREE.PerspectiveCamera(75, 1, 0.1, 1000), background: new THREE.Color(0x282c34)},
+      side: {element: document.getElementById('view-side'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
+      front: {element: document.getElementById('view-front'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
     };
 
     this._setupCameras();
@@ -28,9 +28,14 @@ export class ViewportManager {
     this.renderer = renderer;
   }
 
+  // ★★★ 修正: 存在しなかった setSelectionBoxes メソッドを追加 ★★★
+  setSelectionBoxes(selectionBoxes) {
+    this.selectionBoxes = selectionBoxes;
+  }
+
   setControls(transformControls, orbitControls) {
-      this.transformControls = transformControls;
-      this.orbitControls = orbitControls;
+    this.transformControls = transformControls;
+    this.orbitControls = orbitControls;
   }
 
   _setupCameras() {
@@ -68,63 +73,63 @@ export class ViewportManager {
   }
 
   updateScaleGizmo(viewportKey, appState) {
-      const selectedObjects = appState.selectedObjects;
-      if (selectedObjects.length === 0 || viewportKey === 'perspective') {
-        this.scaleGizmoGroup.visible = false;
-        return;
-      }
-      const box = new THREE.Box3();
-      selectedObjects.forEach((obj) => {
-        box.expandByObject(obj);
-      });
-      if (box.isEmpty()) {
-        this.scaleGizmoGroup.visible = false;
-        return;
-      }
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      if (size.x === 0) size.x = 0.001;
-      if (size.y === 0) size.y = 0.001;
-      if (size.z === 0) size.z = 0.001;
-      this.scaleGizmoGroup.visible = true;
-      this.scaleGizmoGroup.position.copy(center);
-      this.scaleGizmoGroup.renderOrder = 999;
-      const cam = this.viewports[viewportKey].camera;
-      const dist = center.distanceTo(cam.position);
-      const frustumSize = 10;
-      const handleSize = 0.5;
-      const handleVisibleSize = Math.max(((frustumSize * handleSize) / dist) * 1.5, 0.15);
-      switch (viewportKey) {
-        case 'top':
-          this.scaleGizmoGroup.scale.set(size.x, size.z, 1);
-          this.scaleGizmoGroup.rotation.set(-Math.PI / 2, 0, 0);
-          this.scaleGizmoGroup.position.z += 0.01;
-          this.scaleGizmoGroup.children.forEach((child) => {
-            if (child.isMesh) child.scale.set(Math.max(1 / size.x, 0.15), Math.max(1 / size.z, 0.15), 1).multiplyScalar(handleVisibleSize);
-          });
-          break;
-        case 'front':
-          this.scaleGizmoGroup.scale.set(size.x, size.y, 1);
-          this.scaleGizmoGroup.rotation.set(0, 0, 0);
-          this.scaleGizmoGroup.position.z += 0.01;
-          this.scaleGizmoGroup.children.forEach((child) => {
-            if (child.isMesh) child.scale.set(Math.max(1 / size.x, 0.15), Math.max(1 / size.y, 0.15), 1).multiplyScalar(handleVisibleSize);
-          });
-          break;
-        case 'side':
-          this.scaleGizmoGroup.scale.set(size.z, size.y, 1);
-          this.scaleGizmoGroup.rotation.set(0, Math.PI / 2, 0);
-          this.scaleGizmoGroup.position.x += 0.01;
-          this.scaleGizmoGroup.children.forEach((child) => {
-            if (child.isMesh) child.scale.set(Math.max(1 / size.z, 0.15), Math.max(1 / size.y, 0.15), 1).multiplyScalar(handleVisibleSize);
-          });
-          break;
-      }
-      this.scaleGizmoGroup.updateMatrixWorld(true);
+    const selectedObjects = appState.selectedObjects;
+    if (selectedObjects.length === 0 || viewportKey === 'perspective') {
+      this.scaleGizmoGroup.visible = false;
+      return;
+    }
+    const box = new THREE.Box3();
+    selectedObjects.forEach((obj) => {
+      box.expandByObject(obj);
+    });
+    if (box.isEmpty()) {
+      this.scaleGizmoGroup.visible = false;
+      return;
+    }
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    if (size.x === 0) size.x = 0.001;
+    if (size.y === 0) size.y = 0.001;
+    if (size.z === 0) size.z = 0.001;
+    this.scaleGizmoGroup.visible = true;
+    this.scaleGizmoGroup.position.copy(center);
+    this.scaleGizmoGroup.renderOrder = 999;
+    const cam = this.viewports[viewportKey].camera;
+    const dist = center.distanceTo(cam.position);
+    const frustumSize = 10;
+    const handleSize = 0.5;
+    const handleVisibleSize = Math.max(((frustumSize * handleSize) / dist) * 1.5, 0.15);
+    switch (viewportKey) {
+      case 'top':
+        this.scaleGizmoGroup.scale.set(size.x, size.z, 1);
+        this.scaleGizmoGroup.rotation.set(-Math.PI / 2, 0, 0);
+        this.scaleGizmoGroup.position.z += 0.01;
+        this.scaleGizmoGroup.children.forEach((child) => {
+          if (child.isMesh) child.scale.set(Math.max(1 / size.x, 0.15), Math.max(1 / size.z, 0.15), 1).multiplyScalar(handleVisibleSize);
+        });
+        break;
+      case 'front':
+        this.scaleGizmoGroup.scale.set(size.x, size.y, 1);
+        this.scaleGizmoGroup.rotation.set(0, 0, 0);
+        this.scaleGizmoGroup.position.z += 0.01;
+        this.scaleGizmoGroup.children.forEach((child) => {
+          if (child.isMesh) child.scale.set(Math.max(1 / size.x, 0.15), Math.max(1 / size.y, 0.15), 1).multiplyScalar(handleVisibleSize);
+        });
+        break;
+      case 'side':
+        this.scaleGizmoGroup.scale.set(size.z, size.y, 1);
+        this.scaleGizmoGroup.rotation.set(0, Math.PI / 2, 0);
+        this.scaleGizmoGroup.position.x += 0.01;
+        this.scaleGizmoGroup.children.forEach((child) => {
+          if (child.isMesh) child.scale.set(Math.max(1 / size.z, 0.15), Math.max(1 / size.y, 0.15), 1).multiplyScalar(handleVisibleSize);
+        });
+        break;
+    }
+    this.scaleGizmoGroup.updateMatrixWorld(true);
   }
 
   render(appState) {
-    if (!this.renderer || !this.transformControls) return;
+    if (!this.renderer || !this.transformControls || !this.selectionBoxes) return;
 
     for (const key in this.viewports) {
       const view = this.viewports[key];
@@ -165,7 +170,8 @@ export class ViewportManager {
           this.renderer.render(this.scaleGizmoGroup, view.camera);
         }
         this.renderer.autoClear = originalAutoClear;
-      } else { // Perspective View
+      } else {
+        // Perspective View
         this.scaleGizmoGroup.visible = false;
         this.transformControls.visible = !!this.transformControls.object && !appState.modes.isMirrorCopyMode && !appState.modes.isPasteMode && !appState.isPaintMode;
         this.renderer.render(this.scene, view.camera);
@@ -174,13 +180,13 @@ export class ViewportManager {
   }
 
   getViewportFromEvent(event) {
-      for (const key in this.viewports) {
-          const view = this.viewports[key];
-          const rect = view.element.getBoundingClientRect();
-          if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
-              return { key, rect };
-          }
+    for (const key in this.viewports) {
+      const view = this.viewports[key];
+      const rect = view.element.getBoundingClientRect();
+      if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+        return {key, rect};
       }
-      return null;
+    }
+    return null;
   }
 }
