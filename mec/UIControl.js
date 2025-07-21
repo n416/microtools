@@ -1,9 +1,9 @@
-import { AddObjectCommand } from './command-create.js';
-import { MacroCommand, DeleteObjectCommand } from './command-edit.js';
-import * as CsgOperations from './csg-operations.js';
-import * as SceneIO from './scene-io.js';
-import * as ClipboardFeatures from './clipboard-features.js';
-import { createColorPalette } from './paint.js';
+import { AddObjectCommand } from './CommandCreate.js';
+import { MacroCommand, DeleteObjectCommand } from './CommandEdit.js';
+import * as CsgOperations from './CsgOperations.js';
+import * as SceneIO from './SceneIo.js';
+import * as ClipboardFeatures from './ClipboardFeatures.js';
+import { createColorPalette } from './Paint.js';
 import * as THREE from 'three';
 
 export class UIControl {

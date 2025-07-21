@@ -1,4 +1,4 @@
-import { command } from './command.js';
+import { command } from './Command.js';
 
 /**
  * 複数のコマンドをまとめて扱うマクロコマンド。

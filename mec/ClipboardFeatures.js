@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import {MirrorCopyCommand, AddObjectCommand} from './command-create.js';
-import {MacroCommand} from './command-edit.js';
+import {MirrorCopyCommand, AddObjectCommand} from './CommandCreate.js';
+import {MacroCommand} from './CommandEdit.js';
 
 export function startMirrorCopyMode(context) {
   const {log, transformControls, previewGroup, selectionManager, modes} = context;

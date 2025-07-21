@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Brush, Evaluator, ADDITION, INTERSECTION, SUBTRACTION } from 'three-bvh-csg';
-import { DeleteObjectCommand, MacroCommand } from './command-edit.js';
-import { AddObjectCommand } from './command-create.js';
+import { DeleteObjectCommand, MacroCommand } from './CommandEdit.js';
+import { AddObjectCommand } from './CommandCreate.js';
 
 function performCSG(operation, operationName, context) {
   const { scene, mechaGroup, selectionManager, history, log } = context;

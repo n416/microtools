@@ -1,7 +1,7 @@
 import * as THREE from 'three'; // ★★★ 修正: THREE.jsライブラリのインポートを追加 ★★★
-import { AddObjectCommand } from './command-create.js';
-import { MacroCommand, DeleteObjectCommand } from './command-edit.js';
-import * as SceneIO from './scene-io.js';
+import { AddObjectCommand } from './CommandCreate.js';
+import { MacroCommand, DeleteObjectCommand } from './CommandEdit.js';
+import * as SceneIO from './SceneIo.js';
 
 export class History {
     constructor(app) {
