@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {TransformCommand, MacroCommand, DeleteObjectCommand} from './CommandEdit.js';
-import {ChangeColorCommand} from './CommandPaint.js';
+import {PaintObjectCommand} from './CommandPaint.js';
 import * as CsgOperations from './CsgOperations.js';
 import * as ClipboardFeatures from './ClipboardFeatures.js';
 
@@ -15,7 +15,6 @@ export class InputHandler {
     this.previewGroup = appContext.previewGroup;
     this.log = appContext.log;
 
-    // 入力状態の管理
     this.isPanning2D = false;
     this.panStart = {x: 0, y: 0};
     this.cameraStartPos = new THREE.Vector3();
@@ -52,57 +51,47 @@ export class InputHandler {
   }
 
   onKeyDown(e) {
+    // ライブペイントプレビュー中のキー操作を最優先
+    if (this.appState.isLivePaintPreviewMode) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('confirmPaint').click();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            document.getElementById('cancelPaint').click();
+        }
+        return; // 他のキー操作は無効化
+    }
+
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-    // ペイントモード時の色調整
     if (this.appState.isPaintMode && !this.appState.isEyedropperMode) {
       let colorChanged = false;
       const hsl = {};
-      this.appState.currentColor.getHSL(hsl);
+      this.appState.brushProperties.color.getHSL(hsl);
       const hueStep = 0.01;
       const lightnessStep = 0.02;
 
       switch (e.key) {
-        case 'ArrowUp':
-          hsl.l = Math.min(1, hsl.l + lightnessStep);
-          colorChanged = true;
-          break;
-        case 'ArrowDown':
-          hsl.l = Math.max(0, hsl.l - lightnessStep);
-          colorChanged = true;
-          break;
-        case 'ArrowLeft':
-          hsl.h -= hueStep;
-          if (hsl.h < 0) hsl.h += 1;
-          colorChanged = true;
-          break;
-        case 'ArrowRight':
-          hsl.h = (hsl.h + hueStep) % 1.0;
-          colorChanged = true;
-          break;
+        case 'ArrowUp': hsl.l = Math.min(1, hsl.l + lightnessStep); colorChanged = true; break;
+        case 'ArrowDown': hsl.l = Math.max(0, hsl.l - lightnessStep); colorChanged = true; break;
+        case 'ArrowLeft': hsl.h -= hueStep; if (hsl.h < 0) hsl.h += 1; colorChanged = true; break;
+        case 'ArrowRight': hsl.h = (hsl.h + hueStep) % 1.0; colorChanged = true; break;
       }
 
       if (colorChanged) {
         e.preventDefault();
-        this.appState.currentColor.setHSL(hsl.h, hsl.s, hsl.l);
-        // UI更新はmain.jsの責務
+        this.appState.brushProperties.color.setHSL(hsl.h, hsl.s, hsl.l);
         document.dispatchEvent(new CustomEvent('updateCurrentColorDisplay'));
         this.log(`色調整: H:${hsl.h.toFixed(2)} S:${hsl.s.toFixed(2)} L:${hsl.l.toFixed(2)}`);
         return;
       }
     }
 
-    // Undo/Redo/Copy/Paste
     if (e.ctrlKey || e.metaKey) {
       switch (e.key.toLowerCase()) {
-        case 'z':
-          e.preventDefault();
-          e.shiftKey ? this.history.redo() : this.history.undo();
-          return;
-        case 'y':
-          e.preventDefault();
-          this.history.redo();
-          return;
+        case 'z': e.preventDefault(); e.shiftKey ? this.history.redo() : this.history.undo(); return;
+        case 'y': e.preventDefault(); this.history.redo(); return;
         case 'c':
           e.preventDefault();
           const selectedObjectsCopy = this.appState.selectedObjects;
@@ -115,14 +104,10 @@ export class InputHandler {
           return;
         case 'v':
           e.preventDefault();
-          if (!this.appState.modes.clipboard) {
-            this.log('クリップボードが空です。');
-            return;
-          }
+          if (!this.appState.modes.clipboard) { this.log('クリップボードが空です。'); return; }
           const lastSelectedIds = this.appState.modes.lastPasteInfo.objects.map((o) => o.uuid);
           const currentSelectedIds = this.appState.selectedObjects.map((o) => o.uuid);
           const isSameSelection = lastSelectedIds.length === currentSelectedIds.length && lastSelectedIds.every((id) => currentSelectedIds.includes(id));
-
           if (isSameSelection && lastSelectedIds.length > 0) {
             ClipboardFeatures.performDirectPaste(this.appContext);
           } else {
@@ -132,7 +117,6 @@ export class InputHandler {
       }
     }
 
-    // パンモード（スペースキー）
     if (e.key === ' ' && !this.isSpacebarDown) {
       e.preventDefault();
       this.isSpacebarDown = true;
@@ -143,7 +127,6 @@ export class InputHandler {
       return;
     }
 
-    // 各種モードのキャンセル
     if (this.appState.modes.isMirrorCopyMode && e.key === 'Escape') {
       ClipboardFeatures.cancelMirrorCopyMode(this.appContext);
       this.log('鏡面コピーモードをキャンセルしました。');
@@ -159,25 +142,12 @@ export class InputHandler {
       return;
     }
 
-    // TransformControlsのモード切替
     switch (e.key.toLowerCase()) {
-      case 't':
-        this.transformControls.setMode('translate');
-        this.log('モード -> 移動 (3Dビュー)');
-        break;
-      case 'r':
-        this.transformControls.setMode('rotate');
-        document.dispatchEvent(new CustomEvent('setGizmoMode', {detail: 'rotate'}));
-        this.log('モード -> 回転 (3D/2Dビュー)');
-        break;
-      case 's':
-        this.transformControls.setMode('scale');
-        document.dispatchEvent(new CustomEvent('setGizmoMode', {detail: 'scale'}));
-        this.log('モード -> 拡縮 (3D/2Dビュー)');
-        break;
+      case 't': this.transformControls.setMode('translate'); this.log('モード -> 移動 (3Dビュー)'); break;
+      case 'r': this.transformControls.setMode('rotate'); document.dispatchEvent(new CustomEvent('setGizmoMode', {detail: 'rotate'})); this.log('モード -> 回転 (3D/2Dビュー)'); break;
+      case 's': this.transformControls.setMode('scale'); document.dispatchEvent(new CustomEvent('setGizmoMode', {detail: 'scale'})); this.log('モード -> 拡縮 (3D/2Dビュー)'); break;
     }
 
-    // 選択オブジェクトの操作（矢印キー）
     const selectedObjects = this.appState.selectedObjects;
     if (selectedObjects.length === 0) return;
     if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -189,9 +159,7 @@ export class InputHandler {
       return;
     }
 
-    const moveDistance = 0.1,
-      rotateAngle = THREE.MathUtils.degToRad(5),
-      scaleAmount = 0.05;
+    const moveDistance = 0.1, rotateAngle = THREE.MathUtils.degToRad(5), scaleAmount = 0.05;
     const commands = [];
     selectedObjects.forEach((obj) => {
       const oldTransform = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
@@ -200,53 +168,23 @@ export class InputHandler {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         switch (e.key) {
-          case 'ArrowUp':
-            newTransform.rotation.x -= rotateAngle;
-            operationDone = true;
-            break;
-          case 'ArrowDown':
-            newTransform.rotation.x += rotateAngle;
-            operationDone = true;
-            break;
-          case 'ArrowLeft':
-            newTransform.rotation.y -= rotateAngle;
-            operationDone = true;
-            break;
-          case 'ArrowRight':
-            newTransform.rotation.y += rotateAngle;
-            operationDone = true;
-            break;
+          case 'ArrowUp': newTransform.rotation.x -= rotateAngle; operationDone = true; break;
+          case 'ArrowDown': newTransform.rotation.x += rotateAngle; operationDone = true; break;
+          case 'ArrowLeft': newTransform.rotation.y -= rotateAngle; operationDone = true; break;
+          case 'ArrowRight': newTransform.rotation.y += rotateAngle; operationDone = true; break;
         }
       } else if (e.altKey) {
         e.preventDefault();
         switch (e.key) {
-          case 'ArrowUp':
-            newTransform.scale.addScalar(scaleAmount);
-            operationDone = true;
-            break;
-          case 'ArrowDown':
-            newTransform.scale.addScalar(-scaleAmount);
-            operationDone = true;
-            break;
+          case 'ArrowUp': newTransform.scale.addScalar(scaleAmount); operationDone = true; break;
+          case 'ArrowDown': newTransform.scale.addScalar(-scaleAmount); operationDone = true; break;
         }
       } else {
         switch (e.key) {
-          case 'ArrowUp':
-            e.shiftKey ? (newTransform.position.y += moveDistance) : (newTransform.position.z -= moveDistance);
-            operationDone = true;
-            break;
-          case 'ArrowDown':
-            e.shiftKey ? (newTransform.position.y -= moveDistance) : (newTransform.position.z += moveDistance);
-            operationDone = true;
-            break;
-          case 'ArrowLeft':
-            newTransform.position.x -= moveDistance;
-            operationDone = true;
-            break;
-          case 'ArrowRight':
-            newTransform.position.x += moveDistance;
-            operationDone = true;
-            break;
+          case 'ArrowUp': e.shiftKey ? (newTransform.position.y += moveDistance) : (newTransform.position.z -= moveDistance); operationDone = true; break;
+          case 'ArrowDown': e.shiftKey ? (newTransform.position.y -= moveDistance) : (newTransform.position.z += moveDistance); operationDone = true; break;
+          case 'ArrowLeft': newTransform.position.x -= moveDistance; operationDone = true; break;
+          case 'ArrowRight': newTransform.position.x += moveDistance; operationDone = true; break;
         }
       }
       if (operationDone) {
@@ -262,7 +200,6 @@ export class InputHandler {
     if (e.key === ' ') {
       this.isSpacebarDown = false;
       if (!this.appContext.isPanModeActive) {
-        // isPanModeActive は main.js で管理
         this.appContext.orbitControls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
       }
       for (const key in this.viewportManager.viewports) {
@@ -273,8 +210,8 @@ export class InputHandler {
 
   onPointerDown(event) {
     if (event.target.closest('#ui') || this.transformControls.dragging) return;
-    if (this.activePointerId !== null) return; // ★ 追加：他のポインターがアクティブな場合は無視
-    this.activePointerId = event.pointerId; // ★ 追加：ポインターIDを記録
+    if (this.activePointerId !== null) return; 
+    this.activePointerId = event.pointerId; 
 
     const clickedViewportInfo = this.viewportManager.getViewportFromEvent(event);
 
@@ -307,7 +244,7 @@ export class InputHandler {
 
       this.startPoint.set(event.clientX, event.clientY);
 
-      if (this.appState.modes.isMirrorCopyMode || this.appState.modes.isSubtractMode || this.appState.modes.isPasteMode || this.appState.isPaintMode || this.appState.isEyedropperMode) return;
+      if (this.appState.modes.isMirrorCopyMode || this.appState.modes.isSubtractMode || this.appState.modes.isPasteMode || this.appState.isPaintMode || this.appState.isEyedropperMode || this.appState.isLivePaintPreviewMode) return;
 
       const clickedViewport = this.viewportManager.viewports[clickedViewportKey];
       this.pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
@@ -321,7 +258,7 @@ export class InputHandler {
       const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
 
       if (is2DView && this.appState.selectedObjects.length > 0) {
-        const gizmoHandles = this.appContext.gizmoHandles; // main.js から gizmoHandles を取得
+        const gizmoHandles = this.appContext.gizmoHandles; 
         const handleIntersects = this.raycaster.intersectObjects(gizmoHandles, true);
 
         const setupTransformState = () => {
@@ -345,7 +282,6 @@ export class InputHandler {
 
         if (handleIntersects.length > 0) {
           setupTransformState();
-          // ★★★ 修正: 単体選択でもグループ化処理を呼ぶように統一 ★★★
           setupMultiSelectGroup();
           if (this.appContext.gizmoMode === 'scale') this.isScalingIn2DView = true;
           else if (this.appContext.gizmoMode === 'rotate') this.isRotatingIn2DView = true;
@@ -356,7 +292,6 @@ export class InputHandler {
         if (clickedObject && this.appState.selectedObjects.includes(clickedObject) && !event.shiftKey && !event.ctrlKey) {
           setupTransformState();
           this.isDraggingIn2DView = true;
-          // ★★★ 修正: 単体選択でもグループ化処理を呼ぶように統一 ★★★
           setupMultiSelectGroup();
           this.draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
           return;
@@ -387,18 +322,9 @@ export class InputHandler {
       const camera = view.camera;
 
       switch (this.panningViewportKey) {
-        case 'top':
-          camera.position.x = this.cameraStartPos.x - deltaX;
-          camera.position.z = this.cameraStartPos.z - deltaY;
-          break;
-        case 'front':
-          camera.position.x = this.cameraStartPos.x - deltaX;
-          camera.position.y = this.cameraStartPos.y + deltaY;
-          break;
-        case 'side':
-          camera.position.z = this.cameraStartPos.z + deltaX;
-          camera.position.y = this.cameraStartPos.y + deltaY;
-          break;
+        case 'top': camera.position.x = this.cameraStartPos.x - deltaX; camera.position.z = this.cameraStartPos.z - deltaY; break;
+        case 'front': camera.position.x = this.cameraStartPos.x - deltaX; camera.position.y = this.cameraStartPos.y + deltaY; break;
+        case 'side': camera.position.z = this.cameraStartPos.z + deltaX; camera.position.y = this.cameraStartPos.y + deltaY; break;
       }
       return;
     }
@@ -427,20 +353,13 @@ export class InputHandler {
     const worldDeltaX = ((event.clientX - this.dragStartPointer.x) / rect.width) * frustumSize * aspect;
     const worldDeltaY = ((event.clientY - this.dragStartPointer.y) / rect.height) * frustumSize;
 
-    // ★★★ 修正: 単体選択時のロジックを削除し、グループ操作に一本化 ★★★
     if (this.transformGroup) {
       if (this.isDraggingIn2DView) {
         const worldDelta = new THREE.Vector3();
         switch (this.draggedInfo.viewportKey) {
-          case 'top':
-            worldDelta.set(worldDeltaX, 0, worldDeltaY);
-            break;
-          case 'front':
-            worldDelta.set(worldDeltaX, -worldDeltaY, 0);
-            break;
-          case 'side':
-            worldDelta.set(0, -worldDeltaY, -worldDeltaX);
-            break;
+          case 'top': worldDelta.set(worldDeltaX, 0, worldDeltaY); break;
+          case 'front': worldDelta.set(worldDeltaX, -worldDeltaY, 0); break;
+          case 'side': worldDelta.set(0, -worldDeltaY, -worldDeltaX); break;
         }
         this.transformGroup.position.copy(this.dragStartObjectState.position).add(worldDelta);
       } else if (this.isRotatingIn2DView) {
@@ -451,10 +370,8 @@ export class InputHandler {
         const centerOnScreen = new THREE.Vector2(centerX, centerY);
         const startVec = new THREE.Vector2().subVectors(this.dragStartPointer, centerOnScreen);
         const currentVec = new THREE.Vector2(event.clientX, event.clientY).sub(centerOnScreen);
-        // ★ 修正: 変数を let で宣言し、回転方向を修正
         let deltaAngle = Math.atan2(startVec.y, startVec.x) - Math.atan2(currentVec.y, currentVec.x);
 
-        // ★ 追加: SHIFTキーが押されている場合、角度を22.5度単位でスナップさせる
         if (event.shiftKey) {
           const snapAngle = THREE.MathUtils.degToRad(22.5);
           deltaAngle = Math.round(deltaAngle / snapAngle) * snapAngle;
@@ -462,44 +379,20 @@ export class InputHandler {
 
         const axis = new THREE.Vector3();
         switch (this.draggedInfo.viewportKey) {
-          case 'top':
-            axis.set(0, 1, 0);
-            break;
-          case 'front':
-            axis.set(0, 0, 1);
-            break;
-          case 'side':
-            axis.set(1, 0, 0);
-            break;
+          case 'top': axis.set(0, 1, 0); break;
+          case 'front': axis.set(0, 0, 1); break;
+          case 'side': axis.set(1, 0, 0); break;
         }
         this.transformGroup.quaternion.setFromAxisAngle(axis, deltaAngle);
       } else if (this.isScalingIn2DView) {
         const oldSize = this.dragStartObjectState.scale;
         const oldCenter = this.dragStartObjectState.position;
 
-        let u_change = 0,
-          v_change = 0,
-          axisU,
-          axisV;
+        let u_change = 0, v_change = 0, axisU, axisV;
         switch (this.draggedInfo.viewportKey) {
-          case 'top':
-            u_change = worldDeltaX;
-            v_change = worldDeltaY;
-            axisU = 'x';
-            axisV = 'z';
-            break;
-          case 'front':
-            u_change = worldDeltaX;
-            v_change = -worldDeltaY;
-            axisU = 'x';
-            axisV = 'y';
-            break;
-          case 'side':
-            u_change = -worldDeltaX;
-            v_change = -worldDeltaY;
-            axisU = 'z';
-            axisV = 'y';
-            break;
+          case 'top': u_change = worldDeltaX; v_change = worldDeltaY; axisU = 'x'; axisV = 'z'; break;
+          case 'front': u_change = worldDeltaX; v_change = -worldDeltaY; axisU = 'x'; axisV = 'y'; break;
+          case 'side': u_change = -worldDeltaX; v_change = -worldDeltaY; axisU = 'z'; axisV = 'y'; break;
         }
 
         const u_multiplier = this.draggedInfo.viewportKey === 'side' ? (this.draggedInfo.handleName.includes('left') ? 1 : this.draggedInfo.handleName.includes('right') ? -1 : 0) : this.draggedInfo.handleName.includes('left') ? -1 : this.draggedInfo.handleName.includes('right') ? 1 : 0;
@@ -511,61 +404,32 @@ export class InputHandler {
         const newSize = oldSize.clone();
         const newCenter = oldCenter.clone();
 
-        // SHIFTキー: 3Dアスペクト比を維持
         if (event.shiftKey) {
           let scaleRatio = 1.0;
-          // U軸(横)とV軸(縦)のどちらの変化量が大きいかを判断し、スケール比率を計算
           if (u_multiplier !== 0 && (v_multiplier === 0 || Math.abs(scaleChangeU / (oldSize[axisU] || 1)) > Math.abs(scaleChangeV / (oldSize[axisV] || 1)))) {
             scaleRatio = (oldSize[axisU] + scaleChangeU) / (oldSize[axisU] || 1);
           } else if (v_multiplier !== 0) {
             scaleRatio = (oldSize[axisV] + scaleChangeV) / (oldSize[axisV] || 1);
           }
-
-          // 全ての軸に同じ比率を適用
           newSize.copy(oldSize).multiplyScalar(scaleRatio);
-
-          // Altキー: 中心をアンカー
-          if (event.altKey) {
-            // newCenter は oldCenter のまま
-          } else {
-            // デフォルト: 対角をアンカー
+          if (!event.altKey) {
             const sizeDelta = newSize.clone().sub(oldSize);
             const multipliers = new THREE.Vector3(0, 0, 0);
             if (u_multiplier !== 0) multipliers[axisU] = u_multiplier;
             if (v_multiplier !== 0) multipliers[axisV] = v_multiplier;
-
-            // 中心の移動量を計算 (sizeDeltaにはXYZすべての変化量が含まれている)
             newCenter.add(sizeDelta.multiply(multipliers).multiplyScalar(0.5));
           }
         } else {
-          // SHIFTキーなし (個別拡縮)
-
-          // Altキー: 中心をアンカー
           if (event.altKey) {
             if (u_multiplier !== 0) newSize[axisU] = oldSize[axisU] + scaleChangeU * 2;
             if (v_multiplier !== 0) newSize[axisV] = oldSize[axisV] + scaleChangeV * 2;
-            // newCenter は oldCenter のまま
           } else {
-            // デフォルト: 対角をアンカー
-            if (u_multiplier !== 0) {
-              newSize[axisU] = oldSize[axisU] + scaleChangeU;
-              newCenter[axisU] = oldCenter[axisU] + (scaleChangeU / 2) * u_multiplier;
-            }
-            if (v_multiplier !== 0) {
-              newSize[axisV] = oldSize[axisV] + scaleChangeV;
-              newCenter[axisV] = oldCenter[axisV] + (scaleChangeV / 2) * v_multiplier;
-            }
+            if (u_multiplier !== 0) { newSize[axisU] = oldSize[axisU] + scaleChangeU; newCenter[axisU] = oldCenter[axisU] + (scaleChangeU / 2) * u_multiplier; }
+            if (v_multiplier !== 0) { newSize[axisV] = oldSize[axisV] + scaleChangeV; newCenter[axisV] = oldCenter[axisV] + (scaleChangeV / 2) * v_multiplier; }
           }
         }
-
-        // オブジェクトが反転したり、サイズが0以下になったりするのを防ぐ
-        if (newSize.x < 0.01) newSize.x = 0.01;
-        if (newSize.y < 0.01) newSize.y = 0.01;
-        if (newSize.z < 0.01) newSize.z = 0.01;
-
-        // 最終的なスケール係数と位置を計算
+        if (newSize.x < 0.01) newSize.x = 0.01; if (newSize.y < 0.01) newSize.y = 0.01; if (newSize.z < 0.01) newSize.z = 0.01;
         const scaleFactor = new THREE.Vector3(oldSize.x !== 0 ? newSize.x / oldSize.x : 1, oldSize.y !== 0 ? newSize.y / oldSize.y : 1, oldSize.z !== 0 ? newSize.z / oldSize.z : 1);
-
         this.transformGroup.position.copy(newCenter);
         this.transformGroup.scale.copy(scaleFactor);
       }
@@ -573,37 +437,24 @@ export class InputHandler {
   }
 
   onPointerUp(e) {
-    if (e.pointerId !== this.activePointerId) {
-      // 自分が管理していないポインターイベントは無視
-      return;
-    }
+    if (e.pointerId !== this.activePointerId) { return; }
 
-    // --- 2Dパンニング終了処理 ---
     if (this.isPanning2D) {
       const newCursor = this.isSpacebarDown ? 'grab' : 'default';
       this.viewportManager.viewports[this.panningViewportKey].element.style.cursor = newCursor;
-      this.isPanning2D = false;
-      this.panningViewportKey = null;
-      this.appContext.orbitControls.enabled = true;
-      this.activePointerId = null;
+      this.isPanning2D = false; this.panningViewportKey = null; this.appContext.orbitControls.enabled = true; this.activePointerId = null;
       return;
     }
 
-    // --- 2Dビューでの変形操作終了処理 ---
     if (this.isDraggingIn2DView || this.isScalingIn2DView || this.isRotatingIn2DView) {
       const selectedObjects = this.appState.selectedObjects;
       if (this.transformGroup) {
-        selectedObjects.forEach((obj) => {
-          this.worldTransforms.get(obj).parent.attach(obj);
-        });
-        this.appContext.scene.remove(this.transformGroup);
-        this.transformGroup = null;
-        this.worldTransforms.clear();
+        selectedObjects.forEach((obj) => { this.worldTransforms.get(obj).parent.attach(obj); });
+        this.appContext.scene.remove(this.transformGroup); this.transformGroup = null; this.worldTransforms.clear();
       }
       if (this.transformStartCache) {
         if (selectedObjects.length === 1) {
-          const oldT = this.transformStartCache[0];
-          const obj = selectedObjects[0];
+          const oldT = this.transformStartCache[0]; const obj = selectedObjects[0];
           const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
           if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) {
             this.history.execute(new TransformCommand(obj, oldT, newT));
@@ -618,25 +469,16 @@ export class InputHandler {
         }
       }
       this.isDraggingIn2DView = this.isScalingIn2DView = this.isRotatingIn2DView = false;
-      this.appContext.orbitControls.enabled = true;
-      document.dispatchEvent(new CustomEvent('updateGizmoAppearance'));
-      this.transformStartCache = null;
-      this.appState.notifySelectionChange();
-      this.activePointerId = null;
+      this.appContext.orbitControls.enabled = true; document.dispatchEvent(new CustomEvent('updateGizmoAppearance')); this.transformStartCache = null; this.appState.notifySelectionChange(); this.activePointerId = null;
       return;
     }
 
     const endPoint = new THREE.Vector2(e.clientX, e.clientY);
     const isClick = this.startPoint.distanceTo(endPoint) < 5;
 
-    // --- ボックス選択終了処理 ---
     if (this.isBoxSelecting) {
-      this.selectionBoxElement.style.display = 'none';
-      this.isBoxSelecting = false;
-      this.appContext.orbitControls.enabled = true;
-
+      this.selectionBoxElement.style.display = 'none'; this.isBoxSelecting = false; this.appContext.orbitControls.enabled = true;
       if (!isClick) {
-        // ドラッグによるボックス選択の場合
         const boxRect = {left: Math.min(this.startPoint.x, endPoint.x), right: Math.max(this.startPoint.x, endPoint.x), top: Math.min(this.startPoint.y, endPoint.y), bottom: Math.max(this.startPoint.y, endPoint.y)};
         const objectsInBox = [];
         for (const key in this.viewportManager.viewports) {
@@ -644,35 +486,23 @@ export class InputHandler {
           const rect = view.element.getBoundingClientRect();
           if (boxRect.left > rect.right || boxRect.right < rect.left || boxRect.top > rect.bottom || boxRect.bottom < rect.top) continue;
           this.mechaGroup.children.forEach((mesh) => {
+            if (mesh.userData.isNonSelectable) return;
             const pos = new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld);
             pos.project(view.camera);
             const screenX = ((pos.x + 1) / 2) * rect.width + rect.left;
             const screenY = ((-pos.y + 1) / 2) * rect.height + rect.top;
             if (screenX >= boxRect.left && screenX <= boxRect.right && screenY >= boxRect.top && screenY <= boxRect.bottom) {
-              if (!objectsInBox.includes(mesh)) {
-                objectsInBox.push(mesh);
-              }
+              if (!objectsInBox.includes(mesh)) { objectsInBox.push(mesh); }
             }
           });
         }
 
         const currentSelection = this.appState.selectedObjects.slice();
         if (e.ctrlKey) {
-          objectsInBox.forEach((obj) => {
-            const index = currentSelection.indexOf(obj);
-            if (index > -1) {
-              currentSelection.splice(index, 1);
-            } else {
-              currentSelection.push(obj);
-            }
-          });
+          objectsInBox.forEach((obj) => { const index = currentSelection.indexOf(obj); if (index > -1) { currentSelection.splice(index, 1); } else { currentSelection.push(obj); } });
           this.appState.setSelection(currentSelection);
         } else if (e.shiftKey || this.appState.isMultiSelectMode) {
-          objectsInBox.forEach((obj) => {
-            if (!currentSelection.includes(obj)) {
-              currentSelection.push(obj);
-            }
-          });
+          objectsInBox.forEach((obj) => { if (!currentSelection.includes(obj)) { currentSelection.push(obj); } });
           this.appState.setSelection(currentSelection);
         } else {
           this.appState.setSelection(objectsInBox);
@@ -681,101 +511,67 @@ export class InputHandler {
         this.activePointerId = null;
         return;
       }
-      // isClickがtrueの場合は、そのまま下のクリック処理に流す
     }
 
-    // --- クリック処理 ---
     if (isClick) {
       const clickedViewportInfo = this.viewportManager.getViewportFromEvent(e);
-      if (!clickedViewportInfo) {
-        this.activePointerId = null;
-        return;
-      }
-
+      if (!clickedViewportInfo) { this.activePointerId = null; return; }
+      
       const {key: clickedViewportKey, rect: clickedRect} = clickedViewportInfo;
       const clickedViewport = this.viewportManager.viewports[clickedViewportKey];
       this.pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
       this.pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
       this.raycaster.setFromCamera(this.pointer, clickedViewport.camera);
+      
+      const intersects = this.raycaster.intersectObjects(this.mechaGroup.children.filter(c => !c.userData.isNonSelectable), false);
+      const clickedObject = intersects.length > 0 ? intersects[0].object : null;
 
-      // 各種モードごとの処理
       if (this.appState.isEyedropperMode) {
-        const intersects = this.raycaster.intersectObjects(this.mechaGroup.children, false);
-        if (intersects.length > 0) {
-          const clickedObject = intersects[0].object;
-          this.appState.currentColor.copy(clickedObject.material.color);
+        if (clickedObject) {
+          this.appState.brushProperties.color.copy(clickedObject.material.color);
           document.dispatchEvent(new CustomEvent('updateCurrentColorDisplay'));
-          this.log(`色を抽出: #${this.appState.currentColor.getHexString()}`);
+          this.log(`色を抽出: #${this.appState.brushProperties.color.getHexString()}`);
         }
-        document.dispatchEvent(new CustomEvent('setEyedropperMode', {detail: false}));
+        document.dispatchEvent(new CustomEvent('setEyedropperMode', { detail: false }));
       } else if (this.appState.isPaintMode) {
-        const intersects = this.raycaster.intersectObjects(this.mechaGroup.children, false);
-        if (intersects.length > 0) {
-          const clickedObject = intersects[0].object;
-          if (clickedObject.material.color.getHex() !== this.appState.currentColor.getHex()) {
-            this.history.execute(new ChangeColorCommand(clickedObject, this.appState.currentColor));
-          }
-        }
-      } else if (this.appState.modes.isSubtractMode) {
-        const intersects = this.raycaster.intersectObjects(this.mechaGroup.children, true);
-        const drillObject = intersects.length > 0 && this.appState.modes.subtractTargets.includes(intersects[0].object) ? intersects[0].object : null;
-        if (drillObject) {
-          const baseObjects = this.appState.modes.subtractTargets.filter((obj) => obj !== drillObject);
-          if (baseObjects.length > 0) {
-            CsgOperations.performSubtract(baseObjects, drillObject, this.appContext);
-          } else {
-            CsgOperations.cancelSubtractMode(this.appContext);
-          }
-        } else {
-          this.log('掘削操作をキャンセルしました。');
-          CsgOperations.cancelSubtractMode(this.appContext);
-        }
-      } else if (this.appState.modes.isMirrorCopyMode) {
-        const intersects = this.raycaster.intersectObjects(this.previewGroup.children, true);
-        if (intersects.length > 0) {
-          ClipboardFeatures.performMirrorCopy(intersects[0].object, this.appContext);
-        } else {
-          ClipboardFeatures.cancelMirrorCopyMode(this.appContext);
-          this.log('鏡面コピーモードをキャンセルしました。');
-        }
-      } else if (this.appState.modes.isPasteMode) {
-        const intersects = this.raycaster.intersectObjects(this.previewGroup.children, true);
-        if (intersects.length > 0) {
-          ClipboardFeatures.confirmPaste(intersects[0].object, this.appContext);
-        } else {
-          ClipboardFeatures.cancelPasteMode(this.appContext);
-          this.log('貼り付けをキャンセルしました。');
-        }
-      } else {
-        // 通常の選択処理
-        const intersects = this.raycaster.intersectObjects(this.mechaGroup.children, false);
-        const clickedObject = intersects.length > 0 ? intersects[0].object : null;
-
-        if (e.ctrlKey) {
-          this.appState.toggleSelection(clickedObject);
-        } else if (e.shiftKey || this.appState.isMultiSelectMode) {
-          this.appState.addSelection(clickedObject);
-        } else {
+        if (clickedObject) {
+          this.history.execute(new PaintObjectCommand(clickedObject, this.appState.brushProperties));
           this.appState.setSelection(clickedObject);
         }
-
+      } else if (this.appState.modes.isSubtractMode) {
+        const drillObject = clickedObject && this.appState.modes.subtractTargets.includes(clickedObject) ? clickedObject : null;
+        if (drillObject) {
+          const baseObjects = this.appState.modes.subtractTargets.filter((obj) => obj !== drillObject);
+          if (baseObjects.length > 0) { CsgOperations.performSubtract(baseObjects, drillObject, this.appContext); } 
+          else { CsgOperations.cancelSubtractMode(this.appContext); }
+        } else { this.log('掘削操作をキャンセルしました。'); CsgOperations.cancelSubtractMode(this.appContext); }
+      } else if (this.appState.modes.isMirrorCopyMode) {
+        const previewIntersects = this.raycaster.intersectObjects(this.previewGroup.children, true);
+        if (previewIntersects.length > 0) { ClipboardFeatures.performMirrorCopy(previewIntersects[0].object, this.appContext); }
+        else { ClipboardFeatures.cancelMirrorCopyMode(this.appContext); this.log('鏡面コピーモードをキャンセルしました。');}
+      } else if (this.appState.modes.isPasteMode) {
+        const previewIntersects = this.raycaster.intersectObjects(this.previewGroup.children, true);
+        if (previewIntersects.length > 0) { ClipboardFeatures.confirmPaste(previewIntersects[0].object, this.appContext); }
+        else { ClipboardFeatures.cancelPasteMode(this.appContext); this.log('貼り付けをキャンセルしました。'); }
+      } else {
+        if (e.ctrlKey) { this.appState.toggleSelection(clickedObject); } 
+        else if (e.shiftKey || this.appState.isMultiSelectMode) { this.appState.addSelection(clickedObject); }
+        else { this.appState.setSelection(clickedObject); }
+        
         if (this.appState.isMultiSelectMode && !clickedObject) {
           document.dispatchEvent(new CustomEvent('setMultiSelectMode', {detail: false}));
         }
-
         this.log(this.appState.selectedObjects.length > 0 ? `${this.appState.selectedObjects.length}個のオブジェクトを選択中` : '待機中');
       }
     } else {
-      // ボックス選択後、何も選択されなかった場合に選択をクリアする
       if (!e.ctrlKey && !e.shiftKey && !this.appState.isMultiSelectMode) {
         this.appState.clearSelection();
         this.log('待機中');
       }
     }
-
-    // 最後に必ずポインターIDをリセット
     this.activePointerId = null;
   }
+
   onContextMenu(event) {
     const clickedViewportInfo = this.viewportManager.getViewportFromEvent(event);
     if (clickedViewportInfo && clickedViewportInfo.key !== 'perspective') {
