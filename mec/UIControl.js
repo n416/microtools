@@ -34,6 +34,16 @@ export class UIControl {
     this.setupFileIO();
     this.setupModeButtons();
     this.setupPaintControls();
+    this.setupGlobalCancel(); // ★★★ 追加
+  }
+
+  // ★★★ 追加 ★★★
+  setupGlobalCancel() {
+    const escapeButton = document.getElementById('escapeButton');
+    escapeButton.addEventListener('click', () => {
+      // InputHandlerのkeydownロジックを再利用するため、キーボードイベントを能動的に発行する
+      document.dispatchEvent(new KeyboardEvent('keydown', { 'key': 'Escape' }));
+    });
   }
 
   setupObjectCreation() {
