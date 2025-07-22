@@ -174,6 +174,35 @@ export class UIControl {
     const emissiveIntensityInput = document.getElementById('emissiveIntensity');
     const emissivePenumbraInput = document.getElementById('emissivePenumbra');
 
+    // スポイトモードのON/OFFをアプリケーションの状態に反映させる
+    document.addEventListener('setEyedropperMode', (e) => {
+      this.appState.isEyedropperMode = e.detail;
+      const cursor = e.detail ? 'crosshair' : 'default';
+      for (const key in this.appContext.viewportManager.viewports) {
+        this.appContext.viewportManager.viewports[key].element.style.cursor = cursor;
+      }
+    });
+
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ ここからが修正箇所です ★★★
+    // ライブペイント編集中のスポイト操作を処理する (修正)
+    document.addEventListener('livePaintEyedrop', (e) => {
+      if (!this.appState.isLivePaintPreviewMode) return;
+      // 受け取った全プロパティでUIを更新
+      updateUIFromProps(e.detail);
+      // プレビューを適用
+      applyLivePreview();
+    });
+
+    // ブラシ設定が更新されたときにUIに反映する (新規追加)
+    document.addEventListener('updatePaintUIFromBrush', () => {
+      if (this.appState.isPaintMode) {
+        updateUIFromProps(this.appState.brushProperties);
+      }
+    });
+    // ★★★ 修正箇所はここまでです ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
     colorPalette.appendChild(createColorPalette([0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff, 0x999999], 5));
 
     const allInteractiveElements = [colorPalette, metalnessSlider, emissiveColorInput, emissiveIntensityInput, emissivePenumbraInput, ...document.querySelectorAll('input[name="lightDirection"]')];
@@ -236,8 +265,11 @@ export class UIControl {
       emissiveCheckbox.removeEventListener('change', applyLivePreview);
       colorPalette.removeEventListener('click', applyLivePreview);
     };
-
+    
+   // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ confirmPaintButton のイベントリスナーを修正します ★★★
     confirmPaintButton.addEventListener('click', () => {
+      // 新しい塗装プロパティをUIから取得
       const paintProps = {
         color: new THREE.Color(currentColorDisplay.style.backgroundColor),
         metalness: parseFloat(metalnessSlider.value),
@@ -245,12 +277,24 @@ export class UIControl {
         lightDirection: document.querySelector('input[name="lightDirection"]:checked').value,
         emissiveProperties: {color: new THREE.Color(emissiveColorInput.value), intensity: parseFloat(emissiveIntensityInput.value), penumbra: parseFloat(emissivePenumbraInput.value)},
       };
+      
       this.appState.brushProperties = {...paintProps, color: paintProps.color.clone(), emissiveProperties: {...paintProps.emissiveProperties, color: paintProps.emissiveProperties.color.clone()}};
+      
       const commands = [];
-      this.appState.livePaintOriginalStates.forEach((_, obj) => commands.push(new PaintObjectCommand(obj, paintProps)));
-      if (commands.length > 0) this.history.execute(new MacroCommand(commands, `選択中の ${commands.length} 個のオブジェクトを塗装`));
+      // ライブプレビュー開始時に保存した「元の状態(originalState)」を使ってコマンドを生成
+      this.appState.livePaintOriginalStates.forEach((originalState, obj) => {
+        // 第3引数に originalState を渡す
+        commands.push(new PaintObjectCommand(obj, paintProps, originalState));
+      });
+      
+      if (commands.length > 0) {
+        this.history.execute(new MacroCommand(commands, `選択中の ${commands.length} 個のオブジェクトを塗装`));
+      }
+
       exitAllPaintModes();
     });
+    // ★★★ 修正はここまでです ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
     cancelPaintButton.addEventListener('click', () => {
       this.appState.livePaintOriginalStates.forEach((originalState, obj) => {
