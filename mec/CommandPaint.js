@@ -18,30 +18,39 @@ function getVectorFromDirection(direction) {
  * オブジェクトの塗装（色、材質、発光）を変更するコマンド
  */
 export class PaintObjectCommand extends command {
-  constructor(object, paintProperties) {
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ コンストラクタを修正します ★★★
+  constructor(object, newPaintProps, originalState = null) {
     super();
     this.object = object;
-    this.newProps = { ...paintProperties };
+    this.newProps = { ...newPaintProps };
 
-    this.oldProps = {
-      color: object.material.color.clone(),
-      metalness: object.material.metalness,
-      emissive: object.material.emissive.clone(),
-      emissiveIntensity: object.material.emissiveIntensity,
-    };
-    
-    const existingLight = object.getObjectByProperty('isSpotLight', true);
-    if(existingLight) {
-        this.oldProps.light = {
-            color: existingLight.color.clone(),
-            intensity: existingLight.intensity,
-            penumbra: existingLight.penumbra,
-            direction: existingLight.userData.direction || 'neg-z'
+    // originalStateが渡された場合は、それをUNDO用の状態として採用する
+    // これが渡されない場合（ライブプレビューではない通常の塗装）は、現在の状態を保存する
+    if (originalState) {
+        this.oldProps = originalState;
+    } else {
+        this.oldProps = {
+          color: object.material.color.clone(),
+          metalness: object.material.metalness,
+          emissive: object.material.emissive.clone(),
+          emissiveIntensity: object.material.emissiveIntensity,
         };
+        const existingLight = object.getObjectByProperty('isSpotLight', true);
+        if(existingLight) {
+            this.oldProps.light = {
+                color: existingLight.color.clone(),
+                intensity: existingLight.intensity,
+                penumbra: existingLight.penumbra,
+                direction: existingLight.userData.direction || 'neg-z'
+            };
+        }
     }
-
+    
     this.message = 'オブジェクトを塗装';
   }
+  // ★★★ コンストラクタの修正はここまで ★★★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
   execute() {
     this.object.material.color.copy(this.newProps.color);
