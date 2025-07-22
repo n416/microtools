@@ -574,7 +574,7 @@ export class InputHandler {
 
     if (this.isPanning2D) {
       const newCursor = this.isSpacebarDown ? 'grab' : 'default';
-      this.viewportManager.viewports[this.panningViewportKey].element.style.cursor = newCursor;
+      if (this.panningViewportKey) this.viewportManager.viewports[this.panningViewportKey].element.style.cursor = newCursor;
       this.isPanning2D = false;
       this.panningViewportKey = null;
       this.appContext.orbitControls.enabled = true;
@@ -626,6 +626,9 @@ export class InputHandler {
       this.isBoxSelecting = false;
       this.appContext.orbitControls.enabled = true;
       if (!isClick) {
+        if (this.appState.isLivePaintPreviewMode) {
+          document.getElementById('cancelPaint').click();
+        }
         const boxRect = {left: Math.min(this.startPoint.x, endPoint.x), right: Math.max(this.startPoint.x, endPoint.x), top: Math.min(this.startPoint.y, endPoint.y), bottom: Math.max(this.startPoint.y, endPoint.y)};
         const objectsInBox = [];
         for (const key in this.viewportManager.viewports) {
@@ -645,7 +648,6 @@ export class InputHandler {
             }
           });
         }
-
         const currentSelection = this.appState.selectedObjects.slice();
         if (e.ctrlKey) {
           objectsInBox.forEach((obj) => {
@@ -680,11 +682,9 @@ export class InputHandler {
         return;
       }
 
-      const {key: clickedViewportKey, rect: clickedRect} = clickedViewportInfo;
-      const clickedViewport = this.viewportManager.viewports[clickedViewportKey];
-      this.pointer.x = ((e.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
-      this.pointer.y = -((e.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
-      this.raycaster.setFromCamera(this.pointer, clickedViewport.camera);
+      this.pointer.x = ((e.clientX - clickedViewportInfo.rect.left) / clickedViewportInfo.rect.width) * 2 - 1;
+      this.pointer.y = -((e.clientY - clickedViewportInfo.rect.top) / clickedViewportInfo.rect.height) * 2 + 1;
+      this.raycaster.setFromCamera(this.pointer, this.viewportManager.viewports[clickedViewportInfo.key].camera);
 
       const intersects = this.raycaster.intersectObjects(
         this.mechaGroup.children.filter((c) => !c.userData.isNonSelectable),
@@ -692,14 +692,55 @@ export class InputHandler {
       );
       const clickedObject = intersects.length > 0 ? intersects[0].object : null;
 
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      // ★★★ ここからが最終的な修正ロジックです ★★★
+
+      // 優先度1: スポイトモードの処理。選択を変更せず、ここで処理を完結させる。
       if (this.appState.isEyedropperMode) {
         if (clickedObject) {
-          this.appState.brushProperties.color.copy(clickedObject.material.color);
-          document.dispatchEvent(new CustomEvent('updateCurrentColorDisplay'));
-          this.log(`色を抽出: #${this.appState.brushProperties.color.getHexString()}`);
+          const pickedProps = {
+            color: clickedObject.material.color.clone(),
+            metalness: clickedObject.material.metalness,
+            isEmissive: clickedObject.material.emissive.getHex() > 0,
+            emissiveProperties: {color: clickedObject.material.emissive.clone(), intensity: 1.0, penumbra: 0.2},
+            lightDirection: 'neg-z',
+          };
+          const existingLight = clickedObject.getObjectByProperty('isSpotLight', true);
+          if (existingLight) {
+            pickedProps.isEmissive = true;
+            pickedProps.emissiveProperties.color.copy(existingLight.color);
+            pickedProps.emissiveProperties.intensity = existingLight.intensity;
+            pickedProps.emissiveProperties.penumbra = existingLight.penumbra;
+            pickedProps.lightDirection = existingLight.userData.direction || 'neg-z';
+          }
+
+          if (this.appState.isLivePaintPreviewMode) {
+            document.dispatchEvent(new CustomEvent('livePaintEyedrop', {detail: pickedProps}));
+            this.log(`プロパティを抽出しました`);
+          } else {
+            this.appState.brushProperties = {...pickedProps};
+            document.dispatchEvent(new CustomEvent('updatePaintUIFromBrush'));
+            this.log(`ブラシにプロパティを抽出しました`);
+          }
         }
         document.dispatchEvent(new CustomEvent('setEyedropperMode', {detail: false}));
-      } else if (this.appState.isPaintMode) {
+        this.activePointerId = null;
+        return; // <-- 最重要：ここで処理を中断し、選択変更ロジックへ進ませない
+      }
+
+      // 優先度2: ライブペイント中の暗黙の確定/キャンセル処理
+      if (this.appState.isLivePaintPreviewMode) {
+        if (!clickedObject) {
+          // 何もない空間をクリックしたら -> キャンセル
+          document.getElementById('cancelPaint').click();
+        } else if (!this.appState.selectedObjects.includes(clickedObject)) {
+          // 選択外のオブジェクトをクリックしたら -> 確定
+          document.getElementById('confirmPaint').click();
+        }
+      }
+
+      // 優先度3: その他のモード別処理
+      if (this.appState.isPaintMode) {
         if (clickedObject) {
           this.history.execute(new PaintObjectCommand(clickedObject, this.appState.brushProperties));
           this.appState.setSelection(clickedObject);
@@ -734,6 +775,7 @@ export class InputHandler {
           this.log('貼り付けをキャンセルしました。');
         }
       } else {
+        // どのモードでもない場合の通常選択処理
         if (e.ctrlKey) {
           this.appState.toggleSelection(clickedObject);
         } else if (e.shiftKey || this.appState.isMultiSelectMode) {
@@ -741,12 +783,12 @@ export class InputHandler {
         } else {
           this.appState.setSelection(clickedObject);
         }
-
-        if (this.appState.isMultiSelectMode && !clickedObject) {
-          document.dispatchEvent(new CustomEvent('setMultiSelectMode', {detail: false}));
-        }
+        if (this.appState.isMultiSelectMode && !clickedObject) document.dispatchEvent(new CustomEvent('setMultiSelectMode', {detail: false}));
         this.log(this.appState.selectedObjects.length > 0 ? `${this.appState.selectedObjects.length}個のオブジェクトを選択中` : '待機中');
       }
+
+      // ★★★ 最終的な修正ロジックはここまでです ★★★
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
     } else {
       if (!e.ctrlKey && !e.shiftKey && !this.appState.isMultiSelectMode) {
         this.appState.clearSelection();
