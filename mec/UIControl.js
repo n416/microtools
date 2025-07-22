@@ -265,9 +265,7 @@ export class UIControl {
       emissiveCheckbox.removeEventListener('change', applyLivePreview);
       colorPalette.removeEventListener('click', applyLivePreview);
     };
-    
-   // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★★★ confirmPaintButton のイベントリスナーを修正します ★★★
+
     confirmPaintButton.addEventListener('click', () => {
       // 新しい塗装プロパティをUIから取得
       const paintProps = {
@@ -277,24 +275,22 @@ export class UIControl {
         lightDirection: document.querySelector('input[name="lightDirection"]:checked').value,
         emissiveProperties: {color: new THREE.Color(emissiveColorInput.value), intensity: parseFloat(emissiveIntensityInput.value), penumbra: parseFloat(emissivePenumbraInput.value)},
       };
-      
+
       this.appState.brushProperties = {...paintProps, color: paintProps.color.clone(), emissiveProperties: {...paintProps.emissiveProperties, color: paintProps.emissiveProperties.color.clone()}};
-      
+
       const commands = [];
       // ライブプレビュー開始時に保存した「元の状態(originalState)」を使ってコマンドを生成
       this.appState.livePaintOriginalStates.forEach((originalState, obj) => {
         // 第3引数に originalState を渡す
         commands.push(new PaintObjectCommand(obj, paintProps, originalState));
       });
-      
+
       if (commands.length > 0) {
         this.history.execute(new MacroCommand(commands, `選択中の ${commands.length} 個のオブジェクトを塗装`));
       }
 
       exitAllPaintModes();
     });
-    // ★★★ 修正はここまでです ★★★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
     cancelPaintButton.addEventListener('click', () => {
       this.appState.livePaintOriginalStates.forEach((originalState, obj) => {
@@ -399,8 +395,14 @@ export class UIControl {
 
     colorPalette.addEventListener('click', (e) => {
       if (e.target.dataset.color) {
-        currentColorDisplay.style.backgroundColor = `#${new THREE.Color(parseInt(e.target.dataset.color, 16)).getHexString()}`;
+        const selectedColor = parseInt(e.target.dataset.color, 10);
+
+        currentColorDisplay.style.backgroundColor = `#${new THREE.Color(selectedColor).getHexString()}`;
+
         if (this.appState.isPaintMode) updateBrushFromUI();
+
+        // ライブペイント編集中にもプレビューが即時反映されるようにする
+        if (this.appState.isLivePaintPreviewMode) applyLivePreview();
       }
     });
 
