@@ -3,7 +3,7 @@ import {TransformCommand, MacroCommand, DeleteObjectCommand} from './CommandEdit
 import {PaintObjectCommand} from './CommandPaint.js';
 import * as CsgOperations from './CsgOperations.js';
 import * as ClipboardFeatures from './ClipboardFeatures.js';
-import * as PlacementFeatures from './PlacementFeatures.js'; // ★ 新しいファイルをインポート
+import * as PlacementFeatures from './PlacementFeatures.js';
 
 export class InputHandler {
   constructor(appContext) {
@@ -54,12 +54,10 @@ export class InputHandler {
   onKeyDown(e) {
     if (e.key === 'Escape') {
       e.preventDefault();
-      // ★★★ プレビューモードのキャンセル処理を追加 ★★★
       if (this.appState.modes.isPlacementPreviewMode) {
-        PlacementFeatures.cancelPlacementPreview(this.appContext);
-        return;
+          PlacementFeatures.cancelPlacementPreview(this.appContext);
+          return;
       }
-
       if (this.appState.isLivePaintPreviewMode) {
         document.getElementById('cancelPaint').click();
         return;
@@ -156,7 +154,12 @@ export class InputHandler {
           e.preventDefault();
           const selectedObjectsCopy = this.appState.selectedObjects;
           if (selectedObjectsCopy.length > 0) {
-            this.appState.modes.clipboard = selectedObjectsCopy.map((obj) => ({geometry: obj.geometry, material: obj.material, source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()}}));
+            this.appState.modes.clipboard = selectedObjectsCopy.map((obj) => ({
+              geometry: obj.geometry, 
+              material: obj.material, 
+              userData: obj.userData,
+              source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()}
+            }));
             this.log(`${selectedObjectsCopy.length}個のオブジェクトをコピーしました。`);
           } else {
             this.log('コピーするオブジェクトが選択されていません。');
@@ -335,7 +338,7 @@ export class InputHandler {
 
       this.startPoint.set(event.clientX, event.clientY);
 
-      if (this.appState.modes.isMirrorCopyMode || this.appState.modes.isSubtractMode || this.appState.modes.isPasteMode || this.appState.isPaintMode || this.appState.isEyedropperMode || this.appState.isLivePaintPreviewMode) return;
+      if (this.appState.modes.isMirrorCopyMode || this.appState.modes.isSubtractMode || this.appState.modes.isPasteMode || this.appState.isPaintMode || this.appState.isEyedropperMode || this.appState.isLivePaintPreviewMode || this.appState.modes.isPlacementPreviewMode) return;
 
       const clickedViewport = this.viewportManager.viewports[clickedViewportKey];
       this.pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
@@ -406,7 +409,7 @@ export class InputHandler {
     if (this.isPanning2D) {
       const view = this.viewportManager.viewports[this.panningViewportKey];
       const rect = view.element.getBoundingClientRect();
-      const frustumSize = 10;
+      const frustumSize = this.viewportManager.frustumSize;
       const aspect = rect.width / rect.height;
       const deltaX = ((event.clientX - this.panStart.x) / rect.width) * frustumSize * aspect;
       const deltaY = ((event.clientY - this.panStart.y) / rect.height) * frustumSize;
@@ -449,7 +452,11 @@ export class InputHandler {
     const view = this.viewportManager.viewports[this.draggedInfo.viewportKey];
     const rect = view.element.getBoundingClientRect();
     const aspect = rect.width / rect.height;
-    const frustumSize = 10;
+    
+    // ★★★ ここが修正箇所です ★★★
+    // ハードコードされた '10' を、ViewportManagerから取得した正しい値に置き換えます
+    const frustumSize = this.viewportManager.frustumSize;
+    
     const worldDeltaX = ((event.clientX - this.dragStartPointer.x) / rect.width) * frustumSize * aspect;
     const worldDeltaY = ((event.clientY - this.dragStartPointer.y) / rect.height) * frustumSize;
 
@@ -692,20 +699,19 @@ export class InputHandler {
       this.pointer.x = ((e.clientX - clickedViewportInfo.rect.left) / clickedViewportInfo.rect.width) * 2 - 1;
       this.pointer.y = -((e.clientY - clickedViewportInfo.rect.top) / clickedViewportInfo.rect.height) * 2 + 1;
       this.raycaster.setFromCamera(this.pointer, this.viewportManager.viewports[clickedViewportInfo.key].camera);
-      // ★★★ プレビューオブジェクトのクリック処理を追加 ★★★
+
       if (this.appState.modes.isPlacementPreviewMode) {
-        const previewIntersects = this.raycaster.intersectObjects(this.appContext.previewGroup.children);
-        if (previewIntersects.length > 0) {
-          const clickedPreview = previewIntersects[0].object;
-          if (clickedPreview.userData.isPlacementPreview) {
-            PlacementFeatures.confirmPlacement(clickedPreview, this.appContext);
+          const previewIntersects = this.raycaster.intersectObjects(this.appContext.previewGroup.children);
+          if (previewIntersects.length > 0) {
+              const clickedPreview = previewIntersects[0].object;
+              if (clickedPreview.userData.isPlacementPreview) {
+                  PlacementFeatures.confirmPlacement(clickedPreview, this.appContext);
+              }
+          } else {
+              PlacementFeatures.cancelPlacementPreview(this.appContext);
           }
-        } else {
-          // プレビュー以外の場所をクリックしたらキャンセル
-          PlacementFeatures.cancelPlacementPreview(this.appContext);
-        }
-        this.activePointerId = null;
-        return; // 他のクリック処理を実行させない
+          this.activePointerId = null;
+          return;
       }
 
       const intersects = this.raycaster.intersectObjects(
@@ -714,10 +720,6 @@ export class InputHandler {
       );
       const clickedObject = intersects.length > 0 ? intersects[0].object : null;
 
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-      // ★★★ ここからが最終的な修正ロジックです ★★★
-
-      // 優先度1: スポイトモードの処理。選択を変更せず、ここで処理を完結させる。
       if (this.appState.isEyedropperMode) {
         if (clickedObject) {
           const pickedProps = {
@@ -747,21 +749,17 @@ export class InputHandler {
         }
         document.dispatchEvent(new CustomEvent('setEyedropperMode', {detail: false}));
         this.activePointerId = null;
-        return; // <-- 最重要：ここで処理を中断し、選択変更ロジックへ進ませない
+        return;
       }
 
-      // 優先度2: ライブペイント中の暗黙の確定/キャンセル処理
       if (this.appState.isLivePaintPreviewMode) {
         if (!clickedObject) {
-          // 何もない空間をクリックしたら -> キャンセル
           document.getElementById('cancelPaint').click();
         } else if (!this.appState.selectedObjects.includes(clickedObject)) {
-          // 選択外のオブジェクトをクリックしたら -> 確定
           document.getElementById('confirmPaint').click();
         }
       }
 
-      // 優先度3: その他のモード別処理
       if (this.appState.isPaintMode) {
         if (clickedObject) {
           this.history.execute(new PaintObjectCommand(clickedObject, this.appState.brushProperties));
@@ -791,13 +789,12 @@ export class InputHandler {
       } else if (this.appState.modes.isPasteMode) {
         const previewIntersects = this.raycaster.intersectObjects(this.previewGroup.children, true);
         if (previewIntersects.length > 0) {
-          ClipboardFeatures.confirmPaste(previewIntersects[0].object, this.appContext);
+            ClipboardFeatures.confirmPaste(previewIntersects[0].object, this.appContext);
         } else {
-          ClipboardFeatures.cancelPasteMode(this.appContext);
-          this.log('貼り付けをキャンセルしました。');
+            ClipboardFeatures.cancelPasteMode(this.appContext);
+            this.log('貼り付けをキャンセルしました。');
         }
       } else {
-        // どのモードでもない場合の通常選択処理
         if (e.ctrlKey) {
           this.appState.toggleSelection(clickedObject);
         } else if (e.shiftKey || this.appState.isMultiSelectMode) {
@@ -808,9 +805,6 @@ export class InputHandler {
         if (this.appState.isMultiSelectMode && !clickedObject) document.dispatchEvent(new CustomEvent('setMultiSelectMode', {detail: false}));
         this.log(this.appState.selectedObjects.length > 0 ? `${this.appState.selectedObjects.length}個のオブジェクトを選択中` : '待機中');
       }
-
-      // ★★★ 最終的な修正ロジックはここまでです ★★★
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
     } else {
       if (!e.ctrlKey && !e.shiftKey && !this.appState.isMultiSelectMode) {
         this.appState.clearSelection();
