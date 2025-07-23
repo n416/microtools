@@ -39,7 +39,7 @@ export class ViewportManager {
   }
 
   _setupCameras() {
-    this.viewports.perspective.camera.position.set(4, 3, 5);
+    this.viewports.perspective.camera.position.set(1.5, 0, 0);
     this.viewports.perspective.camera.lookAt(0, 0, 0);
     this.viewports.top.camera.position.set(0, 10, 0);
     this.viewports.top.camera.lookAt(0, 0, 0);
