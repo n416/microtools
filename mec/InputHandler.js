@@ -452,16 +452,21 @@ export class InputHandler {
     const view = this.viewportManager.viewports[this.draggedInfo.viewportKey];
     const rect = view.element.getBoundingClientRect();
     const aspect = rect.width / rect.height;
-
-    // ★★★ ここが修正箇所です ★★★
-    // ハードコードされた '10' を、ViewportManagerから取得した正しい値に置き換えます
     const frustumSize = this.viewportManager.frustumSize;
 
-    const worldDeltaX = ((event.clientX - this.dragStartPointer.x) / rect.width) * frustumSize * aspect;
-    const worldDeltaY = ((event.clientY - this.dragStartPointer.y) / rect.height) * frustumSize;
+    let worldDeltaX = ((event.clientX - this.dragStartPointer.x) / rect.width) * frustumSize * aspect;
+    let worldDeltaY = ((event.clientY - this.dragStartPointer.y) / rect.height) * frustumSize;
 
     if (this.transformGroup) {
       if (this.isDraggingIn2DView) {
+        if (event.shiftKey) {
+          if (Math.abs(worldDeltaX) > Math.abs(worldDeltaY)) {
+            worldDeltaY = 0;
+          } else {
+            worldDeltaX = 0;
+          }
+        }
+
         const worldDelta = new THREE.Vector3();
         switch (this.draggedInfo.viewportKey) {
           case 'top':
@@ -474,7 +479,17 @@ export class InputHandler {
             worldDelta.set(0, -worldDeltaY, -worldDeltaX);
             break;
         }
-        this.transformGroup.position.copy(this.dragStartObjectState.position).add(worldDelta);
+
+        const newPosition = this.dragStartObjectState.position.clone().add(worldDelta);
+
+        if (event.ctrlKey) {
+          const gridSize = this.appContext.gridCellSize;
+          newPosition.x = Math.round(newPosition.x / gridSize) * gridSize;
+          newPosition.y = Math.round(newPosition.y / gridSize) * gridSize;
+          newPosition.z = Math.round(newPosition.z / gridSize) * gridSize;
+        }
+
+        this.transformGroup.position.copy(newPosition);
       } else if (this.isRotatingIn2DView) {
         const center3D = this.dragStartObjectState.position;
         const centerProjected = center3D.clone().project(view.camera);
@@ -538,8 +553,8 @@ export class InputHandler {
         let scaleChangeU = u_change * u_multiplier;
         let scaleChangeV = v_change * v_multiplier;
 
-        const newSize = oldSize.clone();
-        const newCenter = oldCenter.clone();
+        let newSize = oldSize.clone();
+        let newCenter = oldCenter.clone();
 
         if (event.shiftKey) {
           let scaleRatio = 1.0;
@@ -571,9 +586,28 @@ export class InputHandler {
             }
           }
         }
+
+        // CTRLキーが押されている場合、計算後の頂点をグリッドに吸着させる
+        if (event.ctrlKey) {
+          const gridSize = this.appContext.gridCellSize;
+          const tempBBox = new THREE.Box3().setFromCenterAndSize(newCenter, newSize);
+
+          tempBBox.min.x = Math.round(tempBBox.min.x / gridSize) * gridSize;
+          tempBBox.min.y = Math.round(tempBBox.min.y / gridSize) * gridSize;
+          tempBBox.min.z = Math.round(tempBBox.min.z / gridSize) * gridSize;
+
+          tempBBox.max.x = Math.round(tempBBox.max.x / gridSize) * gridSize;
+          tempBBox.max.y = Math.round(tempBBox.max.y / gridSize) * gridSize;
+          tempBBox.max.z = Math.round(tempBBox.max.z / gridSize) * gridSize;
+
+          newSize = tempBBox.getSize(new THREE.Vector3());
+          newCenter = tempBBox.getCenter(new THREE.Vector3());
+        }
+
         if (newSize.x < 0.01) newSize.x = 0.01;
         if (newSize.y < 0.01) newSize.y = 0.01;
         if (newSize.z < 0.01) newSize.z = 0.01;
+
         const scaleFactor = new THREE.Vector3(oldSize.x !== 0 ? newSize.x / oldSize.x : 1, oldSize.y !== 0 ? newSize.y / oldSize.y : 1, oldSize.z !== 0 ? newSize.z / oldSize.z : 1);
         this.transformGroup.position.copy(newCenter);
         this.transformGroup.scale.copy(scaleFactor);
