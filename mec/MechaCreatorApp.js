@@ -11,9 +11,10 @@ import * as SceneIO from './SceneIo.js';
 
 export class MechaCreatorApp {
   constructor() {
-    // 1. クラスのプロパティを最初にすべて定義・初期化
     this.scene = new THREE.Scene();
     this.renderer = new THREE.WebGLRenderer({antialias: true});
+    document.body.appendChild(this.renderer.domElement);
+
     this.logMessages = [];
     this.groupBoundingBoxMesh = null;
     this.isPanModeActive = false;
@@ -26,21 +27,17 @@ export class MechaCreatorApp {
     this.gizmoHandles = [];
     this.gizmoLineMaterial = new THREE.LineBasicMaterial({color: 0xffff00, toneMapped: false, depthTest: false});
 
-    // 2. DOM要素を追加し、シーンの基本設定を完了
-    document.body.appendChild(this.renderer.domElement);
     this.setupScene();
 
-    // 3. 主要なコンポーネントをインスタンス化
     this.appState = new AppState();
+
+    const appInstance = this;
     this.history = new History(this);
     this.viewportManager = new ViewportManager(document.getElementById('viewport-container'), this.scene, this.mechaGroup, this.selectionBoxes, this.scaleGizmoGroup);
+
     this.orbitControls = new OrbitControls(this.viewportManager.viewports.perspective.camera, this.viewportManager.viewports.perspective.element);
     this.transformControls = new TransformControls(this.viewportManager.viewports.perspective.camera, this.renderer.domElement);
 
-    // 4. thisの参照を保持するための定数
-    const appInstance = this;
-
-    // 5. すべてのコンポーネントが準備できた後で、それらをまとめる appContext を作成
     this.appContext = {
       scene: this.scene,
       renderer: this.renderer,
@@ -62,7 +59,6 @@ export class MechaCreatorApp {
       originalMaterials: new Map(),
       gizmoHandles: this.gizmoHandles,
       guides: this.guides,
-      // ★★★ ここが最終的な修正箇所です ★★★
       get gizmoMode() {
         return appInstance.gizmoMode;
       },
@@ -71,11 +67,9 @@ export class MechaCreatorApp {
       },
     };
 
-    // 6. appContext を使用する残りのコンポーネントを初期化
     this.inputHandler = new InputHandler(this.appContext);
     this.uiControl = new UIControl(this.appContext);
 
-    // 7. 最終的なセットアップ
     this.viewportManager.setRenderer(this.renderer);
     this.viewportManager.setControls(this.transformControls, this.orbitControls);
   }
@@ -88,44 +82,8 @@ export class MechaCreatorApp {
     directionalLight.position.set(5, 10, 7.5);
     this.scene.add(directionalLight);
 
-    const guideMaterial = new THREE.MeshBasicMaterial({
-      color: 0x00aaff,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.4,
-      depthTest: false,
-    });
-
-    // 1. 自機ガイド
-    const playerGuideGeom = new THREE.BoxGeometry(1.5, 1.0, 1.0);
-    this.guides.player = new THREE.Mesh(playerGuideGeom, guideMaterial);
-    this.guides.player.name = 'PlayerGuide';
-    this.guides.player.position.y = 1.0 / 2;
-    this.guides.player.rotation.y = Math.PI / 2; // ★ Y軸を中心に90度回転
-    this.guides.player.visible = false;
-    this.scene.add(this.guides.player);
-
-    // 2. ザコ敵ガイド
-    const zakoGuideGeom = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-    this.guides.zako = new THREE.Mesh(zakoGuideGeom, guideMaterial.clone());
-    this.guides.zako.name = 'ZakoGuide';
-    this.guides.zako.position.y = 0.5 / 2;
-    this.guides.zako.rotation.y = Math.PI / 2; // ★ Y軸を中心に90度回転
-    this.guides.zako.visible = false;
-    this.scene.add(this.guides.zako);
-
-    // 3. ボスガイド
-    const bossGuideGeom = new THREE.BoxGeometry(3.0, 3.0, 3.0);
-    this.guides.boss = new THREE.Mesh(bossGuideGeom, guideMaterial.clone());
-    this.guides.boss.name = 'BossGuide';
-    this.guides.boss.position.y = 3.0 / 2;
-    this.guides.boss.rotation.y = Math.PI / 2; // ★ Y軸を中心に90度回転
-    this.guides.boss.visible = false;
-    this.scene.add(this.guides.boss);
-    
-    this.scene.add(this.mechaGroup);
-    this.scene.add(this.previewGroup);
-    this.scene.add(this.selectionBoxes);
+    const gridColor = 0x444444;
+    const centerLineColor = 0x666666;
 
     // グリッド全体のサイズと、1マスのサイズを変数として定義
     const gridTotalSize = 20;
@@ -139,6 +97,70 @@ export class MechaCreatorApp {
 
     gridHelper.name = 'GridHelper';
     this.scene.add(gridHelper);
+
+    const gridHelperXZ = new THREE.GridHelper(gridTotalSize, gridDivisions, centerLineColor, gridColor);
+    gridHelperXZ.name = 'GridHelperXZ';
+    this.scene.add(gridHelperXZ);
+
+    const gridHelperXY = new THREE.GridHelper(gridTotalSize, gridDivisions, centerLineColor, gridColor);
+    gridHelperXY.name = 'GridHelperXY';
+    gridHelperXY.rotation.x = Math.PI / 2;
+    this.scene.add(gridHelperXY);
+
+    const gridHelperYZ = new THREE.GridHelper(gridTotalSize, gridDivisions, centerLineColor, gridColor);
+    gridHelperYZ.name = 'GridHelperYZ';
+    gridHelperYZ.rotation.z = Math.PI / 2;
+    this.scene.add(gridHelperYZ);
+
+    const axisLength = gridTotalSize / 2;
+    const axisX = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-axisLength, 0, 0), new THREE.Vector3(axisLength, 0, 0)]), new THREE.LineBasicMaterial({color: 0xff0000, depthTest: false, renderOrder: 1}));
+    axisX.name = 'AxisX';
+    this.scene.add(axisX);
+
+    const axisY = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -axisLength, 0), new THREE.Vector3(0, axisLength, 0)]), new THREE.LineBasicMaterial({color: 0x00ff00, depthTest: false, renderOrder: 1}));
+    axisY.name = 'AxisY';
+    this.scene.add(axisY);
+
+    const axisZ = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, -axisLength), new THREE.Vector3(0, 0, axisLength)]), new THREE.LineBasicMaterial({color: 0x0000ff, depthTest: false, renderOrder: 1}));
+    axisZ.name = 'AxisZ';
+    this.scene.add(axisZ);
+
+    const perspectiveGrid = new THREE.GridHelper(gridTotalSize, gridDivisions, 0x888888, 0x444444);
+    perspectiveGrid.name = 'PerspectiveGrid';
+    this.scene.add(perspectiveGrid);
+
+    const guideMaterial = new THREE.MeshBasicMaterial({
+      color: 0x00aaff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.4,
+      depthTest: false,
+    });
+
+    this.guides.player = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.0, 1.0), guideMaterial);
+    this.guides.player.name = 'PlayerGuide';
+    this.guides.player.position.y = 1.0 / 2;
+    this.guides.player.rotation.y = Math.PI / 2;
+    this.guides.player.visible = false;
+    this.scene.add(this.guides.player);
+
+    this.guides.zako = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), guideMaterial.clone());
+    this.guides.zako.name = 'ZakoGuide';
+    this.guides.zako.position.y = 0.5 / 2;
+    this.guides.zako.rotation.y = Math.PI / 2;
+    this.guides.zako.visible = false;
+    this.scene.add(this.guides.zako);
+
+    this.guides.boss = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.0, 3.0), guideMaterial.clone());
+    this.guides.boss.name = 'BossGuide';
+    this.guides.boss.position.y = 3.0 / 2;
+    this.guides.boss.rotation.y = Math.PI / 2;
+    this.guides.boss.visible = false;
+    this.scene.add(this.guides.boss);
+
+    this.scene.add(this.mechaGroup);
+    this.scene.add(this.previewGroup);
+    this.scene.add(this.selectionBoxes);
 
     const gizmoHandleMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, toneMapped: false, depthTest: false, side: THREE.DoubleSide});
     const handleSize = 0.5;
