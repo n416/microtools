@@ -4,12 +4,13 @@ export class AppState {
   constructor() {
     /** @type {THREE.Object3D[]} */
     this.selectedObjects = [];
-    this.onSelectionChange = new Set(); 
+    this.onSelectionChange = new Set();
 
     this.modes = {
       isMirrorCopyMode: false,
       isPasteMode: false,
       isSubtractMode: false,
+      isPlacementPreviewMode: false, // ★★★ このフラグを追加 ★★★
       subtractTargets: [],
       clipboard: null,
       lastPasteInfo: {objects: [], offset: new THREE.Vector3()},
@@ -20,18 +21,18 @@ export class AppState {
     this.isPaintMode = false; // クリックで連続塗装するモード
     this.isLivePaintPreviewMode = false; // 選択オブジェクトをリアルタイム編集するモード
     this.isEyedropperMode = false;
-    
+
     // ★★★ 修正箇所: 連続塗装用の設定(ブラシ設定)として名前を明確化 ★★★
     this.brushProperties = {
+      color: new THREE.Color(0xffffff),
+      metalness: 1.0,
+      isEmissive: false,
+      lightDirection: 'neg-z',
+      emissiveProperties: {
         color: new THREE.Color(0xffffff),
-        metalness: 1.0,
-        isEmissive: false,
-        lightDirection: 'neg-z',
-        emissiveProperties: {
-            color: new THREE.Color(0xffffff),
-            intensity: 1.0,
-            penumbra: 0.2
-        }
+        intensity: 1.0,
+        penumbra: 0.2,
+      },
     };
 
     // ライブペイントプレビュー用の一時保存領域

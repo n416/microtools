@@ -164,6 +164,21 @@
 
     <div id="ui">
       <div>
+        <div id="guide-controls" style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px; color: white">
+          <b>ゴースト表示:</b>
+          <span style="margin-left: 10px">
+            <input type="checkbox" id="guidePlayerToggle" data-guide-name="player" />
+            <label for="guidePlayerToggle">自機</label>
+          </span>
+          <span style="margin-left: 10px">
+            <input type="checkbox" id="guideZakoToggle" data-guide-name="zako" />
+            <label for="guideZakoToggle">ザコ</label>
+          </span>
+          <span style="margin-left: 10px">
+            <input type="checkbox" id="guideBossToggle" data-guide-name="boss" />
+            <label for="guideBossToggle">ボス</label>
+          </span>
+        </div>
         <button id="addCube">立方体</button>
         <button id="addSphere">球体</button>
         <button id="addCone">円錐</button>
