@@ -55,8 +55,8 @@ export class InputHandler {
     if (e.key === 'Escape') {
       e.preventDefault();
       if (this.appState.modes.isPlacementPreviewMode) {
-          PlacementFeatures.cancelPlacementPreview(this.appContext);
-          return;
+        PlacementFeatures.cancelPlacementPreview(this.appContext);
+        return;
       }
       if (this.appState.isLivePaintPreviewMode) {
         document.getElementById('cancelPaint').click();
@@ -155,10 +155,10 @@ export class InputHandler {
           const selectedObjectsCopy = this.appState.selectedObjects;
           if (selectedObjectsCopy.length > 0) {
             this.appState.modes.clipboard = selectedObjectsCopy.map((obj) => ({
-              geometry: obj.geometry, 
-              material: obj.material, 
+              geometry: obj.geometry,
+              material: obj.material,
               userData: obj.userData,
-              source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()}
+              source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()},
             }));
             this.log(`${selectedObjectsCopy.length}個のオブジェクトをコピーしました。`);
           } else {
@@ -452,11 +452,11 @@ export class InputHandler {
     const view = this.viewportManager.viewports[this.draggedInfo.viewportKey];
     const rect = view.element.getBoundingClientRect();
     const aspect = rect.width / rect.height;
-    
+
     // ★★★ ここが修正箇所です ★★★
     // ハードコードされた '10' を、ViewportManagerから取得した正しい値に置き換えます
     const frustumSize = this.viewportManager.frustumSize;
-    
+
     const worldDeltaX = ((event.clientX - this.dragStartPointer.x) / rect.width) * frustumSize * aspect;
     const worldDeltaY = ((event.clientY - this.dragStartPointer.y) / rect.height) * frustumSize;
 
@@ -701,17 +701,17 @@ export class InputHandler {
       this.raycaster.setFromCamera(this.pointer, this.viewportManager.viewports[clickedViewportInfo.key].camera);
 
       if (this.appState.modes.isPlacementPreviewMode) {
-          const previewIntersects = this.raycaster.intersectObjects(this.appContext.previewGroup.children);
-          if (previewIntersects.length > 0) {
-              const clickedPreview = previewIntersects[0].object;
-              if (clickedPreview.userData.isPlacementPreview) {
-                  PlacementFeatures.confirmPlacement(clickedPreview, this.appContext);
-              }
-          } else {
-              PlacementFeatures.cancelPlacementPreview(this.appContext);
+        const previewIntersects = this.raycaster.intersectObjects(this.appContext.previewGroup.children);
+        if (previewIntersects.length > 0) {
+          const clickedPreview = previewIntersects[0].object;
+          if (clickedPreview.userData.isPlacementPreview) {
+            PlacementFeatures.confirmPlacement(clickedPreview, this.appContext);
           }
-          this.activePointerId = null;
-          return;
+        } else {
+          PlacementFeatures.cancelPlacementPreview(this.appContext);
+        }
+        this.activePointerId = null;
+        return;
       }
 
       const intersects = this.raycaster.intersectObjects(
@@ -789,10 +789,10 @@ export class InputHandler {
       } else if (this.appState.modes.isPasteMode) {
         const previewIntersects = this.raycaster.intersectObjects(this.previewGroup.children, true);
         if (previewIntersects.length > 0) {
-            ClipboardFeatures.confirmPaste(previewIntersects[0].object, this.appContext);
+          ClipboardFeatures.confirmPaste(previewIntersects[0].object, this.appContext);
         } else {
-            ClipboardFeatures.cancelPasteMode(this.appContext);
-            this.log('貼り付けをキャンセルしました。');
+          ClipboardFeatures.cancelPasteMode(this.appContext);
+          this.log('貼り付けをキャンセルしました。');
         }
       } else {
         if (e.ctrlKey) {
