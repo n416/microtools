@@ -96,29 +96,47 @@ export class MechaCreatorApp {
       depthTest: false,
     });
 
-    this.guides.player = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.0, 1.0), guideMaterial);
+    // 1. 自機ガイド
+    const playerGuideGeom = new THREE.BoxGeometry(1.5, 1.0, 1.0);
+    this.guides.player = new THREE.Mesh(playerGuideGeom, guideMaterial);
     this.guides.player.name = 'PlayerGuide';
-    this.guides.player.position.y = 1.0 / 2; // ★ 自機の高さ(1.0)の半分だけ上に移動
+    this.guides.player.position.y = 1.0 / 2;
+    this.guides.player.rotation.y = Math.PI / 2; // ★ Y軸を中心に90度回転
     this.guides.player.visible = false;
     this.scene.add(this.guides.player);
 
-    this.guides.zako = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), guideMaterial.clone());
+    // 2. ザコ敵ガイド
+    const zakoGuideGeom = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    this.guides.zako = new THREE.Mesh(zakoGuideGeom, guideMaterial.clone());
     this.guides.zako.name = 'ZakoGuide';
-    this.guides.zako.position.y = 0.5 / 2; // ★ ザコの高さ(0.5)の半分だけ上に移動
+    this.guides.zako.position.y = 0.5 / 2;
+    this.guides.zako.rotation.y = Math.PI / 2; // ★ Y軸を中心に90度回転
     this.guides.zako.visible = false;
     this.scene.add(this.guides.zako);
 
-    this.guides.boss = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.0, 3.0), guideMaterial.clone());
+    // 3. ボスガイド
+    const bossGuideGeom = new THREE.BoxGeometry(3.0, 3.0, 3.0);
+    this.guides.boss = new THREE.Mesh(bossGuideGeom, guideMaterial.clone());
     this.guides.boss.name = 'BossGuide';
-    this.guides.boss.position.y = 3.0 / 2; // ★ ボスの高さ(3.0)の半分だけ上に移動
+    this.guides.boss.position.y = 3.0 / 2;
+    this.guides.boss.rotation.y = Math.PI / 2; // ★ Y軸を中心に90度回転
     this.guides.boss.visible = false;
     this.scene.add(this.guides.boss);
-
+    
     this.scene.add(this.mechaGroup);
     this.scene.add(this.previewGroup);
     this.scene.add(this.selectionBoxes);
 
-    const gridHelper = new THREE.GridHelper(5, 100, 0x888888, 0x444444);
+    // グリッド全体のサイズと、1マスのサイズを変数として定義
+    const gridTotalSize = 20;
+    const gridCellSize = 0.0625;
+
+    // 全体のサイズと1マスのサイズから、必要な分割数を自動計算
+    const gridDivisions = gridTotalSize / gridCellSize;
+
+    // 変数を使ってグリッドを生成
+    const gridHelper = new THREE.GridHelper(gridTotalSize, gridDivisions, 0x888888, 0x444444);
+
     gridHelper.name = 'GridHelper';
     this.scene.add(gridHelper);
 
