@@ -181,8 +181,8 @@ class Player {
         this.game = game;
         this.x = x;
         this.y = y;
-        this.width = 50;
-        this.height = 20;
+        this.width = 150;
+        this.height = 100;
         this.baseSpeed = 4;
         this.speed = this.baseSpeed;
         this.hp = 3;
