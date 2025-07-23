@@ -55,6 +55,8 @@ export class MechaCreatorApp {
         set: (newSelection) => this.appState.setSelection(newSelection),
         clear: () => this.appState.clearSelection(),
       },
+      gridCellSize: 0.0625, // グリッドサイズを appContext に追加
+      gridTotalSize: 20,
       highlightMaterial: new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.7, side: THREE.DoubleSide}),
       originalMaterials: new Map(),
       gizmoHandles: this.gizmoHandles,
