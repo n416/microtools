@@ -3,6 +3,7 @@ import {TransformCommand, MacroCommand, DeleteObjectCommand} from './CommandEdit
 import {PaintObjectCommand} from './CommandPaint.js';
 import * as CsgOperations from './CsgOperations.js';
 import * as ClipboardFeatures from './ClipboardFeatures.js';
+import * as PlacementFeatures from './PlacementFeatures.js'; // ★ 新しいファイルをインポート
 
 export class InputHandler {
   constructor(appContext) {
@@ -53,6 +54,12 @@ export class InputHandler {
   onKeyDown(e) {
     if (e.key === 'Escape') {
       e.preventDefault();
+      // ★★★ プレビューモードのキャンセル処理を追加 ★★★
+      if (this.appState.modes.isPlacementPreviewMode) {
+        PlacementFeatures.cancelPlacementPreview(this.appContext);
+        return;
+      }
+
       if (this.appState.isLivePaintPreviewMode) {
         document.getElementById('cancelPaint').click();
         return;
@@ -685,6 +692,21 @@ export class InputHandler {
       this.pointer.x = ((e.clientX - clickedViewportInfo.rect.left) / clickedViewportInfo.rect.width) * 2 - 1;
       this.pointer.y = -((e.clientY - clickedViewportInfo.rect.top) / clickedViewportInfo.rect.height) * 2 + 1;
       this.raycaster.setFromCamera(this.pointer, this.viewportManager.viewports[clickedViewportInfo.key].camera);
+      // ★★★ プレビューオブジェクトのクリック処理を追加 ★★★
+      if (this.appState.modes.isPlacementPreviewMode) {
+        const previewIntersects = this.raycaster.intersectObjects(this.appContext.previewGroup.children);
+        if (previewIntersects.length > 0) {
+          const clickedPreview = previewIntersects[0].object;
+          if (clickedPreview.userData.isPlacementPreview) {
+            PlacementFeatures.confirmPlacement(clickedPreview, this.appContext);
+          }
+        } else {
+          // プレビュー以外の場所をクリックしたらキャンセル
+          PlacementFeatures.cancelPlacementPreview(this.appContext);
+        }
+        this.activePointerId = null;
+        return; // 他のクリック処理を実行させない
+      }
 
       const intersects = this.raycaster.intersectObjects(
         this.mechaGroup.children.filter((c) => !c.userData.isNonSelectable),

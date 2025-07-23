@@ -6,6 +6,7 @@ import * as SceneIO from './SceneIo.js';
 import * as ClipboardFeatures from './ClipboardFeatures.js';
 import {createColorPalette} from './Paint.js';
 import * as THREE from 'three';
+import * as PlacementFeatures from './PlacementFeatures.js'; // ★ 新しいファイルをインポート
 
 function getVectorFromDirection(direction) {
   switch (direction) {
@@ -42,6 +43,7 @@ export class UIControl {
     this.setupModeButtons();
     this.setupPaintControls();
     this.setupGlobalCancel();
+    this.setupGhostControls(); // ★ 新しいメソッド呼び出しを追加
   }
 
   setupGlobalCancel() {
@@ -51,13 +53,38 @@ export class UIControl {
       document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
     });
   }
-
+  // ★★★ この関数を丸ごと置き換え ★★★
   setupObjectCreation() {
-    document.getElementById('addCube').addEventListener('click', () => this.history.execute(new AddObjectCommand(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff})), this.mechaGroup, this.appContext.selectionManager)));
-    document.getElementById('addSphere').addEventListener('click', () => this.history.execute(new AddObjectCommand(new THREE.Mesh(new THREE.SphereGeometry(0.7, 32, 16), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff})), this.mechaGroup, this.appContext.selectionManager)));
-    document.getElementById('addCone').addEventListener('click', () => this.history.execute(new AddObjectCommand(new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.5, 32), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff})), this.mechaGroup, this.appContext.selectionManager)));
-    document.getElementById('addCylinder').addEventListener('click', () => this.history.execute(new AddObjectCommand(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5, 32), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff})), this.mechaGroup, this.appContext.selectionManager)));
+    const defaultSize = 0.125;
 
+    // 立方体
+    document.getElementById('addCube').addEventListener('click', () => {
+      const geometry = new THREE.BoxGeometry(defaultSize, defaultSize, defaultSize);
+      PlacementFeatures.requestAddObject(geometry, this.appContext); // ★ 呼び出しを変更
+    });
+
+    // 球体
+    document.getElementById('addSphere').addEventListener('click', () => {
+      const radius = defaultSize / 2;
+      const geometry = new THREE.SphereGeometry(radius, 32, 16);
+      PlacementFeatures.requestAddObject(geometry, this.appContext); // ★ 呼び出しを変更
+    });
+
+    // 円錐
+    document.getElementById('addCone').addEventListener('click', () => {
+      const radius = defaultSize / 2;
+      const geometry = new THREE.ConeGeometry(radius, defaultSize, 32);
+      PlacementFeatures.requestAddObject(geometry, this.appContext); // ★ 呼び出しを変更
+    });
+
+    // 円柱
+    document.getElementById('addCylinder').addEventListener('click', () => {
+      const radius = defaultSize / 2;
+      const geometry = new THREE.CylinderGeometry(radius, radius, defaultSize, 32);
+      PlacementFeatures.requestAddObject(geometry, this.appContext); // ★ 呼び出しを変更
+    });
+
+    // 多角形柱
     document.getElementById('addPrism').addEventListener('click', () => {
       document.getElementById('prismModal').style.display = 'flex';
     });
@@ -69,13 +96,12 @@ export class UIControl {
       let sides = parseInt(sidesInput.value, 10);
       sides = Math.max(3, Math.min(64, sides || 6));
       sidesInput.value = sides;
-      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.5, sides), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff}));
-      mesh.userData.isPrism = true;
-      this.history.execute(new AddObjectCommand(mesh, this.mechaGroup, this.appContext.selectionManager));
+      const radius = defaultSize / 2;
+      const geometry = new THREE.CylinderGeometry(radius, radius, defaultSize, sides);
+      PlacementFeatures.requestAddObject(geometry, this.appContext); // ★ 呼び出しを変更
       document.getElementById('prismModal').style.display = 'none';
     });
   }
-
   setupCsgOperations() {
     document.getElementById('unionObjects').addEventListener('click', () => CsgOperations.performUnion(this.appContext));
     document.getElementById('intersectObjects').addEventListener('click', () => CsgOperations.performIntersect(this.appContext));
@@ -410,6 +436,26 @@ export class UIControl {
       currentColorDisplay.style.backgroundColor = `#${this.appState.brushProperties.color.getHexString()}`;
       if (this.appState.isPaintMode) updateBrushFromUI();
       if (this.appState.isLivePaintPreviewMode) applyLivePreview();
+    });
+  }
+  // ★★★ ゴースト制御用のメソッドを丸ごと追加 ★★★
+  setupGhostControls() {
+    const guideControlsDiv = document.getElementById('guide-controls');
+
+    guideControlsDiv.addEventListener('change', (event) => {
+      // イベントがチェックボックスから発生した場合のみ処理
+      if (event.target.type === 'checkbox') {
+        const guideName = event.target.dataset.guideName;
+        const isVisible = event.target.checked;
+
+        // AppContext経由で対応するガイドを取得
+        const guideObject = this.appContext.guides[guideName];
+
+        if (guideObject) {
+          guideObject.visible = isVisible;
+          this.log(`ゴースト [${guideName}] を${isVisible ? '表示' : '非表示'}にしました。`);
+        }
+      }
     });
   }
 }
