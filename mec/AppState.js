@@ -15,6 +15,8 @@ export class AppState {
       clipboard: null,
       lastPasteInfo: {objects: [], offset: new THREE.Vector3()},
     };
+    
+    this.isWireframeOverlay = true; // デフォルトはON
 
     // モード関連フラグ
     this.isMultiSelectMode = false;

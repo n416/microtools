@@ -44,8 +44,19 @@ export class UIControl {
     this.setupPaintControls();
     this.setupGlobalCancel();
     this.setupGhostControls(); // ★ 新しいメソッド呼び出しを追加
+    this.setupViewControls(); // ★★★ この行を追加 ★★★
   }
+  // ★★★ この関数を丸ごと追加 ★★★
+  setupViewControls() {
+    const wireframeToggle = document.getElementById('wireframeToggle');
+    // アプリの状態をチェックボックスに反映
+    wireframeToggle.checked = this.appState.isWireframeOverlay;
 
+    // チェックボックスが変更されたら、アプリの状態を更新
+    wireframeToggle.addEventListener('change', (event) => {
+      this.appState.isWireframeOverlay = event.target.checked;
+    });
+  }
   setupGlobalCancel() {
     const escapeButton = document.getElementById('escapeButton');
     escapeButton.addEventListener('click', () => {

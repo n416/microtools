@@ -10,8 +10,14 @@ export class ViewportManager {
     this.renderer = null;
     this.transformControls = null;
     this.orbitControls = null;
-    this.wireframeMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true, transparent: true, opacity: 0.7});
-    this.frustumSize = 2.0; // 2Dビューの画角をここで一元管理する
+
+    this.wireframeMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      wireframe: true,
+      polygonOffset: true,
+      polygonOffsetFactor: -1, // ポリゴンをカメラ側に引き寄せるためにマイナスに設定
+      polygonOffsetUnits: -1, // こちらもマイナスに設定
+    });
 
     this.viewports = {
       top: {element: document.getElementById('view-top'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
@@ -19,6 +25,8 @@ export class ViewportManager {
       side: {element: document.getElementById('view-side'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
       front: {element: document.getElementById('view-front'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
     };
+
+    this.frustumSize = 2.0;
 
     this._setupCameras();
     this._setupEventListeners();
@@ -61,7 +69,6 @@ export class ViewportManager {
       if (view.camera.isPerspectiveCamera) {
         view.camera.aspect = aspect;
       } else {
-        // ★★★ frustumSize をクラスのプロパティから参照するように変更 ★★★
         view.camera.left = (-this.frustumSize * aspect) / 2;
         view.camera.right = (this.frustumSize * aspect) / 2;
         view.camera.top = this.frustumSize / 2;
@@ -142,6 +149,14 @@ export class ViewportManager {
     const axisY = this.scene.getObjectByName('AxisY');
     const axisZ = this.scene.getObjectByName('AxisZ');
 
+    if (perspectiveGrid) perspectiveGrid.visible = false;
+    if (gridXZ) gridXZ.visible = false;
+    if (gridXY) gridXY.visible = false;
+    if (gridYZ) gridYZ.visible = false;
+    if (axisX) axisX.visible = false;
+    if (axisY) axisY.visible = false;
+    if (axisZ) axisZ.visible = false;
+
     for (const key in this.viewports) {
       const view = this.viewports[key];
       const rect = view.element.getBoundingClientRect();
@@ -152,46 +167,81 @@ export class ViewportManager {
       const left = rect.left;
       const bottom = this.renderer.domElement.clientHeight - rect.bottom;
 
-      if (perspectiveGrid) perspectiveGrid.visible = false;
-      if (gridXZ) gridXZ.visible = false;
-      if (gridXY) gridXY.visible = false;
-      if (gridYZ) gridYZ.visible = false;
-      if (axisX) axisX.visible = false;
-      if (axisY) axisY.visible = false;
-      if (axisZ) axisZ.visible = false;
-
       this.renderer.setViewport(left, bottom, width, height);
       this.renderer.setScissor(left, bottom, width, height);
       this.renderer.setScissorTest(true);
       this.renderer.setClearColor(view.background);
 
-      if (view.camera.isOrthographicCamera) {
-        switch (key) {
-          case 'top':
-            if (gridXZ) gridXZ.visible = true;
-            if (axisX) axisX.visible = true;
-            if (axisZ) axisZ.visible = true;
-            break;
-          case 'front':
-            if (gridXY) gridXY.visible = true;
-            if (axisX) axisX.visible = true;
-            if (axisY) axisY.visible = true;
-            break;
-          case 'side':
-            if (gridYZ) gridYZ.visible = true;
-            if (axisY) axisY.visible = true;
-            if (axisZ) axisZ.visible = true;
-            break;
-        }
+      // renderメソッド内の for (const key in this.viewports) { ... } ループを探してください
 
+     if (view.camera.isOrthographicCamera) {
+        const rect = view.element.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > this.renderer.domElement.clientHeight || rect.right < 0 || rect.left > this.renderer.domElement.clientWidth) continue;
+
+        const width = rect.right - rect.left;
+        const height = rect.bottom - rect.top;
+        const left = rect.left;
+        const bottom = this.renderer.domElement.clientHeight - rect.bottom;
+
+        this.renderer.setViewport(left, bottom, width, height);
+        this.renderer.setScissor(left, bottom, width, height);
+        this.renderer.setScissorTest(true);
+        this.renderer.setClearColor(view.background);
+
+        // --- 確実な描画ロジック ---
+
+        // 1. このビューで表示すべきグリッドや軸を設定
+        const perspectiveGrid = this.scene.getObjectByName('PerspectiveGrid');
+        if (perspectiveGrid) perspectiveGrid.visible = false;
+        
+        const gridXZ = this.scene.getObjectByName('GridHelperXZ');
+        if (gridXZ) gridXZ.visible = (key === 'top');
+        const gridXY = this.scene.getObjectByName('GridHelperXY');
+        if (gridXY) gridXY.visible = (key === 'front');
+        const gridYZ = this.scene.getObjectByName('GridHelperYZ');
+        if (gridYZ) gridYZ.visible = (key === 'side');
+        
+        const axisX = this.scene.getObjectByName('AxisX');
+        if (axisX) axisX.visible = (key === 'top' || key === 'front');
+        const axisY = this.scene.getObjectByName('AxisY');
+        if (axisY) axisY.visible = (key === 'front' || key === 'side');
+        const axisZ = this.scene.getObjectByName('AxisZ');
+        if (axisZ) axisZ.visible = (key === 'top' || key === 'side');
+        
+        this.mechaGroup.visible = true;
+        this.selectionBoxes.visible = true;
         this.updateScaleGizmo(key, appState);
+
+        // 2. 【第一描画】シーン全体を通常通り描画（ここで手順1のライトが適用される）
+        this.renderer.autoClear = true; // 最初にビューポートをクリア
+        this.scene.overrideMaterial = null;
         this.renderer.render(this.scene, view.camera);
+        
+        // 3. 【第二描画】ワイヤーフレームが有効な場合、上から重ねて描画
+        if (appState.isWireframeOverlay) {
+            this.renderer.autoClear = false; // 前の描画を消さない！
+            this.scene.overrideMaterial = this.wireframeMaterial;
+            this.renderer.render(this.mechaGroup, view.camera);
+            this.scene.overrideMaterial = null; // 必ず元に戻す
+        }
+        
+        // 4. 【第三描画】スケールギズモを常に最前面に描画
+        if (this.scaleGizmoGroup.visible) {
+            this.renderer.autoClear = false; // 前の描画を消さない！
+            this.renderer.render(this.scaleGizmoGroup, view.camera);
+        }
+        
       } else {
+      // ▲▲▲ 差し替えはここまで ▲▲▲
+
+        // --- Perspectiveカメラの処理（ここは変更なし）---
+        const perspectiveGrid = this.scene.getObjectByName('PerspectiveGrid');
         if (perspectiveGrid) perspectiveGrid.visible = true;
         this.scaleGizmoGroup.visible = false;
         this.transformControls.visible = !!this.transformControls.object && !appState.modes.isMirrorCopyMode && !appState.modes.isPasteMode && !appState.isPaintMode;
         this.renderer.render(this.scene, view.camera);
       }
+      
     }
   }
 
