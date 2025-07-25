@@ -1,19 +1,24 @@
 import * as THREE from 'three';
-
-// (このファイル内の getVectorFromDirection 関数は変更なし)
-
 export function autoSaveScene(context) {
   const {mechaGroup} = context;
   const sceneData = {objects: []};
   mechaGroup.children.forEach((mesh) => {
+    // isNonSelectableなオブジェクトは引き続き保存しない
     if (mesh.userData.isNonSelectable) return;
 
     let geometryType = '';
-    // ★★★ 修正箇所：ジオメトリのパラメータを保存する変数を追加 ★★★
     let geometryParameters = null;
+    let customUserData = {}; // ★ userDataを保存するための変数を追加
 
-    // instanceof を使ってジオメトリの型を判定し、パラメータを取得する
-    if (mesh.geometry instanceof THREE.BoxGeometry) {
+    // ★★★ 修正箇所: インポートされたOBJかどうかを最初に判定 ★★★
+    if (mesh.userData.isImportedOBJ) {
+      geometryType = 'ImportedOBJ';
+      // 巨大なジオメトリは保存しない
+      geometryParameters = null;
+      // ファイル名などの必要なuserDataを保存対象に含める
+      customUserData.fileName = mesh.userData.fileName;
+      customUserData.isImportedOBJ = true;
+    } else if (mesh.geometry instanceof THREE.BoxGeometry) {
       geometryType = 'Box';
       geometryParameters = mesh.geometry.parameters;
     } else if (mesh.geometry instanceof THREE.SphereGeometry) {
@@ -23,7 +28,6 @@ export function autoSaveScene(context) {
       geometryType = 'Cone';
       geometryParameters = mesh.geometry.parameters;
     } else if (mesh.geometry instanceof THREE.CylinderGeometry) {
-      // isPrismプロパティで角柱と円柱を区別
       if (mesh.userData.isPrism) {
         geometryType = 'Prism';
       } else {
@@ -31,15 +35,13 @@ export function autoSaveScene(context) {
       }
       geometryParameters = mesh.geometry.parameters;
     } else if (mesh.geometry instanceof THREE.BufferGeometry && !mesh.geometry.parameters) {
-      // CSGなどで作られたカスタムジオメトリ
       geometryType = 'Custom';
-      geometryParameters = mesh.geometry.toJSON(); // パラメータがない場合はジオメトリ全体をJSON化
+      geometryParameters = mesh.geometry.toJSON();
     }
 
     if (geometryType) {
       const saveData = {
         geometryType,
-        // ★★★ 修正箇所：取得したパラメータを保存データに追加 ★★★
         geometryParameters,
         position: mesh.position.toArray(),
         rotation: mesh.rotation.toArray().slice(0, 3),
@@ -50,10 +52,10 @@ export function autoSaveScene(context) {
           emissive: mesh.material.emissive.getHex(),
           emissiveIntensity: mesh.material.emissiveIntensity,
         },
+        // ★ isPrismやインポートされたファイル名などのuserDataを保存
+        userData: {...mesh.userData, ...customUserData},
       };
-      if (mesh.userData.isPrism) {
-        saveData.isPrism = true;
-      }
+
       const spotLight = mesh.getObjectByProperty('isSpotLight', true);
       if (spotLight) {
         saveData.spotLight = {
@@ -66,7 +68,19 @@ export function autoSaveScene(context) {
       sceneData.objects.push(saveData);
     }
   });
-  localStorage.setItem('mechaCreatorAutoSave', JSON.stringify(sceneData));
+
+  try {
+    const jsonString = JSON.stringify(sceneData);
+    if (jsonString.length > 4.8 * 1024 * 1024) {
+      console.warn('自動保存データが大きすぎるため、保存をスキップしました。');
+      context.log('自動保存データが大きすぎるため、保存をスキップしました。');
+      return;
+    }
+    localStorage.setItem('mechaCreatorAutoSave', jsonString);
+  } catch (e) {
+    console.error('シーンの自動保存に失敗しました。', e);
+    context.log('シーンの自動保存に失敗しました。');
+  }
 }
 
 export function loadFromData(context, sceneData) {
@@ -85,12 +99,15 @@ export function loadFromData(context, sceneData) {
   const loader = new THREE.BufferGeometryLoader();
   sceneData.objects.forEach((data) => {
     let geometry;
-    const params = data.geometryParameters; // 保存されたパラメータを取得
+    const params = data.geometryParameters;
 
-    // ★★★ ここの switch 文を全面的に修正 ★★★
     switch (data.geometryType) {
+      // ★★★ 修正箇所: ImportedOBJのケースを追加 ★★★
+      case 'ImportedOBJ':
+        // ジオメトリは復元できないので、ユーザーに再インポートを促す
+        log(`要再読込: ${data.userData.fileName || '不明なOBJファイル'}`);
+        return; // このオブジェクトの読み込みはここで終了
       case 'Box':
-        // 保存されたパラメータを使い、なければデフォルト値(1)で復元
         geometry = new THREE.BoxGeometry(params?.width ?? 1, params?.height ?? 1, params?.depth ?? 1);
         break;
       case 'Sphere':
@@ -103,12 +120,10 @@ export function loadFromData(context, sceneData) {
         geometry = new THREE.CylinderGeometry(params?.radiusTop ?? 0.5, params?.radiusBottom ?? 0.5, params?.height ?? 1.5, params?.radialSegments ?? 32);
         break;
       case 'Prism':
-        // isPrismフラグがなくても、古いデータとの互換性のためにsidesも見る
         const sides = params?.radialSegments ?? data.sides ?? 6;
         geometry = new THREE.CylinderGeometry(params?.radiusTop ?? 0.7, params?.radiusBottom ?? 0.7, params?.height ?? 1.5, sides);
         break;
       case 'Custom':
-        // 以前の geometryData との互換性も維持
         const customGeomData = params ?? data.geometryData;
         if (customGeomData) geometry = loader.parse(customGeomData);
         break;
@@ -136,8 +151,9 @@ export function loadFromData(context, sceneData) {
       mesh.rotation.fromArray(data.rotation);
       mesh.scale.fromArray(data.scale);
 
-      if (data.isPrism) {
-        mesh.userData.isPrism = true;
+      // ★★★ 修正箇所: 保存されたuserDataを復元 ★★★
+      if (data.userData) {
+        mesh.userData = {...mesh.userData, ...data.userData};
       }
 
       if (data.spotLight) {

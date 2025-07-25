@@ -1,4 +1,4 @@
-import { command } from './Command.js';
+import {command} from './Command.js';
 
 /**
  * オブジェクトをシーンに追加するコマンド。
@@ -40,6 +40,28 @@ export class MirrorCopyCommand extends command {
 
   execute() {
     this.mechaGroup.add(this.object);
+  }
+
+  undo() {
+    this.mechaGroup.remove(this.object);
+  }
+}
+
+/**
+ * インポートされたオブジェクトをシーンに追加するコマンド (★★★★★追加★★★★★)
+ */
+export class ImportObjectCommand extends command {
+  constructor(object, mechaGroup, selectionManager, fileName) {
+    super();
+    this.object = object;
+    this.mechaGroup = mechaGroup;
+    this.selectionManager = selectionManager;
+    this.message = `${fileName} をインポート`;
+  }
+
+  execute() {
+    this.mechaGroup.add(this.object);
+    this.selectionManager.set([this.object]);
   }
 
   undo() {
