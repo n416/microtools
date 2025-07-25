@@ -27,6 +27,11 @@ export class ViewportManager {
       opacity: 0,
     });
 
+    this.wireframeMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      wireframe: true,
+    });
+
     this.viewports = {
       top: {element: document.getElementById('view-top'), camera: new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000), background: new THREE.Color(0x1a1a1a)},
       perspective: {element: document.getElementById('view-perspective'), camera: new THREE.PerspectiveCamera(75, 1, 0.1, 1000), background: new THREE.Color(0x282c34)},
@@ -195,47 +200,41 @@ export class ViewportManager {
 
       // --- ビューの種類（2Dか3Dか）による描画処理の分岐 ---
       if (view.camera.isOrthographicCamera) {
-        // 【第一描画】ソリッド描画パス
-        // ドラッグ中ではないオブジェクト(mechaGroup)を一時的に非表示にする
-        this.mechaGroup.visible = false;
+        // --- 2Dビュー (上面/正面/側面) の描画処理 ---
+        // 2Dビューでは「ソリッド → ワイヤーフレーム → 選択枠/ギズモ」の順で重ね描きを行う。
 
-        // シーンを一度描画する。
-        // これにより、シーン直下にいるドラッグ中のオブジェクト(transformGroup)と、
-        // グリッドなどのヘルパーだけがソリッドで描画される。
-        this.scene.overrideMaterial = null;
+        // 2.【第一描画】シーン全体を通常通り描画 (ソリッド表示)
+        this.scene.overrideMaterial = null; // 全オブジェクトが自身のマテリアルで描画されるようにする。
         this.renderer.render(this.scene, view.camera);
 
-        // 次のパスのために、非表示にしたmechaGroupを元に戻す
-        this.mechaGroup.visible = true;
-
-        // 【第二描画】ワイヤーフレーム描画パス
+        // ★★★ ここからが重ね描き部分です ★★★
+        // 3.【第二描画】UIのチェックがONの場合のみ、ワイヤーフレームを重ねて描画
         if (appState.isWireframeOverlay) {
-          this.renderer.autoClear = false; // 前回の描画を消さずに重ねる
+          this.renderer.autoClear = false; // 重ね描きのため、自動クリアを無効に
 
           const originalMaterials = new Map();
 
-          // ワイヤーフレームマテリアルに差し替えるヘルパー関数
+          // ワイヤーフレーム用マテリアルに差し替える関数
           const applyWireframe = (object) => {
             if (object.isMesh) {
               originalMaterials.set(object, object.material);
-              // 前回の修正で追加したOpaque（不透明）なマテリアルを使用
-              object.material = this.wireframeMaterialOpaque;
+              object.material = this.wireframeMaterial;
             }
           };
 
-          // 元のマテリアルに戻すヘルパー関数
+          // 元のマテリアルに戻す関数
           const restoreMaterial = (object) => {
             if (object.isMesh && originalMaterials.has(object)) {
               object.material = originalMaterials.get(object);
             }
           };
 
-          // 静止オブジェクト(mechaGroup)にワイヤーフレームを描画
+          // 通常のオブジェクトグループにワイヤーフレームを重ねる
           this.mechaGroup.traverse(applyWireframe);
           this.renderer.render(this.mechaGroup, view.camera);
           this.mechaGroup.traverse(restoreMaterial);
 
-          // ドラッグ中のオブジェクト(transformGroup)があれば、それにもワイヤーフレームを描画
+          // ドラッグ中のオブジェクトがあれば、それにもワイヤーフレームを重ねる
           if (appState.transformGroup) {
             appState.transformGroup.traverse(applyWireframe);
             this.renderer.render(appState.transformGroup, view.camera);
@@ -243,8 +242,8 @@ export class ViewportManager {
           }
         }
 
-        // 【第三描画】選択枠とギズモの描画
-        this.renderer.autoClear = false;
+        // 4. 【第三描画】最後に選択枠とギズモを描画
+        this.renderer.autoClear = false; // さらに重ね描きするため、クリアしない。
         this.renderer.render(this.selectionBoxes, view.camera);
         this.updateScaleGizmo(key, appState);
         if (this.scaleGizmoGroup.visible) {
