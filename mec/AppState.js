@@ -15,7 +15,7 @@ export class AppState {
       clipboard: null,
       lastPasteInfo: {objects: [], offset: new THREE.Vector3()},
     };
-    
+
     this.isWireframeOverlay = true; // デフォルトはON
 
     // モード関連フラグ
@@ -39,6 +39,9 @@ export class AppState {
 
     // ライブペイントプレビュー用の一時保存領域
     this.livePaintOriginalStates = new Map();
+
+    // 2Dビューでのドラッグ操作中に、対象オブジェクトを一時的に格納するグループ
+    this.transformGroup = null;
   }
 
   setSelection(objects) {
