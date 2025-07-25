@@ -369,6 +369,9 @@ export class InputHandler {
           this.appState.selectedObjects.forEach((obj) => this.worldTransforms.set(obj, {parent: obj.parent}));
           if (this.transformGroup) this.appContext.scene.remove(this.transformGroup);
           this.transformGroup = new THREE.Group();
+          // AppState経由でtransformGroupを他モジュールから参照できるようにする
+          this.appState.transformGroup = this.transformGroup;
+
           this.transformGroup.position.copy(this.dragStartObjectState.position);
           this.appContext.scene.add(this.transformGroup);
           this.appState.selectedObjects.forEach((obj) => this.transformGroup.attach(obj));
@@ -386,6 +389,7 @@ export class InputHandler {
         if (clickedObject && this.appState.selectedObjects.includes(clickedObject) && !event.shiftKey && !event.ctrlKey) {
           setupTransformState();
           this.isDraggingIn2DView = true;
+          this.appState.isDraggingObject = true; // ★★★ この行を追加 ★★★
           setupMultiSelectGroup();
           this.draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
           return;
@@ -637,6 +641,9 @@ export class InputHandler {
           this.worldTransforms.get(obj).parent.attach(obj);
         });
         this.appContext.scene.remove(this.transformGroup);
+
+        // transformGroupを破棄したので、AppStateからも参照を消す
+        this.appState.transformGroup = null;
         this.transformGroup = null;
         this.worldTransforms.clear();
       }
@@ -658,6 +665,7 @@ export class InputHandler {
         }
       }
       this.isDraggingIn2DView = this.isScalingIn2DView = this.isRotatingIn2DView = false;
+      this.appState.isDraggingObject = false; // ★★★ この行を追加 ★★★
       this.appContext.orbitControls.enabled = true;
       document.dispatchEvent(new CustomEvent('updateGizmoAppearance'));
       this.transformStartCache = null;
