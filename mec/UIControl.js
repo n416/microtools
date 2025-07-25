@@ -1,4 +1,4 @@
-import {AddObjectCommand} from './CommandCreate.js';
+import {AddObjectCommand, ImportObjectCommand} from './CommandCreate.js';
 import {MacroCommand, DeleteObjectCommand} from './CommandEdit.js';
 import {PaintObjectCommand} from './CommandPaint.js';
 import * as CsgOperations from './CsgOperations.js';
@@ -7,6 +7,7 @@ import * as ClipboardFeatures from './ClipboardFeatures.js';
 import {createColorPalette} from './Paint.js';
 import * as THREE from 'three';
 import * as PlacementFeatures from './PlacementFeatures.js'; // ★ 新しいファイルをインポート
+import {OBJLoader} from './OBJLoader.js'; // 新しく作成したOBJLoaderをインポート
 
 function getVectorFromDirection(direction) {
   switch (direction) {
@@ -151,6 +152,75 @@ export class UIControl {
       this.log('データ保存');
     });
     document.getElementById('load').addEventListener('click', () => fileInput.click());
+    // ★★★ ここからOBJインポート処理を追加 ★★★
+    document.getElementById('importObj').addEventListener('click', () => objFileInput.click());
+
+    // ★★★ ここから修正 ★★★
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        const fileContent = re.target.result;
+        // ファイル内容がJSON形式で始まっているか簡易的にチェック
+        if (!fileContent.trim().startsWith('{')) {
+          this.log('エラー: このファイルは有効なシーンデータではありません。OBJモデルは「OBJ読込」ボタンからインポートしてください。');
+          return;
+        }
+        try {
+          SceneIO.loadFromData(this.appContext, JSON.parse(fileContent));
+        } catch (err) {
+          this.log('ファイル読込失敗: ファイルが破損しているか、形式が正しくありません。');
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+    // ★★★ 修正はここまで ★★★
+    
+    // OBJファイルが選択されたときの処理
+    objFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        try {
+          const loader = new OBJLoader();
+          const geometry = loader.parse(re.target.result);
+
+          // ジオメトリが正常に生成されたかチェック
+          if (geometry.attributes.position.count === 0) {
+            this.log('OBJファイルの解析に失敗しました。対応していない形式の可能性があります。');
+            return;
+          }
+
+          const material = new THREE.MeshStandardMaterial({
+            color: 0xcccccc,
+            side: THREE.DoubleSide,
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+
+          // オブジェクトをシーンの中央に配置
+          mesh.position.set(0, 0, 0);
+
+          // ★★★ 修正箇所 ★★★
+          // 2つのフラグ/データをuserDataに保存する
+          mesh.userData.isImportedOBJ = true;
+          mesh.userData.fileName = file.name; // ファイル名を保存
+
+          // 新しいコマンドを使ってオブジェクトをシーンに追加
+          this.history.execute(new ImportObjectCommand(mesh, this.mechaGroup, this.appContext.selectionManager, file.name));
+        } catch (err) {
+          this.log('OBJファイルの読み込み中にエラーが発生しました。');
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = ''; // 同じファイルを連続で選択できるようにする
+    });
+    // ★★★ OBJインポート処理ここまで ★★★
+
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;

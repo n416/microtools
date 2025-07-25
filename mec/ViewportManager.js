@@ -11,22 +11,6 @@ export class ViewportManager {
     this.transformControls = null;
     this.orbitControls = null;
 
-    // ドラッグ中（不透明）のワイヤーフレーム用マテリアル
-    this.wireframeMaterialOpaque = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      wireframe: true,
-      depthTest: false, // 常に手前に描画
-    });
-
-    // 静止時（透明）のワイヤーフレーム用マテリアル
-    this.wireframeMaterialTransparent = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      wireframe: true,
-      depthTest: false, // 常に手前に描画
-      transparent: true,
-      opacity: 0,
-    });
-
     this.wireframeMaterial = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       wireframe: true,
@@ -84,6 +68,7 @@ export class ViewportManager {
       view.camera.updateProjectionMatrix();
     }
   }
+
   updateScaleGizmo(viewportKey, appState) {
     const selectedObjects = appState.selectedObjects;
     if (selectedObjects.length === 0 || viewportKey === 'perspective') {
@@ -106,166 +91,114 @@ export class ViewportManager {
     this.scaleGizmoGroup.visible = true;
     this.scaleGizmoGroup.position.copy(center);
     this.scaleGizmoGroup.renderOrder = 999;
+
     const cam = this.viewports[viewportKey].camera;
-    const viewHeight = cam.top - cam.bottom;
-    const handleScreenFraction = 0.025;
-    const handleWorldSize = viewHeight * handleScreenFraction;
-    const handleBaseSize = 0.5;
-    const handleScalar = handleWorldSize / handleBaseSize;
+    const viewHeight = (cam.top - cam.bottom) / cam.zoom;
+    const handleWorldSize = viewHeight * 0.025;
+
     switch (viewportKey) {
       case 'top':
         this.scaleGizmoGroup.scale.set(size.x, size.z, 1);
         this.scaleGizmoGroup.rotation.set(-Math.PI / 2, 0, 0);
-        this.scaleGizmoGroup.children.forEach((child) => {
-          if (child.isMesh) {
-            child.scale.set(1 / size.x, 1 / size.z, 1).multiplyScalar(handleScalar);
-          }
-        });
         break;
       case 'front':
         this.scaleGizmoGroup.scale.set(size.x, size.y, 1);
         this.scaleGizmoGroup.rotation.set(0, 0, 0);
-        this.scaleGizmoGroup.children.forEach((child) => {
-          if (child.isMesh) {
-            child.scale.set(1 / size.x, 1 / size.y, 1).multiplyScalar(handleScalar);
-          }
-        });
         break;
       case 'side':
         this.scaleGizmoGroup.scale.set(size.z, size.y, 1);
         this.scaleGizmoGroup.rotation.set(0, Math.PI / 2, 0);
-        this.scaleGizmoGroup.children.forEach((child) => {
-          if (child.isMesh) {
-            child.scale.set(1 / size.z, 1 / size.y, 1).multiplyScalar(handleScalar);
-          }
-        });
         break;
     }
+
+    this.scaleGizmoGroup.children.forEach((child) => {
+      if (child.isMesh) {
+        child.scale.set(
+          handleWorldSize / this.scaleGizmoGroup.scale.x,
+          handleWorldSize / this.scaleGizmoGroup.scale.y,
+          handleWorldSize / this.scaleGizmoGroup.scale.z
+        );
+      }
+    });
+
     this.scaleGizmoGroup.updateMatrixWorld(true);
   }
-  /**
-   * render関数
-   * アプリケーションのメインループから毎フレーム呼び出され、
-   * 4つのビューポート（top, perspective, side, front）すべてを描画する責務を持つ。
-   * @param {object} appState - アプリケーション全体の現在の状態（UIのチェック状態など）を保持するオブジェクト
-   */
+
   render(appState) {
-    // --- 準備 1: 初期化チェック ---
-    // レンダラーや各種コントローラー（TransformControls, SelectionBox）が
-    // まだセットされていない場合は、何もせずに処理を中断する。
     if (!this.renderer || !this.transformControls || !this.selectionBoxes) return;
 
-    // --- 準備 2: ヘルパーオブジェクトの取得 ---
-    // シーンから名前を頼りに、各ビューで表示/非表示を切り替えるヘルパーオブジェクトを取得しておく。
-    const perspectiveGrid = this.scene.getObjectByName('PerspectiveGrid'); // パースビュー用グリッド
-    const gridXZ = this.scene.getObjectByName('GridHelperXZ'); // 上面図用グリッド (X-Z平面)
-    const gridXY = this.scene.getObjectByName('GridHelperXY'); // 正面図用グリッド (X-Y平面)
-    const gridYZ = this.scene.getObjectByName('GridHelperYZ'); // 側面図用グリッド (Y-Z平面)
-    const axisX = this.scene.getObjectByName('AxisX'); // X軸
-    const axisY = this.scene.getObjectByName('AxisY'); // Y軸
-    const axisZ = this.scene.getObjectByName('AxisZ'); // Z軸
+    const perspectiveGrid = this.scene.getObjectByName('PerspectiveGrid');
+    const gridXZ = this.scene.getObjectByName('GridHelperXZ');
+    const gridXY = this.scene.getObjectByName('GridHelperXY');
+    const gridYZ = this.scene.getObjectByName('GridHelperYZ');
+    const axisX = this.scene.getObjectByName('AxisX');
+    const axisY = this.scene.getObjectByName('AxisY');
+    const axisZ = this.scene.getObjectByName('AxisZ');
 
-    // --- 全ビューポートのループ処理 ---
-    // 'top', 'perspective', 'side', 'front' の各ビューポートに対して描画処理を繰り返す。
     for (const key in this.viewports) {
       const view = this.viewports[key];
-      // 1. ビューポートに対応するHTML要素の、画面上での位置とサイズを取得する。
       const rect = view.element.getBoundingClientRect();
-
-      // 2. ビューポートが完全に画面外にある場合は、描画処理をスキップして次のビューへ（パフォーマンス最適化）。
       if (rect.bottom < 0 || rect.top > this.renderer.domElement.clientHeight || rect.right < 0 || rect.left > this.renderer.domElement.clientWidth) continue;
-
-      // 3. WebGLの座標系（左下が原点）に合わせて、描画領域を計算する。
       const width = rect.right - rect.left;
       const height = rect.bottom - rect.top;
       const left = rect.left;
-      // CSSのY座標（上が0）をWebGLのY座標（下が0）に変換する。
       const bottom = this.renderer.domElement.clientHeight - rect.bottom;
 
-      // 4. レンダラーに、このビュー専用の描画領域とクリッピング領域（シザー）を設定する。
       this.renderer.setViewport(left, bottom, width, height);
       this.renderer.setScissor(left, bottom, width, height);
-      this.renderer.setScissorTest(true); // シザーテストを有効にし、設定した領域外にはみ出して描画されるのを防ぐ。
-      this.renderer.setClearColor(view.background); // このビューの背景色を設定する。
+      this.renderer.setScissorTest(true);
+      this.renderer.setClearColor(view.background);
 
-      // --- 事前準備: ヘルパー類の表示/非表示を一括で設定 ---
-      // 各ビューに応じて、表示すべきグリッドを切り替える。
       if (gridXZ) gridXZ.visible = key === 'top';
       if (gridXY) gridXY.visible = key === 'front';
       if (gridYZ) gridYZ.visible = key === 'side';
-      if (axisX) axisX.visible = true; // 軸は常に表示
+      if (axisX) axisX.visible = true;
       if (axisY) axisY.visible = true;
       if (axisZ) axisZ.visible = true;
       if (perspectiveGrid) perspectiveGrid.visible = key === 'perspective';
 
-      // --- ビューの種類（2Dか3Dか）による描画処理の分岐 ---
       if (view.camera.isOrthographicCamera) {
-        // --- 2Dビュー (上面/正面/側面) の描画処理 ---
-        // 2Dビューでは「ソリッド → ワイヤーフレーム → 選択枠/ギズモ」の順で重ね描きを行う。
-
-        // 2.【第一描画】シーン全体を通常通り描画 (ソリッド表示)
-        this.scene.overrideMaterial = null; // 全オブジェクトが自身のマテリアルで描画されるようにする。
+        this.scene.overrideMaterial = null;
         this.renderer.render(this.scene, view.camera);
-
-        // ★★★ ここからが重ね描き部分です ★★★
-        // 3.【第二描画】UIのチェックがONの場合のみ、ワイヤーフレームを重ねて描画
         if (appState.isWireframeOverlay) {
-          this.renderer.autoClear = false; // 重ね描きのため、自動クリアを無効に
-
+          this.renderer.autoClear = false;
           const originalMaterials = new Map();
-
-          // ワイヤーフレーム用マテリアルに差し替える関数
           const applyWireframe = (object) => {
             if (object.isMesh) {
               originalMaterials.set(object, object.material);
               object.material = this.wireframeMaterial;
             }
           };
-
-          // 元のマテリアルに戻す関数
           const restoreMaterial = (object) => {
             if (object.isMesh && originalMaterials.has(object)) {
               object.material = originalMaterials.get(object);
             }
           };
-
-          // 通常のオブジェクトグループにワイヤーフレームを重ねる
           this.mechaGroup.traverse(applyWireframe);
           this.renderer.render(this.mechaGroup, view.camera);
           this.mechaGroup.traverse(restoreMaterial);
-
-          // ドラッグ中のオブジェクトがあれば、それにもワイヤーフレームを重ねる
           if (appState.transformGroup) {
             appState.transformGroup.traverse(applyWireframe);
             this.renderer.render(appState.transformGroup, view.camera);
             appState.transformGroup.traverse(restoreMaterial);
           }
         }
-
-        // 4. 【第三描画】最後に選択枠とギズモを描画
-        this.renderer.autoClear = false; // さらに重ね描きするため、クリアしない。
+        this.renderer.autoClear = false;
         this.renderer.render(this.selectionBoxes, view.camera);
         this.updateScaleGizmo(key, appState);
         if (this.scaleGizmoGroup.visible) {
           this.renderer.render(this.scaleGizmoGroup, view.camera);
         }
       } else {
-        // --- 3Dビュー (パース) の処理 ---
-        // 3Dビューは単純にシーンを一度描画するだけ。
-
-        // パースビュー専用のグリッドを表示状態にする。
         const perspectiveGrid = this.scene.getObjectByName('PerspectiveGrid');
         if (perspectiveGrid) perspectiveGrid.visible = true;
-
-        // 2Dビュー用のカスタムスケールギズモは非表示にする。
         this.scaleGizmoGroup.visible = false;
-        // TransformControls(移動/回転/拡縮ギズモ)の表示/非表示をアプリの状態に応じて決定する。
         this.transformControls.visible = !!this.transformControls.object && !appState.modes.isMirrorCopyMode && !appState.modes.isPasteMode && !appState.isPaintMode;
-        // シーン全体を描画する。
         this.renderer.render(this.scene, view.camera);
       }
     }
   }
+
   getViewportFromEvent(event) {
     for (const key in this.viewports) {
       const view = this.viewports[key];

@@ -55,7 +55,7 @@ export class MechaCreatorApp {
         set: (newSelection) => this.appState.setSelection(newSelection),
         clear: () => this.appState.clearSelection(),
       },
-      gridCellSize: 0.0625, // グリッドサイズを appContext に追加
+      gridCellSize: 0.0625,
       gridTotalSize: 20,
       highlightMaterial: new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.7, side: THREE.DoubleSide}),
       originalMaterials: new Map(),
@@ -86,17 +86,10 @@ export class MechaCreatorApp {
 
     const gridColor = 0x444444;
     const centerLineColor = 0x666666;
-
-    // グリッド全体のサイズと、1マスのサイズを変数として定義
     const gridTotalSize = 20;
     const gridCellSize = 0.0625;
-
-    // 全体のサイズと1マスのサイズから、必要な分割数を自動計算
     const gridDivisions = gridTotalSize / gridCellSize;
-
-    // 変数を使ってグリッドを生成
     const gridHelper = new THREE.GridHelper(gridTotalSize, gridDivisions, 0x888888, 0x444444);
-
     gridHelper.name = 'GridHelper';
     this.scene.add(gridHelper);
 
@@ -115,16 +108,19 @@ export class MechaCreatorApp {
     this.scene.add(gridHelperYZ);
 
     const axisLength = gridTotalSize / 2;
-    const axisX = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-axisLength, 0, 0), new THREE.Vector3(axisLength, 0, 0)]), new THREE.LineBasicMaterial({color: 0xff0000, depthTest: false, renderOrder: 1}));
+    const axisX = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-axisLength, 0, 0), new THREE.Vector3(axisLength, 0, 0)]), new THREE.LineBasicMaterial({color: 0xff0000, depthTest: false}));
     axisX.name = 'AxisX';
+    axisX.renderOrder = 1;
     this.scene.add(axisX);
 
-    const axisY = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -axisLength, 0), new THREE.Vector3(0, axisLength, 0)]), new THREE.LineBasicMaterial({color: 0x00ff00, depthTest: false, renderOrder: 1}));
+    const axisY = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -axisLength, 0), new THREE.Vector3(0, axisLength, 0)]), new THREE.LineBasicMaterial({color: 0x00ff00, depthTest: false}));
     axisY.name = 'AxisY';
+    axisY.renderOrder = 1;
     this.scene.add(axisY);
 
-    const axisZ = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, -axisLength), new THREE.Vector3(0, 0, axisLength)]), new THREE.LineBasicMaterial({color: 0x0000ff, depthTest: false, renderOrder: 1}));
+    const axisZ = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, -axisLength), new THREE.Vector3(0, 0, axisLength)]), new THREE.LineBasicMaterial({color: 0x0000ff, depthTest: false}));
     axisZ.name = 'AxisZ';
+    axisZ.renderOrder = 1;
     this.scene.add(axisZ);
 
     const perspectiveGrid = new THREE.GridHelper(gridTotalSize, gridDivisions, 0x888888, 0x444444);
@@ -179,6 +175,7 @@ export class MechaCreatorApp {
     const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.5, 0.5, 0), new THREE.Vector3(0.5, 0.5, 0), new THREE.Vector3(0.5, -0.5, 0), new THREE.Vector3(-0.5, -0.5, 0), new THREE.Vector3(-0.5, 0.5, 0)]);
     const gizmoFrame = new THREE.Line(lineGeometry, this.gizmoLineMaterial);
     this.scaleGizmoGroup.add(gizmoFrame);
+
     handlePositions.forEach((pos) => {
       const handleGeometry = new THREE.BoxGeometry(handleSize, handleSize, handleSize);
       const handle = new THREE.Mesh(handleGeometry, gizmoHandleMaterial.clone());
@@ -245,10 +242,10 @@ export class MechaCreatorApp {
     const color = this.gizmoMode === 'rotate' ? new THREE.Color(0x00ffff) : new THREE.Color(0xffff00);
     this.gizmoLineMaterial.color.copy(color);
     this.gizmoHandles.forEach((handle) => {
+      handle.material.color.copy(color);
       if (handle.name.includes('center')) {
         handle.visible = this.gizmoMode === 'scale';
       }
-      handle.material.color.copy(color);
     });
   }
 
