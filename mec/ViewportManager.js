@@ -113,11 +113,7 @@ export class ViewportManager {
 
     this.scaleGizmoGroup.children.forEach((child) => {
       if (child.isMesh) {
-        child.scale.set(
-          handleWorldSize / this.scaleGizmoGroup.scale.x,
-          handleWorldSize / this.scaleGizmoGroup.scale.y,
-          handleWorldSize / this.scaleGizmoGroup.scale.z
-        );
+        child.scale.set(handleWorldSize / this.scaleGizmoGroup.scale.x, handleWorldSize / this.scaleGizmoGroup.scale.y, handleWorldSize / this.scaleGizmoGroup.scale.z);
       }
     });
 
@@ -134,6 +130,7 @@ export class ViewportManager {
     const axisX = this.scene.getObjectByName('AxisX');
     const axisY = this.scene.getObjectByName('AxisY');
     const axisZ = this.scene.getObjectByName('AxisZ');
+    this.scaleGizmoGroup.visible = false;
 
     for (const key in this.viewports) {
       const view = this.viewports[key];
@@ -158,8 +155,13 @@ export class ViewportManager {
       if (perspectiveGrid) perspectiveGrid.visible = key === 'perspective';
 
       if (view.camera.isOrthographicCamera) {
+        // 毎回、最初の描画の前にギズモを非表示にする
+        this.scaleGizmoGroup.visible = false;
+
         this.scene.overrideMaterial = null;
-        this.renderer.render(this.scene, view.camera);
+        this.renderer.render(this.scene, view.camera); // この時点ではギズモは描画されない
+
+        // ワイヤーフレームの重ね描き処理
         if (appState.isWireframeOverlay) {
           this.renderer.autoClear = false;
           const originalMaterials = new Map();
@@ -185,14 +187,19 @@ export class ViewportManager {
         }
         this.renderer.autoClear = false;
         this.renderer.render(this.selectionBoxes, view.camera);
+
+        // ギズモの状態を現在のビュー用に更新する
         this.updateScaleGizmo(key, appState);
+
+        // ギズモが表示されるべき状態なら、ここで改めて描画する
         if (this.scaleGizmoGroup.visible) {
           this.renderer.render(this.scaleGizmoGroup, view.camera);
         }
       } else {
+        // 3Dプレビュー用の描画処理
         const perspectiveGrid = this.scene.getObjectByName('PerspectiveGrid');
         if (perspectiveGrid) perspectiveGrid.visible = true;
-        this.scaleGizmoGroup.visible = false;
+        this.scaleGizmoGroup.visible = false; // 2D用ギズモは非表示
         this.transformControls.visible = !!this.transformControls.object && !appState.modes.isMirrorCopyMode && !appState.modes.isPasteMode && !appState.isPaintMode;
         this.renderer.render(this.scene, view.camera);
       }

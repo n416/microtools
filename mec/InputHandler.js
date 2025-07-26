@@ -422,17 +422,13 @@ export class InputHandler {
       }
     }
   }
-  // InputHandler.js 内の onPointerMove メソッドを、これで置き換えてください
 
   onPointerMove(event) {
     if (this.isPanning2D) {
       const view = this.viewportManager.viewports[this.panningViewportKey];
       const rect = view.element.getBoundingClientRect();
       const camera = view.camera;
-
-      // ★ 変更点1: パン操作の移動量計算にズーム率を適用
       const effectiveFrustumSize = this.viewportManager.frustumSize / camera.zoom;
-
       const aspect = rect.width / rect.height;
       const deltaX = ((event.clientX - this.panStart.x) / rect.width) * effectiveFrustumSize * aspect;
       const deltaY = ((event.clientY - this.panStart.y) / rect.height) * effectiveFrustumSize;
@@ -474,10 +470,7 @@ export class InputHandler {
     const view = this.viewportManager.viewports[this.draggedInfo.viewportKey];
     const rect = view.element.getBoundingClientRect();
     const aspect = rect.width / rect.height;
-
-    // ★ 変更点2: オブジェクト変形時の移動量計算にもズーム率を適用
     const effectiveFrustumSize = this.viewportManager.frustumSize / view.camera.zoom;
-
     let worldDeltaX = ((event.clientX - this.dragStartPointer.x) / rect.width) * effectiveFrustumSize * aspect;
     let worldDeltaY = ((event.clientY - this.dragStartPointer.y) / rect.height) * effectiveFrustumSize;
 
@@ -490,9 +483,7 @@ export class InputHandler {
             worldDeltaX = 0;
           }
         }
-
         const worldDelta = new THREE.Vector3();
-        // ★ 変更点3: オブジェクトドラッグ時の軸方向を修正
         switch (this.draggedInfo.viewportKey) {
           case 'top':
             worldDelta.set(worldDeltaX, 0, worldDeltaY);
@@ -504,16 +495,13 @@ export class InputHandler {
             worldDelta.set(0, -worldDeltaY, -worldDeltaX);
             break;
         }
-
         const newPosition = this.dragStartObjectState.position.clone().add(worldDelta);
-
         if (event.ctrlKey) {
           const gridSize = this.appContext.gridCellSize;
           newPosition.x = Math.round(newPosition.x / gridSize) * gridSize;
           newPosition.y = Math.round(newPosition.y / gridSize) * gridSize;
           newPosition.z = Math.round(newPosition.z / gridSize) * gridSize;
         }
-
         this.transformGroup.position.copy(newPosition);
       } else if (this.isRotatingIn2DView) {
         const center3D = this.dragStartObjectState.position;
@@ -546,11 +534,12 @@ export class InputHandler {
       } else if (this.isScalingIn2DView) {
         const oldSize = this.dragStartObjectState.scale;
         const oldCenter = this.dragStartObjectState.position;
+        const handleName = this.draggedInfo.handleName;
 
         let u_change = 0,
-          v_change = 0,
-          axisU,
-          axisV;
+          v_change = 0;
+        let axisU, axisV;
+
         switch (this.draggedInfo.viewportKey) {
           case 'top':
             u_change = worldDeltaX;
@@ -572,43 +561,127 @@ export class InputHandler {
             break;
         }
 
-        const u_multiplier = this.draggedInfo.handleName.includes('left') ? -1 : this.draggedInfo.handleName.includes('right') ? 1 : 0;
-        const v_multiplier = this.draggedInfo.handleName.includes('top') ? 1 : this.draggedInfo.handleName.includes('bottom') ? -1 : 0;
+        const oldMin = new THREE.Vector3().subVectors(oldCenter, oldSize.clone().multiplyScalar(0.5));
+        const oldMax = new THREE.Vector3().addVectors(oldCenter, oldSize.clone().multiplyScalar(0.5));
 
-        let scaleChangeU = u_change * u_multiplier;
-        let scaleChangeV = v_change * v_multiplier;
+        const draggedPoint = new THREE.Vector3();
+        const anchorPoint = new THREE.Vector3();
 
-        let newSize = oldSize.clone();
-        let newCenter = oldCenter.clone();
+        switch (this.draggedInfo.viewportKey) {
+          case 'top':
+            if (handleName.includes('left')) {
+              draggedPoint.x = oldMin.x;
+              anchorPoint.x = oldMax.x;
+            } else if (handleName.includes('right')) {
+              draggedPoint.x = oldMax.x;
+              anchorPoint.x = oldMin.x;
+            } else {
+              draggedPoint.x = oldMin.x;
+              anchorPoint.x = oldMax.x;
+            }
+            if (handleName.includes('top')) {
+              draggedPoint.z = oldMin.z;
+              anchorPoint.z = oldMax.z;
+            } else if (handleName.includes('bottom')) {
+              draggedPoint.z = oldMax.z;
+              anchorPoint.z = oldMin.z;
+            } else {
+              draggedPoint.z = oldMin.z;
+              anchorPoint.z = oldMax.z;
+            }
+            draggedPoint.y = oldMin.y;
+            anchorPoint.y = oldMax.y;
+            break;
+          case 'front':
+            if (handleName.includes('left')) {
+              draggedPoint.x = oldMin.x;
+              anchorPoint.x = oldMax.x;
+            } else if (handleName.includes('right')) {
+              draggedPoint.x = oldMax.x;
+              anchorPoint.x = oldMin.x;
+            } else {
+              draggedPoint.x = oldMin.x;
+              anchorPoint.x = oldMax.x;
+            }
+            if (handleName.includes('top')) {
+              draggedPoint.y = oldMax.y;
+              anchorPoint.y = oldMin.y;
+            } else if (handleName.includes('bottom')) {
+              draggedPoint.y = oldMin.y;
+              anchorPoint.y = oldMax.y;
+            } else {
+              draggedPoint.y = oldMin.y;
+              anchorPoint.y = oldMax.y;
+            }
+            draggedPoint.z = oldMin.z;
+            anchorPoint.z = oldMax.z;
+            break;
+          case 'side':
+            if (handleName.includes('left')) {
+              draggedPoint.z = oldMax.z;
+              anchorPoint.z = oldMin.z;
+            } else if (handleName.includes('right')) {
+              draggedPoint.z = oldMin.z;
+              anchorPoint.z = oldMax.z;
+            } else {
+              draggedPoint.z = oldMin.z;
+              anchorPoint.z = oldMax.z;
+            }
+            if (handleName.includes('top')) {
+              draggedPoint.y = oldMax.y;
+              anchorPoint.y = oldMin.y;
+            } else if (handleName.includes('bottom')) {
+              draggedPoint.y = oldMin.y;
+              anchorPoint.y = oldMax.y;
+            } else {
+              draggedPoint.y = oldMin.y;
+              anchorPoint.y = oldMax.y;
+            }
+            draggedPoint.x = oldMin.x;
+            anchorPoint.x = oldMax.x;
+            break;
+        }
+
+        const u_multiplier = handleName.includes('left') || handleName.includes('right');
+        const v_multiplier = handleName.includes('top') || handleName.includes('bottom');
+        if (u_multiplier) draggedPoint[axisU] += u_change;
+        if (v_multiplier) draggedPoint[axisV] += v_change;
+
+        const rawNewMin = new THREE.Vector3(Math.min(draggedPoint.x, anchorPoint.x), Math.min(draggedPoint.y, anchorPoint.y), Math.min(draggedPoint.z, anchorPoint.z));
+        const rawNewMax = new THREE.Vector3(Math.max(draggedPoint.x, anchorPoint.x), Math.max(draggedPoint.y, anchorPoint.y), Math.max(draggedPoint.z, anchorPoint.z));
+
+        let newSize = new THREE.Vector3().subVectors(rawNewMax, rawNewMin);
+        let newCenter = new THREE.Vector3().addVectors(rawNewMin, rawNewMax).multiplyScalar(0.5);
+
+        if (event.altKey) {
+          const tempVec = new THREE.Vector3();
+          tempVec.subVectors(draggedPoint, oldCenter);
+          tempVec.multiplyScalar(2);
+          // ★★★ エラー箇所を修正: .abs()の呼び出しを、より確実な手動での計算に置き換え ★★★
+          tempVec.x = Math.abs(tempVec.x);
+          tempVec.y = Math.abs(tempVec.y);
+          tempVec.z = Math.abs(tempVec.z);
+          newSize.copy(tempVec);
+          newCenter.copy(oldCenter);
+        }
 
         if (event.shiftKey) {
-          let scaleRatio = 1.0;
-          if (u_multiplier !== 0 && (v_multiplier === 0 || Math.abs(scaleChangeU / (oldSize[axisU] || 1)) > Math.abs(scaleChangeV / (oldSize[axisV] || 1)))) {
-            scaleRatio = (oldSize[axisU] + scaleChangeU) / (oldSize[axisU] || 1);
-          } else if (v_multiplier !== 0) {
-            scaleRatio = (oldSize[axisV] + scaleChangeV) / (oldSize[axisV] || 1);
-          }
-          newSize.copy(oldSize).multiplyScalar(scaleRatio);
+          const primaryAxis = Math.abs(u_change) > Math.abs(v_change) ? axisU : axisV;
+          const scaleRatio = oldSize[primaryAxis] !== 0 ? newSize[primaryAxis] / oldSize[primaryAxis] : 1;
+          newSize = oldSize.clone().multiplyScalar(scaleRatio);
           if (!event.altKey) {
-            const sizeDelta = newSize.clone().sub(oldSize);
-            const multipliers = new THREE.Vector3(0, 0, 0);
-            if (u_multiplier !== 0) multipliers[axisU] = u_multiplier;
-            if (v_multiplier !== 0) multipliers[axisV] = v_multiplier;
-            newCenter.add(sizeDelta.multiply(multipliers).multiplyScalar(0.5));
-          }
-        } else {
-          if (event.altKey) {
-            if (u_multiplier !== 0) newSize[axisU] = oldSize[axisU] + scaleChangeU * 2;
-            if (v_multiplier !== 0) newSize[axisV] = oldSize[axisV] + scaleChangeV * 2;
-          } else {
-            if (u_multiplier !== 0) {
-              newSize[axisU] = oldSize[axisU] + scaleChangeU;
-              newCenter[axisU] = oldCenter[axisU] + (scaleChangeU / 2) * u_multiplier;
-            }
-            if (v_multiplier !== 0) {
-              newSize[axisV] = oldSize[axisV] + scaleChangeV;
-              newCenter[axisV] = oldCenter[axisV] + (scaleChangeV / 2) * v_multiplier;
-            }
+            const newMin = new THREE.Vector3();
+            const newMax = new THREE.Vector3();
+            ['x', 'y', 'z'].forEach((axis) => {
+              if (draggedPoint[axis] < anchorPoint[axis]) {
+                newMin[axis] = anchorPoint[axis] - newSize[axis];
+                newMax[axis] = anchorPoint[axis];
+              } else {
+                newMax[axis] = anchorPoint[axis] + newSize[axis];
+                newMin[axis] = anchorPoint[axis];
+              }
+            });
+            newCenter.addVectors(newMin, newMax).multiplyScalar(0.5);
           }
         }
 
@@ -630,6 +703,7 @@ export class InputHandler {
         if (newSize.z < 0.01) newSize.z = 0.01;
 
         const scaleFactor = new THREE.Vector3(oldSize.x !== 0 ? newSize.x / oldSize.x : 1, oldSize.y !== 0 ? newSize.y / oldSize.y : 1, oldSize.z !== 0 ? newSize.z / oldSize.z : 1);
+
         this.transformGroup.position.copy(newCenter);
         this.transformGroup.scale.copy(scaleFactor);
       }
