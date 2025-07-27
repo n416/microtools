@@ -372,8 +372,9 @@ export class InputHandler {
         const setupTransformState = () => {
           this.appContext.orbitControls.enabled = false;
           this.dragStartPointer.set(event.clientX, event.clientY);
-          this.transformStartCache = this.appState.selectedObjects.map((obj) => ({position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()}));
+          this.transformStartCache = this.appState.selectedObjects.map((obj) => ({ matrix: obj.matrix.clone() }));
         };
+
         const setupMultiSelectGroup = () => {
           const groupBounds = new THREE.Box3();
           this.appState.selectedObjects.forEach((obj) => groupBounds.expandByObject(obj));
@@ -383,7 +384,6 @@ export class InputHandler {
           this.appState.selectedObjects.forEach((obj) => this.worldTransforms.set(obj, {parent: obj.parent}));
           if (this.transformGroup) this.appContext.scene.remove(this.transformGroup);
           this.transformGroup = new THREE.Group();
-          // AppState経由でtransformGroupを他モジュールから参照できるようにする
           this.appState.transformGroup = this.transformGroup;
 
           this.transformGroup.position.copy(this.dragStartObjectState.position);
@@ -394,8 +394,11 @@ export class InputHandler {
         if (handleIntersects.length > 0) {
           setupTransformState();
           setupMultiSelectGroup();
-          if (this.appContext.gizmoMode === 'scale') this.isScalingIn2DView = true;
-          else if (this.appContext.gizmoMode === 'rotate') this.isRotatingIn2DView = true;
+          if (this.appContext.gizmoMode === 'scale') {
+            this.isScalingIn2DView = true;
+          } else if (this.appContext.gizmoMode === 'rotate') {
+            this.isRotatingIn2DView = true;
+          }
           this.draggedInfo = {viewportKey: clickedViewportKey, handleName: handleIntersects[0].object.name};
           return;
         }
@@ -403,7 +406,7 @@ export class InputHandler {
         if (clickedObject && this.appState.selectedObjects.includes(clickedObject) && !event.shiftKey && !event.ctrlKey) {
           setupTransformState();
           this.isDraggingIn2DView = true;
-          this.appState.isDraggingObject = true; // ★★★ この行を追加 ★★★
+          this.appState.isDraggingObject = true; 
           setupMultiSelectGroup();
           this.draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
           return;
@@ -465,6 +468,7 @@ export class InputHandler {
     }
 
     if (!this.isDraggingIn2DView && !this.isScalingIn2DView && !this.isRotatingIn2DView) return;
+    
     event.preventDefault();
 
     const view = this.viewportManager.viewports[this.draggedInfo.viewportKey];
@@ -657,7 +661,6 @@ export class InputHandler {
           const tempVec = new THREE.Vector3();
           tempVec.subVectors(draggedPoint, oldCenter);
           tempVec.multiplyScalar(2);
-          // ★★★ エラー箇所を修正: .abs()の呼び出しを、より確実な手動での計算に置き換え ★★★
           tempVec.x = Math.abs(tempVec.x);
           tempVec.y = Math.abs(tempVec.y);
           tempVec.z = Math.abs(tempVec.z);
@@ -724,39 +727,49 @@ export class InputHandler {
       this.activePointerId = null;
       return;
     }
-
+    
     if (this.isDraggingIn2DView || this.isScalingIn2DView || this.isRotatingIn2DView) {
       const selectedObjects = this.appState.selectedObjects;
       if (this.transformGroup) {
-        selectedObjects.forEach((obj) => {
-          this.worldTransforms.get(obj).parent.attach(obj);
-        });
-        this.appContext.scene.remove(this.transformGroup);
+        
+        const commands = [];
+        
+        // ★★★ 将来のデグレ防止のための重要コメント ★★★
+        // 2Dビューでの変形操作は、せん断(Shear)を含む可能性があるため、
+        // 単純なposition, rotation, scale(PRS)では状態を完全に表現できない。
+        // ここでは、以下の手順でせん断情報を含む正しい最終的なローカルマトリクスを計算し、
+        // それをコマンドとして記録する。
 
-        // transformGroupを破棄したので、AppStateからも参照を消す
+        selectedObjects.forEach((obj, i) => {
+          const oldT = this.transformStartCache[i]; 
+          const originalParent = this.worldTransforms.get(obj).parent;
+
+          // 1. three.jsのattach()メソッドを利用する。
+          //    これは、オブジェクトのワールド空間での見た目(位置、回転、拡縮、せん断の全て)を
+          //    完全に維持したまま、親子関係を安全に変更するための公式な方法。
+          // 2. この操作により、オブジェクトの`.matrix`プロパティ(ローカル座標変換マトリクス)が
+          //    新しい親(originalParent)に対して、見た目が変わらないように自動的に再計算される。
+          // 3. この再計算された`.matrix`こそが、せん断情報を含む正しい最終的な変形状態である。
+          originalParent.attach(obj);
+          
+          const newT = { matrix: obj.matrix.clone() };
+          
+          if (!oldT.matrix.equals(newT.matrix)) {
+              commands.push(new TransformCommand(obj, oldT, newT));
+          }
+        });
+        
+        this.appContext.scene.remove(this.transformGroup);
         this.appState.transformGroup = null;
         this.transformGroup = null;
         this.worldTransforms.clear();
-      }
-      if (this.transformStartCache) {
-        if (selectedObjects.length === 1) {
-          const oldT = this.transformStartCache[0];
-          const obj = selectedObjects[0];
-          const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
-          if (!oldT.position.equals(newT.position) || !oldT.rotation.equals(newT.rotation) || !oldT.scale.equals(newT.scale)) {
-            this.history.execute(new TransformCommand(obj, oldT, newT));
-          }
-        } else if (selectedObjects.length > 1) {
-          const commands = selectedObjects.map((obj, i) => {
-            const oldT = this.transformStartCache[i];
-            const newT = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
-            return new TransformCommand(obj, oldT, newT);
-          });
-          this.history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトをグループ変形`));
+        
+        if (commands.length > 0) {
+            this.history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトをグループ変形`));
         }
       }
       this.isDraggingIn2DView = this.isScalingIn2DView = this.isRotatingIn2DView = false;
-      this.appState.isDraggingObject = false; // ★★★ この行を追加 ★★★
+      this.appState.isDraggingObject = false; 
       this.appContext.orbitControls.enabled = true;
       document.dispatchEvent(new CustomEvent('updateGizmoAppearance'));
       this.transformStartCache = null;
@@ -829,8 +842,8 @@ export class InputHandler {
         return;
       }
 
-      this.pointer.x = ((e.clientX - clickedViewportInfo.rect.left) / clickedViewportInfo.rect.width) * 2 - 1;
-      this.pointer.y = -((e.clientY - clickedViewportInfo.rect.top) / clickedViewportInfo.rect.height) * 2 + 1;
+      this.pointer.x = ((event.clientX - clickedViewportInfo.rect.left) / clickedViewportInfo.rect.width) * 2 - 1;
+      this.pointer.y = -((event.clientY - clickedViewportInfo.rect.top) / clickedViewportInfo.rect.height) * 2 + 1;
       this.raycaster.setFromCamera(this.pointer, this.viewportManager.viewports[clickedViewportInfo.key].camera);
 
       if (this.appState.modes.isPlacementPreviewMode) {
