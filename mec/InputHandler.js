@@ -372,7 +372,24 @@ export class InputHandler {
         const setupTransformState = () => {
           this.appContext.orbitControls.enabled = false;
           this.dragStartPointer.set(event.clientX, event.clientY);
-          this.transformStartCache = this.appState.selectedObjects.map((obj) => ({ matrix: obj.matrix.clone() }));
+          // 選択された各オブジェクトに対して、以下の処理を行う。
+          this.appState.selectedObjects.forEach((obj) => {
+            // 1. オブジェクトが回転しているか？ (Quaternionが初期状態ではないか？)
+            const isRotated = !obj.quaternion.equals(new THREE.Quaternion());
+
+            // 2. もし回転しており、かつ現在「簡易モード」(`matrixAutoUpdate = true`)であれば...
+            if (isRotated && obj.matrixAutoUpdate === true) {
+              // 3. オブジェクトを「専門モード」に切り替える。
+              //    これにより、以降の変形は常に matrix が基準となり、シアー情報が失われなくなる。
+              obj.matrixAutoUpdate = false;
+
+              // 4. ★重要★ モード切替の瞬間に、現在のPRS(位置・回転・スケール)の状態を
+              //    matrix に一度だけ正確に反映させる。これで情報の不整合が完全に解消される。
+              obj.updateMatrix();
+            }
+          });
+
+          this.transformStartCache = this.appState.selectedObjects.map((obj) => ({matrix: obj.matrix.clone()}));
         };
 
         const setupMultiSelectGroup = () => {
@@ -406,7 +423,7 @@ export class InputHandler {
         if (clickedObject && this.appState.selectedObjects.includes(clickedObject) && !event.shiftKey && !event.ctrlKey) {
           setupTransformState();
           this.isDraggingIn2DView = true;
-          this.appState.isDraggingObject = true; 
+          this.appState.isDraggingObject = true;
           setupMultiSelectGroup();
           this.draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
           return;
@@ -468,7 +485,7 @@ export class InputHandler {
     }
 
     if (!this.isDraggingIn2DView && !this.isScalingIn2DView && !this.isRotatingIn2DView) return;
-    
+
     event.preventDefault();
 
     const view = this.viewportManager.viewports[this.draggedInfo.viewportKey];
@@ -727,13 +744,12 @@ export class InputHandler {
       this.activePointerId = null;
       return;
     }
-    
+
     if (this.isDraggingIn2DView || this.isScalingIn2DView || this.isRotatingIn2DView) {
       const selectedObjects = this.appState.selectedObjects;
       if (this.transformGroup) {
-        
         const commands = [];
-        
+
         // ★★★ 将来のデグレ防止のための重要コメント ★★★
         // 2Dビューでの変形操作は、せん断(Shear)を含む可能性があるため、
         // 単純なposition, rotation, scale(PRS)では状態を完全に表現できない。
@@ -741,7 +757,7 @@ export class InputHandler {
         // それをコマンドとして記録する。
 
         selectedObjects.forEach((obj, i) => {
-          const oldT = this.transformStartCache[i]; 
+          const oldT = this.transformStartCache[i];
           const originalParent = this.worldTransforms.get(obj).parent;
 
           // 1. three.jsのattach()メソッドを利用する。
@@ -751,25 +767,25 @@ export class InputHandler {
           //    新しい親(originalParent)に対して、見た目が変わらないように自動的に再計算される。
           // 3. この再計算された`.matrix`こそが、せん断情報を含む正しい最終的な変形状態である。
           originalParent.attach(obj);
-          
-          const newT = { matrix: obj.matrix.clone() };
-          
+
+          const newT = {matrix: obj.matrix.clone()};
+
           if (!oldT.matrix.equals(newT.matrix)) {
-              commands.push(new TransformCommand(obj, oldT, newT));
+            commands.push(new TransformCommand(obj, oldT, newT));
           }
         });
-        
+
         this.appContext.scene.remove(this.transformGroup);
         this.appState.transformGroup = null;
         this.transformGroup = null;
         this.worldTransforms.clear();
-        
+
         if (commands.length > 0) {
-            this.history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトをグループ変形`));
+          this.history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトをグループ変形`));
         }
       }
       this.isDraggingIn2DView = this.isScalingIn2DView = this.isRotatingIn2DView = false;
-      this.appState.isDraggingObject = false; 
+      this.appState.isDraggingObject = false;
       this.appContext.orbitControls.enabled = true;
       document.dispatchEvent(new CustomEvent('updateGizmoAppearance'));
       this.transformStartCache = null;
