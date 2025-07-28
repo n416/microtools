@@ -94,7 +94,7 @@ export class ViewportManager {
 
     const cam = this.viewports[viewportKey].camera;
     const viewHeight = (cam.top - cam.bottom) / cam.zoom;
-    const handleWorldSize = viewHeight * 0.025;
+    const handleWorldSize = viewHeight * 0.04;
 
     switch (viewportKey) {
       case 'top':
