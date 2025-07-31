@@ -15,6 +15,7 @@ class Game {
     this.modelLoader = new ModelLoader(this.webglCanvas);
     this.playerModel = null;
     this.modelCenterOffset = new THREE.Vector3();
+    this.playerHitboxDefinitions = []; // ヒットボックス定義をGameオブジェクトで保持
     
     // 初期値として設定。後にモデルサイズに合わせて再計算される。
     this.WORLD_VIEW_HEIGHT = 6.0;
@@ -44,17 +45,13 @@ class Game {
     console.log('Initializing game data...');
     await Promise.all([
         this.stageManager.loadData('data/stages.json', 'data/enemies.json'),
-        this.modelLoader.loadFighter('data/fighter.json').then(model => {
-            if (model) {
-                this.playerModel = model;
+        this.modelLoader.loadFighter('data/fighter.json').then(result => {
+            if (result && result.model) {
+                this.playerModel = result.model;
                 this.playerModel.rotation.y = Math.PI / 2;
                 
-                // fighter.jsonからヒットボックス定義を読み込む
-                fetch('data/fighter.json')
-                    .then(res => res.json())
-                    .then(fighterData => {
-                        this.player.hitboxDefinitions = fighterData.hitboxes;
-                    });
+                // Gameオブジェクトにヒットボックス定義を保存
+                this.playerHitboxDefinitions = result.hitboxes || []; 
 
                 const modelBox = new THREE.Box3().setFromObject(this.playerModel);
                 const modelSize = new THREE.Vector3();
@@ -86,7 +83,8 @@ class Game {
   startNewGame() {
     this.currentStageNumber = 1;
     this.score = 0;
-    this.player = new Player(this, 100, this.canvas.height / 2);
+    // Gameオブジェクトが保持しているヒットボックス定義を使ってPlayerを生成
+    this.player = new Player(this, 100, this.canvas.height / 2, this.playerHitboxDefinitions);
     this.resetEntities();
     this.stageManager.startStage(this.currentStageNumber);
     this.gameState = 'playing';
@@ -197,26 +195,56 @@ class Game {
 
     const barrier = this.player.barrier;
 
-    // 敵の弾 vs (バリア or プレイヤー)
+    // プレイヤーのヒットボックスを現在のスクリーン座標に変換
+    const playerScreenHitboxes = this.player.hitboxDefinitions.map(hb => {
+        const playerCenterX = this.player.x + this.player.width / 2;
+        const playerCenterY = this.player.y + this.player.height / 2;
+        const pixelsPerUnitX = this.canvas.width / this.WORLD_VIEW_WIDTH;
+        const pixelsPerUnitY = this.canvas.height / this.WORLD_VIEW_HEIGHT;
+
+        const hbWidth = hb.width * pixelsPerUnitX;
+        const hbHeight = hb.height * pixelsPerUnitY;
+        
+        const drawX = playerCenterX + (hb.offsetX - this.modelCenterOffset.x) * pixelsPerUnitX - hbWidth / 2;
+        const drawY = playerCenterY - (hb.offsetY - this.modelCenterOffset.y) * pixelsPerUnitY - hbHeight / 2;
+        
+        return { x: drawX, y: drawY, width: hbWidth, height: hbHeight };
+    });
+
+
+    // 敵の弾 vs (バリア or プレイヤーのヒットボックス)
     this.enemyBullets.forEach((bullet) => {
-      const target = barrier && barrier.isActive ? barrier : this.player;
-      if (isColliding(bullet, target)) {
-        target.takeDamage(1);
-        bullet.isActive = false;
+      if (barrier && barrier.isActive && isColliding(bullet, barrier)) {
+          barrier.takeDamage(1);
+          bullet.isActive = false;
+      } else {
+          for (const hitbox of playerScreenHitboxes) {
+              if (isColliding(bullet, hitbox)) {
+                  this.player.takeDamage(1);
+                  bullet.isActive = false;
+                  break; // 1発の弾で複数回ダメージを受けないようにループを抜ける
+              }
+          }
       }
     });
 
-    // 敵 vs (バリア or プレイヤー)
+    // 敵 vs (バリア or プレイヤーのヒットボックス)
     this.enemies.forEach((enemy) => {
-      const target = barrier && barrier.isActive ? barrier : this.player;
-      // 判定対象は常にプレイヤー自身だが、ダメージはtargetが受ける
-      if (isColliding(this.player, enemy)) {
-        target.takeDamage(1);
-        enemy.takeDamage(100);
-      }
+        if (barrier && barrier.isActive && isColliding(enemy, barrier)) {
+            barrier.takeDamage(1);
+            enemy.takeDamage(100); // 敵もダメージを受ける
+        } else {
+            for (const hitbox of playerScreenHitboxes) {
+                if (isColliding(enemy, hitbox)) {
+                    this.player.takeDamage(1);
+                    enemy.takeDamage(100); // 敵は衝突で即死
+                    break;
+                }
+            }
+        }
     });
 
-    // プレイヤー vs パワーアップカプセル
+    // プレイヤー vs パワーアップカプセル (当たり判定は大きいままにする)
     this.powerUps.forEach((powerUp) => {
       if (isColliding(this.player, powerUp)) {
         this.player.addPowerUp();
@@ -239,7 +267,7 @@ class Game {
       this.ctx.lineWidth = 2;
       this.ctx.strokeRect(this.player.x, this.player.y, this.player.width, this.player.height);
       
-      // ▼▼▼ ヒットボックスの矩形描画を追加 ▼▼▼
+      // ヒットボックスの矩形描画
       this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)'; // 緑色
       this.ctx.lineWidth = 1;
 
@@ -252,9 +280,7 @@ class Game {
           const hbWidth = hb.width * pixelsPerUnitX;
           const hbHeight = hb.height * pixelsPerUnitY;
           
-          // モデルのオフセットと中心からのオフセットを考慮して描画位置を計算
           const drawX = playerCenterX + (hb.offsetX - this.modelCenterOffset.x) * pixelsPerUnitX - hbWidth / 2;
-          // Y軸は2Dと3Dで逆なので、-hb.offsetYとする
           const drawY = playerCenterY - (hb.offsetY - this.modelCenterOffset.y) * pixelsPerUnitY - hbHeight / 2;
           
           this.ctx.strokeRect(drawX, drawY, hbWidth, hbHeight);

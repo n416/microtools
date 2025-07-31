@@ -153,7 +153,7 @@ class Barrier {
 
 
 class Player {
-    constructor(game, x, y) {
+    constructor(game, x, y, hitboxDefinitions = []) { // hitboxDefinitions を引数で受け取る
         this.game = game;
         this.x = x;
         this.y = y;
@@ -181,7 +181,7 @@ class Player {
 
         this.shootCooldown = 0;
         this.bulletOffsetX = this.width; // 初期値。initで再設定される
-        this.hitboxDefinitions = []; // ▼▼▼ ヒットボックス定義を保存する配列を追加 ▼▼▼
+        this.hitboxDefinitions = hitboxDefinitions; // ▼▼▼ 引数で受け取った定義をセット ▼▼▼
     }
 
     update(keys) {
