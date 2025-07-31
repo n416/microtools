@@ -1,4 +1,4 @@
-// 通常弾クラス
+// ... (Bullet, Missile, LaserBullet, Option, Barrier クラスは変更なし) ...
 class Bullet {
     constructor(game, x, y, vx, vy, type = 'normal') {
         this.game = game;
@@ -23,8 +23,6 @@ class Bullet {
         this.game.ctx.fillRect(this.x, this.y, this.width, this.height);
     }
 }
-
-// ミサイルクラス
 class Missile {
     constructor(game, x, y) {
         this.game = game;
@@ -38,7 +36,6 @@ class Missile {
         this.onGround = false;
         this.isActive = true;
     }
-
     update(deltaTime) {
         if (!this.onGround) {
             this.y += this.speedY;
@@ -52,20 +49,16 @@ class Missile {
             this.isActive = false;
         }
     }
-
     draw() {
         this.game.ctx.fillStyle = '#99ff99';
         this.game.ctx.fillRect(this.x, this.y, this.width, this.height);
     }
 }
-
-// レーザークラス
 class LaserBullet {
     constructor(game, source, isOptionLaser = false) {
         this.game = game;
         this.source = source;
         this.isOptionLaser = isOptionLaser;
-
         this.width = 400;
         this.height = 3;
         this.x = source.x + source.width;
@@ -73,7 +66,6 @@ class LaserBullet {
         this.speed = 10;
         this.isActive = true;
     }
-
     update(deltaTime) {
         this.x += this.speed;
         this.y = this.source.y + (this.source.height / 2) - (this.height / 2);
@@ -81,14 +73,11 @@ class LaserBullet {
             this.isActive = false;
         }
     }
-
     draw() {
         this.game.ctx.fillStyle = '#ff8a8a';
         this.game.ctx.fillRect(this.x, this.y, this.width, this.height);
     }
 }
-
-// オプションクラス
 class Option {
     constructor(game, player) {
         this.game = game;
@@ -98,7 +87,6 @@ class Option {
         this.width = 16;
         this.height = 16;
     }
-
     update(history, index) {
         const delay = (index + 1) * 20;
         if (history.length > delay) {
@@ -107,10 +95,8 @@ class Option {
             this.y = targetPos.y;
         }
     }
-    
     shoot(powerUpState) {
         const bulletSpeed = 7;
-
         if (powerUpState.laser) {
             this.game.playerBullets.push(new LaserBullet(this.game, this, true));
         } else if (powerUpState.double) {
@@ -119,12 +105,10 @@ class Option {
         } else {
             this.game.playerBullets.push(new Bullet(this.game, this.x, this.y + this.height / 2, bulletSpeed, 0, 'option'));
         }
-
         if (powerUpState.missile) {
             this.game.playerBullets.push(new Missile(this.game, this.x + this.width / 2, this.y + this.height));
         }
     }
-
     draw() {
         this.game.ctx.fillStyle = '#ffb400';
         this.game.ctx.beginPath();
@@ -132,8 +116,6 @@ class Option {
         this.game.ctx.fill();
     }
 }
-
-// バリアクラス
 class Barrier {
     constructor(game, player) {
         this.game = game;
@@ -142,17 +124,15 @@ class Barrier {
         this.radius = 40;
         this.x = player.x + player.width / 2;
         this.y = player.y + player.height / 2;
-        this.width = this.radius * 2;  // for collision detection
-        this.height = this.radius * 2; // for collision detection
+        this.width = this.radius * 2;
+        this.height = this.radius * 2;
         this.isActive = true;
     }
-
     update() {
         if (!this.isActive) return;
         this.x = this.player.x + this.player.width / 2 - this.radius;
         this.y = this.player.y + this.player.height / 2 - this.radius;
     }
-    
     takeDamage(amount) {
         this.durability -= amount;
         if (this.durability <= 0) {
@@ -160,16 +140,12 @@ class Barrier {
             console.log("Barrier destroyed!");
         }
     }
-
     draw() {
         if (!this.isActive) return;
-        
         const centerX = this.player.x + this.player.width / 2;
         const centerY = this.player.y + this.player.height / 2;
-        
         this.game.ctx.beginPath();
         this.game.ctx.arc(centerX, centerY, this.radius, 0, Math.PI * 2);
-        
         this.game.ctx.fillStyle = `rgba(100, 200, 255, ${0.2 + this.durability * 0.05})`;
         this.game.ctx.fill();
     }
@@ -181,7 +157,7 @@ class Player {
         this.game = game;
         this.x = x;
         this.y = y;
-        this.width = 150;
+        this.width = 150; // 当たり判定サイズはinitで再設定される
         this.height = 100;
         this.baseSpeed = 4;
         this.speed = this.baseSpeed;
@@ -204,6 +180,8 @@ class Player {
         };
 
         this.shootCooldown = 0;
+        this.bulletOffsetX = this.width; // 初期値。initで再設定される
+        this.hitboxDefinitions = []; // ▼▼▼ ヒットボックス定義を保存する配列を追加 ▼▼▼
     }
 
     update(keys) {
@@ -255,6 +233,8 @@ class Player {
     }
     
     shoot() {
+        const bulletOffsetX = this.bulletOffsetX;
+
         if (this.powerUpState.laser) {
             const playerLaserOnScreen = this.game.playerBullets.some(b => b instanceof LaserBullet && !b.isOptionLaser);
             if (playerLaserOnScreen) return;
@@ -263,11 +243,11 @@ class Player {
         else if (this.powerUpState.double) {
             const doubleBulletsOnScreen = this.game.playerBullets.some(b => b.type === 'double');
             if (doubleBulletsOnScreen) return;
-            this.game.playerBullets.push(new Bullet(this.game, this.x + this.width, this.y + this.height / 2, 7, 0, 'double'));
-            this.game.playerBullets.push(new Bullet(this.game, this.x + this.width, this.y, 7, -2.5, 'double'));
+            this.game.playerBullets.push(new Bullet(this.game, this.x + bulletOffsetX, this.y + this.height / 2, 7, 0, 'double'));
+            this.game.playerBullets.push(new Bullet(this.game, this.x + bulletOffsetX, this.y, 7, -2.5, 'double'));
         } 
         else {
-            this.game.playerBullets.push(new Bullet(this.game, this.x + this.width, this.y + this.height / 2, 7, 0, 'normal'));
+            this.game.playerBullets.push(new Bullet(this.game, this.x + bulletOffsetX, this.y + this.height / 2, 7, 0, 'normal'));
         }
 
         if (this.powerUpState.missile) {
@@ -323,11 +303,6 @@ class Player {
     applyPowerUpState() {
         this.speed = this.baseSpeed + (this.powerUpState.speedLevel || 0) * 2;
         console.log('Player state applied:', this.powerUpState);
-    }
-
-    draw() {
-        this.game.ctx.fillStyle = 'cyan';
-        this.game.ctx.fillRect(this.x, this.y, this.width, this.height);
     }
 
     drawPowerUpGauge() {
