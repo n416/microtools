@@ -239,6 +239,50 @@
         pointer-events: none;
         display: none;
       }
+      /* ▼▼▼ ラベル用のCSSをすべて削除し、こちらを追記 ▼▼▼ */
+      /* 新しいラッパー：これが位置の基準点になる */
+      .slider-wrapper {
+        position: relative;
+        flex-grow: 1; /* 横幅いっぱいに広がる */
+        display: flex;
+        align-items: center;
+      }
+
+      /* ラッパーの中のスライダーは100%広がる */
+      .slider-wrapper input[type='range'] {
+        width: 100%;
+      }
+
+      /* 以前の .slider-group の relative指定は不要になるので削除 */
+      .slider-container .slider-group {
+        /* position: relative; ← この行があれば削除 */
+      }
+
+      /* 吹き出しのCSSは変更なしでOK */
+      #rotationYTooltip {
+        position: absolute;
+        display: none;
+        background-color: #555;
+        color: white;
+        font-weight: bold;
+        padding: 5px 10px;
+        border-radius: 5px;
+        bottom: 35px;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        pointer-events: none;
+      }
+
+      #rotationYTooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #555;
+      }
     </style>
   </head>
   <body>
@@ -274,10 +318,17 @@
 
             <fieldset id="modelControls" style="display: none">
               <h3>モデル操作</h3>
-              <div class="slider-group"><span>回転 Y:</span> <input type="range" id="rotationY" min="-180" max="180" value="0" style="flex-grow: 1" /></div>
+              <div class="slider-container">
+                <div class="slider-group">
+                  <span>回転 Y:</span>
+                  <div class="slider-wrapper">
+                    <input type="range" id="rotationY" min="-180" max="180" value="0" step="45" />
+                    <div id="rotationYTooltip"></div>
+                  </div>
+                </div>
+              </div>
               <div class="slider-group"><span>回転 X:</span> <input type="range" id="rotationX" min="-180" max="180" value="0" style="flex-grow: 1" /></div>
             </fieldset>
-
             <fieldset>
               <h3>基準座標ガイド</h3>
               <p style="font-size: 0.8em; color: #ccc; margin-top: 0">3Dモデルのサイズ基準となるガイドを表示します。</p>
@@ -366,6 +417,7 @@
         const saveLoadModal = document.getElementById('saveLoadModal');
         const closeModalBtn = document.getElementById('closeModalBtn');
         const selectionBoxElement = document.getElementById('selection-box');
+        const rotationYTooltip = document.getElementById('rotationYTooltip'); // ← この行を追記
 
         // --- State ---
         let asset = null;
@@ -449,6 +501,51 @@
         }
         // ▲▲▲【座標系統一】ここまで ▲▲▲
 
+        // ▼▼▼ この関数を新しく追加 ▼▼▼
+        function updateRotationTooltip() {
+          const slider = rotationYSlider;
+          const tooltip = rotationYTooltip;
+
+          const min = parseFloat(slider.min);
+          const max = parseFloat(slider.max);
+          const val = parseFloat(slider.value);
+
+          // ▼▼▼ ここからが変更箇所 ▼▼▼
+          // スライダーの値に応じて表示するテキストを決定する
+          let labelText = '';
+          switch (val) {
+            case 0:
+              labelText = '正面';
+              break;
+            case -90:
+              labelText = '側面';
+              break;
+            case 90:
+              labelText = '逆側面';
+              break;
+            case 180:
+            case -180:
+              labelText = '背面';
+              break;
+            default:
+              // -135, -45, 45, 135 などの場合は数値をそのまま表示
+              labelText = val;
+          }
+          // 決定したテキストを吹き出しに設定
+          tooltip.textContent = labelText;
+          // ▲▲▲ ここまでが変更箇所 ▲▲▲
+
+          // --- これ以降の位置計算ロジックは変更ありません ---
+          const percent = (val - min) / (max - min);
+          const sliderWidth = slider.offsetWidth;
+
+          const thumbWidth = 16;
+          const trackWidth = sliderWidth - thumbWidth;
+          const newLeft = percent * trackWidth + thumbWidth / 2;
+
+          tooltip.style.left = `${newLeft}px`;
+          tooltip.style.display = 'block';
+        }
         function init() {
           renderer = new THREE.WebGLRenderer({canvas: webglCanvas, antialias: true, alpha: true});
           renderer.setClearColor(0x000000, 0);
@@ -944,6 +1041,23 @@
         deleteHitboxBtn.addEventListener('click', () => {
           hitboxes = hitboxes.filter((box) => !selectedHitboxes.includes(box));
           setSelection([]);
+        });
+
+        // ▼▼▼ 以下のイベントリスナーを新しく追加 ▼▼▼
+        // スライダーをドラッグしている最中
+        rotationYSlider.addEventListener('input', updateRotationTooltip);
+
+        // スライダーを押し始めた時
+        rotationYSlider.addEventListener('mousedown', updateRotationTooltip);
+
+        // スライダーからマウスを離した時
+        rotationYSlider.addEventListener('mouseup', () => {
+          rotationYTooltip.style.display = 'none';
+        });
+
+        // スライダーからマウスカーソルが外れた時
+        rotationYSlider.addEventListener('mouseleave', () => {
+          rotationYTooltip.style.display = 'none';
         });
 
         Object.values(propInputs).forEach((input) =>
