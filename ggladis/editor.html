@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>キャラクターヒットボックスエディタ v21.0 (完成版)</title>
+    <title>キャラクターヒットボックスエディタ v22.0 (座標系統一版)</title>
     <script src="https://cdn.jsdelivr.net/npm/three@0.142.0/build/three.min.js"></script>
     <style>
       :root {
@@ -433,6 +433,22 @@
           if (renderer) renderer.setSize(resW, resH);
         }
 
+        // ▼▼▼【座標系統一】ここからが統一された座標変換関数 ▼▼▼
+        function worldToScreen(worldPos) {
+          const worldPoint = new THREE.Vector3(worldPos.x, worldPos.y, 0);
+          const screenPoint = worldPoint.project(camera);
+          const x = (screenPoint.x * 0.5 + 0.5) * editorCanvas.width;
+          const y = (-screenPoint.y * 0.5 + 0.5) * editorCanvas.height;
+          return {x, y};
+        }
+
+        function screenToWorld(screenPos) {
+          const ndc = new THREE.Vector3((screenPos.x / editorCanvas.width) * 2 - 1, -(screenPos.y / editorCanvas.height) * 2 + 1, 0);
+          ndc.unproject(camera);
+          return {x: ndc.x, y: ndc.y};
+        }
+        // ▲▲▲【座標系統一】ここまで ▲▲▲
+
         function init() {
           renderer = new THREE.WebGLRenderer({canvas: webglCanvas, antialias: true, alpha: true});
           renderer.setClearColor(0x000000, 0);
@@ -470,7 +486,6 @@
 
         function renderLoop() {
           renderer.render(scene, camera);
-
           ctx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
 
           if (asset && asset.type === 'sprite' && asset.image.complete) {
@@ -479,37 +494,24 @@
             ctx.drawImage(asset.image, x, y, asset.image.width, asset.image.height);
           }
 
-          // ★★★ 修正: ガイド描画にカメラのパンを反映 ★★★
+          // ▼▼▼【座標系統一】ガイド描画を統一関数に準拠 ▼▼▼
           if (guideDef) {
+            const screenPos = worldToScreen({x: -guideDef.w / 2, y: guideDef.h});
             const screenW = guideDef.w * PIXELS_PER_UNIT;
             const screenH = guideDef.h * PIXELS_PER_UNIT;
 
-            const panOffsetX = camera.position.x * PIXELS_PER_UNIT;
-            const panOffsetY = (camera.position.y - Y_OFFSET) * PIXELS_PER_UNIT;
-
-            const centerX = editorCanvas.width / 2 - panOffsetX;
-            const originY = editorCanvas.height - (WORLD_VIEW_HEIGHT / 2 - Y_OFFSET) * PIXELS_PER_UNIT + panOffsetY;
-
-            const topLeftX = centerX - screenW / 2;
-            const topLeftY = originY - screenH;
             ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
             ctx.lineWidth = 2;
             ctx.setLineDash([10, 5]);
-            ctx.strokeRect(topLeftX, topLeftY, screenW, screenH);
+            ctx.strokeRect(screenPos.x, screenPos.y, screenW, screenH);
             ctx.setLineDash([]);
           }
 
+          // ▼▼▼【座標系統一】ヒットボックス描画を統一関数に準拠 ▼▼▼
           hitboxes.forEach((box) => {
-            const panOffsetX = camera.position.x * PIXELS_PER_UNIT;
-            const panOffsetY = (camera.position.y - Y_OFFSET) * PIXELS_PER_UNIT;
-
-            const screenCenterX = editorCanvas.width / 2 - panOffsetX;
-            const screenOriginY = editorCanvas.height - (WORLD_VIEW_HEIGHT / 2 - Y_OFFSET) * PIXELS_PER_UNIT + panOffsetY;
-
+            const screenPos = worldToScreen({x: box.worldX, y: box.worldY + box.worldH});
             const screenW = box.worldW * PIXELS_PER_UNIT;
             const screenH = box.worldH * PIXELS_PER_UNIT;
-            const topLeftX = screenCenterX + box.worldX * PIXELS_PER_UNIT;
-            const topLeftY = screenOriginY - box.worldY * PIXELS_PER_UNIT - screenH;
 
             ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
             ctx.strokeStyle = 'rgba(255, 0, 0, 0.9)';
@@ -518,8 +520,8 @@
               ctx.strokeStyle = 'rgba(255, 255, 0, 0.9)';
               ctx.lineWidth = 2;
             }
-            ctx.fillRect(topLeftX, topLeftY, screenW, screenH);
-            ctx.strokeRect(topLeftX, topLeftY, screenW, screenH);
+            ctx.fillRect(screenPos.x, screenPos.y, screenW, screenH);
+            ctx.strokeRect(screenPos.x, screenPos.y, screenW, screenH);
             if (selectedHitboxes.length === 1 && selectedHitboxes[0] === box) {
               drawResizeHandles(box);
             }
@@ -556,8 +558,9 @@
           selectionStartPoint.set(e.clientX, e.clientY);
           if (isSpacebarDown) {
             isPanning = true;
-            panStart.x = e.clientX;
-            panStart.y = e.clientY;
+            const pos = getMousePos(e); // getMousePos() を使ってキャンバス内座標を取得
+            panStart.x = pos.x; // 取得したキャンバス内座標を保存
+            panStart.y = pos.y; // 取得したキャンバス内座標を保存
             cameraStartPos.copy(camera.position);
             editorCanvas.style.cursor = 'grabbing';
             return;
@@ -592,7 +595,7 @@
           }
 
           if (dragTarget && dragTarget.length > 0) {
-            dragContext.startMousePos = pos;
+            dragContext.startMousePos = screenToWorld(pos);
             dragContext.initialStates.clear();
             dragTarget.forEach((box) => {
               dragContext.initialStates.set(box, {...box});
@@ -603,10 +606,10 @@
         function onPointerMove(e) {
           const pos = getMousePos(e);
           if (isPanning) {
-            const worldDeltaX = (e.clientX - panStart.x) / PIXELS_PER_UNIT;
-            const worldDeltaY = -(e.clientY - panStart.y) / PIXELS_PER_UNIT;
-            camera.position.x = cameraStartPos.x - worldDeltaX;
-            camera.position.y = cameraStartPos.y - worldDeltaY;
+            const currentWorldPos = screenToWorld(pos);
+            const startWorldPos = screenToWorld(panStart);
+            camera.position.x = cameraStartPos.x - (currentWorldPos.x - startWorldPos.x);
+            camera.position.y = cameraStartPos.y - (currentWorldPos.y - startWorldPos.y);
             return;
           }
           if (isBoxSelecting) {
@@ -619,8 +622,9 @@
           }
 
           if (dragTarget) {
-            let dx_world = (pos.x - dragContext.startMousePos.x) / PIXELS_PER_UNIT;
-            let dy_world = -(pos.y - dragContext.startMousePos.y) / PIXELS_PER_UNIT;
+            const worldPos = screenToWorld(pos);
+            let dx_world = worldPos.x - dragContext.startMousePos.x;
+            let dy_world = worldPos.y - dragContext.startMousePos.y;
 
             if (isResizing) {
               const box = dragTarget[0];
@@ -669,17 +673,8 @@
               bottom: Math.max(selectionStartPoint.y, e.clientY) - rect.top,
             };
             const objectsInBox = hitboxes.filter((box) => {
-              const panOffsetX = camera.position.x * PIXELS_PER_UNIT;
-              const panOffsetY = (camera.position.y - Y_OFFSET) * PIXELS_PER_UNIT;
-              const screenCenterX = editorCanvas.width / 2 - panOffsetX;
-              const screenOriginY = editorCanvas.height - (WORLD_VIEW_HEIGHT / 2 - Y_OFFSET) * PIXELS_PER_UNIT + panOffsetY;
-              const screenW = box.worldW * PIXELS_PER_UNIT;
-              const screenH = box.worldH * PIXELS_PER_UNIT;
-              const topLeftX = screenCenterX + box.worldX * PIXELS_PER_UNIT;
-              const topLeftY = screenOriginY - box.worldY * PIXELS_PER_UNIT - screenH;
-              const boxCenterX = topLeftX + screenW / 2;
-              const boxCenterY = topLeftY + screenH / 2;
-              return boxCenterX >= boxRect.left && boxCenterX <= boxRect.right && boxCenterY >= boxRect.top && boxCenterY <= boxRect.bottom;
+              const screenPos = worldToScreen({x: box.worldX + box.worldW / 2, y: box.worldY + box.worldH / 2});
+              return screenPos.x >= boxRect.left && screenPos.x <= boxRect.right && screenPos.y >= boxRect.top && screenPos.y <= boxRect.bottom;
             });
             setSelection(objectsInBox, e.ctrlKey, true);
           }
@@ -693,42 +688,30 @@
           return {x: evt.clientX - rect.left, y: evt.clientY - rect.top};
         }
 
+        // ▼▼▼【座標系統一】ヒットボックス/ハンドル判定を統一関数に準拠 ▼▼▼
         function getHitboxAt(x, y) {
           for (let i = hitboxes.length - 1; i >= 0; i--) {
             const b = hitboxes[i];
-            const panOffsetX = camera.position.x * PIXELS_PER_UNIT;
-            const panOffsetY = (camera.position.y - Y_OFFSET) * PIXELS_PER_UNIT;
-            const screenCenterX = editorCanvas.width / 2 - panOffsetX;
-            const screenOriginY = editorCanvas.height - (WORLD_VIEW_HEIGHT / 2 - Y_OFFSET) * PIXELS_PER_UNIT + panOffsetY;
+            const screenPos = worldToScreen({x: b.worldX, y: b.worldY + b.worldH});
             const screenW = b.worldW * PIXELS_PER_UNIT;
             const screenH = b.worldH * PIXELS_PER_UNIT;
-            const topLeftX = screenCenterX + b.worldX * PIXELS_PER_UNIT;
-            const topLeftY = screenOriginY - b.worldY * PIXELS_PER_UNIT - screenH;
-            if (x >= topLeftX && x <= topLeftX + screenW && y >= topLeftY && y <= topLeftY + screenH) return b;
+            if (x >= screenPos.x && x <= screenPos.x + screenW && y >= screenPos.y && y <= screenPos.y + screenH) return b;
           }
           return null;
         }
 
         function getResizeHandlePositions(b) {
-          const panOffsetX = camera.position.x * PIXELS_PER_UNIT;
-          const panOffsetY = (camera.position.y - Y_OFFSET) * PIXELS_PER_UNIT;
-          const screenCenterX = editorCanvas.width / 2 - panOffsetX;
-          const screenOriginY = editorCanvas.height - (WORLD_VIEW_HEIGHT / 2 - Y_OFFSET) * PIXELS_PER_UNIT + panOffsetY;
-          const screenW = b.worldW * PIXELS_PER_UNIT;
-          const screenH = b.worldH * PIXELS_PER_UNIT;
-          const topLeftX = screenCenterX + b.worldX * PIXELS_PER_UNIT;
-          const topLeftY = screenOriginY - b.worldY * PIXELS_PER_UNIT - screenH;
-          const brX = topLeftX + screenW,
-            brY = topLeftY + screenH;
+          const tl = worldToScreen({x: b.worldX, y: b.worldY + b.worldH});
+          const br = worldToScreen({x: b.worldX + b.worldW, y: b.worldY});
           return {
-            nw: {x: topLeftX, y: topLeftY},
-            ne: {x: brX, y: topLeftY},
-            sw: {x: topLeftX, y: brY},
-            se: {x: brX, y: brY},
-            n: {x: topLeftX + screenW / 2, y: topLeftY},
-            s: {x: topLeftX + screenW / 2, y: brY},
-            w: {x: topLeftX, y: topLeftY + screenH / 2},
-            e: {x: brX, y: topLeftY + screenH / 2},
+            nw: {x: tl.x, y: tl.y},
+            ne: {x: br.x, y: tl.y},
+            sw: {x: tl.x, y: br.y},
+            se: {x: br.x, y: br.y},
+            n: {x: (tl.x + br.x) / 2, y: tl.y},
+            s: {x: (tl.x + br.x) / 2, y: br.y},
+            w: {x: tl.x, y: (tl.y + br.y) / 2},
+            e: {x: br.x, y: (tl.y + br.y) / 2},
           };
         }
 
@@ -833,7 +816,6 @@
           updateUI();
         }
 
-        // ★★★ 修正: MEC JSON読み込み時の自動中央揃えをコメントアウト ★★★
         function loadMecJson(jsonContent) {
           clearAsset();
           try {
@@ -879,6 +861,14 @@
             gridHelper.visible = true;
             webglCanvas.classList.remove('bg-grid');
             if (!guideDef) setGuide('player');
+
+            // モデル全体をY軸中心に90度回転させて側面を向ける
+            const sideViewRotation = -Math.PI / 2; // 90度をラジアンに変換
+            mechaGroup.rotation.y = sideViewRotation;
+
+            // UIスライダーの値を実際の回転に同期させる
+            rotationYSlider.value = THREE.MathUtils.radToDeg(sideViewRotation);
+
             updateUI();
           } catch (e) {
             alert('JSONのパースに失敗しました。');
@@ -1021,15 +1011,10 @@
           if (!asset || asset.type !== 'sprite') return alert('切り出しには画像スプライトが必要です。');
           const bbox = hitboxes.reduce(
             (bb, box) => {
-              const panOffsetX = camera.position.x * PIXELS_PER_UNIT;
-              const panOffsetY = (camera.position.y - Y_OFFSET) * PIXELS_PER_UNIT;
-              const screenCenterX = editorCanvas.width / 2 - panOffsetX;
-              const screenOriginY = editorCanvas.height - (WORLD_VIEW_HEIGHT / 2 - Y_OFFSET) * PIXELS_PER_UNIT + panOffsetY;
-              const screenW = box.worldW * PIXELS_PER_UNIT,
-                screenH = box.worldH * PIXELS_PER_UNIT;
-              const topLeftX = screenCenterX + box.worldX * PIXELS_PER_UNIT;
-              const topLeftY = screenOriginY - box.worldY * PIXELS_PER_UNIT - screenH;
-              return {minX: Math.min(bb.minX, topLeftX), minY: Math.min(bb.minY, topLeftY), maxX: Math.max(bb.maxX, topLeftX + screenW), maxY: Math.max(bb.maxY, topLeftY + screenH)};
+              const screenPos = worldToScreen({x: box.worldX, y: box.worldY + box.worldH});
+              const screenW = box.worldW * PIXELS_PER_UNIT;
+              const screenH = box.worldH * PIXELS_PER_UNIT;
+              return {minX: Math.min(bb.minX, screenPos.x), minY: Math.min(bb.minY, screenPos.y), maxX: Math.max(bb.maxX, screenPos.x + screenW), maxY: Math.max(bb.maxY, screenPos.y + screenH)};
             },
             {minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity}
           );
