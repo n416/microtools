@@ -239,26 +239,15 @@
         pointer-events: none;
         display: none;
       }
-      /* ▼▼▼ ラベル用のCSSをすべて削除し、こちらを追記 ▼▼▼ */
-      /* 新しいラッパー：これが位置の基準点になる */
       .slider-wrapper {
         position: relative;
-        flex-grow: 1; /* 横幅いっぱいに広がる */
+        flex-grow: 1;
         display: flex;
         align-items: center;
       }
-
-      /* ラッパーの中のスライダーは100%広がる */
       .slider-wrapper input[type='range'] {
         width: 100%;
       }
-
-      /* 以前の .slider-group の relative指定は不要になるので削除 */
-      .slider-container .slider-group {
-        /* position: relative; ← この行があれば削除 */
-      }
-
-      /* 吹き出しのCSSは変更なしでOK */
       #rotationYTooltip {
         position: absolute;
         display: none;
@@ -273,7 +262,6 @@
         white-space: nowrap;
         pointer-events: none;
       }
-
       #rotationYTooltip::after {
         content: '';
         position: absolute;
@@ -366,6 +354,7 @@
             </fieldset>
             <fieldset>
               <h3>エクスポート</h3>
+              <button id="exportFighterJsonBtn" disabled>ヒットボックスとMecモデルをJSONで書き出し</button>
               <button id="exportBtn" disabled>スプライトを切り出して保存</button>
               <textarea id="jsonOutput" readonly></textarea>
               <button id="copyJsonBtn">JSONをコピー</button>
@@ -405,6 +394,7 @@
         const exportBtn = document.getElementById('exportBtn');
         const jsonOutput = document.getElementById('jsonOutput');
         const copyJsonBtn = document.getElementById('copyJsonBtn');
+        const exportFighterJsonBtn = document.getElementById('exportFighterJsonBtn');
         const assetModeBtn = document.getElementById('assetModeBtn');
         const hitboxModeBtn = document.getElementById('hitboxModeBtn');
         const assetModePanel = document.getElementById('assetModePanel');
@@ -417,7 +407,7 @@
         const saveLoadModal = document.getElementById('saveLoadModal');
         const closeModalBtn = document.getElementById('closeModalBtn');
         const selectionBoxElement = document.getElementById('selection-box');
-        const rotationYTooltip = document.getElementById('rotationYTooltip'); // ← この行を追記
+        const rotationYTooltip = document.getElementById('rotationYTooltip');
 
         // --- State ---
         let asset = null;
@@ -485,7 +475,6 @@
           if (renderer) renderer.setSize(resW, resH);
         }
 
-        // ▼▼▼【座標系統一】ここからが統一された座標変換関数 ▼▼▼
         function worldToScreen(worldPos) {
           const worldPoint = new THREE.Vector3(worldPos.x, worldPos.y, 0);
           const screenPoint = worldPoint.project(camera);
@@ -499,9 +488,7 @@
           ndc.unproject(camera);
           return {x: ndc.x, y: ndc.y};
         }
-        // ▲▲▲【座標系統一】ここまで ▲▲▲
 
-        // ▼▼▼ この関数を新しく追加 ▼▼▼
         function updateRotationTooltip() {
           const slider = rotationYSlider;
           const tooltip = rotationYTooltip;
@@ -510,8 +497,6 @@
           const max = parseFloat(slider.max);
           const val = parseFloat(slider.value);
 
-          // ▼▼▼ ここからが変更箇所 ▼▼▼
-          // スライダーの値に応じて表示するテキストを決定する
           let labelText = '';
           switch (val) {
             case 0:
@@ -528,14 +513,10 @@
               labelText = '背面';
               break;
             default:
-              // -135, -45, 45, 135 などの場合は数値をそのまま表示
               labelText = val;
           }
-          // 決定したテキストを吹き出しに設定
           tooltip.textContent = labelText;
-          // ▲▲▲ ここまでが変更箇所 ▲▲▲
 
-          // --- これ以降の位置計算ロジックは変更ありません ---
           const percent = (val - min) / (max - min);
           const sliderWidth = slider.offsetWidth;
 
@@ -564,8 +545,8 @@
           gridHelper = new THREE.GridHelper(20, 20 / GRID_CELL_SIZE, 0x666666, 0x444444);
           gridHelper.rotation.x = Math.PI / 2;
           gridHelper.visible = true;
-          gridHelper.material.depthTest = false; // 深度テストを無効化
-          gridHelper.renderOrder = -1; // 描画順を最後に
+          gridHelper.material.depthTest = false;
+          gridHelper.renderOrder = -1;
           scene.add(gridHelper);
 
           mechaGroup = new THREE.Group();
@@ -593,7 +574,6 @@
             ctx.drawImage(asset.image, x, y, asset.image.width, asset.image.height);
           }
 
-          // ▼▼▼【座標系統一】ガイド描画を統一関数に準拠 ▼▼▼
           if (guideDef) {
             const screenPos = worldToScreen({x: -guideDef.w / 2, y: guideDef.h});
             const screenW = guideDef.w * PIXELS_PER_UNIT;
@@ -606,7 +586,6 @@
             ctx.setLineDash([]);
           }
 
-          // ▼▼▼【座標系統一】ヒットボックス描画を統一関数に準拠 ▼▼▼
           hitboxes.forEach((box) => {
             const screenPos = worldToScreen({x: box.worldX, y: box.worldY + box.worldH});
             const screenW = box.worldW * PIXELS_PER_UNIT;
@@ -637,7 +616,6 @@
           }
         }
 
-        // --- Event Handlers (Mec Features Integrated) ---
         function onKeyDown(e) {
           if (e.key === ' ' && !isSpacebarDown) {
             e.preventDefault();
@@ -657,9 +635,9 @@
           selectionStartPoint.set(e.clientX, e.clientY);
           if (isSpacebarDown) {
             isPanning = true;
-            const pos = getMousePos(e); // getMousePos() を使ってキャンバス内座標を取得
-            panStart.x = pos.x; // 取得したキャンバス内座標を保存
-            panStart.y = pos.y; // 取得したキャンバス内座標を保存
+            const pos = getMousePos(e);
+            panStart.x = pos.x;
+            panStart.y = pos.y;
             cameraStartPos.copy(camera.position);
             editorCanvas.style.cursor = 'grabbing';
             return;
@@ -781,13 +759,11 @@
           isResizing = false;
         }
 
-        // --- Interaction Logic (Mouse) ---
         function getMousePos(evt) {
           const rect = editorCanvas.getBoundingClientRect();
           return {x: evt.clientX - rect.left, y: evt.clientY - rect.top};
         }
 
-        // ▼▼▼【座標系統一】ヒットボックス/ハンドル判定を統一関数に準拠 ▼▼▼
         function getHitboxAt(x, y) {
           for (let i = hitboxes.length - 1; i >= 0; i--) {
             const b = hitboxes[i];
@@ -878,7 +854,6 @@
           }
         }
 
-        // --- Core Logic ---
         function setSelection(boxes, ctrlKey = false, shiftKey = false) {
           const newSelection = Array.isArray(boxes) ? boxes : boxes ? [boxes] : [];
           if (ctrlKey) {
@@ -915,7 +890,7 @@
           updateUI();
         }
 
-        function loadMecJson(jsonContent) {
+        function loadMecJson(jsonContent, fileName) {
           clearAsset();
           try {
             const sceneData = JSON.parse(jsonContent);
@@ -956,16 +931,14 @@
               alert('表示可能なジオメトリがありません。');
               return;
             }
-            asset = {type: 'model', name: 'MEC Model', json: jsonContent};
+            asset = {type: 'model', name: fileName, json: jsonContent};
             gridHelper.visible = true;
             webglCanvas.classList.remove('bg-grid');
             if (!guideDef) setGuide('player');
 
-            // モデル全体をY軸中心に90度回転させて側面を向ける
-            const sideViewRotation = -Math.PI / 2; // 90度をラジアンに変換
+            const sideViewRotation = -Math.PI / 2;
             mechaGroup.rotation.y = sideViewRotation;
 
-            // UIスライダーの値を実際の回転に同期させる
             rotationYSlider.value = THREE.MathUtils.radToDeg(sideViewRotation);
 
             updateUI();
@@ -978,6 +951,7 @@
         function updateUI() {
           deleteAssetBtn.disabled = !asset;
           modelControls.style.display = asset && asset.type === 'model' ? 'block' : 'none';
+          exportFighterJsonBtn.disabled = !(asset && asset.type === 'model');
           exportBtn.disabled = !(asset && asset.type === 'sprite' && hitboxes.length > 0);
           deleteHitboxBtn.disabled = selectedHitboxes.length === 0;
 
@@ -1005,7 +979,6 @@
           if (type) document.getElementById(`guide${type.charAt(0).toUpperCase() + type.slice(1)}Btn`).classList.add('active');
         }
 
-        // --- UI Listeners (All original features restored) ---
         imageLoader.addEventListener('change', (e) => {
           if (e.target.files[0]) {
             const reader = new FileReader();
@@ -1020,9 +993,10 @@
         });
         mecJsonLoader.addEventListener('change', (e) => {
           if (e.target.files[0]) {
+            const file = e.target.files[0];
             const reader = new FileReader();
-            reader.onload = (re) => loadMecJson(re.target.result);
-            reader.readAsText(e.target.files[0]);
+            reader.onload = (re) => loadMecJson(re.target.result, file.name);
+            reader.readAsText(file);
             e.target.value = '';
           }
         });
@@ -1045,19 +1019,11 @@
           setSelection([]);
         });
 
-        // ▼▼▼ 以下のイベントリスナーを新しく追加 ▼▼▼
-        // スライダーをドラッグしている最中
         rotationYSlider.addEventListener('input', updateRotationTooltip);
-
-        // スライダーを押し始めた時
         rotationYSlider.addEventListener('mousedown', updateRotationTooltip);
-
-        // スライダーからマウスを離した時
         rotationYSlider.addEventListener('mouseup', () => {
           rotationYTooltip.style.display = 'none';
         });
-
-        // スライダーからマウスカーソルが外れた時
         rotationYSlider.addEventListener('mouseleave', () => {
           rotationYTooltip.style.display = 'none';
         });
@@ -1177,7 +1143,7 @@
               img.onload = () => addSprite(img, state.asset.src);
               img.src = state.asset.src;
             } else if (state.asset.type === 'model') {
-              loadMecJson(state.asset.json);
+              loadMecJson(state.asset.json, state.asset.name);
             }
           }
           alert(`スロット ${slot} からロードしました。`);
@@ -1210,6 +1176,35 @@
             setSelection([]);
           })
         );
+
+        exportFighterJsonBtn.addEventListener('click', () => {
+          if (!asset || asset.type !== 'model') {
+            alert('MECモデルが読み込まれていません。');
+            return;
+          }
+
+          const outputFilename = prompt('書き出すファイル名を入力してください:', 'fighter.json');
+          if (!outputFilename) return;
+
+          const fighterData = {
+            modelFile: asset.name,
+            hitboxes: hitboxes.map((b) => ({
+              offsetX: parseFloat(b.worldX.toFixed(3)),
+              offsetY: parseFloat(b.worldY.toFixed(3)),
+              width: parseFloat(b.worldW.toFixed(3)),
+              height: parseFloat(b.worldH.toFixed(3)),
+            })),
+          };
+
+          const jsonString = JSON.stringify(fighterData, null, 2);
+          const blob = new Blob([jsonString], {type: 'application/json'});
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = outputFilename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        });
 
         // --- Final Initialization ---
         init();
