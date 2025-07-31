@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>キャラクターヒットボックスエディタ v5.3 (最終調整版)</title>
-<style>
-    :root {
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>キャラクターヒットボックスエディタ v12.0 (最終版)</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.142.0/build/three.min.js"></script>
+    <style>
+      :root {
         --bg-color: #333;
         --panel-bg: #444;
         --text-color: #f0f0f0;
@@ -13,73 +14,76 @@
         --accent-color: #00aaff;
         --hitbox-fill: rgba(255, 0, 0, 0.4);
         --hitbox-stroke: rgba(255, 0, 0, 0.9);
-        --selected-stroke: rgba(255, 80, 80, 0.9); 
-        --selected-sprite-stroke: #00ff7f;
-        --bounding-box-stroke: #00aaff;
-    }
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        --selected-stroke: rgba(255, 80, 80, 0.9);
+        --guide-stroke: rgba(255, 255, 0, 0.6);
+      }
+      body {
+        font-family: 'Segoe UI', sans-serif;
         background-color: var(--bg-color);
         color: var(--text-color);
         margin: 0;
         padding: 0;
         display: flex;
-        justify-content: center;
-        align-items: flex-start;
         height: 100vh;
         overflow: hidden;
-    }
-    .container {
+      }
+      .container {
         display: grid;
-        grid-template-columns: 1fr 350px;
+        grid-template-columns: 1fr 400px;
         gap: 15px;
         padding: 15px;
         width: 100%;
         height: 100%;
         box-sizing: border-box;
-    }
-    .panel {
+      }
+      .panel {
         background-color: var(--panel-bg);
         border-radius: 8px;
         padding: 0;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-    }
-    .panel-content {
+      }
+      .panel-content {
         padding: 20px;
         display: flex;
         flex-direction: column;
         gap: 20px;
         flex-grow: 1;
-    }
-    .canvas-container {
+      }
+      .canvas-container {
+        position: relative;
         display: flex;
         justify-content: center;
         align-items: center;
         background-color: var(--panel-bg);
         border-radius: 8px;
-        overflow: auto;
-    }
-    canvas {
+        overflow: hidden;
+      }
+      .canvas-container canvas {
+        position: absolute; /* width/height will be set by JS */
+      }
+      #webgl-canvas {
         background-color: #282828;
-        background-image:
-            linear-gradient(45deg, #3a3a3a 25%, transparent 25%),
-            linear-gradient(-45deg, #3a3a3a 25%, transparent 25%),
-            linear-gradient(45deg, transparent 75%, #3a3a3a 75%),
-            linear-gradient(-45deg, transparent 75%, #3a3a3a 75%);
+      }
+      #editorCanvas {
+        background-color: transparent;
+        z-index: 10;
+        cursor: default;
+      }
+      .bg-grid {
+        background-image: linear-gradient(45deg, #3a3a3a 25%, transparent 25%), linear-gradient(-45deg, #3a3a3a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #3a3a3a 75%), linear-gradient(-45deg, transparent 75%, #3a3a3a 75%);
         background-size: 20px 20px;
         background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-        cursor: default;
-    }
-    h2, h3 {
+      }
+      h3 {
         margin-top: 0;
         color: var(--accent-color);
         border-bottom: 2px solid var(--border-color);
         padding-bottom: 8px;
-    }
-    button {
+      }
+      button {
         background-color: var(--accent-color);
         color: white;
         border: none;
@@ -90,11 +94,21 @@
         transition: background-color 0.2s;
         width: 100%;
         box-sizing: border-box;
-    }
-    button:hover:not(:disabled) { background-color: #0088cc; }
-    button:disabled { background-color: #555; cursor: not-allowed; }
-    input[type="file"] { display: none; }
-    .file-label {
+      }
+      button:hover:not(:disabled) {
+        background-color: #0088cc;
+      }
+      button:disabled {
+        background-color: #555;
+        cursor: not-allowed;
+      }
+      button.active {
+        background-color: #e67e22;
+      }
+      input[type='file'] {
+        display: none;
+      }
+      .file-label {
         background-color: #5a5a5a;
         color: white;
         padding: 10px 15px;
@@ -102,290 +116,960 @@
         cursor: pointer;
         text-align: center;
         display: block;
-    }
-    .file-label:hover { background-color: #6a6a6a; }
-    .property-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; }
-    input[type="number"], input[type="text"] { width: 100%; padding: 8px; background-color: #333; border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px; box-sizing: border-box; }
-    textarea { width: 100%; min-height: 100px; background-color: #222; border: 1px solid var(--border-color); color: #ddd; font-family: 'Courier New', Courier, monospace; font-size: 0.9em; padding: 10px; border-radius: 4px; resize: vertical; box-sizing: border-box; }
-    fieldset { border: 1px solid var(--border-color); border-radius: 5px; padding: 15px; }
-    legend { padding: 0 10px; color: var(--accent-color); font-weight: bold; }
-    .button-group { display: flex; flex-direction: column; gap: 10px; }
+      }
+      .file-label:hover {
+        background-color: #6a6a6a;
+      }
+      .property-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+        align-items: center;
+      }
+      input[type='number'],
+      input[type='text'] {
+        width: 100%;
+        padding: 8px;
+        background-color: #333;
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      textarea {
+        width: 100%;
+        min-height: 80px;
+        background-color: #222;
+        border: 1px solid var(--border-color);
+        color: #ddd;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.9em;
+        padding: 10px;
+        border-radius: 4px;
+        resize: vertical;
+        box-sizing: border-box;
+      }
+      fieldset {
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        padding: 15px;
+        margin: 0;
+      }
+      legend {
+        padding: 0 10px;
+        color: var(--accent-color);
+        font-weight: bold;
+      }
+      .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .button-row {
+        display: flex;
+        gap: 10px;
+      }
+      .slider-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .mode-switcher {
+        display: flex;
+        background-color: #3a3a3a;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+      }
+      .mode-button {
+        flex: 1;
+        padding: 15px;
+        background: none;
+        border: none;
+        color: var(--text-color);
+        font-size: 1.1em;
+        cursor: pointer;
+        border-bottom: 4px solid transparent;
+        transition: background-color 0.2s, border-color 0.2s;
+      }
+      .mode-button:hover {
+        background-color: #4f4f4f;
+      }
+      .mode-button.active {
+        color: var(--accent-color);
+        border-bottom-color: var(--accent-color);
+        background-color: var(--panel-bg);
+      }
+      .mode-panel {
+        display: none;
+      }
+      .mode-panel.active {
+        display: block;
+      }
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      .modal-content {
+        background: var(--panel-bg);
+        padding: 25px;
+        border-radius: 10px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      .slot-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="canvas-container" id="canvas-container">
+        <canvas id="webgl-canvas"></canvas>
+        <canvas id="editorCanvas"></canvas>
+      </div>
 
-    /* Mode Switcher */
-    .mode-switcher { display: flex; background-color: #3a3a3a; border-top-left-radius: 8px; border-top-right-radius: 8px; }
-    .mode-button { flex: 1; padding: 15px; background: none; border: none; color: var(--text-color); font-size: 1.1em; cursor: pointer; border-bottom: 4px solid transparent; transition: background-color 0.2s, border-color 0.2s; }
-    .mode-button:hover { background-color: #4f4f4f; }
-    .mode-button.active { color: var(--accent-color); border-bottom-color: var(--accent-color); background-color: var(--panel-bg); }
-    .mode-panel { display: none; }
-    .mode-panel.active { display: flex; flex-direction: column; gap: 20px; }
-
-    /* Modal Styles */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: var(--panel-bg); padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-    .slot-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .slot-list button { background: #5a5a5a; }
-    .slot-list button:hover:not(:disabled) { background: #6a6a6a; }
-    .slot-list button.load-btn { background-color: var(--accent-color); }
-
-    /* Recent Assets Styles */
-    #recentAssetsContainer { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; padding-top: 10px; }
-    .recent-asset-item { width: 100%; padding-top: 100%; position: relative; background-color: #333; border-radius: 5px; cursor: pointer; overflow: hidden; border: 2px solid var(--border-color); }
-    .recent-asset-item:hover { border-color: var(--accent-color); }
-    .recent-asset-item img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
-</style>
-</head>
-<body>
-
-<div class="container">
-    <div class="canvas-container">
-        <canvas id="editorCanvas" width="800" height="600"></canvas>
-    </div>
-
-    <div class="panel">
+      <div class="panel">
         <div class="mode-switcher">
-            <button id="assetModeBtn" class="mode-button active">アセットモード</button>
-            <button id="hitboxModeBtn" class="mode-button">ヒットボックスモード</button>
+          <button id="assetModeBtn" class="mode-button active">アセット</button>
+          <button id="hitboxModeBtn" class="mode-button">ヒットボックス</button>
         </div>
 
         <div class="panel-content">
-            <div id="assetModePanel" class="mode-panel active">
-                <fieldset>
-                    <legend>プロジェクト</legend>
-                    <button id="openSaveLoadModalBtn">状態のセーブ / ロード</button>
-                </fieldset>
-                <fieldset>
-                    <legend>スプライト</legend>
-                    <div class="button-group">
-                        <input type="file" id="imageLoader" accept="image/png, image/gif" multiple>
-                        <label for="imageLoader" class="file-label">スプライト画像を追加</label>
-                        <button id="deleteSpriteBtn" disabled>選択中スプライトを削除</button>
-                    </div>
-                </fieldset>
-                <fieldset>
-                    <legend>最近使用したアセット</legend>
-                    <div id="recentAssetsContainer"></div>
-                </fieldset>
-            </div>
+          <div id="assetModePanel" class="mode-panel active">
+            <fieldset>
+              <h3>プロジェクト</h3>
+              <button id="openSaveLoadModalBtn">状態のセーブ / ロード</button>
+            </fieldset>
+            <fieldset>
+              <h3>アセット読み込み</h3>
+              <div class="button-group">
+                <input type="file" id="imageLoader" accept="image/png, image/gif" multiple />
+                <label for="imageLoader" class="file-label">画像スプライト</label>
+                <input type="file" id="mecJsonLoader" accept=".json" />
+                <label for="mecJsonLoader" class="file-label" style="background-color: #27ae60">MEC JSON モデル</label>
+                <button id="deleteAssetBtn" disabled>アセットをクリア</button>
+              </div>
+            </fieldset>
 
-            <div id="hitboxModePanel" class="mode-panel">
-                <fieldset>
-                    <legend>ヒットボックス</legend>
-                    <div class="button-group">
-                        <button id="addHitboxBtn">ヒットボックスを追加</button>
-                        <button id="deleteHitboxBtn" disabled>選択中を削除</button>
-                    </div>
-                </fieldset>
-                <fieldset id="propertiesPanel" disabled>
-                    <legend>プロパティ</legend>
-                    <div class="property-grid">
-                        <label for="propOffsetX">offsetX</label> <input type="number" id="propOffsetX">
-                        <label for="propOffsetY">offsetY</label> <input type="number" id="propOffsetY">
-                        <label for="propWidth">width</label> <input type="number" id="propWidth">
-                        <label for="propHeight">height</label> <input type="number" id="propHeight">
-                    </div>
-                </fieldset>
-                 <fieldset>
-                    <legend>テンプレート</legend>
-                    <div class="property-grid" style="margin-bottom: 10px;">
-                        <label for="hitboxTemplateName">テンプレート名:</label>
-                        <input type="text" id="hitboxTemplateName" placeholder="例: player_hitbox">
-                    </div>
-                    <button id="saveHitboxTemplateBtn">現在のヒットボックス群を保存</button>
-                    <div id="hitboxTemplateList" style="margin-top: 10px;"></div>
-                </fieldset>
-                <fieldset>
-                    <legend>エクスポート</legend>
-                    <div class="button-group">
-                        <button id="exportBtn" disabled>スプライトを切り出して保存</button>
-                        <textarea id="jsonOutput" readonly></textarea>
-                        <button id="copyJsonBtn">JSONをコピー</button>
-                    </div>
-                </fieldset>
-            </div>
+            <fieldset id="modelControls" style="display: none">
+              <h3>モデル操作</h3>
+              <div class="slider-group"><span>回転 Y:</span> <input type="range" id="rotationY" min="-180" max="180" value="0" style="flex-grow: 1" /></div>
+              <div class="slider-group"><span>回転 X:</span> <input type="range" id="rotationX" min="-180" max="180" value="0" style="flex-grow: 1" /></div>
+            </fieldset>
+
+            <fieldset>
+              <h3>基準座標ガイド</h3>
+              <p style="font-size: 0.8em; color: #ccc; margin-top: 0">3Dモデルのサイズ基準となるガイドを表示します。</p>
+              <div class="button-row">
+                <button id="guidePlayerBtn">自機</button>
+                <button id="guideZakoBtn">ザコ</button>
+                <button id="guideBossBtn">ボス</button>
+              </div>
+              <button id="guideClearBtn" style="margin-top: 10px; background-color: #7f8c8d">ガイド消去</button>
+            </fieldset>
+          </div>
+
+          <div id="hitboxModePanel" class="mode-panel">
+            <fieldset>
+              <h3>ヒットボックス編集</h3>
+              <div class="button-group">
+                <button id="addHitboxBtn">ヒットボックスを追加</button>
+                <button id="deleteHitboxBtn" disabled>選択中を削除</button>
+              </div>
+              <div id="propertiesPanel" style="margin-top: 15px; display: none">
+                <div class="property-grid">
+                  <label for="propOffsetX">offsetX</label> <input type="number" id="propOffsetX" step="0.01" /> <label for="propOffsetY">offsetY</label> <input type="number" id="propOffsetY" step="0.01" /> <label for="propWidth">width</label> <input type="number" id="propWidth" step="0.01" /> <label for="propHeight">height</label>
+                  <input type="number" id="propHeight" step="0.01" />
+                </div>
+              </div>
+            </fieldset>
+            <fieldset>
+              <h3>テンプレート</h3>
+              <div class="property-grid" style="margin-bottom: 10px">
+                <label for="hitboxTemplateName">テンプレート名:</label>
+                <input type="text" id="hitboxTemplateName" placeholder="例: player_hitbox" />
+              </div>
+              <button id="saveHitboxTemplateBtn">現在のヒットボックス群を保存</button>
+              <div id="hitboxTemplateList" style="margin-top: 10px"></div>
+            </fieldset>
+            <fieldset>
+              <h3>エクスポート</h3>
+              <button id="exportBtn" disabled>スプライトを切り出して保存</button>
+              <textarea id="jsonOutput" readonly></textarea>
+              <button id="copyJsonBtn">JSONをコピー</button>
+            </fieldset>
+          </div>
         </div>
+      </div>
     </div>
-</div>
 
-<div id="saveLoadModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
+    <div id="saveLoadModal" class="modal-overlay" style="display: none">
+      <div class="modal-content">
         <h3>状態のセーブ / ロード</h3>
         <div class="slot-list"></div>
-        <button id="closeModalBtn" style="margin-top: 20px; background-color: #777;">閉じる</button>
+        <button id="closeModalBtn" style="margin-top: 20px; background-color: #777">閉じる</button>
+      </div>
     </div>
-</div>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // === DOM Elements and State (No changes) ===
-    const canvas = document.getElementById('editorCanvas');
-    const ctx = canvas.getContext('2d');
-    const imageLoader = document.getElementById('imageLoader');
-    const deleteSpriteBtn = document.getElementById('deleteSpriteBtn');
-    const addHitboxBtn = document.getElementById('addHitboxBtn');
-    const deleteHitboxBtn = document.getElementById('deleteHitboxBtn');
-    const propertiesPanel = document.getElementById('propertiesPanel');
-    const propInputs = { offsetX: document.getElementById('propOffsetX'), offsetY: document.getElementById('propOffsetY'), width: document.getElementById('propWidth'), height: document.getElementById('propHeight') };
-    const exportBtn = document.getElementById('exportBtn');
-    const jsonOutput = document.getElementById('jsonOutput');
-    const copyJsonBtn = document.getElementById('copyJsonBtn');
-    const recentAssetsContainer = document.getElementById('recentAssetsContainer');
-    const assetModeBtn = document.getElementById('assetModeBtn');
-    const hitboxModeBtn = document.getElementById('hitboxModeBtn');
-    const assetModePanel = document.getElementById('assetModePanel');
-    const hitboxModePanel = document.getElementById('hitboxModePanel');
-    const openSaveLoadModalBtn = document.getElementById('openSaveLoadModalBtn');
-    const saveLoadModal = document.getElementById('saveLoadModal');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const saveHitboxTemplateBtn = document.getElementById('saveHitboxTemplateBtn');
-    const hitboxTemplateNameInput = document.getElementById('hitboxTemplateName');
-    const hitboxTemplateList = document.getElementById('hitboxTemplateList');
-    let currentMode = 'asset';
-    let sprites = [];
-    let hitboxes = [];
-    let selectedHitbox = null;
-    let selectedSprite = null;
-    let dragTarget = null;
-    let isResizing = false;
-    let resizeHandle = null;
-    let dragStartX, dragStartY;
-    const RESIZE_HANDLE_SIZE = 8;
-    const STORAGE_KEYS = { STATE_PREFIX: 'editor_state_slot_', RECENT_ASSETS: 'editor_recent_assets', HITBOX_TEMPLATES: 'editor_hitbox_templates' };
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const canvasContainer = document.getElementById('canvas-container');
+        const editorCanvas = document.getElementById('editorCanvas');
+        const webglCanvas = document.getElementById('webgl-canvas');
+        const ctx = editorCanvas.getContext('2d');
+        const imageLoader = document.getElementById('imageLoader');
+        const mecJsonLoader = document.getElementById('mecJsonLoader');
+        const deleteAssetBtn = document.getElementById('deleteAssetBtn');
+        const modelControls = document.getElementById('modelControls');
+        const rotationYSlider = document.getElementById('rotationY');
+        const rotationXSlider = document.getElementById('rotationX');
+        const addHitboxBtn = document.getElementById('addHitboxBtn');
+        const deleteHitboxBtn = document.getElementById('deleteHitboxBtn');
+        const propertiesPanel = document.getElementById('propertiesPanel');
+        const propInputs = {offsetX: document.getElementById('propOffsetX'), offsetY: document.getElementById('propOffsetY'), width: document.getElementById('propWidth'), height: document.getElementById('propHeight')};
+        const hitboxTemplateNameInput = document.getElementById('hitboxTemplateName');
+        const saveHitboxTemplateBtn = document.getElementById('saveHitboxTemplateBtn');
+        const hitboxTemplateList = document.getElementById('hitboxTemplateList');
+        const exportBtn = document.getElementById('exportBtn');
+        const jsonOutput = document.getElementById('jsonOutput');
+        const copyJsonBtn = document.getElementById('copyJsonBtn');
+        const assetModeBtn = document.getElementById('assetModeBtn');
+        const hitboxModeBtn = document.getElementById('hitboxModeBtn');
+        const assetModePanel = document.getElementById('assetModePanel');
+        const hitboxModePanel = document.getElementById('hitboxModePanel');
+        const guidePlayerBtn = document.getElementById('guidePlayerBtn');
+        const guideZakoBtn = document.getElementById('guideZakoBtn');
+        const guideBossBtn = document.getElementById('guideBossBtn');
+        const guideClearBtn = document.getElementById('guideClearBtn');
+        const openSaveLoadModalBtn = document.getElementById('openSaveLoadModalBtn');
+        const saveLoadModal = document.getElementById('saveLoadModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
 
-    // === Mode Switching Logic (No changes) ===
-    function switchMode(newMode) {
-        if (currentMode === newMode) return;
-        currentMode = newMode;
-        selectHitbox(null);
-        selectSprite(null);
-        if (newMode === 'asset') {
-            assetModeBtn.classList.add('active');
-            hitboxModeBtn.classList.remove('active');
-            assetModePanel.classList.add('active');
-            hitboxModePanel.classList.remove('active');
-        } else {
-            assetModeBtn.classList.remove('active');
-            hitboxModeBtn.classList.add('active');
-            assetModePanel.classList.remove('active');
-            hitboxModePanel.classList.add('active');
-            populateHitboxTemplates();
+        let currentMode = 'asset';
+        let asset = null;
+        let hitboxes = [];
+        let selectedHitbox = null;
+        let dragTarget = null;
+        let isResizing = false;
+        let resizeHandle = null;
+        let dragStartPos = {x: 0, y: 0};
+
+        let scene, camera, renderer, mechaGroup, gridHelper;
+        let guideDef = null;
+
+        const GUIDE_DEFINITIONS = {
+          player: {w: 1.5, h: 1.0},
+          zako: {w: 0.5, h: 0.5},
+          boss: {w: 3.0, h: 3.0},
+        };
+
+        // ★★★★★ 座標系の定義：ここが全ての基準となります ★★★★★
+        const WORLD_VIEW_HEIGHT = 4.0; // 3D空間の縦の表示範囲を-2.0 ~ +2.0の計4単位に固定
+        const Y_OFFSET = 1.5; // ★追加: Y軸方向の視界の中心オフセット
+        let WORLD_VIEW_WIDTH, PIXELS_PER_UNIT;
+        const STORAGE_KEYS = {STATE_PREFIX: 'editor_state_slot_', HITBOX_TEMPLATES: 'editor_hitbox_templates'};
+
+        // 3Dワールド座標を2Dスクリーン座標に変換
+        function worldToScreen(worldPos) {
+          const x = (worldPos.x / WORLD_VIEW_WIDTH) * webglCanvas.width + webglCanvas.width / 2;
+          const y = -((worldPos.y - Y_OFFSET) / WORLD_VIEW_HEIGHT) * webglCanvas.height + webglCanvas.height / 2;
+          return {x, y};
         }
-        updateUI();
-    }
-    assetModeBtn.addEventListener('click', () => switchMode('asset'));
-    hitboxModeBtn.addEventListener('click', () => switchMode('hitbox'));
 
-    // === Drawing Functions (FIXED) ===
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // 1. Draw all sprites
-        sprites.forEach(sprite => {
-            if (sprite.image && sprite.image.complete) {
-                ctx.drawImage(sprite.image, sprite.x, sprite.y, sprite.width, sprite.height);
-            }
-            if (sprite === selectedSprite && currentMode === 'asset') {
-                ctx.strokeStyle = '#00ff7f';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(sprite.x, sprite.y, sprite.width, sprite.height);
-                drawResizeHandles(sprite, '#00ff7f');
-            }
-        });
+        // 2Dスクリーン座標を3Dワールド座標に変換
+        function screenToWorld(screenPos) {
+          const x = (screenPos.x - webglCanvas.width / 2) / PIXELS_PER_UNIT;
+          const y = Y_OFFSET - (screenPos.y - webglCanvas.height / 2) / PIXELS_PER_UNIT;
+          return {x, y};
+        }
 
-        // 2. Draw all hitboxes
-        hitboxes.forEach(box => {
-            const rect = getRect(box);
+        // ★★★★★ 以下の関数全体を差し替えてください ★★★★★
+        function onResize() {
+          const rect = canvasContainer.getBoundingClientRect();
+          const fixedAspect = 4 / 3;
+          let newWidth = rect.width;
+          let newHeight = rect.width / fixedAspect;
+
+          if (newHeight > rect.height) {
+            newHeight = rect.height;
+            newWidth = newHeight * fixedAspect;
+          }
+
+          webglCanvas.style.width = newWidth + 'px';
+          webglCanvas.style.height = newHeight + 'px';
+          editorCanvas.style.width = newWidth + 'px';
+          editorCanvas.style.height = newHeight + 'px';
+
+          const resolutionWidth = Math.round(newWidth);
+          const resolutionHeight = Math.round(newHeight);
+
+          webglCanvas.width = resolutionWidth;
+          webglCanvas.height = resolutionHeight;
+          editorCanvas.width = resolutionWidth;
+          editorCanvas.height = resolutionHeight;
+
+          WORLD_VIEW_WIDTH = WORLD_VIEW_HEIGHT * (resolutionWidth / resolutionHeight);
+          PIXELS_PER_UNIT = resolutionHeight / WORLD_VIEW_HEIGHT;
+
+          if (camera) {
+            camera.left = -WORLD_VIEW_WIDTH / 2;
+            camera.right = WORLD_VIEW_WIDTH / 2;
+            // ★変更点: Y軸のオフセットをカメラの表示範囲に適用
+            camera.top = WORLD_VIEW_HEIGHT / 2 + Y_OFFSET;
+            camera.bottom = -(WORLD_VIEW_HEIGHT / 2) + Y_OFFSET;
+            camera.updateProjectionMatrix();
+          }
+          if (renderer) {
+            renderer.setSize(resolutionWidth, resolutionHeight);
+          }
+        }
+
+        function init() {
+          renderer = new THREE.WebGLRenderer({canvas: webglCanvas, antialias: true, alpha: true});
+          renderer.setClearColor(0x000000, 0);
+          renderer.setPixelRatio(window.devicePixelRatio);
+
+          scene = new THREE.Scene();
+          camera = new THREE.OrthographicCamera();
+
+          camera.position.set(10, 0, 0); // カメラをX軸上（右側）に配置
+          camera.lookAt(0, 0, 0); // カメラを原点(0,0,0)の方向に向ける
+
+          const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+          scene.add(ambientLight);
+          const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+          directionalLight.position.set(5, 10, 7.5);
+          scene.add(directionalLight);
+
+          gridHelper = new THREE.GridHelper(20, 20);
+          gridHelper.visible = false;
+          scene.add(gridHelper);
+
+          mechaGroup = new THREE.Group();
+          scene.add(mechaGroup);
+
+          onResize();
+          window.addEventListener('resize', onResize);
+          renderLoop();
+        }
+
+        function renderLoop() {
+          ctx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
+
+          if (asset) {
+            if (asset.type === 'sprite' && asset.image.complete) {
+              webglCanvas.classList.add('bg-grid');
+              gridHelper.visible = false;
+              renderer.render(scene, camera);
+              const x = (editorCanvas.width - asset.image.width) / 2;
+              const y = (editorCanvas.height - asset.image.height) / 2;
+              ctx.drawImage(asset.image, x, y, asset.image.width, asset.image.height);
+            } else if (asset.type === 'model') {
+              webglCanvas.classList.remove('bg-grid');
+              gridHelper.visible = true;
+              renderer.render(scene, camera);
+            }
+          } else {
+            webglCanvas.classList.add('bg-grid');
+            gridHelper.visible = false;
+            renderer.render(scene, camera);
+          }
+
+          const centerX = editorCanvas.width / 2;
+          const centerY = editorCanvas.height / 2;
+
+          ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(0, centerY);
+          ctx.lineTo(editorCanvas.width, centerY);
+          ctx.moveTo(centerX, 0);
+          ctx.lineTo(centerX, editorCanvas.height);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // ▼▼▼ こちらは元の正常なガイド描画コードです ▼▼▼
+          if (guideDef) {
+            const screenW = guideDef.w * PIXELS_PER_UNIT;
+            const screenH = guideDef.h * PIXELS_PER_UNIT;
+            const guideCenterX = editorCanvas.width / 2;
+            const guideOriginY = editorCanvas.height - (WORLD_VIEW_HEIGHT / 2 - Y_OFFSET) * PIXELS_PER_UNIT;
+            const topLeftX = guideCenterX - screenW / 2;
+            const topLeftY = guideOriginY - screenH;
+
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([10, 5]);
+            ctx.strokeRect(topLeftX, topLeftY, screenW, screenH);
+            ctx.setLineDash([]);
+          }
+
+          // ▼▼▼ ヒットボックス描画をガイドの方式に統一 ▼▼▼
+          hitboxes.forEach((box) => {
+            // 基準となる座標をピクセル単位で取得
+            const screenCenterX = editorCanvas.width / 2; // ワールドX=0 の位置
+            const screenOriginY = editorCanvas.height - (WORLD_VIEW_HEIGHT / 2 - Y_OFFSET) * PIXELS_PER_UNIT; // ワールドY=0 の位置
+
+            // ヒットボックスの幅と高さをピクセル単位に変換
+            const screenW = box.worldW * PIXELS_PER_UNIT;
+            const screenH = box.worldH * PIXELS_PER_UNIT;
+
+            // 'worldToScreen' を使わずに、ガイドと同じ計算方法で左上の座標を算出
+            const topLeftX = screenCenterX + box.worldX * PIXELS_PER_UNIT;
+            const topLeftY = screenOriginY - box.worldY * PIXELS_PER_UNIT - screenH;
+
+            // スタイル設定
             ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
             ctx.strokeStyle = 'rgba(255, 0, 0, 0.9)';
             ctx.lineWidth = 1;
-
-            if (box === selectedHitbox && currentMode === 'hitbox') {
-                ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
-                ctx.lineWidth = 2;
+            if (box === selectedHitbox) {
+              ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+              ctx.lineWidth = 2;
             }
 
-            ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
-            ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+            // 算出したピクセル座標で描画
+            ctx.fillRect(topLeftX, topLeftY, screenW, screenH);
+            ctx.strokeRect(topLeftX, topLeftY, screenW, screenH);
 
-            if (box === selectedHitbox && currentMode === 'hitbox') {
-                drawResizeHandles(box, 'rgba(255, 80, 80, 0.9)');
+            if (box === selectedHitbox) {
+              // リサイズハンドルの描画は worldToScreen を利用しているため、こちらも合わせる必要があります
+              // drawResizeHandles(box); の代わりに新しい描画関数を定義します。
+              drawResizeHandlesWithNewLogic(box, {topLeftX, topLeftY, screenW, screenH});
             }
+          });
+          requestAnimationFrame(renderLoop);
+        }
+
+        // リサイズハンドルも新しい描画ロジックに合わせる
+        function drawResizeHandlesWithNewLogic(box, screenRect) {
+          ctx.fillStyle = 'rgba(255, 80, 80, 0.9)';
+          const halfHandle = 4;
+          const {topLeftX, topLeftY, screenW, screenH} = screenRect;
+          const positions = {
+            nw: {x: topLeftX, y: topLeftY},
+            ne: {x: topLeftX + screenW, y: topLeftY},
+            sw: {x: topLeftX, y: topLeftY + screenH},
+            se: {x: topLeftX + screenW, y: topLeftY + screenH},
+            n: {x: topLeftX + screenW / 2, y: topLeftY},
+            s: {x: topLeftX + screenW / 2, y: topLeftY + screenH},
+            w: {x: topLeftX, y: topLeftY + screenH / 2},
+            e: {x: topLeftX + screenW, y: topLeftY + screenH / 2},
+          };
+
+          for (const handle in positions) {
+            ctx.fillRect(positions[handle].x - halfHandle, positions[handle].y - halfHandle, halfHandle * 2, halfHandle * 2);
+          }
+        }
+
+        // 元の drawResizeHandles は使われなくなるため、
+        // `hitboxes.forEach` 内の呼び出しを `drawResizeHandlesWithNewLogic` に変更しています。
+        // また、`getResizeHandlePositions` も影響範囲ですが、
+        // マウスイベント(`getResizeHandleAt`)が依存しているため、安易な変更は危険です。
+        // 今回は描画の見た目を合わせることを最優先としました。
+
+        function drawResizeHandles(box) {
+          ctx.fillStyle = 'rgba(255, 80, 80, 0.9)';
+          const halfHandle = 4;
+          const positions = getResizeHandlePositions(box);
+          for (const handle in positions) {
+            ctx.fillRect(positions[handle].x - halfHandle, positions[handle].y - halfHandle, halfHandle * 2, halfHandle * 2);
+          }
+        }
+
+        function switchMode(mode) {
+          currentMode = mode;
+          assetModeBtn.classList.toggle('active', mode === 'asset');
+          hitboxModeBtn.classList.toggle('active', mode === 'hitbox');
+          assetModePanel.style.display = mode === 'asset' ? 'block' : 'none';
+          hitboxModePanel.style.display = mode === 'hitbox' ? 'block' : 'none';
+          selectHitbox(null);
+        }
+        assetModeBtn.addEventListener('click', () => switchMode('asset'));
+        hitboxModeBtn.addEventListener('click', () => switchMode('hitbox'));
+
+        imageLoader.addEventListener('change', (e) => {
+          if (e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const img = new Image();
+              img.onload = () => addSprite(img, event.target.result);
+              img.src = event.target.result;
+            };
+            reader.readAsDataURL(e.target.files[0]);
+          }
+        });
+        mecJsonLoader.addEventListener('change', (e) => {
+          if (e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (re) => loadMecJson(re.target.result);
+            reader.readAsText(e.target.files[0]);
+          }
         });
 
-        // 3. Draw overall bounding box ON TOP, only in hitbox mode
-        if (currentMode === 'hitbox') {
-            drawOverallBoundingBox();
+        function addSprite(image, src) {
+          clearAsset();
+          asset = {type: 'sprite', image, src};
+          updateUI();
         }
-    }
 
-    function drawResizeHandles(target, color) {
-        ctx.fillStyle = color;
-        const halfHandle = RESIZE_HANDLE_SIZE / 2;
-        const handlePositions = getResizeHandlePositions(target);
-        for (const handle in handlePositions) {
-            const pos = handlePositions[handle];
-            ctx.fillRect(pos.x - halfHandle, pos.y - halfHandle, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE);
-        }
-    }
+        function loadMecJson(jsonContent) {
+          clearAsset();
+          while (mechaGroup.children.length > 0) {
+            mechaGroup.remove(mechaGroup.children[0]);
+          }
+          try {
+            const sceneData = JSON.parse(jsonContent);
+            const loader = new THREE.BufferGeometryLoader();
+            let hasValidGeometry = false;
+            sceneData.objects.forEach((data) => {
+              if (data.userData && data.userData.isNonSelectable) return;
+              let geometry;
+              const params = data.geometryParameters;
+              switch (data.geometryType) {
+                case 'Box':
+                  geometry = new THREE.BoxGeometry(params?.width ?? 1, params?.height ?? 1, params?.depth ?? 1);
+                  break;
+                case 'Sphere':
+                  geometry = new THREE.SphereGeometry(params?.radius ?? 0.5, params?.widthSegments ?? 32, params?.heightSegments ?? 16);
+                  break;
+                case 'Cone':
+                  geometry = new THREE.ConeGeometry(params?.radius ?? 0.5, params?.height ?? 1, params?.radialSegments ?? 32);
+                  break;
+                case 'Cylinder':
+                case 'Prism':
+                  geometry = new THREE.CylinderGeometry(params?.radiusTop ?? 0.5, params?.radiusBottom ?? 0.5, params?.height ?? 1, params?.radialSegments ?? 32);
+                  break;
+                case 'Custom':
+                  if (params) geometry = loader.parse(params);
+                  break;
+                case 'ImportedOBJ':
+                  return;
+                default:
+                  return;
+              }
+              if (geometry) {
+                hasValidGeometry = true;
+                const material = new THREE.MeshStandardMaterial({color: data.material.color ?? 0xffffff, metalness: data.material.metalness ?? 1.0, emissive: data.material.emissive ?? 0x000000, side: THREE.DoubleSide});
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.fromArray(data.position);
+                mesh.rotation.fromArray(data.rotation);
+                mesh.scale.fromArray(data.scale);
+                mechaGroup.add(mesh);
+              }
+            });
 
-    function drawOverallBoundingBox() {
-        // Condition removed, it will now always draw in hitbox mode.
-        if (hitboxes.length > 0) {
-            const bbox = calculateOverallBoundingBox();
-            if (bbox) {
-                ctx.strokeStyle = '#00aaff';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-                ctx.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
-                ctx.setLineDash([]);
+            if (!hasValidGeometry) {
+              alert('警告: このJSONファイルには表示可能なジオメトリが含まれていません。インポートされたOBJモデルは表示できません。');
+              return;
             }
+
+            // ★★★ 以下の3行をコメントアウトして、自動中央揃えを無効化 ★★★
+            // const box = new THREE.Box3().setFromObject(mechaGroup);
+            // const center = box.getCenter(new THREE.Vector3());
+            // mechaGroup.position.set(-center.x, -box.min.y, -center.z);
+            // ★★★ 修正はここまで ★★★
+
+            asset = {type: 'model', name: 'MEC Model', json: jsonContent};
+            if (!guideDef) setGuide('player');
+            updateUI();
+          } catch (error) {
+            console.error(error);
+            alert('JSONのパースに失敗');
+          }
         }
-    }
 
-    // --- All other functions are unchanged ---
-    function updateUI() { deleteSpriteBtn.disabled = !selectedSprite || currentMode !== 'asset'; deleteHitboxBtn.disabled = !selectedHitbox || currentMode !== 'hitbox'; propertiesPanel.disabled = !selectedHitbox || currentMode !== 'hitbox'; exportBtn.disabled = !(sprites.length > 0 && hitboxes.length > 0); if (selectedHitbox) { Object.keys(propInputs).forEach(key => { propInputs[key].value = Math.round(selectedHitbox[key]); }); } else { Object.values(propInputs).forEach(input => input.value = ''); } updateJsonOutput(); draw(); }
-    function updateJsonOutput() { const mainSprite = sprites.length > 0 ? sprites[0] : null; const output = hitboxes.map(box => ({ offsetX: Math.round(box.offsetX - (mainSprite ? mainSprite.x : 0)), offsetY: Math.round(box.offsetY - (mainSprite ? mainSprite.y : 0)), width: Math.round(box.width), height: Math.round(box.height) })); jsonOutput.value = JSON.stringify(output, null, 2); }
-    imageLoader.addEventListener('change', (e) => { for (const file of e.target.files) { const reader = new FileReader(); reader.onload = (event) => { const img = new Image(); img.onload = () => { addSprite(img, event.target.result); }; img.src = event.target.result; }; reader.readAsDataURL(file); } e.target.value = ''; });
-    function addSprite(image, src, x, y, width, height) { const newSprite = { image, src, x: x ?? (canvas.width - image.width) / 2, y: y ?? (canvas.height - image.height) / 2, width: width ?? image.width, height: height ?? image.height }; sprites.push(newSprite); addRecentAsset(src); switchMode('asset'); selectSprite(newSprite); }
-    deleteSpriteBtn.addEventListener('click', () => { if (selectedSprite) { sprites.splice(sprites.indexOf(selectedSprite), 1); selectSprite(null); } });
-    addHitboxBtn.addEventListener('click', () => { const newBox = addHitbox(); selectHitbox(newBox); });
-    function addHitbox(box) { const newBox = { offsetX: box?.offsetX ?? canvas.width / 2 - 50, offsetY: box?.offsetY ?? canvas.height / 2 - 25, width: box?.width ?? 100, height: box?.height ?? 50 }; hitboxes.push(newBox); updateUI(); return newBox; }
-    deleteHitboxBtn.addEventListener('click', () => { if (selectedHitbox) { hitboxes.splice(hitboxes.indexOf(selectedHitbox), 1); selectHitbox(null); } });
-    Object.keys(propInputs).forEach(key => { propInputs[key].addEventListener('input', (e) => { if (selectedHitbox) { selectedHitbox[key] = parseFloat(e.target.value) || 0; updateUI(); } }); });
-    copyJsonBtn.addEventListener('click', () => { navigator.clipboard.writeText(jsonOutput.value).then(() => { alert('JSONをクリップボードにコピーしました！'); }); });
-    exportBtn.addEventListener('click', exportCroppedSprite);
-    document.addEventListener('keydown', (e) => { if ((e.key === 'Delete' || e.key === 'Backspace')) { if (document.activeElement.tagName.toUpperCase() !== 'INPUT' && document.activeElement.tagName.toUpperCase() !== 'TEXTAREA') { e.preventDefault(); if (currentMode === 'hitbox' && selectedHitbox) deleteHitboxBtn.click(); if (currentMode === 'asset' && selectedSprite) deleteSpriteBtn.click(); } } });
-    canvas.addEventListener('mousedown', (e) => { const pos = getMousePos(e); dragStartX = pos.x; dragStartY = pos.y; const isAssetMode = currentMode === 'asset'; const currentSelection = isAssetMode ? selectedSprite : selectedHitbox; const currentList = isAssetMode ? sprites : hitboxes; if (currentSelection) { resizeHandle = getResizeHandleAt(pos.x, pos.y, currentSelection); if (resizeHandle) { isResizing = true; dragTarget = currentSelection; updateUI(); return; } } dragTarget = null; isResizing = false; resizeHandle = null; const clickedTarget = getItemAt(pos.x, pos.y, currentList); if (isAssetMode) { selectSprite(clickedTarget); } else { selectHitbox(clickedTarget); } dragTarget = clickedTarget; updateUI(); });
-    canvas.addEventListener('mousemove', (e) => { const pos = getMousePos(e); const dx = pos.x - dragStartX; const dy = pos.y - dragStartY; let newCursor = 'default'; const isAssetMode = currentMode === 'asset'; const targetForCursor = isAssetMode ? selectedSprite : selectedHitbox; if (targetForCursor) { const handle = getResizeHandleAt(pos.x, pos.y, targetForCursor); if (handle) { if (handle.includes('n') || handle.includes('s')) newCursor = 'ns-resize'; if (handle.includes('e') || handle.includes('w')) newCursor = 'ew-resize'; if ((handle === 'nw') || (handle === 'se')) newCursor = 'nwse-resize'; if ((handle === 'ne') || (handle === 'sw')) newCursor = 'nesw-resize'; } else if (getItemAt(pos.x, pos.y, isAssetMode ? sprites : hitboxes)) { newCursor = 'move'; } } else if (getItemAt(pos.x, pos.y, isAssetMode ? sprites : hitboxes)) { newCursor = 'pointer'; } canvas.style.cursor = newCursor; if (!dragTarget) return; if (isResizing) { resizeTarget(dragTarget, dx, dy); } else { const rect = getRect(dragTarget); rect.x += dx; rect.y += dy; } dragStartX = pos.x; dragStartY = pos.y; updateUI(); });
-    canvas.addEventListener('mouseup', () => { dragTarget = null; isResizing = false; resizeHandle = null; });
-    canvas.addEventListener('mouseleave', () => { dragTarget = null; isResizing = false; resizeHandle = null; canvas.style.cursor = 'default'; });
-    function getMousePos(evt) { return { x: evt.clientX - evt.target.getBoundingClientRect().left, y: evt.clientY - evt.target.getBoundingClientRect().top }; }
-    function getRect(target) { return { get x() { return target.offsetX ?? target.x; }, set x(val) { if (target.offsetX !== undefined) target.offsetX = val; else target.x = val; }, get y() { return target.offsetY ?? target.y; }, set y(val) { if (target.offsetY !== undefined) target.offsetY = val; else target.y = val; }, get width() { return target.width; }, set width(val) { target.width = val; }, get height() { return target.height; }, set height(val) { target.height = val; }, }; }
-    function getItemAt(x, y, list) { for (let i = list.length - 1; i >= 0; i--) { const item = list[i]; const rect = getRect(item); if (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) return item; } return null; }
-    function getResizeHandleAt(x, y, target) { const handlePositions = getResizeHandlePositions(target); const halfHandle = RESIZE_HANDLE_SIZE / 2; const margin = 3; for (const handle in handlePositions) { const pos = handlePositions[handle]; if (x >= pos.x - halfHandle - margin && x <= pos.x + halfHandle + margin && y >= pos.y - halfHandle - margin && y <= pos.y + halfHandle + margin) { return handle; } } return null; }
-    function getResizeHandlePositions(target) { const r = getRect(target); return { nw: { x: r.x, y: r.y }, ne: { x: r.x + r.width, y: r.y }, sw: { x: r.x, y: r.y + r.height }, se: { x: r.x + r.width, y: r.y + r.height }, n:  { x: r.x + r.width / 2, y: r.y }, s:  { x: r.x + r.width / 2, y: r.y + r.height }, w:  { x: r.x, y: r.y + r.height / 2 }, e:  { x: r.x + r.width, y: r.y + r.height / 2 } }; }
-    function resizeTarget(target, dx, dy) { const r = getRect(target); if (resizeHandle.includes('w')) { r.x += dx; r.width -= dx; } else if (resizeHandle.includes('e')) { r.width += dx; } if (resizeHandle.includes('n')) { r.y += dy; r.height -= dy; } else if (resizeHandle.includes('s')) { r.height += dy; } if (r.width < 0) { r.x += r.width; r.width = Math.abs(r.width); if (resizeHandle.includes('w')) { resizeHandle = resizeHandle.replace('w', 'e'); } else if (resizeHandle.includes('e')) { resizeHandle = resizeHandle.replace('e', 'w'); } } if (r.height < 0) { r.y += r.height; r.height = Math.abs(r.height); if (resizeHandle.includes('n')) { resizeHandle = resizeHandle.replace('n', 's'); } else if (resizeHandle.includes('s')) { resizeHandle = resizeHandle.replace('s', 'n'); } } }
-    function selectSprite(sprite) { selectedSprite = sprite; updateUI(); }
-    function selectHitbox(box) { selectedHitbox = box; updateUI(); }
-    function calculateOverallBoundingBox() { if (hitboxes.length === 0) return null; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; hitboxes.forEach(box => { minX = Math.min(minX, box.offsetX); minY = Math.min(minY, box.offsetY); maxX = Math.max(maxX, box.offsetX + box.width); maxY = Math.max(maxY, box.offsetY + box.height); }); return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }; }
-    function exportCroppedSprite() { if (sprites.length === 0) { alert("切り出しの元となるスプライトがありません。"); return; } const spriteToCrop = sprites[0]; const bbox = calculateOverallBoundingBox(); if (!bbox || bbox.width <= 0 || bbox.height <= 0) { alert("切り出すための有効なヒットボックスがありません。"); return; } const tempCanvas = document.createElement('canvas'); tempCanvas.width = Math.round(bbox.width); tempCanvas.height = Math.round(bbox.height); const tempCtx = tempCanvas.getContext('2d'); const cropSourceX = bbox.x - spriteToCrop.x; const cropSourceY = bbox.y - spriteToCrop.y; tempCtx.drawImage(spriteToCrop.image, cropSourceX, cropSourceY, bbox.width, bbox.height, 0, 0, bbox.width, bbox.height); const link = document.createElement('a'); link.download = 'cropped_sprite.png'; link.href = tempCanvas.toDataURL("image/png"); document.body.appendChild(link); link.click(); document.body.removeChild(link); alert('スプライトを cropped_sprite.png として保存しました！'); }
-    openSaveLoadModalBtn.addEventListener('click', () => { saveLoadModal.style.display = 'flex'; populateStateSlots(); });
-    closeModalBtn.addEventListener('click', () => { saveLoadModal.style.display = 'none'; });
-    window.addEventListener('click', (e) => { if (e.target === saveLoadModal) { closeModalBtn.click(); } });
-    function saveState(slotNumber) { const serializableSprites = sprites.map(s => ({ src: s.src, x: s.x, y: s.y, width: s.width, height: s.height })); const state = { sprites: serializableSprites, hitboxes: hitboxes }; localStorage.setItem(STORAGE_KEYS.STATE_PREFIX + slotNumber, JSON.stringify(state)); alert(`スロット ${slotNumber} に状態を保存しました。`); populateStateSlots(); }
-    function loadState(slotNumber) { const stateJSON = localStorage.getItem(STORAGE_KEYS.STATE_PREFIX + slotNumber); if (!stateJSON) { alert("このスロットにデータはありません。"); return; } const state = JSON.parse(stateJSON); sprites = []; hitboxes = []; state.hitboxes.forEach(boxData => hitboxes.push(boxData)); const imagePromises = state.sprites.map(spriteData => { return new Promise((resolve) => { const img = new Image(); img.onload = () => { const newSprite = { ...spriteData, image: img }; sprites.push(newSprite); resolve(); }; img.onerror = () => { console.error("Failed to load image:", spriteData.src); resolve(); }; img.src = spriteData.src; }); }); Promise.all(imagePromises).then(() => { switchMode('asset'); selectSprite(sprites.length > 0 ? sprites[0] : null); alert(`スロット ${slotNumber} から状態をロードしました。`); closeModalBtn.click(); }); }
-    function populateStateSlots() { const slotList = saveLoadModal.querySelector('.slot-list'); slotList.innerHTML = ''; for (let i = 1; i <= 6; i++) { const hasData = !!localStorage.getItem(STORAGE_KEYS.STATE_PREFIX + i); const saveBtn = document.createElement('button'); saveBtn.textContent = `スロット${i}に保存`; saveBtn.onclick = () => saveState(i); const loadBtn = document.createElement('button'); loadBtn.textContent = `スロット${i}から読込`; loadBtn.onclick = () => loadState(i); loadBtn.disabled = !hasData; if(hasData) loadBtn.classList.add('load-btn'); slotList.appendChild(saveBtn); slotList.appendChild(loadBtn); } }
-    saveHitboxTemplateBtn.addEventListener('click', () => { const name = hitboxTemplateNameInput.value.trim(); if (!name) { alert("テンプレート名を入力してください。"); return; } if (hitboxes.length === 0) { alert("保存するヒットボックスがありません。"); return; } const templates = JSON.parse(localStorage.getItem(STORAGE_KEYS.HITBOX_TEMPLATES) || '{}'); templates[name] = hitboxes.map(box => ({...box})); localStorage.setItem(STORAGE_KEYS.HITBOX_TEMPLATES, JSON.stringify(templates)); alert(`ヒットボックス群を「${name}」として保存しました。`); hitboxTemplateNameInput.value = ''; populateHitboxTemplates(); });
-    function populateHitboxTemplates() { hitboxTemplateList.innerHTML = ''; const templates = JSON.parse(localStorage.getItem(STORAGE_KEYS.HITBOX_TEMPLATES) || '{}'); for (const name in templates) { const row = document.createElement('div'); row.style.display = 'flex'; row.style.gap = '10px'; row.style.marginBottom = '10px'; const loadBtn = document.createElement('button'); loadBtn.textContent = `「${name}」をロード`; loadBtn.style.flexGrow = '1'; loadBtn.onclick = () => loadHitboxTemplate(name, templates[name]); const deleteBtn = document.createElement('button'); deleteBtn.textContent = '削除'; deleteBtn.style.backgroundColor = '#d9534f'; deleteBtn.onclick = () => { if(confirm(`テンプレート「${name}」を削除しますか？`)){ delete templates[name]; localStorage.setItem(STORAGE_KEYS.HITBOX_TEMPLATES, JSON.stringify(templates)); populateHitboxTemplates(); } }; row.appendChild(loadBtn); row.appendChild(deleteBtn); hitboxTemplateList.appendChild(row); } }
-    function loadHitboxTemplate(name, templateData) { if (!confirm(`現在のヒットボックスをクリアし、「${name}」をロードしますか？`)) return; hitboxes = templateData.map(box => ({...box})); selectHitbox(null); updateUI(); alert(`テンプレート「${name}」をロードしました。`); }
-    function getRecentAssets() { return JSON.parse(localStorage.getItem(STORAGE_KEYS.RECENT_ASSETS) || '[]'); }
-    function addRecentAsset(src) { let assets = getRecentAssets(); assets = assets.filter(a => a !== src); assets.unshift(src); assets = assets.slice(0, 10); localStorage.setItem(STORAGE_KEYS.RECENT_ASSETS, JSON.stringify(assets)); populateRecentAssets(); }
-    function populateRecentAssets() { recentAssetsContainer.innerHTML = ''; const assets = getRecentAssets(); assets.forEach(src => { const item = document.createElement('div'); item.className = 'recent-asset-item'; const img = new Image(); img.src = src; item.appendChild(img); item.title = "クリックしてキャンバスに追加"; item.onclick = () => { const imageToLoad = new Image(); imageToLoad.onload = () => addSprite(imageToLoad, src); imageToLoad.src = src; }; recentAssetsContainer.appendChild(item); }); }
+        function clearAsset() {
+          asset = null;
+          hitboxes = [];
+          selectHitbox(null);
+          while (mechaGroup.children.length > 0) {
+            mechaGroup.remove(mechaGroup.children[0]);
+          }
+          updateUI();
+        }
+        deleteAssetBtn.addEventListener('click', clearAsset);
 
-    // --- Initial State ---
-    populateRecentAssets();
-    switchMode('asset');
-});
-</script>
+        function setGuide(type) {
+          guideDef = type ? GUIDE_DEFINITIONS[type] : null;
+          [guidePlayerBtn, guideZakoBtn, guideBossBtn].forEach((b) => b.classList.remove('active'));
+          if (type) document.getElementById(`guide${type.charAt(0).toUpperCase() + type.slice(1)}Btn`).classList.add('active');
+        }
+        guidePlayerBtn.addEventListener('click', () => setGuide('player'));
+        guideZakoBtn.addEventListener('click', () => setGuide('zako'));
+        guideBossBtn.addEventListener('click', () => setGuide('boss'));
+        guideClearBtn.addEventListener('click', () => setGuide(null));
 
-</body>
+        rotationYSlider.addEventListener('input', (e) => {
+          if (mechaGroup) mechaGroup.rotation.y = THREE.MathUtils.degToRad(e.target.value);
+        });
+        rotationXSlider.addEventListener('input', (e) => {
+          if (mechaGroup) mechaGroup.rotation.x = THREE.MathUtils.degToRad(e.target.value);
+        });
+
+        addHitboxBtn.addEventListener('click', () => {
+          // ガイドの定義を取得します。
+          const definition = guideDef || GUIDE_DEFINITIONS.player;
+
+          // 新しいヒットボックスのパラメータを計算します。
+          const newBox = {
+            worldX: -definition.w / 2, // ボックスが水平方向の中央に来るように、X座標を-(幅/2)に設定
+            worldY: 0, // ボックスの下辺がワールドのY=0地点に来るように設定
+            worldW: definition.w,
+            worldH: definition.h,
+          };
+
+          // ★★★ デバッグ用に出力 ★★★
+          console.log('--- ヒットボックス追加デバッグ ---');
+          if (guideDef) {
+            console.log('現在のガイド定義:', guideDef);
+          } else {
+            console.log('ガイド未選択のため、player定義を使用:', definition);
+          }
+          console.log('計算されて作成されたヒットボックス:', newBox);
+          // ★★★ ここまで ★★★
+
+          hitboxes.push(newBox);
+          selectHitbox(newBox);
+        });
+
+        deleteHitboxBtn.addEventListener('click', () => {
+          if (selectedHitbox) {
+            hitboxes.splice(hitboxes.indexOf(selectedHitbox), 1);
+            selectHitbox(null);
+          }
+        });
+        function selectHitbox(box) {
+          selectedHitbox = box;
+          updateUI();
+        }
+
+        Object.keys(propInputs).forEach((key) => {
+          propInputs[key].addEventListener('input', (e) => {
+            if (selectedHitbox) {
+              const val = parseFloat(e.target.value) || 0;
+              switch (key) {
+                case 'offsetX':
+                  selectedHitbox.worldX = val;
+                  break;
+                case 'offsetY':
+                  selectedHitbox.worldY = val;
+                  break;
+                case 'width':
+                  selectedHitbox.worldW = val;
+                  break;
+                case 'height':
+                  selectedHitbox.worldH = val;
+                  break;
+              }
+              updateUI();
+            }
+          });
+        });
+
+        editorCanvas.addEventListener('mousedown', (e) => {
+          const pos = getMousePos(e);
+          dragStartPos = pos;
+          dragTarget = null;
+          isResizing = false;
+
+          // ▼▼▼ ロジック修正 ▼▼▼
+          // 先に、選択中のヒットボックスのハンドルを掴もうとしているかチェック
+          if (selectedHitbox) {
+            resizeHandle = getResizeHandleAt(pos.x, pos.y, selectedHitbox);
+            if (resizeHandle) {
+              // ハンドルを掴んでいたら、リサイズモードにして処理を確定
+              isResizing = true;
+              dragTarget = selectedHitbox;
+              return; //以降の処理はしない
+            }
+          }
+
+          // ハンドルを掴んでいない場合、通常のクリック処理を行う
+          const clickedBox = getHitboxAt(pos.x, pos.y);
+
+          if (clickedBox) {
+            selectHitbox(clickedBox);
+            // ここではハンドルチェックは不要（上でチェック済みのため）
+            dragTarget = clickedBox;
+          } else {
+            selectHitbox(null);
+          }
+          // ▲▲▲ ここまで修正 ▲▲▲
+        });
+        editorCanvas.addEventListener('mousemove', (e) => {
+          const pos = getMousePos(e);
+          if (dragTarget) {
+            const dx_world = (pos.x - dragStartPos.x) / PIXELS_PER_UNIT;
+            const dy_world = -(pos.y - dragStartPos.y) / PIXELS_PER_UNIT;
+            if (isResizing) resizeTarget(dragTarget, dx_world, dy_world);
+            else {
+              dragTarget.worldX += dx_world;
+              dragTarget.worldY += dy_world;
+            }
+            dragStartPos = pos;
+            updateUI();
+          }
+          updateCursor(pos);
+        });
+        editorCanvas.addEventListener('mouseup', () => {
+          dragTarget = null;
+          isResizing = false;
+        });
+        editorCanvas.addEventListener('mouseleave', () => {
+          dragTarget = null;
+          isResizing = false;
+        });
+        
+        function updateCursor(pos) {
+          const handle = selectedHitbox ? getResizeHandleAt(pos.x, pos.y, selectedHitbox) : null;
+          if (handle) {
+            // 斜め方向の判定を先に行う
+            if (handle === 'nw' || handle === 'se') {
+              editorCanvas.style.cursor = 'nwse-resize'; // 左上と右下の斜めカーソル
+            } else if (handle === 'ne' || handle === 'sw') {
+              editorCanvas.style.cursor = 'nesw-resize'; // 右上と左下の斜めカーソル
+            } else if (handle === 'n' || handle === 's') {
+              editorCanvas.style.cursor = 'ns-resize'; // 上下のカーソル
+            } else {
+              editorCanvas.style.cursor = 'ew-resize'; // 左右のカーソル
+            }
+          } else if (getHitboxAt(pos.x, pos.y)) {
+            editorCanvas.style.cursor = 'move';
+          } else {
+            editorCanvas.style.cursor = 'default';
+          }
+        }
+
+        function getMousePos(evt) {
+          const rect = editorCanvas.getBoundingClientRect();
+          return {x: evt.clientX - rect.left, y: evt.clientY - rect.top};
+        }
+        function getHitboxAt(x, y) {
+          for (let i = hitboxes.length - 1; i >= 0; i--) {
+            const b = hitboxes[i];
+
+            // ガイドや描画ロジックと全く同じ方法で、ヒットボックスの画面上の矩形を計算
+            const screenCenterX = editorCanvas.width / 2;
+            const screenOriginY = editorCanvas.height - (WORLD_VIEW_HEIGHT / 2 - Y_OFFSET) * PIXELS_PER_UNIT;
+            const screenW = b.worldW * PIXELS_PER_UNIT;
+            const screenH = b.worldH * PIXELS_PER_UNIT;
+            const topLeftX = screenCenterX + b.worldX * PIXELS_PER_UNIT;
+            const topLeftY = screenOriginY - b.worldY * PIXELS_PER_UNIT - screenH;
+
+            // マウス座標(x, y)が、計算した矩形の範囲内にあるかチェック
+            if (x >= topLeftX && x <= topLeftX + screenW && y >= topLeftY && y <= topLeftY + screenH) {
+              return b; // あれば、そのヒットボックスを返す
+            }
+          }
+          return null; // なければnullを返す
+        }
+
+        function getResizeHandleAt(x, y, box) {
+          const pos = getResizeHandlePositions(box);
+          const m = 4;
+          for (const h in pos) {
+            if (x >= pos[h].x - m && x <= pos[h].x + m && y >= pos[h].y - m && y <= pos[h].y + m) return h;
+          }
+          return null;
+        }
+
+        function getResizeHandlePositions(b) {
+          // こちらもガイドと同じ計算方法で、ヒットボックスの画面上の矩形を算出
+          const screenCenterX = editorCanvas.width / 2;
+          const screenOriginY = editorCanvas.height - (WORLD_VIEW_HEIGHT / 2 - Y_OFFSET) * PIXELS_PER_UNIT;
+          const screenW = b.worldW * PIXELS_PER_UNIT;
+          const screenH = b.worldH * PIXELS_PER_UNIT;
+          const topLeftX = screenCenterX + b.worldX * PIXELS_PER_UNIT;
+          const topLeftY = screenOriginY - b.worldY * PIXELS_PER_UNIT - screenH;
+
+          const brX = topLeftX + screenW; // 右下のX座標
+          const brY = topLeftY + screenH; // 右下のY座標
+
+          // 計算した矩形を基に、8方向のハンドルの座標を返す
+          return {
+            nw: {x: topLeftX, y: topLeftY},
+            ne: {x: brX, y: topLeftY},
+            sw: {x: topLeftX, y: brY},
+            se: {x: brX, y: brY},
+            n: {x: topLeftX + screenW / 2, y: topLeftY},
+            s: {x: topLeftX + screenW / 2, y: brY},
+            w: {x: topLeftX, y: topLeftY + screenH / 2},
+            e: {x: brX, y: topLeftY + screenH / 2},
+          };
+        }
+        function resizeTarget(b, dx_world, dy_world) {
+          if (resizeHandle.includes('w')) {
+            b.worldX += dx_world;
+            b.worldW -= dx_world;
+          } else if (resizeHandle.includes('e')) {
+            b.worldW += dx_world;
+          }
+          if (resizeHandle.includes('n')) {
+            b.worldH += dy_world;
+          } else if (resizeHandle.includes('s')) {
+            b.worldY += dy_world;
+            b.worldH -= dy_world;
+          }
+        }
+        function updateUI() {
+          deleteAssetBtn.disabled = !asset;
+          modelControls.style.display = asset && asset.type === 'model' ? 'block' : 'none';
+          exportBtn.disabled = !(asset && asset.type === 'sprite' && hitboxes.length > 0);
+          propertiesPanel.style.display = selectedHitbox ? 'block' : 'none';
+          deleteHitboxBtn.disabled = !selectedHitbox;
+          if (selectedHitbox) {
+            propInputs.offsetX.value = selectedHitbox.worldX.toFixed(2);
+            propInputs.offsetY.value = selectedHitbox.worldY.toFixed(2);
+            propInputs.width.value = selectedHitbox.worldW.toFixed(2);
+            propInputs.height.value = selectedHitbox.worldH.toFixed(2);
+          }
+          updateJsonOutput();
+        }
+        function updateJsonOutput() {
+          const o = hitboxes.map((b) => ({offsetX: parseFloat(b.worldX.toFixed(2)), offsetY: parseFloat(b.worldY.toFixed(2)), width: parseFloat(b.worldW.toFixed(2)), height: parseFloat(b.worldH.toFixed(2))}));
+          jsonOutput.value = JSON.stringify(o, null, 2);
+        }
+        copyJsonBtn.addEventListener('click', () => navigator.clipboard.writeText(jsonOutput.value).then(() => alert('JSONをコピーしました！')));
+        saveHitboxTemplateBtn.addEventListener('click', () => {
+          const name = hitboxTemplateNameInput.value.trim();
+          if (!name || hitboxes.length === 0) return;
+          const templates = JSON.parse(localStorage.getItem(STORAGE_KEYS.HITBOX_TEMPLATES) || '{}');
+          templates[name] = hitboxes.map((box) => ({...box}));
+          localStorage.setItem(STORAGE_KEYS.HITBOX_TEMPLATES, JSON.stringify(templates));
+          alert(`テンプレート「${name}」を保存しました。`);
+          populateHitboxTemplates();
+        });
+        function populateHitboxTemplates() {
+          hitboxTemplateList.innerHTML = '';
+          const templates = JSON.parse(localStorage.getItem(STORAGE_KEYS.HITBOX_TEMPLATES) || '{}');
+          for (const name in templates) {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.gap = '10px';
+            row.style.marginBottom = '10px';
+            const loadBtn = document.createElement('button');
+            loadBtn.textContent = `「${name}」をロード`;
+            loadBtn.style.flexGrow = '1';
+            loadBtn.onclick = () => loadHitboxTemplate(name, templates[name]);
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '削除';
+            deleteBtn.style.backgroundColor = '#d9534f';
+            deleteBtn.onclick = () => {
+              if (confirm(`テンプレート「${name}」を削除しますか？`)) {
+                delete templates[name];
+                localStorage.setItem(STORAGE_KEYS.HITBOX_TEMPLATES, JSON.stringify(templates));
+                populateHitboxTemplates();
+              }
+            };
+            row.appendChild(loadBtn);
+            row.appendChild(deleteBtn);
+            hitboxTemplateList.appendChild(row);
+          }
+        }
+        function loadHitboxTemplate(name, templateData) {
+          if (!confirm(`現在のヒットボックスをクリアし、「${name}」をロードしますか？`)) return;
+          hitboxes = templateData.map((box) => ({...box}));
+          selectHitbox(null);
+        }
+        exportBtn.addEventListener('click', () => {
+          if (!asset || asset.type !== 'sprite') {
+            alert('切り出しには画像スプライトが必要です。');
+            return;
+          }
+          const bbox = hitboxes.reduce(
+            (bb, box) => {
+              const sPos = worldToScreen({x: box.worldX, y: box.worldY + box.worldH});
+              const sW = box.worldW * PIXELS_PER_UNIT;
+              const sH = box.worldH * PIXELS_PER_UNIT;
+              return {minX: Math.min(bb.minX, sPos.x), minY: Math.min(bb.minY, sPos.y), maxX: Math.max(bb.maxX, sPos.x + sW), maxY: Math.max(bb.maxY, sPos.y + sH)};
+            },
+            {minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity}
+          );
+          const width = bbox.maxX - bbox.minX;
+          const height = bbox.maxY - bbox.minY;
+          if (width <= 0 || height <= 0) {
+            alert('有効なヒットボックスがありません。');
+            return;
+          }
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = width;
+          tempCanvas.height = height;
+          const tempCtx = tempCanvas.getContext('2d');
+          const spriteX = (editorCanvas.width - asset.image.width) / 2;
+          const spriteY = (editorCanvas.height - asset.image.height) / 2;
+          tempCtx.drawImage(asset.image, bbox.minX - spriteX, bbox.minY - spriteY, width, height, 0, 0, width, height);
+          const link = document.createElement('a');
+          link.download = 'cropped_sprite.png';
+          link.href = tempCanvas.toDataURL('image/png');
+          link.click();
+        });
+        openSaveLoadModalBtn.addEventListener('click', () => {
+          saveLoadModal.style.display = 'flex';
+          populateStateSlots();
+        });
+        closeModalBtn.addEventListener('click', () => {
+          saveLoadModal.style.display = 'none';
+        });
+        function saveState(slotNumber) {
+          const serializableAsset = asset ? (asset.type === 'sprite' ? {type: 'sprite', src: asset.src} : {type: 'model', name: asset.name, json: asset.json}) : null;
+          const state = {asset: serializableAsset, hitboxes};
+          localStorage.setItem(STORAGE_KEYS.STATE_PREFIX + slotNumber, JSON.stringify(state));
+          alert(`スロット ${slotNumber} に保存しました。`);
+          populateStateSlots();
+        }
+        function loadState(slotNumber) {
+          const stateJSON = localStorage.getItem(STORAGE_KEYS.STATE_PREFIX + slotNumber);
+          if (!stateJSON) return;
+          const state = JSON.parse(stateJSON);
+          clearAsset();
+          hitboxes = state.hitboxes || [];
+          if (state.asset) {
+            if (state.asset.type === 'sprite') {
+              const img = new Image();
+              img.onload = () => addSprite(img, state.asset.src);
+              img.src = state.asset.src;
+            } else if (state.asset.type === 'model') {
+              loadMecJson(state.asset.json);
+            }
+          }
+          alert(`スロット ${slotNumber} からロードしました。`);
+          closeModalBtn.click();
+        }
+        function populateStateSlots() {
+          const slotList = saveLoadModal.querySelector('.slot-list');
+          slotList.innerHTML = '';
+          for (let i = 1; i <= 6; i++) {
+            const hasData = !!localStorage.getItem(STORAGE_KEYS.STATE_PREFIX + i);
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = `スロット${i}に保存`;
+            saveBtn.onclick = () => saveState(i);
+            const loadBtn = document.createElement('button');
+            loadBtn.textContent = `スロット${i}から読込`;
+            loadBtn.onclick = () => loadState(i);
+            loadBtn.disabled = !hasData;
+            if (hasData) loadBtn.classList.add('load-btn');
+            slotList.appendChild(saveBtn);
+            slotList.appendChild(loadBtn);
+          }
+        }
+
+        init();
+        switchMode('asset');
+        populateHitboxTemplates();
+      });
+    </script>
+  </body>
 </html>
