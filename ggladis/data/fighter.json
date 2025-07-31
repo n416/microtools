@@ -1,0 +1,11 @@
+{
+  "modelFile": "test_mec.json",
+  "hitboxes": [
+    {
+      "offsetX": 0,
+      "offsetY": 0.4,
+      "width": 0.4,
+      "height": 0.1
+    }
+  ]
+}

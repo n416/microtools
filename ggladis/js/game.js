@@ -1,7 +1,9 @@
 class Game {
   constructor(canvas, ctx) {
-    this.canvas = canvas;
+    this.canvas = canvas; // gameCanvas
     this.ctx = ctx;
+    this.webglCanvas = document.getElementById('webgl-canvas'); // 3D用Canvasを取得
+
     this.gameState = 'title';
     this.currentStageNumber = 1;
     this.scrollSpeed = 2;
@@ -9,6 +11,14 @@ class Game {
     this.player = new Player(this, 100, this.canvas.height / 2);
     this.stageManager = new StageManager(this);
     this.saveManager = new SaveManager(this);
+    
+    this.modelLoader = new ModelLoader(this.webglCanvas);
+    this.playerModel = null;
+    this.modelCenterOffset = new THREE.Vector3();
+    
+    // 初期値として設定。後にモデルサイズに合わせて再計算される。
+    this.WORLD_VIEW_HEIGHT = 6.0;
+    this.WORLD_VIEW_WIDTH = this.WORLD_VIEW_HEIGHT * (this.canvas.width / this.canvas.height);
 
     this.enemies = [];
     this.playerBullets = [];
@@ -32,7 +42,44 @@ class Game {
 
   async init() {
     console.log('Initializing game data...');
-    await this.stageManager.loadData('data/stages.json', 'data/enemies.json');
+    await Promise.all([
+        this.stageManager.loadData('data/stages.json', 'data/enemies.json'),
+        this.modelLoader.loadFighter('data/fighter.json').then(model => {
+            if (model) {
+                this.playerModel = model;
+                this.playerModel.rotation.y = Math.PI / 2;
+                
+                // fighter.jsonからヒットボックス定義を読み込む
+                fetch('data/fighter.json')
+                    .then(res => res.json())
+                    .then(fighterData => {
+                        this.player.hitboxDefinitions = fighterData.hitboxes;
+                    });
+
+                const modelBox = new THREE.Box3().setFromObject(this.playerModel);
+                const modelSize = new THREE.Vector3();
+                modelBox.getSize(modelSize);
+                
+                modelBox.getCenter(this.modelCenterOffset);
+
+                const modelNaturalWidth = modelSize.z;
+                const modelNaturalHeight = modelSize.y;
+                const desiredPixelWidth = 120;
+
+                this.WORLD_VIEW_WIDTH = (modelNaturalWidth * this.canvas.width) / desiredPixelWidth;
+                this.WORLD_VIEW_HEIGHT = this.WORLD_VIEW_WIDTH / (this.canvas.width / this.canvas.height);
+
+                this.modelLoader.updateCameraProjection(this.WORLD_VIEW_WIDTH, this.WORLD_VIEW_HEIGHT);
+
+                this.player.width = desiredPixelWidth;
+                this.player.height = (modelNaturalHeight / modelNaturalWidth) * desiredPixelWidth;
+                
+                const modelFrontIn3D = modelBox.max.z;
+                const pixelOffsetX = (modelFrontIn3D / this.WORLD_VIEW_WIDTH) * this.canvas.width;
+                this.player.bulletOffsetX = pixelOffsetX + 5;
+            }
+        })
+    ]);
     console.log('Data loaded. Ready at title screen.');
   }
 
@@ -108,6 +155,20 @@ class Game {
     this.player.update(this.keys);
     this.stageManager.update(deltaTime);
 
+    if (this.playerModel) {
+        const playerCenterX = this.player.x + this.player.width / 2;
+        const playerCenterY = this.player.y + this.player.height / 2;
+
+        const worldX = (playerCenterX / this.canvas.width) * this.WORLD_VIEW_WIDTH - (this.WORLD_VIEW_WIDTH / 2);
+        const worldY = -(playerCenterY / this.canvas.height) * this.WORLD_VIEW_HEIGHT + (this.WORLD_VIEW_HEIGHT / 2) + 1.5;
+
+        this.playerModel.position.set(
+            worldX - this.modelCenterOffset.x, 
+            worldY - this.modelCenterOffset.y, 
+            0 - this.modelCenterOffset.z
+        );
+    }
+
     this.enemies.forEach((enemy) => enemy.update(deltaTime));
     this.playerBullets.forEach((b) => b.update(deltaTime));
     this.enemyBullets.forEach((b) => b.update(deltaTime));
@@ -165,10 +226,40 @@ class Game {
   }
 
   draw() {
+    // 2Dの描画をクリア
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+    // 3Dシーンをレンダリング
+    this.modelLoader.renderer.render(this.modelLoader.scene, this.modelLoader.camera);
+
     if (this.gameState === 'playing') {
-      this.player.draw();
+
+      // デバッグ用のメイン矩形描画
+      this.ctx.strokeStyle = 'rgba(255, 0, 255, 0.7)'; // 紫色
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeRect(this.player.x, this.player.y, this.player.width, this.player.height);
+      
+      // ▼▼▼ ヒットボックスの矩形描画を追加 ▼▼▼
+      this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)'; // 緑色
+      this.ctx.lineWidth = 1;
+
+      const playerCenterX = this.player.x + this.player.width / 2;
+      const playerCenterY = this.player.y + this.player.height / 2;
+      const pixelsPerUnitX = this.canvas.width / this.WORLD_VIEW_WIDTH;
+      const pixelsPerUnitY = this.canvas.height / this.WORLD_VIEW_HEIGHT;
+
+      this.player.hitboxDefinitions.forEach(hb => {
+          const hbWidth = hb.width * pixelsPerUnitX;
+          const hbHeight = hb.height * pixelsPerUnitY;
+          
+          // モデルのオフセットと中心からのオフセットを考慮して描画位置を計算
+          const drawX = playerCenterX + (hb.offsetX - this.modelCenterOffset.x) * pixelsPerUnitX - hbWidth / 2;
+          // Y軸は2Dと3Dで逆なので、-hb.offsetYとする
+          const drawY = playerCenterY - (hb.offsetY - this.modelCenterOffset.y) * pixelsPerUnitY - hbHeight / 2;
+          
+          this.ctx.strokeRect(drawX, drawY, hbWidth, hbHeight);
+      });
+
       this.player.options.forEach((option) => {
         option.draw();
       });
