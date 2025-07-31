@@ -5,9 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Gradius-like Game</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* 3Dモデル表示のためにスタイルを追加 */
+        #canvas-container {
+            position: relative;
+            width: 1920px; /* canvasのサイズに合わせる */
+            height: 1080px; /* canvasのサイズに合わせる */
+        }
+        #gameCanvas, #webgl-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #gameCanvas {
+            z-index: 10; /* ゲームのUIなどを手前に */
+            background: transparent; /* 3Dモデルが見えるように背景を透過 */
+        }
+        #webgl-canvas {
+            z-index: 1; /* 3Dモデルを奥に */
+            background-color: #000;
+        }
+    </style>
 </head><body>
     <h1>Advanced Gradius-like Game</h1>
-    <canvas id="gameCanvas" width="1920" height="1080"></canvas>
+    <div id="canvas-container">
+        <canvas id="webgl-canvas" width="1920" height="1080"></canvas>
+        <canvas id="gameCanvas" width="1920" height="1080"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.142.0/build/three.min.js"></script>
 
     <script src="js/utils.js"></script>
     <script src="js/save.js"></script>
@@ -16,6 +42,7 @@
     <script src="js/boss.js"></script>
     <script src="js/player.js"></script>
     <script src="js/stage.js"></script>
+    <script src="js/model_loader.js"></script>
     <script src="js/game.js"></script>
     <script src="js/main.js"></script>
 </body>
