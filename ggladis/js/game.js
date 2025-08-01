@@ -165,6 +165,10 @@ class Game {
             worldY - this.modelCenterOffset.y, 
             0 - this.modelCenterOffset.z
         );
+
+        // ▼▼▼ プレイヤーの現在の傾きをモデルの回転に適用 ▼▼▼
+        // 左右への傾きはZ軸回転になります。THREE.jsはラジアンを扱うため、度から変換します。
+        this.playerModel.rotation.z = THREE.MathUtils.degToRad(this.player.currentTilt);
     }
 
     this.enemies.forEach((enemy) => enemy.update(deltaTime));
