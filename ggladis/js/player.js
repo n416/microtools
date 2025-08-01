@@ -153,11 +153,11 @@ class Barrier {
 
 
 class Player {
-    constructor(game, x, y, hitboxDefinitions = []) { // hitboxDefinitions を引数で受け取る
+    constructor(game, x, y, hitboxDefinitions = []) {
         this.game = game;
         this.x = x;
         this.y = y;
-        this.width = 150; // 当たり判定サイズはinitで再設定される
+        this.width = 150; 
         this.height = 100;
         this.baseSpeed = 4;
         this.speed = this.baseSpeed;
@@ -180,16 +180,30 @@ class Player {
         };
 
         this.shootCooldown = 0;
-        this.bulletOffsetX = this.width; // 初期値。initで再設定される
-        this.hitboxDefinitions = hitboxDefinitions; // ▼▼▼ 引数で受け取った定義をセット ▼▼▼
+        this.bulletOffsetX = this.width;
+        this.hitboxDefinitions = hitboxDefinitions;
+
+        // ▼▼▼ 機体の傾きを管理するプロパティを追加 ▼▼▼
+        this.targetTilt = 0;   // 目標の傾き（度）
+        this.currentTilt = 0;  // 現在の傾き（度）
     }
 
     update(keys) {
         const lastX = this.x;
         const lastY = this.y;
         
-        if (keys['ArrowUp']) this.y -= this.speed;
-        if (keys['ArrowDown']) this.y += this.speed;
+        // ▼▼▼ 傾きの目標値を設定 ▼▼▼
+        this.targetTilt = 0; // デフォルトは傾きなし
+        if (keys['ArrowUp']) {
+            this.y -= this.speed;
+            this.targetTilt = -45; // 上昇時は反時計回りに45度
+        }
+        if (keys['ArrowDown']) {
+            this.y += this.speed;
+            this.targetTilt = 45;  // 下降時は時計回りに45度
+        }
+        // ▲▲▲ 傾きの目標値を設定 ▲▲▲
+
         if (keys['ArrowLeft']) this.x -= this.speed;
         if (keys['ArrowRight']) this.x += this.speed;
 
@@ -230,6 +244,9 @@ class Player {
                 delete keys['ShiftRight'];
             }
         }
+
+        // ▼▼▼ 現在の傾きを目標値に近づける ▼▼▼
+        this.currentTilt += (this.targetTilt - this.currentTilt) * 0.2;
     }
     
     shoot() {
