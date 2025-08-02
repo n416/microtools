@@ -47,6 +47,13 @@ class Enemy {
       if (this.dropsPowerUp) {
         this.game.powerUps.push(new PowerUpCapsule(this.game, this.x, this.y));
       }
+
+      // ★ 敵の移動パターンによって爆発エフェクトを切り替える
+      if (this.movementPattern === 'sine') {
+        this.game.addImplosion(this.x + this.width / 2, this.y + this.height / 2, 'normal');
+      } else {
+        this.game.addExplosion(this.x + this.width / 2, this.y + this.height / 2, 'small');
+      }
     }
   }
 }
