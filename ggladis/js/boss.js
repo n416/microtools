@@ -13,12 +13,7 @@ class EnemyBullet {
   update(deltaTime) {
     this.x += this.vx;
     this.y += this.vy;
-    if (
-      this.x < 0 ||
-      this.x > this.game.canvas.width ||
-      this.y < 0 ||
-      this.y > this.game.canvas.height
-    ) {
+    if (this.x < 0 || this.x > this.game.canvas.width || this.y < 0 || this.y > this.game.canvas.height) {
       this.isActive = false;
     }
   }
@@ -69,9 +64,7 @@ class Boss extends Enemy {
     const bulletSpeed = -5;
     const bulletX = this.x;
     const bulletY = this.y + this.height / 2;
-    this.game.enemyBullets.push(
-      new EnemyBullet(this.game, bulletX, bulletY, bulletSpeed, 0)
-    );
+    this.game.enemyBullets.push(new EnemyBullet(this.game, bulletX, bulletY, bulletSpeed, 0));
   }
 
   fireRadial() {
@@ -81,25 +74,15 @@ class Boss extends Enemy {
       const angle = ((Math.PI * 2) / bulletCount) * i;
       const vx = Math.cos(angle) * bulletSpeed;
       const vy = Math.sin(angle) * bulletSpeed;
-      this.game.enemyBullets.push(
-        new EnemyBullet(
-          this.game,
-          this.x + this.width / 2,
-          this.y + this.height / 2,
-          vx,
-          vy
-        )
-      );
+      this.game.enemyBullets.push(new EnemyBullet(this.game, this.x + this.width / 2, this.y + this.height / 2, vx, vy));
     }
   }
 
   takeDamage(amount) {
     if (this.isEntering) return; // 登場中は無敵
 
-    // 修正箇所: super.takeDamage()を呼ばず、直接HPを減らす
     this.hp -= amount;
 
-    // HPが0以下で、まだisAliveがtrueの場合にdie()を呼ぶ
     if (this.hp <= 0 && this.isAlive) {
       this.die();
     }
@@ -110,9 +93,9 @@ class Boss extends Enemy {
     this.game.score += this.score;
     console.log('Boss defeated!');
 
-    // TODO: ここで爆発エフェクトを再生する
+    // ボスは'large'サイズの爆発
+    this.game.addExplosion(this.x + this.width / 2, this.y + this.height / 2, 'large');
 
-    // ステージクリア状態へ移行
     this.game.gameState = 'stageClear';
   }
 
