@@ -1,4 +1,3 @@
-// 敵の弾クラス
 class EnemyBullet {
   constructor(game, x, y, vx, vy) {
     this.game = game;
@@ -23,7 +22,6 @@ class EnemyBullet {
   }
 }
 
-// Bossクラス
 class Boss extends Enemy {
   constructor(game, x, y, bossData) {
     super(game, x, y, bossData);
@@ -31,7 +29,6 @@ class Boss extends Enemy {
     this.specialAttackCooldown = bossData.specialAttackCooldown;
     this.attackTimer = this.attackInterval;
     this.specialAttackTimer = this.specialAttackCooldown;
-
     this.isEntering = true;
     this.targetX = this.game.canvas.width - this.width - 50;
   }
@@ -45,15 +42,12 @@ class Boss extends Enemy {
       }
       return;
     }
-
     this.attackTimer -= deltaTime / 1000;
     this.specialAttackTimer -= deltaTime / 1000;
-
     if (this.attackTimer <= 0) {
       this.fireForward();
       this.attackTimer = this.attackInterval;
     }
-
     if (this.specialAttackTimer <= 0) {
       this.fireRadial();
       this.specialAttackTimer = this.specialAttackCooldown;
@@ -79,24 +73,19 @@ class Boss extends Enemy {
   }
 
   takeDamage(amount) {
-    if (this.isEntering) return; // 登場中は無敵
-
+    if (this.isEntering) return;
     this.hp -= amount;
-
     if (this.hp <= 0 && this.isAlive) {
       this.die();
     }
   }
 
   die() {
-    this.isAlive = false;
+    this.isAlive = false; // ★ 自身の状態を「倒された」にするだけ
     this.game.score += this.score;
     console.log('Boss defeated!');
-
-    // ボスは'large'サイズの爆発
     this.game.addExplosion(this.x + this.width / 2, this.y + this.height / 2, 'large');
-
-    this.game.gameState = 'stageClear';
+    // gameStateの変更はここから削除
   }
 
   draw() {
