@@ -1,4 +1,3 @@
-// ... (Bullet, Missile, LaserBullet, Option, Barrier クラスは変更なし) ...
 class Bullet {
   constructor(game, x, y, vx, vy, type = 'normal') {
     this.game = game;
@@ -14,9 +13,7 @@ class Bullet {
   update(deltaTime) {
     this.x += this.vx;
     this.y += this.vy;
-    if (this.x > this.game.canvas.width) {
-      this.isActive = false;
-    }
+    if (this.x > this.game.canvas.width) this.isActive = false;
   }
   draw() {
     this.game.ctx.fillStyle = 'white';
@@ -45,9 +42,7 @@ class Missile {
       }
     }
     this.x += this.speedX;
-    if (this.x > this.game.canvas.width) {
-      this.isActive = false;
-    }
+    if (this.x > this.game.canvas.width) this.isActive = false;
   }
   draw() {
     this.game.ctx.fillStyle = '#99ff99';
@@ -69,9 +64,7 @@ class LaserBullet {
   update(deltaTime) {
     this.x += this.speed;
     this.y = this.source.y + this.source.height / 2 - this.height / 2;
-    if (this.x > this.game.canvas.width) {
-      this.isActive = false;
-    }
+    if (this.x > this.game.canvas.width) this.isActive = false;
   }
   draw() {
     this.game.ctx.fillStyle = '#ff8a8a';
@@ -97,17 +90,12 @@ class Option {
   }
   shoot(powerUpState) {
     const bulletSpeed = 7;
-    if (powerUpState.laser) {
-      this.game.playerBullets.push(new LaserBullet(this.game, this, true));
-    } else if (powerUpState.double) {
+    if (powerUpState.laser) this.game.playerBullets.push(new LaserBullet(this.game, this, true));
+    else if (powerUpState.double) {
       this.game.playerBullets.push(new Bullet(this.game, this.x, this.y + this.height / 2, bulletSpeed, 0, 'option_double'));
       this.game.playerBullets.push(new Bullet(this.game, this.x, this.y, bulletSpeed, -2.5, 'option_double'));
-    } else {
-      this.game.playerBullets.push(new Bullet(this.game, this.x, this.y + this.height / 2, bulletSpeed, 0, 'option'));
-    }
-    if (powerUpState.missile) {
-      this.game.playerBullets.push(new Missile(this.game, this.x + this.width / 2, this.y + this.height));
-    }
+    } else this.game.playerBullets.push(new Bullet(this.game, this.x, this.y + this.height / 2, bulletSpeed, 0, 'option'));
+    if (powerUpState.missile) this.game.playerBullets.push(new Missile(this.game, this.x + this.width / 2, this.y + this.height));
   }
   draw() {
     this.game.ctx.fillStyle = '#ffb400';
@@ -161,51 +149,44 @@ class Player {
     this.baseSpeed = 4;
     this.speed = this.baseSpeed;
     this.hp = 3;
+    this.isAlive = true;
 
     this.powerUpOptions = ['SPEED UP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '?'];
     this.powerUpGaugeIndex = -1;
-
     this.options = [];
     this.positionHistory = [];
     this.historyLength = 120;
-
     this.barrier = null;
-
-    this.powerUpState = {
-      speedLevel: 0,
-      missile: false,
-      double: false,
-      laser: false,
-    };
-
+    this.powerUpState = {speedLevel: 0, missile: false, double: false, laser: false};
     this.shootCooldown = 0;
     this.bulletOffsetX = this.width;
     this.hitboxDefinitions = hitboxDefinitions;
-
-    // ▼▼▼ 機体の傾きを管理するプロパティを追加 ▼▼▼
-    this.targetTilt = 0; // 目標の傾き（度）
-    this.currentTilt = 0; // 現在の傾き（度）
+    this.targetTilt = 0;
+    this.currentTilt = 0;
+    this.jetCooldown = 0;
   }
 
   update(keys) {
     const lastX = this.x;
     const lastY = this.y;
 
-    // ▼▼▼ 傾きの目標値を設定 ▼▼▼
-    this.targetTilt = 0; // デフォルトは傾きなし
+    this.targetTilt = 0;
     if (keys['ArrowUp']) {
       this.y -= this.speed;
-      this.targetTilt = -45; // 上昇時は反時計回りに45度
+      this.targetTilt = -45;
     }
     if (keys['ArrowDown']) {
       this.y += this.speed;
-      this.targetTilt = 45; // 下降時は時計回りに45度
+      this.targetTilt = 45;
     }
-    // ▲▲▲ 傾きの目標値を設定 ▲▲▲
-
     if (keys['ArrowLeft']) this.x -= this.speed;
     if (keys['ArrowRight']) this.x += this.speed;
 
+    if (this.jetCooldown > 0) this.jetCooldown--;
+    if (this.isAlive && this.jetCooldown <= 0) {
+        this.spawnJetParticles(keys);
+    }
+    
     this.x = Math.max(0, Math.min(this.game.canvas.width - this.width, this.x));
     this.y = Math.max(0, Math.min(this.game.canvas.height - this.height, this.y));
 
@@ -213,20 +194,13 @@ class Player {
 
     if (hasMoved) {
       this.positionHistory.unshift({x: this.x, y: this.y});
-      if (this.positionHistory.length > this.historyLength) {
-        this.positionHistory.pop();
-      }
-
-      this.options.forEach((option, index) => {
-        option.update(this.positionHistory, index);
-      });
+      if (this.positionHistory.length > this.historyLength) this.positionHistory.pop();
+      this.options.forEach((option, index) => option.update(this.positionHistory, index));
     }
 
     if (this.barrier) {
       this.barrier.update();
-      if (!this.barrier.isActive) {
-        this.barrier = null;
-      }
+      if (!this.barrier.isActive) this.barrier = null;
     }
 
     if (this.shootCooldown > 0) this.shootCooldown -= 1;
@@ -244,33 +218,69 @@ class Player {
       }
     }
 
-    // ▼▼▼ 現在の傾きを目標値に近づける ▼▼▼
     this.currentTilt += (this.targetTilt - this.currentTilt) * 0.2;
+  }
+
+  spawnJetParticles(keys) {
+    // パーティクルの発生源を自機後方に設定
+    const particleOriginX = this.x + 10;
+    const particleOriginY = this.y + this.height / 2;
+    // THREE.MathUtils.degToRadで角度を度からラジアンに変換。180度は真後ろ。
+    // this.currentTiltは機体の傾き。0.5を掛けることで炎の追従を少しマイルドにしている。
+    const baseAngle = THREE.MathUtils.degToRad(180 + this.currentTilt * 0.5); 
+
+    let options = {}; // パーティクルに渡す設定
+    let particleCount = 1; // 1回あたりに生成するパーティクルの数
+
+    if (keys['ArrowRight']) { // 前進している時
+        particleCount = 3; // たくさん出す
+        options = {
+            angle: baseAngle + (Math.random() - 0.5) * 0.1, // 噴出角度。少しだけランダムなブレを加える
+            speed: 5,     // 噴出スピード
+            maxSize: 12,   // パーティクルの最大サイズ
+            friction: 0.99, // 摩擦（大きいほど減速しにくい）
+        };
+        this.jetCooldown = 10; // 次の噴射までの待機時間（フレーム）。0で毎フレーム噴射。
+    } else if (keys['ArrowLeft']) { // 後進している時
+        particleCount = 0; // 少なく出す
+        options = {
+            angle: baseAngle, // ブレさせない
+            speed: 1,
+            maxSize: 5,
+            friction: 0.9,
+        };
+        this.jetCooldown = 5;
+    } else { // 停止（アイドリング）している時
+        particleCount = 1; // 少なく出す
+        options = {
+            angle: baseAngle,// + (Math.random() - 0.5) * 0.05, // ブレはごく僅かに
+            speed: 2,
+            maxSize: 7,
+            friction: 0.92,
+        };
+        this.jetCooldown = 10;
+    }
+    
+    // 設定した数だけパーティクルを生成する
+    for (let i = 0; i < particleCount; i++) {
+        // 噴射口に幅があるように見せるため、Y座標を少しだけランダムにずらす
+        const yOffset = (Math.random() - 0.5) * (this.height * 0.2);
+        this.game.jetParticles.push(new JetParticle(this.game, particleOriginX, particleOriginY + yOffset, options));
+    }
   }
 
   shoot() {
     const bulletOffsetX = this.bulletOffsetX;
-
     if (this.powerUpState.laser) {
-      const playerLaserOnScreen = this.game.playerBullets.some((b) => b instanceof LaserBullet && !b.isOptionLaser);
-      if (playerLaserOnScreen) return;
+      if (this.game.playerBullets.some((b) => b instanceof LaserBullet && !b.isOptionLaser)) return;
       this.game.playerBullets.push(new LaserBullet(this.game, this, false));
     } else if (this.powerUpState.double) {
-      const doubleBulletsOnScreen = this.game.playerBullets.some((b) => b.type === 'double');
-      if (doubleBulletsOnScreen) return;
+      if (this.game.playerBullets.some((b) => b.type === 'double')) return;
       this.game.playerBullets.push(new Bullet(this.game, this.x + bulletOffsetX, this.y + this.height / 2, 7, 0, 'double'));
       this.game.playerBullets.push(new Bullet(this.game, this.x + bulletOffsetX, this.y, 7, -2.5, 'double'));
-    } else {
-      this.game.playerBullets.push(new Bullet(this.game, this.x + bulletOffsetX, this.y + this.height / 2, 7, 0, 'normal'));
-    }
-
-    if (this.powerUpState.missile) {
-      this.game.playerBullets.push(new Missile(this.game, this.x + this.width / 2, this.y + this.height));
-    }
-
-    this.options.forEach((option) => {
-      option.shoot(this.powerUpState);
-    });
+    } else this.game.playerBullets.push(new Bullet(this.game, this.x + bulletOffsetX, this.y + this.height / 2, 7, 0, 'normal'));
+    if (this.powerUpState.missile) this.game.playerBullets.push(new Missile(this.game, this.x + this.width / 2, this.y + this.height));
+    this.options.forEach((option) => option.shoot(this.powerUpState));
   }
 
   addPowerUp() {
@@ -281,7 +291,6 @@ class Player {
     if (this.powerUpGaugeIndex === -1) return;
     const selectedPowerUp = this.powerUpOptions[this.powerUpGaugeIndex];
     console.log('Activating:', selectedPowerUp);
-
     switch (selectedPowerUp) {
       case 'SPEED UP':
         this.powerUpState.speedLevel = (this.powerUpState.speedLevel || 0) + 1;
@@ -298,16 +307,10 @@ class Player {
         this.powerUpState.double = false;
         break;
       case 'OPTION':
-        if (this.options.length < 4) {
-          this.options.push(new Option(this.game, this));
-        }
+        if (this.options.length < 4) this.options.push(new Option(this.game, this));
         break;
       case '?':
-        if (this.barrier && this.barrier.isActive) {
-          this.barrier.durability = 5;
-        } else {
-          this.barrier = new Barrier(this.game, this);
-        }
+        this.barrier = this.barrier && this.barrier.isActive ? ((this.barrier.durability = 5), this.barrier) : new Barrier(this.game, this);
         break;
     }
     this.applyPowerUpState();
@@ -316,7 +319,6 @@ class Player {
 
   applyPowerUpState() {
     this.speed = this.baseSpeed + (this.powerUpState.speedLevel || 0) * 2;
-    console.log('Player state applied:', this.powerUpState);
   }
 
   drawPowerUpGauge() {
@@ -324,7 +326,6 @@ class Player {
     const PADDING = 10;
     const BOX_WIDTH = 110;
     const startY = this.game.canvas.height - FONT_SIZE - PADDING;
-
     this.game.ctx.font = `${FONT_SIZE}px Arial`;
     this.powerUpOptions.forEach((option, i) => {
       this.game.ctx.textAlign = 'left';
@@ -334,12 +335,14 @@ class Player {
   }
 
   takeDamage(amount) {
+    if (!this.isAlive) return;
     this.hp -= amount;
     if (this.hp <= 0) {
       this.hp = 0;
+      this.isAlive = false;
       this.game.addExplosion(this.x + this.width / 2, this.y + this.height / 2, 'player');
-      this.game.gameState = 'gameOver';
-      console.log('Game Over');
+      this.game.startTransition('gameOver', 2000);
+      console.log('Player destroyed. Transitioning to Game Over...');
     }
   }
 }
