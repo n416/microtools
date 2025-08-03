@@ -10,7 +10,8 @@ export class AppState {
       isMirrorCopyMode: false,
       isPasteMode: false,
       isSubtractMode: false,
-      isPlacementPreviewMode: false, // ★★★ このフラグを追加 ★★★
+      isPlacementPreviewMode: false,
+      isJointMode: false, // ★★★ このフラグを追加 ★★★
       subtractTargets: [],
       clipboard: null,
       lastPasteInfo: {objects: [], offset: new THREE.Vector3()},
@@ -24,7 +25,6 @@ export class AppState {
     this.isLivePaintPreviewMode = false; // 選択オブジェクトをリアルタイム編集するモード
     this.isEyedropperMode = false;
 
-    // ★★★ 修正箇所: 連続塗装用の設定(ブラシ設定)として名前を明確化 ★★★
     this.brushProperties = {
       color: new THREE.Color(0xffffff),
       metalness: 1.0,

@@ -41,7 +41,6 @@
         font-size: 12px;
         max-width: 300px;
       }
-      /* ★★★ 追加箇所 ★★★ */
       #cancel-container {
         position: absolute;
         top: 10px;
@@ -59,7 +58,6 @@
       #escapeButton:hover {
         background-color: #d35400;
       }
-      /* ★★★ ここまで ★★★ */
       #viewport-container {
         position: fixed;
         top: 0;
@@ -201,6 +199,12 @@
         <button id="paintModeButton" style="background-color: #9b59b6; color: white">ペイント</button>
         <button id="cancelMirrorCopy" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
         <button id="cancelSubtract" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
+      </div>
+      <div id="joint-operations" style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px">
+        <button id="addSphereJoint" style="background-color: #d35400; color: white">球ジョイント</button>
+        <button id="addCylinderJoint" style="background-color: #d35400; color: white">円柱ジョイント</button>
+        <button id="addSlideJoint" style="background-color: #d35400; color: white">スライドジョイント</button>
+        <button id="jointModeButton" style="background-color: #8e44ad; color: white">ジョイント操作</button>
       </div>
       <div>
         <button id="save">保存</button>
