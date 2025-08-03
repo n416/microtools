@@ -4,6 +4,7 @@ import {PaintObjectCommand} from './CommandPaint.js';
 import * as CsgOperations from './CsgOperations.js';
 import * as ClipboardFeatures from './ClipboardFeatures.js';
 import * as PlacementFeatures from './PlacementFeatures.js';
+import * as JointFeatures from './JointFeatures.js';
 
 export class InputHandler {
   constructor(appContext) {
@@ -13,6 +14,7 @@ export class InputHandler {
     this.history = appContext.history;
     this.transformControls = appContext.transformControls;
     this.mechaGroup = appContext.mechaGroup;
+    this.jointGroup = appContext.jointGroup;
     this.previewGroup = appContext.previewGroup;
     this.log = appContext.log;
 
@@ -28,6 +30,7 @@ export class InputHandler {
     this.isDraggingIn2DView = false;
     this.isScalingIn2DView = false;
     this.isRotatingIn2DView = false;
+    this.isDraggingJoint = false;
     this.dragStartPointer = new THREE.Vector2();
     this.draggedInfo = null;
     this.transformStartCache = null;
@@ -87,6 +90,10 @@ export class InputHandler {
       }
       if (this.appState.modes.isSubtractMode) {
         document.getElementById('cancelSubtract').click();
+        return;
+      }
+      if (this.appState.modes.isJointMode) {
+        document.getElementById('jointModeButton').click();
         return;
       }
       if (this.appState.isPaintMode) {
@@ -225,10 +232,14 @@ export class InputHandler {
     }
 
     const selectedObjects = this.appState.selectedObjects;
-    if (selectedObjects.length === 0) return;
+    if (selectedObjects.length === 0 || this.appState.modes.isJointMode) return;
+
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (selectedObjects.length > 0) {
-        const commands = selectedObjects.map((obj) => new DeleteObjectCommand(obj, this.mechaGroup));
+        const commands = selectedObjects.map((obj) => {
+          const parentGroup = obj.userData.isJoint ? this.jointGroup : this.mechaGroup;
+          return new DeleteObjectCommand(obj, parentGroup);
+        });
         this.history.execute(new MacroCommand(commands, `選択した ${selectedObjects.length} 個のオブジェクトを削除`));
         this.appState.clearSelection();
       }
@@ -331,7 +342,7 @@ export class InputHandler {
         this.panStart.y = e.clientY;
         this.cameraStartPos.copy(this.viewportManager.viewports[this.panningViewportKey].camera.position);
         this.appContext.orbitControls.enabled = false;
-        this.viewportManager.viewports[clickedViewportInfo.key].element.style.cursor = 'grabbing';
+        if (clickedViewportInfo) this.viewportManager.viewports[clickedViewportInfo.key].element.style.cursor = 'grabbing';
       }
     };
 
@@ -352,18 +363,32 @@ export class InputHandler {
 
       this.startPoint.set(event.clientX, event.clientY);
 
-      if (this.appState.modes.isMirrorCopyMode || this.appState.modes.isSubtractMode || this.appState.modes.isPasteMode || this.appState.isPaintMode || this.appState.isEyedropperMode || this.appState.isLivePaintPreviewMode || this.appState.modes.isPlacementPreviewMode) return;
-
       const clickedViewport = this.viewportManager.viewports[clickedViewportKey];
       this.pointer.x = ((event.clientX - clickedRect.left) / clickedRect.width) * 2 - 1;
       this.pointer.y = -((event.clientY - clickedRect.top) / clickedRect.height) * 2 + 1;
       this.raycaster.setFromCamera(this.pointer, clickedViewport.camera);
 
+      const allObjectIntersects = this.raycaster.intersectObjects([...this.mechaGroup.children, ...this.jointGroup.children], true);
+      const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
+      const intersectionPoint = allObjectIntersects.length > 0 ? allObjectIntersects[0].point : null;
+
+      if (this.appState.modes.isJointMode) {
+        if (clickedObject && !clickedObject.userData.isJoint && intersectionPoint) {
+          if (JointFeatures.startJointDrag(clickedObject, intersectionPoint, event, this.appContext)) {
+            this.isDraggingJoint = true;
+            this.appContext.orbitControls.enabled = false;
+          }
+        }
+        return;
+      }
+
+      if (this.appState.modes.isMirrorCopyMode || this.appState.modes.isSubtractMode || this.appState.modes.isPasteMode || this.appState.isPaintMode || this.appState.isEyedropperMode || this.appState.isLivePaintPreviewMode || this.appState.modes.isPlacementPreviewMode) {
+        return;
+      }
+
       this.viewportManager.updateScaleGizmo(clickedViewportKey, this.appState);
 
       const is2DView = clickedViewportKey !== 'perspective';
-      const allObjectIntersects = this.raycaster.intersectObjects(this.mechaGroup.children, true);
-      const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
 
       if (is2DView && this.appState.selectedObjects.length > 0) {
         const gizmoHandles = this.appContext.gizmoHandles;
@@ -372,23 +397,13 @@ export class InputHandler {
         const setupTransformState = () => {
           this.appContext.orbitControls.enabled = false;
           this.dragStartPointer.set(event.clientX, event.clientY);
-          // 選択された各オブジェクトに対して、以下の処理を行う。
           this.appState.selectedObjects.forEach((obj) => {
-            // 1. オブジェクトが回転しているか？ (Quaternionが初期状態ではないか？)
             const isRotated = !obj.quaternion.equals(new THREE.Quaternion());
-
-            // 2. もし回転しており、かつ現在「簡易モード」(`matrixAutoUpdate = true`)であれば...
             if (isRotated && obj.matrixAutoUpdate === true) {
-              // 3. オブジェクトを「専門モード」に切り替える。
-              //    これにより、以降の変形は常に matrix が基準となり、シアー情報が失われなくなる。
               obj.matrixAutoUpdate = false;
-
-              // 4. ★重要★ モード切替の瞬間に、現在のPRS(位置・回転・スケール)の状態を
-              //    matrix に一度だけ正確に反映させる。これで情報の不整合が完全に解消される。
               obj.updateMatrix();
             }
           });
-
           this.transformStartCache = this.appState.selectedObjects.map((obj) => ({matrix: obj.matrix.clone()}));
         };
 
@@ -402,7 +417,6 @@ export class InputHandler {
           if (this.transformGroup) this.appContext.scene.remove(this.transformGroup);
           this.transformGroup = new THREE.Group();
           this.appState.transformGroup = this.transformGroup;
-
           this.transformGroup.position.copy(this.dragStartObjectState.position);
           this.appContext.scene.add(this.transformGroup);
           this.appState.selectedObjects.forEach((obj) => this.transformGroup.attach(obj));
@@ -484,6 +498,11 @@ export class InputHandler {
       return;
     }
 
+    if (this.isDraggingJoint) {
+      JointFeatures.applyJointTransform(event, this.appContext);
+      return;
+    }
+
     if (!this.isDraggingIn2DView && !this.isScalingIn2DView && !this.isRotatingIn2DView) return;
 
     event.preventDefault();
@@ -559,27 +578,24 @@ export class InputHandler {
 
         let u_change = 0,
           v_change = 0;
-        let axisU, axisV;
+        let axisU = '',
+          axisV = '';
 
-        switch (this.draggedInfo.viewportKey) {
-          case 'top':
-            u_change = worldDeltaX;
-            v_change = worldDeltaY;
-            axisU = 'x';
-            axisV = 'z';
-            break;
-          case 'front':
-            u_change = worldDeltaX;
-            v_change = -worldDeltaY;
-            axisU = 'x';
-            axisV = 'y';
-            break;
-          case 'side':
-            u_change = -worldDeltaX;
-            v_change = -worldDeltaY;
-            axisU = 'z';
-            axisV = 'y';
-            break;
+        if (this.draggedInfo.viewportKey === 'top') {
+          u_change = worldDeltaX;
+          v_change = worldDeltaY;
+          axisU = 'x';
+          axisV = 'z';
+        } else if (this.draggedInfo.viewportKey === 'front') {
+          u_change = worldDeltaX;
+          v_change = -worldDeltaY;
+          axisU = 'x';
+          axisV = 'y';
+        } else if (this.draggedInfo.viewportKey === 'side') {
+          u_change = -worldDeltaX;
+          v_change = -worldDeltaY;
+          axisU = 'z';
+          axisV = 'y';
         }
 
         const oldMin = new THREE.Vector3().subVectors(oldCenter, oldSize.clone().multiplyScalar(0.5));
@@ -745,31 +761,25 @@ export class InputHandler {
       return;
     }
 
+    if (this.isDraggingJoint) {
+      JointFeatures.endJointDrag(this.appContext);
+      this.isDraggingJoint = false;
+      this.draggedInfo = null;
+      this.appContext.orbitControls.enabled = true;
+      this.activePointerId = null;
+      return;
+    }
+
     if (this.isDraggingIn2DView || this.isScalingIn2DView || this.isRotatingIn2DView) {
       const selectedObjects = this.appState.selectedObjects;
       if (this.transformGroup) {
         const commands = [];
 
-        // ★★★ 将来のデグレ防止のための重要コメント ★★★
-        // 2Dビューでの変形操作は、せん断(Shear)を含む可能性があるため、
-        // 単純なposition, rotation, scale(PRS)では状態を完全に表現できない。
-        // ここでは、以下の手順でせん断情報を含む正しい最終的なローカルマトリクスを計算し、
-        // それをコマンドとして記録する。
-
         selectedObjects.forEach((obj, i) => {
           const oldT = this.transformStartCache[i];
           const originalParent = this.worldTransforms.get(obj).parent;
-
-          // 1. three.jsのattach()メソッドを利用する。
-          //    これは、オブジェクトのワールド空間での見た目(位置、回転、拡縮、せん断の全て)を
-          //    完全に維持したまま、親子関係を安全に変更するための公式な方法。
-          // 2. この操作により、オブジェクトの`.matrix`プロパティ(ローカル座標変換マトリクス)が
-          //    新しい親(originalParent)に対して、見た目が変わらないように自動的に再計算される。
-          // 3. この再計算された`.matrix`こそが、せん断情報を含む正しい最終的な変形状態である。
           originalParent.attach(obj);
-
           const newT = {matrix: obj.matrix.clone()};
-
           if (!oldT.matrix.equals(newT.matrix)) {
             commands.push(new TransformCommand(obj, oldT, newT));
           }
@@ -811,7 +821,9 @@ export class InputHandler {
           const view = this.viewportManager.viewports[key];
           const rect = view.element.getBoundingClientRect();
           if (boxRect.left > rect.right || boxRect.right < rect.left || boxRect.top > rect.bottom || boxRect.bottom < rect.top) continue;
-          this.mechaGroup.children.forEach((mesh) => {
+
+          const allVisibleObjects = [...this.mechaGroup.children, ...this.jointGroup.children];
+          allVisibleObjects.forEach((mesh) => {
             if (mesh.userData.isNonSelectable) return;
             const pos = new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld);
             pos.project(view.camera);
@@ -876,14 +888,11 @@ export class InputHandler {
         return;
       }
 
-      const intersects = this.raycaster.intersectObjects(
-        this.mechaGroup.children.filter((c) => !c.userData.isNonSelectable),
-        false
-      );
+      const intersects = this.raycaster.intersectObjects([...this.mechaGroup.children.filter((c) => !c.userData.isNonSelectable), ...this.jointGroup.children], false);
       const clickedObject = intersects.length > 0 ? intersects[0].object : null;
 
       if (this.appState.isEyedropperMode) {
-        if (clickedObject) {
+        if (clickedObject && !clickedObject.userData.isJoint) {
           const pickedProps = {
             color: clickedObject.material.color.clone(),
             metalness: clickedObject.material.metalness,
@@ -920,10 +929,20 @@ export class InputHandler {
         } else if (!this.appState.selectedObjects.includes(clickedObject)) {
           document.getElementById('confirmPaint').click();
         }
+        this.activePointerId = null;
+        return;
       }
 
-      if (this.appState.isPaintMode) {
-        if (clickedObject) {
+      if (this.appState.modes.isJointMode) {
+        if (e.ctrlKey) {
+          this.appState.toggleSelection(clickedObject);
+        } else if (e.shiftKey || this.appState.isMultiSelectMode) {
+          this.appState.addSelection(clickedObject);
+        } else {
+          this.appState.setSelection(clickedObject);
+        }
+      } else if (this.appState.isPaintMode) {
+        if (clickedObject && !clickedObject.userData.isJoint) {
           this.history.execute(new PaintObjectCommand(clickedObject, this.appState.brushProperties));
           this.appState.setSelection(clickedObject);
         }
@@ -965,7 +984,19 @@ export class InputHandler {
           this.appState.setSelection(clickedObject);
         }
         if (this.appState.isMultiSelectMode && !clickedObject) document.dispatchEvent(new CustomEvent('setMultiSelectMode', {detail: false}));
-        this.log(this.appState.selectedObjects.length > 0 ? `${this.appState.selectedObjects.length}個のオブジェクトを選択中` : '待機中');
+      }
+
+      const selectionCount = this.appState.selectedObjects.length;
+      if (selectionCount > 0) {
+        const firstObj = this.appState.selectedObjects[0];
+        const objectType = firstObj.userData.isJoint ? 'ジョイント' : 'オブジェクト';
+        this.log(selectionCount > 1 ? `${selectionCount}個のオブジェクト/ジョイントを選択中` : `${objectType}を選択中`);
+        if (firstObj.userData.isJoint) {
+          // ★★★ ここが修正箇所です ★★★
+          this.log(`子オブジェクト: ${firstObj.userData.childObjects?.length ?? 0}個`);
+        }
+      } else {
+        this.log('待機中');
       }
     } else {
       if (!e.ctrlKey && !e.shiftKey && !this.appState.isMultiSelectMode) {

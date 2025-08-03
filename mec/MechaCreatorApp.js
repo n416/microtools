@@ -21,27 +21,27 @@ export class MechaCreatorApp {
     this.gizmoMode = 'scale';
     this.guides = {};
     this.mechaGroup = new THREE.Group();
+    this.jointGroup = new THREE.Group();
     this.previewGroup = new THREE.Group();
     this.selectionBoxes = new THREE.Group();
     this.scaleGizmoGroup = new THREE.Group();
     this.gizmoHandles = [];
     this.gizmoLineMaterial = new THREE.LineBasicMaterial({color: 0xffff00, toneMapped: false, depthTest: false});
 
-    this.setupScene();
-
     this.appState = new AppState();
-
-    const appInstance = this;
     this.history = new History(this);
     this.viewportManager = new ViewportManager(document.getElementById('viewport-container'), this.scene, this.mechaGroup, this.selectionBoxes, this.scaleGizmoGroup);
 
     this.orbitControls = new OrbitControls(this.viewportManager.viewports.perspective.camera, this.viewportManager.viewports.perspective.element);
     this.transformControls = new TransformControls(this.viewportManager.viewports.perspective.camera, this.renderer.domElement);
 
+    const appInstance = this; // `this`をappInstanceとしてキャプチャ
+
     this.appContext = {
       scene: this.scene,
       renderer: this.renderer,
       mechaGroup: this.mechaGroup,
+      jointGroup: this.jointGroup,
       previewGroup: this.previewGroup,
       viewportManager: this.viewportManager,
       transformControls: this.transformControls,
@@ -61,16 +61,21 @@ export class MechaCreatorApp {
       originalMaterials: new Map(),
       gizmoHandles: this.gizmoHandles,
       guides: this.guides,
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      // ★★★ ここが無限再帰バグの修正箇所です ★★★
       get gizmoMode() {
         return appInstance.gizmoMode;
       },
       get isPanModeActive() {
         return appInstance.isPanModeActive;
       },
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
     };
 
     this.inputHandler = new InputHandler(this.appContext);
     this.uiControl = new UIControl(this.appContext);
+
+    this.setupScene();
 
     this.viewportManager.setRenderer(this.renderer);
     this.viewportManager.setControls(this.transformControls, this.orbitControls);
@@ -157,8 +162,11 @@ export class MechaCreatorApp {
     this.scene.add(this.guides.boss);
 
     this.scene.add(this.mechaGroup);
+    this.scene.add(this.jointGroup);
     this.scene.add(this.previewGroup);
     this.scene.add(this.selectionBoxes);
+
+    this.scene.add(this.transformControls);
 
     const gizmoHandleMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, toneMapped: false, depthTest: false, side: THREE.DoubleSide});
     const handleSize = 0.5;
@@ -213,13 +221,11 @@ export class MechaCreatorApp {
     }
     this.transformControls.detach();
 
-    if (selectedObjects.length === 1) {
+    if (this.appState.modes.isJointMode) {
+      // Joint mode, no gizmo
+    } else if (selectedObjects.length === 1) {
       this.transformControls.attach(selectedObjects[0]);
-      this.selectionBoxes.add(new THREE.BoxHelper(selectedObjects[0], 0xffff00));
     } else if (selectedObjects.length > 1) {
-      selectedObjects.forEach((obj) => {
-        this.selectionBoxes.add(new THREE.BoxHelper(obj, 0xffff00));
-      });
       const groupBox3 = new THREE.Box3();
       selectedObjects.forEach((obj) => {
         groupBox3.expandByObject(obj);
@@ -235,6 +241,13 @@ export class MechaCreatorApp {
         this.selectionBoxes.add(new THREE.BoxHelper(boxMesh, 0x00ff00));
         this.groupBoundingBoxMesh = boxMesh;
       }
+    }
+
+    if (selectedObjects.length > 0) {
+      selectedObjects.forEach((obj) => {
+        const color = obj.userData.isJoint ? 0xffa500 : 0xffff00;
+        this.selectionBoxes.add(new THREE.BoxHelper(obj, color));
+      });
     }
   }
 
@@ -277,6 +290,10 @@ export class MechaCreatorApp {
     this.appState.onSelectionChange.add(this.updateSelection.bind(this));
     this.inputHandler.initialize();
     this.uiControl.initialize();
+
+    this.transformControls.addEventListener('dragging-changed', (event) => {
+      this.orbitControls.enabled = !event.value;
+    });
 
     document.addEventListener('setGizmoMode', (e) => {
       this.gizmoMode = e.detail;
