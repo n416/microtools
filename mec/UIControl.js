@@ -6,8 +6,9 @@ import * as SceneIO from './SceneIo.js';
 import * as ClipboardFeatures from './ClipboardFeatures.js';
 import {createColorPalette} from './Paint.js';
 import * as THREE from 'three';
-import * as PlacementFeatures from './PlacementFeatures.js'; // ★ 新しいファイルをインポート
-import {OBJLoader} from './OBJLoader.js'; // 新しく作成したOBJLoaderをインポート
+import * as PlacementFeatures from './PlacementFeatures.js';
+import * as JointFeatures from './JointFeatures.js'; // ★★★ 追加 ★★★
+import {OBJLoader} from './OBJLoader.js';
 
 function getVectorFromDirection(direction) {
   switch (direction) {
@@ -34,26 +35,26 @@ export class UIControl {
     this.history = appContext.history;
     this.appState = appContext.state;
     this.mechaGroup = appContext.mechaGroup;
+    this.jointGroup = appContext.jointGroup; // ★★★ 追加 ★★★
     this.log = appContext.log;
   }
 
   initialize() {
     this.setupObjectCreation();
     this.setupCsgOperations();
+    this.setupJointOperations(); // ★★★ 追加 ★★★
     this.setupFileIO();
     this.setupModeButtons();
     this.setupPaintControls();
     this.setupGlobalCancel();
-    this.setupGhostControls(); // ★ 新しいメソッド呼び出しを追加
-    this.setupViewControls(); // ★★★ この行を追加 ★★★
+    this.setupGhostControls();
+    this.setupViewControls();
   }
-  // ★★★ この関数を丸ごと追加 ★★★
+
   setupViewControls() {
     const wireframeToggle = document.getElementById('wireframeToggle');
-    // アプリの状態をチェックボックスに反映
     wireframeToggle.checked = this.appState.isWireframeOverlay;
 
-    // チェックボックスが変更されたら、アプリの状態を更新
     wireframeToggle.addEventListener('change', (event) => {
       this.appState.isWireframeOverlay = event.target.checked;
     });
@@ -61,42 +62,35 @@ export class UIControl {
   setupGlobalCancel() {
     const escapeButton = document.getElementById('escapeButton');
     escapeButton.addEventListener('click', () => {
-      // ★★★ 修正箇所: { bubbles: true } を追加 ★★★
       document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
     });
   }
-  // ★★★ この関数を丸ごと置き換え ★★★
   setupObjectCreation() {
     const defaultSize = 0.125;
 
-    // 立方体
     document.getElementById('addCube').addEventListener('click', () => {
       const geometry = new THREE.BoxGeometry(defaultSize, defaultSize, defaultSize);
-      PlacementFeatures.requestAddObject(geometry, this.appContext); // ★ 呼び出しを変更
+      PlacementFeatures.requestAddObject(geometry, this.appContext);
     });
 
-    // 球体
     document.getElementById('addSphere').addEventListener('click', () => {
       const radius = defaultSize / 2;
       const geometry = new THREE.SphereGeometry(radius, 32, 16);
-      PlacementFeatures.requestAddObject(geometry, this.appContext); // ★ 呼び出しを変更
+      PlacementFeatures.requestAddObject(geometry, this.appContext);
     });
 
-    // 円錐
     document.getElementById('addCone').addEventListener('click', () => {
       const radius = defaultSize / 2;
       const geometry = new THREE.ConeGeometry(radius, defaultSize, 32);
-      PlacementFeatures.requestAddObject(geometry, this.appContext); // ★ 呼び出しを変更
+      PlacementFeatures.requestAddObject(geometry, this.appContext);
     });
 
-    // 円柱
     document.getElementById('addCylinder').addEventListener('click', () => {
       const radius = defaultSize / 2;
       const geometry = new THREE.CylinderGeometry(radius, radius, defaultSize, 32);
-      PlacementFeatures.requestAddObject(geometry, this.appContext); // ★ 呼び出しを変更
+      PlacementFeatures.requestAddObject(geometry, this.appContext);
     });
 
-    // 多角形柱
     document.getElementById('addPrism').addEventListener('click', () => {
       document.getElementById('prismModal').style.display = 'flex';
     });
@@ -110,7 +104,7 @@ export class UIControl {
       sidesInput.value = sides;
       const radius = defaultSize / 2;
       const geometry = new THREE.CylinderGeometry(radius, radius, defaultSize, sides);
-      PlacementFeatures.requestAddObject(geometry, this.appContext); // ★ 呼び出しを変更
+      PlacementFeatures.requestAddObject(geometry, this.appContext);
       document.getElementById('prismModal').style.display = 'none';
     });
   }
@@ -127,13 +121,35 @@ export class UIControl {
     document.getElementById('deleteObject').addEventListener('click', () => {
       const selected = this.appState.selectedObjects;
       if (selected.length === 0) return this.log('削除対象なし');
-      this.history.execute(
-        new MacroCommand(
-          selected.map((obj) => new DeleteObjectCommand(obj, this.mechaGroup)),
-          `選択した ${selected.length} 個のオブジェクトを削除`
-        )
-      );
+
+      // ★★★ 修正: 削除対象の親グループを判別 ★★★
+      const commands = selected.map((obj) => {
+        const parentGroup = obj.userData.isJoint ? this.jointGroup : this.mechaGroup;
+        return new DeleteObjectCommand(obj, parentGroup);
+      });
+
+      this.history.execute(new MacroCommand(commands, `選択した ${selected.length} 個のオブジェクトを削除`));
       this.appState.clearSelection();
+    });
+  }
+
+  // ★★★ この関数を丸ごと追加 ★★★
+  setupJointOperations() {
+    document.getElementById('addSphereJoint').addEventListener('click', () => {
+      JointFeatures.requestAddJoint('sphere', this.appContext);
+    });
+    document.getElementById('addCylinderJoint').addEventListener('click', () => {
+      JointFeatures.requestAddJoint('cylinder', this.appContext);
+    });
+    document.getElementById('addSlideJoint').addEventListener('click', () => {
+      JointFeatures.requestAddJoint('slide', this.appContext);
+    });
+
+    const jointModeButton = document.getElementById('jointModeButton');
+    jointModeButton.addEventListener('click', () => {
+      this.appState.modes.isJointMode = !this.appState.modes.isJointMode;
+      jointModeButton.style.backgroundColor = this.appState.modes.isJointMode ? '#2ecc71' : '#8e44ad';
+      this.log(this.appState.modes.isJointMode ? 'ジョイント操作モード開始。' : 'ジョイント操作モード終了。');
     });
   }
 
@@ -152,17 +168,14 @@ export class UIControl {
       this.log('データ保存');
     });
     document.getElementById('load').addEventListener('click', () => fileInput.click());
-    // ★★★ ここからOBJインポート処理を追加 ★★★
     document.getElementById('importObj').addEventListener('click', () => objFileInput.click());
 
-    // ★★★ ここから修正 ★★★
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (re) => {
         const fileContent = re.target.result;
-        // ファイル内容がJSON形式で始まっているか簡易的にチェック
         if (!fileContent.trim().startsWith('{')) {
           this.log('エラー: このファイルは有効なシーンデータではありません。OBJモデルは「OBJ読込」ボタンからインポートしてください。');
           return;
@@ -177,9 +190,7 @@ export class UIControl {
       reader.readAsText(file);
       e.target.value = '';
     });
-    // ★★★ 修正はここまで ★★★
-    
-    // OBJファイルが選択されたときの処理
+
     objFileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -189,7 +200,6 @@ export class UIControl {
           const loader = new OBJLoader();
           const geometry = loader.parse(re.target.result);
 
-          // ジオメトリが正常に生成されたかチェック
           if (geometry.attributes.position.count === 0) {
             this.log('OBJファイルの解析に失敗しました。対応していない形式の可能性があります。');
             return;
@@ -200,36 +210,12 @@ export class UIControl {
             side: THREE.DoubleSide,
           });
           const mesh = new THREE.Mesh(geometry, material);
-
-          // オブジェクトをシーンの中央に配置
           mesh.position.set(0, 0, 0);
-
-          // ★★★ 修正箇所 ★★★
-          // 2つのフラグ/データをuserDataに保存する
           mesh.userData.isImportedOBJ = true;
-          mesh.userData.fileName = file.name; // ファイル名を保存
-
-          // 新しいコマンドを使ってオブジェクトをシーンに追加
+          mesh.userData.fileName = file.name;
           this.history.execute(new ImportObjectCommand(mesh, this.mechaGroup, this.appContext.selectionManager, file.name));
         } catch (err) {
           this.log('OBJファイルの読み込み中にエラーが発生しました。');
-          console.error(err);
-        }
-      };
-      reader.readAsText(file);
-      e.target.value = ''; // 同じファイルを連続で選択できるようにする
-    });
-    // ★★★ OBJインポート処理ここまで ★★★
-
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (re) => {
-        try {
-          SceneIO.loadFromData(this.appContext, JSON.parse(re.target.result));
-        } catch (err) {
-          this.log('ファイル読込失敗');
           console.error(err);
         }
       };

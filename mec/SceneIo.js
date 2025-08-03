@@ -1,21 +1,38 @@
 import * as THREE from 'three';
+
+function getVectorFromDirection(direction) {
+  switch (direction) {
+    case 'pos-x':
+      return new THREE.Vector3(1, 0, 0);
+    case 'neg-x':
+      return new THREE.Vector3(-1, 0, 0);
+    case 'pos-y':
+      return new THREE.Vector3(0, 1, 0);
+    case 'neg-y':
+      return new THREE.Vector3(0, -1, 0);
+    case 'pos-z':
+      return new THREE.Vector3(0, 0, 1);
+    case 'neg-z':
+      return new THREE.Vector3(0, 0, -1);
+    default:
+      return new THREE.Vector3(0, 0, -1);
+  }
+}
+
 export function autoSaveScene(context) {
-  const {mechaGroup} = context;
-  const sceneData = {objects: []};
+  const {mechaGroup, jointGroup} = context;
+  const sceneData = {objects: [], joints: []};
+
   mechaGroup.children.forEach((mesh) => {
-    // isNonSelectableなオブジェクトは引き続き保存しない
     if (mesh.userData.isNonSelectable) return;
 
     let geometryType = '';
     let geometryParameters = null;
-    let customUserData = {}; // ★ userDataを保存するための変数を追加
+    let customUserData = {};
 
-    // ★★★ 修正箇所: インポートされたOBJかどうかを最初に判定 ★★★
     if (mesh.userData.isImportedOBJ) {
       geometryType = 'ImportedOBJ';
-      // 巨大なジオメトリは保存しない
       geometryParameters = null;
-      // ファイル名などの必要なuserDataを保存対象に含める
       customUserData.fileName = mesh.userData.fileName;
       customUserData.isImportedOBJ = true;
     } else if (mesh.geometry instanceof THREE.BoxGeometry) {
@@ -41,6 +58,7 @@ export function autoSaveScene(context) {
 
     if (geometryType) {
       const saveData = {
+        uuid: mesh.uuid,
         geometryType,
         geometryParameters,
         position: mesh.position.toArray(),
@@ -52,7 +70,6 @@ export function autoSaveScene(context) {
           emissive: mesh.material.emissive.getHex(),
           emissiveIntensity: mesh.material.emissiveIntensity,
         },
-        // ★ isPrismやインポートされたファイル名などのuserDataを保存
         userData: {...mesh.userData, ...customUserData},
       };
 
@@ -67,6 +84,22 @@ export function autoSaveScene(context) {
       }
       sceneData.objects.push(saveData);
     }
+  });
+
+  jointGroup.children.forEach((joint) => {
+    const saveData = {
+      uuid: joint.uuid,
+      type: joint.userData.type,
+      position: joint.position.toArray(),
+      rotation: joint.rotation.toArray().slice(0, 3),
+      scale: joint.scale.toArray(),
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      // ★★★ ここが親子情報を正しく保存する修正箇所です ★★★
+      parentObject: joint.userData.parentObject,
+      childObjects: joint.userData.childObjects,
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    };
+    sceneData.joints.push(saveData);
   });
 
   try {
@@ -84,8 +117,8 @@ export function autoSaveScene(context) {
 }
 
 export function loadFromData(context, sceneData) {
-  const {mechaGroup, transformControls, log, history} = context;
-  // (既存のオブジェクト削除処理は変更なし)
+  const {mechaGroup, jointGroup, transformControls, log, history} = context;
+
   while (mechaGroup.children.length > 0) {
     const mesh = mechaGroup.children[0];
     mechaGroup.remove(mesh);
@@ -94,84 +127,138 @@ export function loadFromData(context, sceneData) {
       if (child.material) child.material.dispose();
     });
   }
+  while (jointGroup.children.length > 0) {
+    const joint = jointGroup.children[0];
+    jointGroup.remove(joint);
+    joint.traverse((child) => {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) child.material.dispose();
+    });
+  }
   transformControls.detach();
 
   const loader = new THREE.BufferGeometryLoader();
-  sceneData.objects.forEach((data) => {
-    let geometry;
-    const params = data.geometryParameters;
 
-    switch (data.geometryType) {
-      // ★★★ 修正箇所: ImportedOBJのケースを追加 ★★★
-      case 'ImportedOBJ':
-        // ジオメトリは復元できないので、ユーザーに再インポートを促す
-        log(`要再読込: ${data.userData.fileName || '不明なOBJファイル'}`);
-        return; // このオブジェクトの読み込みはここで終了
-      case 'Box':
-        geometry = new THREE.BoxGeometry(params?.width ?? 1, params?.height ?? 1, params?.depth ?? 1);
-        break;
-      case 'Sphere':
-        geometry = new THREE.SphereGeometry(params?.radius ?? 0.7, params?.widthSegments ?? 32, params?.heightSegments ?? 16);
-        break;
-      case 'Cone':
-        geometry = new THREE.ConeGeometry(params?.radius ?? 0.7, params?.height ?? 1.5, params?.radialSegments ?? 32);
-        break;
-      case 'Cylinder':
-        geometry = new THREE.CylinderGeometry(params?.radiusTop ?? 0.5, params?.radiusBottom ?? 0.5, params?.height ?? 1.5, params?.radialSegments ?? 32);
-        break;
-      case 'Prism':
-        const sides = params?.radialSegments ?? data.sides ?? 6;
-        geometry = new THREE.CylinderGeometry(params?.radiusTop ?? 0.7, params?.radiusBottom ?? 0.7, params?.height ?? 1.5, sides);
-        break;
-      case 'Custom':
-        const customGeomData = params ?? data.geometryData;
-        if (customGeomData) geometry = loader.parse(customGeomData);
-        break;
-      default:
-        return;
-    }
+  if (sceneData.objects) {
+    sceneData.objects.forEach((data) => {
+      let geometry;
+      const params = data.geometryParameters;
 
-    if (geometry) {
-      // (以降のマテリアル設定やオブジェクト配置のコードは変更なし)
-      const materialProps = {side: THREE.DoubleSide};
-      if (data.material) {
-        materialProps.color = data.material.color;
-        materialProps.metalness = data.material.metalness;
-        materialProps.emissive = data.material.emissive;
-        materialProps.emissiveIntensity = data.material.emissiveIntensity;
-      } else {
-        materialProps.color = data.color;
-        materialProps.metalness = 1.0;
-        materialProps.emissive = 0x000000;
-      }
-      const material = new THREE.MeshStandardMaterial(materialProps);
-
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.fromArray(data.position);
-      mesh.rotation.fromArray(data.rotation);
-      mesh.scale.fromArray(data.scale);
-
-      // ★★★ 修正箇所: 保存されたuserDataを復元 ★★★
-      if (data.userData) {
-        mesh.userData = {...mesh.userData, ...data.userData};
+      switch (data.geometryType) {
+        case 'ImportedOBJ':
+          log(`要再読込: ${data.userData.fileName || '不明なOBJファイル'}`);
+          return;
+        case 'Box':
+          geometry = new THREE.BoxGeometry(params?.width ?? 1, params?.height ?? 1, params?.depth ?? 1);
+          break;
+        case 'Sphere':
+          geometry = new THREE.SphereGeometry(params?.radius ?? 0.7, params?.widthSegments ?? 32, params?.heightSegments ?? 16);
+          break;
+        case 'Cone':
+          geometry = new THREE.ConeGeometry(params?.radius ?? 0.7, params?.height ?? 1.5, params?.radialSegments ?? 32);
+          break;
+        case 'Cylinder':
+          geometry = new THREE.CylinderGeometry(params?.radiusTop ?? 0.5, params?.radiusBottom ?? 0.5, params?.height ?? 1.5, params?.radialSegments ?? 32);
+          break;
+        case 'Prism':
+          const sides = params?.radialSegments ?? data.sides ?? 6;
+          geometry = new THREE.CylinderGeometry(params?.radiusTop ?? 0.7, params?.radiusBottom ?? 0.7, params?.height ?? 1.5, sides);
+          break;
+        case 'Custom':
+          const customGeomData = params ?? data.geometryData;
+          if (customGeomData) geometry = loader.parse(customGeomData);
+          break;
+        default:
+          return;
       }
 
-      if (data.spotLight) {
-        const spotLight = new THREE.SpotLight(data.spotLight.color);
-        spotLight.intensity = data.spotLight.intensity;
-        spotLight.penumbra = data.spotLight.penumbra;
-        spotLight.name = 'EmissiveLight';
-        spotLight.target = new THREE.Object3D();
-        spotLight.target.name = 'EmissiveLightTarget';
-        const direction = data.spotLight.direction || 'neg-z';
-        spotLight.userData.direction = direction;
-        spotLight.target.position.copy(getVectorFromDirection(direction));
-        mesh.add(spotLight, spotLight.target);
+      if (geometry) {
+        const materialProps = {side: THREE.DoubleSide};
+        if (data.material) {
+          materialProps.color = data.material.color;
+          materialProps.metalness = data.material.metalness;
+          materialProps.emissive = data.material.emissive;
+          materialProps.emissiveIntensity = data.material.emissiveIntensity;
+        } else {
+          materialProps.color = data.color;
+          materialProps.metalness = 1.0;
+          materialProps.emissive = 0x000000;
+        }
+        const material = new THREE.MeshStandardMaterial(materialProps);
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.uuid = data.uuid;
+        mesh.position.fromArray(data.position);
+        mesh.rotation.fromArray(data.rotation);
+        mesh.scale.fromArray(data.scale);
+
+        if (data.userData) {
+          mesh.userData = {...mesh.userData, ...data.userData};
+        }
+
+        if (data.spotLight) {
+          const spotLight = new THREE.SpotLight(data.spotLight.color);
+          spotLight.intensity = data.spotLight.intensity;
+          spotLight.penumbra = data.spotLight.penumbra;
+          spotLight.name = 'EmissiveLight';
+          spotLight.target = new THREE.Object3D();
+          spotLight.target.name = 'EmissiveLightTarget';
+          const direction = data.spotLight.direction || 'neg-z';
+          spotLight.userData.direction = direction;
+          spotLight.target.position.copy(getVectorFromDirection(direction));
+          mesh.add(spotLight, spotLight.target);
+        }
+
+        mechaGroup.add(mesh);
+      }
+    });
+  }
+
+  if (sceneData.joints) {
+    sceneData.joints.forEach((data) => {
+      let geometry;
+      const size = 0.1;
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xffa500,
+        transparent: true,
+        opacity: 0.8,
+        depthTest: false,
+        wireframe: true,
+      });
+
+      switch (data.type) {
+        case 'sphere':
+          geometry = new THREE.SphereGeometry(size / 2, 16, 8);
+          break;
+        case 'cylinder':
+          geometry = new THREE.CylinderGeometry(size / 3, size / 3, size * 1.5, 16);
+          break;
+        case 'slide':
+          geometry = new THREE.BoxGeometry(size * 2, size / 2, size / 2);
+          break;
+        default:
+          return;
+      }
+      const joint = new THREE.Mesh(geometry, material);
+      joint.uuid = data.uuid;
+      joint.userData.isJoint = true;
+      joint.userData.type = data.type;
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      // ★★★ ここが親子情報を正しく読み込む修正箇所です ★★★
+      joint.userData.parentObject = data.parentObject;
+      joint.userData.childObjects = data.childObjects;
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+      joint.position.fromArray(data.position);
+      joint.rotation.fromArray(data.rotation);
+      if (data.scale) {
+        joint.scale.fromArray(data.scale);
       }
 
-      mechaGroup.add(mesh);
-    }
-  });
+      jointGroup.add(joint);
+    });
+  }
+
   log('データ読込完了');
   history.undoStack = [];
   history.redoStack = [];

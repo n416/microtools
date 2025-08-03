@@ -9,13 +9,12 @@ export class AddObjectCommand extends command {
     this.object = object;
     this.mechaGroup = mechaGroup;
     this.selectionManager = selectionManager;
-    this.isInternal = isInternal; // ペーストやCSG操作など、外部で選択管理する場合はtrue
+    this.isInternal = isInternal;
     this.message = isInternal ? `オブジェクトを内部処理で追加` : `${object.geometry.type.replace('Geometry', '')} を追加`;
   }
 
   execute() {
     this.mechaGroup.add(this.object);
-    // UIから直接追加された場合のみ、選択状態を更新する
     if (!this.isInternal) {
       this.selectionManager.set([this.object]);
     }
@@ -23,7 +22,30 @@ export class AddObjectCommand extends command {
 
   undo() {
     this.mechaGroup.remove(this.object);
-    // undo後はHistoryクラスで選択がクリアされるため、ここでは何もしない
+  }
+}
+
+/**
+ * ジョイントをシーンに追加するコマンド。
+ */
+export class AddJointCommand extends command {
+  constructor(joint, jointGroup, selectionManager, parentObject, childObjects) {
+    super();
+    this.object = joint;
+    this.jointGroup = jointGroup;
+    this.selectionManager = selectionManager;
+    this.parentObject = parentObject;
+    this.childObjects = childObjects;
+    this.message = `${joint.userData.type}ジョイントを追加`;
+  }
+
+  execute() {
+    this.jointGroup.add(this.object);
+    this.selectionManager.set([this.object, this.parentObject, ...this.childObjects]);
+  }
+
+  undo() {
+    this.jointGroup.remove(this.object);
   }
 }
 
@@ -48,7 +70,7 @@ export class MirrorCopyCommand extends command {
 }
 
 /**
- * インポートされたオブジェクトをシーンに追加するコマンド (★★★★★追加★★★★★)
+ * インポートされたオブジェクトをシーンに追加するコマンド
  */
 export class ImportObjectCommand extends command {
   constructor(object, mechaGroup, selectionManager, fileName) {
