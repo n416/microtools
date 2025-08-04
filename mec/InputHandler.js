@@ -1,10 +1,12 @@
 import * as THREE from 'three';
+// ★★★ The unnecessary import of IkTransformCommand has been removed from this line ★★★
 import {TransformCommand, MacroCommand, DeleteObjectCommand} from './CommandEdit.js';
 import {PaintObjectCommand} from './CommandPaint.js';
 import * as CsgOperations from './CsgOperations.js';
 import * as ClipboardFeatures from './ClipboardFeatures.js';
 import * as PlacementFeatures from './PlacementFeatures.js';
 import * as JointFeatures from './JointFeatures.js';
+import * as IkFeatures from './IkFeatures.js';
 
 export class InputHandler {
   constructor(appContext) {
@@ -43,6 +45,8 @@ export class InputHandler {
 
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
+
+    this.isPreparingIkDrag = false;
   }
 
   initialize() {
@@ -90,6 +94,10 @@ export class InputHandler {
       }
       if (this.appState.modes.isSubtractMode) {
         document.getElementById('cancelSubtract').click();
+        return;
+      }
+      if (this.appState.modes.isIkMode) {
+        document.getElementById('ikModeButton').click();
         return;
       }
       if (this.appState.modes.isJointMode) {
@@ -232,7 +240,7 @@ export class InputHandler {
     }
 
     const selectedObjects = this.appState.selectedObjects;
-    if (selectedObjects.length === 0 || this.appState.modes.isJointMode) return;
+    if (selectedObjects.length === 0 || this.appState.modes.isJointMode || this.appState.modes.isIkMode) return;
 
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (selectedObjects.length > 0) {
@@ -372,6 +380,16 @@ export class InputHandler {
       const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
       const intersectionPoint = allObjectIntersects.length > 0 ? allObjectIntersects[0].point : null;
 
+      if (this.appState.modes.isIkMode) {
+        if (clickedObject && !clickedObject.userData.isJoint) {
+          if (this.appState.modes.ik.endEffector === clickedObject) {
+            this.isPreparingIkDrag = true;
+            this.appContext.orbitControls.enabled = false;
+          }
+        }
+        return;
+      }
+
       if (this.appState.modes.isJointMode) {
         if (clickedObject && !clickedObject.userData.isJoint && intersectionPoint) {
           if (JointFeatures.startJointDrag(clickedObject, intersectionPoint, event, this.appContext)) {
@@ -495,6 +513,16 @@ export class InputHandler {
       this.selectionBoxElement.style.top = `${top}px`;
       this.selectionBoxElement.style.width = `${width}px`;
       this.selectionBoxElement.style.height = `${height}px`;
+      return;
+    }
+
+    if (this.isPreparingIkDrag) {
+      if (IkFeatures.startIkDrag(event, this.appContext)) {
+        this.isPreparingIkDrag = false;
+      }
+    }
+    if (this.appState.modes.ik.isDragging) {
+      IkFeatures.solveIk(event, this.appContext);
       return;
     }
 
@@ -761,6 +789,12 @@ export class InputHandler {
       return;
     }
 
+    if (this.appState.modes.ik.isDragging) {
+      IkFeatures.endIkDrag(this.appContext);
+    }
+    this.isPreparingIkDrag = false;
+    this.appContext.orbitControls.enabled = true;
+
     if (this.isDraggingJoint) {
       JointFeatures.endJointDrag(this.appContext);
       this.isDraggingJoint = false;
@@ -933,7 +967,13 @@ export class InputHandler {
         return;
       }
 
-      if (this.appState.modes.isJointMode) {
+      if (this.appState.modes.isIkMode) {
+        if (clickedObject && !clickedObject.userData.isJoint) {
+          IkFeatures.selectEndEffector(clickedObject, this.appContext);
+        } else {
+          this.appState.clearIkSelection();
+        }
+      } else if (this.appState.modes.isJointMode) {
         if (e.ctrlKey) {
           this.appState.toggleSelection(clickedObject);
         } else if (e.shiftKey || this.appState.isMultiSelectMode) {
@@ -987,21 +1027,22 @@ export class InputHandler {
       }
 
       const selectionCount = this.appState.selectedObjects.length;
-      if (selectionCount > 0) {
+      if (this.appState.modes.isIkMode) {
+        // IKモードのログはIKFeaturesで管理
+      } else if (selectionCount > 0) {
         const firstObj = this.appState.selectedObjects[0];
         const objectType = firstObj.userData.isJoint ? 'ジョイント' : 'オブジェクト';
         this.log(selectionCount > 1 ? `${selectionCount}個のオブジェクト/ジョイントを選択中` : `${objectType}を選択中`);
         if (firstObj.userData.isJoint) {
-          // ★★★ ここが修正箇所です ★★★
           this.log(`子オブジェクト: ${firstObj.userData.childObjects?.length ?? 0}個`);
         }
       } else {
-        this.log('待機中');
+        if (!this.appState.modes.isIkMode) this.log('待機中');
       }
     } else {
       if (!e.ctrlKey && !e.shiftKey && !this.appState.isMultiSelectMode) {
         this.appState.clearSelection();
-        this.log('待機中');
+        if (!this.appState.modes.isIkMode) this.log('待機中');
       }
     }
     this.activePointerId = null;

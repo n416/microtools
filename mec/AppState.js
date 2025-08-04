@@ -11,7 +11,13 @@ export class AppState {
       isPasteMode: false,
       isSubtractMode: false,
       isPlacementPreviewMode: false,
-      isJointMode: false, // ★★★ このフラグを追加 ★★★
+      isJointMode: false, // FK
+      isIkMode: false,
+      ik: {
+        endEffector: null,
+        ikChain: [],
+        isDragging: false,
+      },
       subtractTargets: [],
       clipboard: null,
       lastPasteInfo: {objects: [], offset: new THREE.Vector3()},
@@ -71,6 +77,32 @@ export class AppState {
     this.selectedObjects = [];
     this.notifySelectionChange();
   }
+
+  clearIkSelection() {
+    // 選択ハイライト(BoxHelper)を削除
+    if (this.modes.ik.endEffector && this.modes.ik.endEffector.userData.boxHelper) {
+      const boxHelper = this.modes.ik.endEffector.userData.boxHelper;
+      // boxHelper.parent が存在する場合のみ remove を呼び出す
+      if (boxHelper.parent) {
+        boxHelper.parent.remove(boxHelper);
+      }
+      this.modes.ik.endEffector.userData.boxHelper = null; // 参照を削除
+    }
+
+    // IKチェーンのジョイントのハイライトを元に戻す
+    if (this.modes.ik.ikChain) {
+        this.modes.ik.ikChain.forEach(joint => {
+            joint.material.color.set(0xffa500); // 元の色に戻す
+        });
+    }
+
+    // IK状態をリセット
+    this.modes.ik.endEffector = null;
+    this.modes.ik.ikChain = [];
+    this.modes.ik.isDragging = false;
+    this.notifySelectionChange();
+  }
+
 
   notifySelectionChange() {
     this.onSelectionChange.forEach((callback) => callback(this.selectedObjects));

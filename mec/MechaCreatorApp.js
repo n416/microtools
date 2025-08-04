@@ -43,6 +43,7 @@ export class MechaCreatorApp {
       mechaGroup: this.mechaGroup,
       jointGroup: this.jointGroup,
       previewGroup: this.previewGroup,
+      selectionBoxes: this.selectionBoxes,
       viewportManager: this.viewportManager,
       transformControls: this.transformControls,
       orbitControls: this.orbitControls,
@@ -61,15 +62,12 @@ export class MechaCreatorApp {
       originalMaterials: new Map(),
       gizmoHandles: this.gizmoHandles,
       guides: this.guides,
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-      // ★★★ ここが無限再帰バグの修正箇所です ★★★
       get gizmoMode() {
         return appInstance.gizmoMode;
       },
       get isPanModeActive() {
         return appInstance.isPanModeActive;
       },
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
     };
 
     this.inputHandler = new InputHandler(this.appContext);
@@ -93,6 +91,7 @@ export class MechaCreatorApp {
     const centerLineColor = 0x666666;
     const gridTotalSize = 20;
     const gridCellSize = 0.0625;
+    // ★★★ エラーの原因だった gridDivisions の定義を追加 ★★★
     const gridDivisions = gridTotalSize / gridCellSize;
     const gridHelper = new THREE.GridHelper(gridTotalSize, gridDivisions, 0x888888, 0x444444);
     gridHelper.name = 'GridHelper';
@@ -221,7 +220,13 @@ export class MechaCreatorApp {
     }
     this.transformControls.detach();
 
-    if (this.appState.modes.isJointMode) {
+    if (this.appState.modes.isIkMode) {
+        if(this.appState.modes.ik.endEffector && !this.appState.modes.ik.endEffector.userData.boxHelper){
+             const boxHelper = new THREE.BoxHelper(this.appState.modes.ik.endEffector, 0x00ff00);
+             this.appState.modes.ik.endEffector.userData.boxHelper = boxHelper;
+             this.selectionBoxes.add(boxHelper);
+        }
+    } else if (this.appState.modes.isJointMode) {
       // Joint mode, no gizmo
     } else if (selectedObjects.length === 1) {
       this.transformControls.attach(selectedObjects[0]);
