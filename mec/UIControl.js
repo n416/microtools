@@ -7,7 +7,7 @@ import * as ClipboardFeatures from './ClipboardFeatures.js';
 import {createColorPalette} from './Paint.js';
 import * as THREE from 'three';
 import * as PlacementFeatures from './PlacementFeatures.js';
-import * as JointFeatures from './JointFeatures.js'; // ★★★ 追加 ★★★
+import * as JointFeatures from './JointFeatures.js';
 import {OBJLoader} from './OBJLoader.js';
 
 function getVectorFromDirection(direction) {
@@ -35,14 +35,14 @@ export class UIControl {
     this.history = appContext.history;
     this.appState = appContext.state;
     this.mechaGroup = appContext.mechaGroup;
-    this.jointGroup = appContext.jointGroup; // ★★★ 追加 ★★★
+    this.jointGroup = appContext.jointGroup;
     this.log = appContext.log;
   }
 
   initialize() {
     this.setupObjectCreation();
     this.setupCsgOperations();
-    this.setupJointOperations(); // ★★★ 追加 ★★★
+    this.setupJointOperations();
     this.setupFileIO();
     this.setupModeButtons();
     this.setupPaintControls();
@@ -122,7 +122,6 @@ export class UIControl {
       const selected = this.appState.selectedObjects;
       if (selected.length === 0) return this.log('削除対象なし');
 
-      // ★★★ 修正: 削除対象の親グループを判別 ★★★
       const commands = selected.map((obj) => {
         const parentGroup = obj.userData.isJoint ? this.jointGroup : this.mechaGroup;
         return new DeleteObjectCommand(obj, parentGroup);
@@ -133,7 +132,6 @@ export class UIControl {
     });
   }
 
-  // ★★★ この関数を丸ごと追加 ★★★
   setupJointOperations() {
     document.getElementById('addSphereJoint').addEventListener('click', () => {
       JointFeatures.requestAddJoint('sphere', this.appContext);
@@ -148,9 +146,34 @@ export class UIControl {
     const jointModeButton = document.getElementById('jointModeButton');
     jointModeButton.addEventListener('click', () => {
       this.appState.modes.isJointMode = !this.appState.modes.isJointMode;
-      jointModeButton.style.backgroundColor = this.appState.modes.isJointMode ? '#2ecc71' : '#8e44ad';
-      this.log(this.appState.modes.isJointMode ? 'ジョイント操作モード開始。' : 'ジョイント操作モード終了。');
+      if (this.appState.modes.isJointMode) {
+        this.appState.modes.isIkMode = false; // IKモードをOFF
+        this.appState.clearIkSelection();
+      }
+      this.updateModeButtons();
+      this.log(this.appState.modes.isJointMode ? 'FK操作モード開始。' : 'FK操作モード終了。');
     });
+
+    const ikModeButton = document.getElementById('ikModeButton');
+    ikModeButton.addEventListener('click', () => {
+      this.appState.modes.isIkMode = !this.appState.modes.isIkMode;
+      if (this.appState.modes.isIkMode) {
+        this.appState.modes.isJointMode = false; // FKモードをOFF
+        this.appState.clearSelection();
+        this.log('IK操作モード開始。エンドエフェクタを選択してください。');
+      } else {
+        this.appState.clearIkSelection();
+        this.log('IK操作モード終了。');
+      }
+      this.updateModeButtons();
+    });
+  }
+
+  updateModeButtons() {
+    const jointModeButton = document.getElementById('jointModeButton');
+    const ikModeButton = document.getElementById('ikModeButton');
+    jointModeButton.style.backgroundColor = this.appState.modes.isJointMode ? '#2ecc71' : '#8e44ad';
+    ikModeButton.style.backgroundColor = this.appState.modes.isIkMode ? '#2ecc71' : '#8e44ad';
   }
 
   setupFileIO() {
@@ -276,8 +299,6 @@ export class UIControl {
       }
     });
 
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★★★ ここからが修正箇所です ★★★
     // ライブペイント編集中のスポイト操作を処理する (修正)
     document.addEventListener('livePaintEyedrop', (e) => {
       if (!this.appState.isLivePaintPreviewMode) return;
@@ -293,8 +314,6 @@ export class UIControl {
         updateUIFromProps(this.appState.brushProperties);
       }
     });
-    // ★★★ 修正箇所はここまでです ★★★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
     colorPalette.appendChild(createColorPalette([0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff, 0x999999], 5));
 
@@ -505,7 +524,6 @@ export class UIControl {
       if (this.appState.isLivePaintPreviewMode) applyLivePreview();
     });
   }
-  // ★★★ ゴースト制御用のメソッドを丸ごと追加 ★★★
   setupGhostControls() {
     const guideControlsDiv = document.getElementById('guide-controls');
 
