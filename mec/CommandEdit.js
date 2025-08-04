@@ -67,6 +67,7 @@ export class TransformCommand extends command {
       this.object.rotation.copy(this.newTransform.rotation);
       this.object.scale.copy(this.newTransform.scale);
     }
+    this.object.updateMatrixWorld(true);
   }
 
   undo() {
@@ -80,6 +81,7 @@ export class TransformCommand extends command {
       this.object.rotation.copy(this.oldTransform.rotation);
       this.object.scale.copy(this.oldTransform.scale);
     }
+    this.object.updateMatrixWorld(true);
   }
 }
 
@@ -98,6 +100,7 @@ export class JointTransformCommand extends command {
     this.finalStates.forEach((state) => {
       state.object.position.copy(state.position);
       state.object.rotation.copy(state.rotation);
+      state.object.updateMatrixWorld(true);
     });
   }
 
@@ -105,6 +108,9 @@ export class JointTransformCommand extends command {
     this.initialStates.forEach((state) => {
       state.object.position.copy(state.position);
       state.object.rotation.copy(state.rotation);
+       state.object.updateMatrixWorld(true);
     });
   }
 }
+
+// ★★★ 不要になった IkTransformCommand を削除 ★★★
