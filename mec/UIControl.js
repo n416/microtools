@@ -49,6 +49,100 @@ export class UIControl {
     this.setupGlobalCancel();
     this.setupGhostControls();
     this.setupViewControls();
+    this.setupIkConnectionBrowser();
+  }
+
+  setupIkConnectionBrowser() {
+    const browserList = document.getElementById('ik-browser-list');
+
+    const updateList = () => {
+      browserList.innerHTML = '';
+
+      const objects = this.mechaGroup.children;
+      const joints = this.jointGroup.children;
+      const uuidToNameMap = new Map();
+
+      objects.forEach((o, i) => {
+        let name = `Object_${i}`;
+        if (o.userData.isImportedOBJ && o.userData.fileName) {
+          name = o.userData.fileName;
+        } else if (o.name) {
+          name = o.name;
+        }
+        uuidToNameMap.set(o.uuid, name);
+      });
+
+      joints.forEach((joint) => {
+        const parentUuid = joint.userData.parentObject;
+        const childUuids = joint.userData.childObjects || [];
+        const parentName = uuidToNameMap.get(parentUuid) || '不明';
+
+        childUuids.forEach((childUuid) => {
+          const childName = uuidToNameMap.get(childUuid) || '不明';
+          const jointType = joint.userData.type || 'ジョイント';
+
+          const listItem = document.createElement('div');
+          listItem.textContent = `[${parentName}] -- (${jointType}) -- [${childName}]`;
+          listItem.dataset.parentUuid = parentUuid;
+          listItem.dataset.childUuid = childUuid;
+          listItem.dataset.jointUuid = joint.uuid;
+          listItem.style.cursor = 'pointer';
+          listItem.style.padding = '2px 4px';
+          listItem.title = `親: ${parentName}\n子: ${childName}\nジョイント: ${jointType}`;
+          browserList.appendChild(listItem);
+        });
+      });
+      // After updating the list, re-apply highlight based on current selection
+      highlightListItems();
+    };
+
+    const highlightListItems = () => {
+      const selectedUuids = this.appContext.selectionManager.get().map((o) => o.uuid);
+      const items = browserList.querySelectorAll('div[data-parent-uuid]');
+      items.forEach((item) => {
+        const {parentUuid, childUuid, jointUuid} = item.dataset;
+        if (selectedUuids.includes(parentUuid) || selectedUuids.includes(childUuid) || selectedUuids.includes(jointUuid)) {
+          item.classList.add('highlight');
+        } else {
+          item.classList.remove('highlight');
+        }
+      });
+    };
+
+    browserList.addEventListener('click', (e) => {
+      if (e.target && e.target.dataset.parentUuid) {
+        const {parentUuid, childUuid, jointUuid} = e.target.dataset;
+        const findObject = (uuid) => this.mechaGroup.getObjectByProperty('uuid', uuid) || this.jointGroup.getObjectByProperty('uuid', uuid);
+
+        const parent = findObject(parentUuid);
+        const child = findObject(childUuid);
+        const joint = findObject(jointUuid);
+        const objectsToBlink = [parent, child, joint].filter(Boolean);
+
+        if (objectsToBlink.length > 0) {
+          const blinkGroup = this.appContext.selectionBoxes;
+          const helpers = [];
+          objectsToBlink.forEach((obj) => {
+            const color = obj.userData.isJoint ? 0xff00ff : 0x00ff00;
+            const boxHelper = new THREE.BoxHelper(obj, color);
+            helpers.push(boxHelper);
+            blinkGroup.add(boxHelper);
+          });
+
+          setTimeout(() => {
+            helpers.forEach((h) => {
+              blinkGroup.remove(h);
+              if (h.geometry) h.geometry.dispose();
+              if (h.material) h.material.dispose();
+            });
+          }, 750);
+        }
+      }
+    });
+
+    this.appState.onSelectionChange.add(highlightListItems);
+    document.addEventListener('connections-changed', updateList);
+    updateList();
   }
 
   setupViewControls() {
