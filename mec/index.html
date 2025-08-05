@@ -151,6 +151,30 @@
         display: inline-block;
         width: 70px;
       }
+      #ik-browser {
+        position: absolute;
+        top: 45px;
+        right: 10px;
+        width: 300px;
+        height: 300px;
+        background-color: rgba(20, 20, 20, 0.75);
+        color: white;
+        border: 1px solid #666;
+        border-radius: 5px;
+        z-index: 12;
+        font-family: monospace;
+        font-size: 12px;
+        overflow-y: auto;
+        padding: 8px;
+        backdrop-filter: blur(2px);
+      }
+      #ik-browser-list div:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      #ik-browser-list .highlight {
+        background-color: #f39c12;
+        color: black;
+      }
     </style>
   </head>
   <body>
@@ -280,6 +304,10 @@
           <button id="cancelPrism">キャンセル</button>
         </div>
       </div>
+    </div>
+    <div id="ik-browser">
+      <b style="padding-bottom: 5px; display: block; border-bottom: 1px solid #444; margin-bottom: 5px">IK接続ブラウザ</b>
+      <div id="ik-browser-list"></div>
     </div>
     <script type="importmap">
       {

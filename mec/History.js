@@ -23,6 +23,7 @@ export class History {
 
     this.app.log(command.message);
     SceneIO.autoSaveScene(this.app.appContext);
+    document.dispatchEvent(new CustomEvent('connections-changed'));
   }
 
   undo() {
@@ -44,6 +45,7 @@ export class History {
 
       this.app.log(`Undo: ${command.message}`);
       SceneIO.autoSaveScene(this.app.appContext);
+      document.dispatchEvent(new CustomEvent('connections-changed'));
     } else {
       this.app.log('これ以上元に戻せません。');
     }
@@ -68,6 +70,7 @@ export class History {
 
       this.app.log(`Redo: ${command.message}`);
       SceneIO.autoSaveScene(this.app.appContext);
+      document.dispatchEvent(new CustomEvent('connections-changed'));
     } else {
       this.app.log('これ以上やり直せません。');
     }

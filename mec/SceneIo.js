@@ -262,4 +262,5 @@ export function loadFromData(context, sceneData) {
   log('データ読込完了');
   history.undoStack = [];
   history.redoStack = [];
+  document.dispatchEvent(new CustomEvent('connections-changed'));
 }
