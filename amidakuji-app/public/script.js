@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const switcherGroupList = document.getElementById('switcherGroupList');
   const switcherCreateGroup = document.getElementById('switcherCreateGroup');
   const backToDashboardButton = document.getElementById('backToDashboardButton');
+  const goToGroupSettingsButton = document.getElementById('goToGroupSettingsButton');
 
   // --- データ管理 ---
   let allUserGroups = []; // ユーザーが管理する全グループを保持
@@ -202,6 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
   async function showGroupDashboard() {
     showView('groupDashboard');
     currentGroupId = null;
+    if (groupNameInput) {
+      groupNameInput.value = ''; // 入力フィールドをクリア
+    }
     await loadGroups();
   }
 
@@ -376,6 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (eventIdInput) eventIdInput.value = '';
     currentEventId = null;
     currentLotteryData = null;
+    if (createEventButton) createEventButton.textContent = 'この内容でイベントを作成'; // ボタンテキストを元に戻す
     if (adminControls) adminControls.style.display = 'none';
     if (broadcastControls) broadcastControls.style.display = 'none';
   }
@@ -1117,9 +1122,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  async function updateEvent() {
+    if (!currentEventId) return alert('更新対象のイベントIDがありません。');
+    const participantCount = parseInt(participantCountInput.value, 10);
+    if (participantCount !== prizes.length) return alert('参加人数と景品の数は同じにしてください。');
+
+    const eventData = {
+      prizes,
+      participantCount,
+      displayMode: displayModeSelect.value,
+      eventPassword: eventPasswordInput.value,
+    };
+
+    try {
+      createEventButton.disabled = true;
+      createEventButton.textContent = '保存中...';
+      const res = await fetch(`/api/events/${currentEventId}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(eventData),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'イベント更新に失敗');
+
+      alert(`イベントが更新されました！`);
+      const currentGroup = allUserGroups.find((g) => g.id === currentGroupId);
+      showDashboardView(currentGroup.id, currentGroup.name);
+    } catch (error) {
+      console.error('Update failed:', error);
+      alert(error.message);
+    } finally {
+      createEventButton.disabled = false;
+    }
+  }
+
   async function loadEvent(eventId, viewToShow = 'eventEditView') {
     if (!eventId) return;
     currentEventId = eventId;
+
     try {
       const res = await fetch(`/api/events/${eventId}`);
       if (!res.ok) throw new Error((await res.json()).error || '読み込みに失敗');
@@ -1144,6 +1184,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (eventPasswordInput) {
           eventPasswordInput.value = '';
           eventPasswordInput.placeholder = data.eventPassword ? '（パスワード設定済み）' : '（任意）';
+        }
+        if (createEventButton) {
+          createEventButton.textContent = 'この内容でイベントを保存'; // ボタンテキストを変更
         }
         renderPrizeList();
       } else if (viewToShow === 'broadcastView') {
@@ -2124,6 +2167,28 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ----- イベントリスナー -----
+  if (goToGroupSettingsButton) {
+    goToGroupSettingsButton.addEventListener('click', () => {
+      if (currentGroupId) {
+        // ユーザーが管理するグループリストから現在のグループ情報を検索
+        const currentGroup = allUserGroups.find((g) => g.id === currentGroupId);
+        if (currentGroup) {
+          openSettingsModal(currentGroup); // 設定モーダルを開く
+        } else {
+          alert('グループ情報が見つかりませんでした。');
+        }
+      }
+    });
+  }
+  if (switcherCreateGroup) {
+    switcherCreateGroup.addEventListener('click', () => {
+      groupDropdown.style.display = 'none'; // ドロップダウンを閉じる
+      showGroupDashboard(); // グループ作成画面を表示
+      if (groupNameInput) {
+        groupNameInput.focus(); // 入力フィールドにフォーカス
+      }
+    });
+  }
   if (stopImpersonatingButton) stopImpersonatingButton.addEventListener('click', stopImpersonating);
   if (loginButton) loginButton.addEventListener('click', () => (window.location.href = '/auth/google'));
   if (logoutButton)
@@ -2182,7 +2247,15 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPrizeList();
       }
     });
-  if (createEventButton) createEventButton.addEventListener('click', createEvent);
+  if (createEventButton) {
+    createEventButton.addEventListener('click', () => {
+      if (currentEventId) {
+        updateEvent(); // 編集モードなら更新処理
+      } else {
+        createEvent(); // 新規作成モードなら作成処理
+      }
+    });
+  }
   if (loadButton)
     loadButton.addEventListener('click', () => {
       if (eventIdInput) loadEvent(eventIdInput.value.trim());
