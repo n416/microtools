@@ -193,7 +193,6 @@ app.get('/api/user/me', async (req, res) => {
   res.json(user);
 });
 
-
 app.delete('/api/user/me', ensureAuthenticated, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -251,16 +250,16 @@ app.delete('/api/user/me', ensureAuthenticated, async (req, res) => {
 
 app.post('/api/user/me/last-group', ensureAuthenticated, async (req, res) => {
   try {
-    const { groupId } = req.body;
+    const {groupId} = req.body;
     if (!groupId) {
-      return res.status(400).json({ error: 'Group ID is required.' });
+      return res.status(400).json({error: 'Group ID is required.'});
     }
     const userRef = firestore.collection('users').doc(req.user.id);
-    await userRef.update({ lastUsedGroupId: groupId });
-    res.status(200).json({ message: 'Last used group updated.' });
+    await userRef.update({lastUsedGroupId: groupId});
+    res.status(200).json({message: 'Last used group updated.'});
   } catch (error) {
     console.error('Error updating last used group:', error);
-    res.status(500).json({ error: 'Failed to update last used group.' });
+    res.status(500).json({error: 'Failed to update last used group.'});
   }
 });
 function generateLines(numParticipants) {
@@ -778,6 +777,59 @@ app.get('/api/events/:id', ensureAuthenticated, async (req, res) => {
   } catch (error) {
     console.error(`Error fetching event ${req.params.id}:`, error);
     res.status(500).json({error: 'イベントの読み込みに失敗しました。'});
+  }
+});
+app.put('/api/events/:id', ensureAuthenticated, async (req, res) => {
+  try {
+    const {id: eventId} = req.params;
+    const {prizes, participantCount, displayMode, eventPassword} = req.body;
+
+    if (!participantCount || participantCount < 2) return res.status(400).json({error: '参加人数は2人以上で設定してください。'});
+    if (!prizes || !Array.isArray(prizes) || prizes.length !== participantCount) return res.status(400).json({error: '参加人数と景品の数が一致していません。'});
+
+    const eventRef = firestore.collection('events').doc(eventId);
+    const doc = await eventRef.get();
+
+    if (!doc.exists) return res.status(404).json({error: 'イベントが見つかりません。'});
+
+    const eventData = doc.data();
+    if (eventData.ownerId !== req.user.id) return res.status(403).json({error: 'このイベントを編集する権限がありません。'});
+    if (eventData.status === 'started') return res.status(400).json({error: '開始済みのイベントは編集できません。'});
+
+    const updateData = {
+      prizes: prizes.map((p) => (typeof p === 'string' ? {name: p, imageUrl: null} : p)),
+      participantCount,
+      displayMode,
+    };
+
+    if (eventPassword && eventPassword.trim() !== '') {
+      updateData.eventPassword = await bcrypt.hash(eventPassword, saltRounds);
+    }
+
+    if (participantCount !== eventData.participantCount) {
+      const groupDoc = await firestore.collection('groups').doc(eventData.groupId).get();
+      const groupParticipants = groupDoc.exists ? groupDoc.data().participants || [] : [];
+      const newParticipants = Array.from({length: participantCount}, (_, i) => {
+        const existingParticipant = eventData.participants[i];
+        const groupParticipant = groupParticipants[i];
+        if (existingParticipant) return existingParticipant;
+        return {
+          slot: i,
+          name: null,
+          deleteToken: null,
+          color: groupParticipant ? groupParticipant.color : `#${Math.floor(Math.random() * 16777215).toString(16)}`,
+          id: groupParticipant ? groupParticipant.id : crypto.randomBytes(16).toString('hex'),
+        };
+      });
+      updateData.participants = newParticipants;
+      updateData.lines = generateLines(participantCount);
+    }
+
+    await eventRef.update(updateData);
+    res.status(200).json({id: eventId, message: 'イベントが正常に更新されました。'});
+  } catch (error) {
+    console.error('Error updating event:', error);
+    res.status(500).json({error: 'イベントの更新に失敗しました。'});
   }
 });
 
