@@ -120,6 +120,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const profileColorInput = document.getElementById('profileColorInput');
   const saveProfileButton = document.getElementById('saveProfileButton');
 
+  // --- UI要素の取得 ---
+  const groupSwitcher = document.getElementById('groupSwitcher');
+  const currentGroupName = document.getElementById('currentGroupName');
+  const groupDropdown = document.getElementById('groupDropdown');
+  const switcherGroupList = document.getElementById('switcherGroupList');
+  const switcherCreateGroup = document.getElementById('switcherCreateGroup');
+  const backToDashboardButton = document.getElementById('backToDashboardButton');
+
+  // --- データ管理 ---
+  let allUserGroups = []; // ユーザーが管理する全グループを保持
+
   // --- データ管理 ---
   let prizes = [];
   let currentLotteryData = null;
@@ -147,6 +158,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard'];
 
+  /**
+   * ヘッダーの実際の高さに応じてbodyのpadding-topを動的に調整する関数
+   */
+  function adjustBodyPadding() {
+    const header = document.querySelector('.main-header');
+    const impersonationBanner = document.querySelector('.impersonation-banner');
+    let totalOffset = 0;
+
+    if (header) {
+      totalOffset += header.offsetHeight;
+    }
+    // 成り代わりバナーが表示されている場合は、その高さも加算する
+    if (impersonationBanner && getComputedStyle(impersonationBanner).display !== 'none') {
+      totalOffset += impersonationBanner.offsetHeight;
+    }
+
+    document.body.style.paddingTop = `${totalOffset}px`;
+  }
+
   // ----- 画面表示ロジック -----
 
   function showView(viewToShowId) {
@@ -157,6 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     stopAnimation();
+    // ビューが切り替わるたびに、必ずヘッダーの高さを再計算して適用する
+    adjustBodyPadding();
   }
 
   function hideParticipantSubViews() {
@@ -184,10 +216,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (eventGroupName) eventGroupName.textContent = `グループ: ${groupName}`;
     resetEventCreationForm();
     loadEventsForGroup(groupId);
+    updateGroupSwitcher(); // ★ 追加
   }
 
+  if (backToDashboardButton) {
+    backToDashboardButton.addEventListener('click', () => {
+      const currentGroup = allUserGroups.find((g) => g.id === currentGroupId);
+      if (currentGroup) {
+        showDashboardView(currentGroup.id, currentGroup.name);
+      } else {
+        showGroupDashboard();
+      }
+    });
+  }
   // ----- URLルーティングと初期化 -----
 
+  // 修正後
   async function handleRouting() {
     stopAnimation();
     const path = window.location.pathname;
@@ -199,56 +243,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isParticipantView = eventIdMatch || customUrlMatch || shareMatch;
 
+    // 最初に認証状態を確認し、ログインユーザー情報を取得完了させる
+    const loggedInUser = await checkGoogleAuthState();
+
+    // 参加者用ページへのアクセスの場合
     if (isParticipantView) {
       document.querySelector('.main-header').style.display = 'none';
       showView('participantView');
-    } else {
-      document.querySelector('.main-header').style.display = 'flex';
-      await checkGoogleAuthState();
-    }
-
-    if (isParticipantView) {
-      if (adminMatch || adminRequestMatch) return;
       const eventId = eventIdMatch ? eventIdMatch[1] : shareMatch ? shareMatch[1] : null;
       const customUrl = customUrlMatch ? customUrlMatch[1] : null;
       const participantName = shareMatch ? decodeURIComponent(shareMatch[2]) : null;
       const isShare = !!shareMatch;
       await initializeParticipantView(eventId, isShare, participantName, customUrl);
-    } else if (adminMatch) {
-      if (currentUser && currentUser.role === 'system_admin' && !currentUser.isImpersonating) {
+      return; // 参加者ビューの処理が完了したら、以降の処理は不要
+    }
+
+    // 管理者用ページへのアクセスの場合
+    document.querySelector('.main-header').style.display = 'flex';
+    adjustBodyPadding(); // ヘッダー表示後にpaddingを調整
+
+    if (loggedInUser) {
+      // ログインしている場合
+      if (adminMatch && loggedInUser.role === 'system_admin' && !loggedInUser.isImpersonating) {
         showAdminDashboard();
       } else {
-        showGroupDashboard();
+        // lastUsedGroupIdに基づいてリダイレクト、なければ最初のグループへ
+        await loadUserGroupsAndRedirect(loggedInUser.lastUsedGroupId);
       }
-    } else if (adminRequestMatch) {
-      showGroupDashboard();
     } else {
-      if (currentUser && currentUser.id) {
-        showGroupDashboard();
-      } else {
-        ALL_VIEWS.forEach((viewId) => {
-          const el = document.getElementById(viewId);
-          if (el) el.style.display = 'none';
-        });
-        document.querySelector('.main-header').style.display = 'flex';
-        if (authStatus) authStatus.textContent = 'イベント管理はログインが必要です。';
-        if (loginButton) loginButton.style.display = 'block';
-      }
+      // ログインしていない場合
+      ALL_VIEWS.forEach((viewId) => {
+        const el = document.getElementById(viewId);
+        if (el) el.style.display = 'none';
+      });
+      if (authStatus) authStatus.textContent = 'イベント管理はログインが必要です。';
+      if (loginButton) loginButton.style.display = 'block';
     }
   }
 
+  // 修正後
   async function checkGoogleAuthState() {
     try {
       const res = await fetch('/api/user/me');
       if (!res.ok) throw new Error('Failed to fetch auth state');
       const user = await res.json();
       currentUser = user;
+      const impersonationBanner = document.querySelector('.impersonation-banner');
 
       if (user && user.id) {
         let displayName = user.name;
         if (user.isImpersonating) {
           displayName = `${user.originalUser.name} (成り代わり中: ${user.name})`;
-          if (document.querySelector('.impersonation-banner')) document.querySelector('.impersonation-banner').style.display = 'block';
+          if (impersonationBanner) impersonationBanner.style.display = 'block';
+        } else {
+          if (impersonationBanner) impersonationBanner.style.display = 'none';
         }
         if (authStatus) authStatus.textContent = `ようこそ、${displayName}さん`;
         if (loginButton) loginButton.style.display = 'none';
@@ -272,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
             requestAdminButton.style.display = 'none';
           }
         }
+        return user; // ★取得したユーザー情報を返す
       } else {
         if (authStatus) authStatus.textContent = '';
         if (loginButton) loginButton.style.display = 'block';
@@ -279,10 +328,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (deleteAccountButton) deleteAccountButton.style.display = 'none';
         if (adminDashboardButton) adminDashboardButton.style.display = 'none';
         if (requestAdminButton) requestAdminButton.style.display = 'none';
-        if (document.querySelector('.impersonation-banner')) document.querySelector('.impersonation-banner').style.display = 'none';
+        if (impersonationBanner) impersonationBanner.style.display = 'none';
+        return null; // ★ログインしていない場合はnullを返す
       }
     } catch (e) {
       console.error('Auth check failed', e);
+      return null; // ★エラー時もnullを返す
+    } finally {
+      adjustBodyPadding(); // 最後に必ずpaddingを調整
+    }
+  }
+
+  async function loadUserGroupsAndRedirect(lastUsedGroupId) {
+    try {
+      const res = await fetch('/api/groups');
+      if (!res.ok) throw new Error('グループの読み込みに失敗');
+      allUserGroups = await res.json();
+      updateGroupSwitcher(); // ★ スイッチャーUIを更新
+
+      if (allUserGroups.length > 0) {
+        let targetGroup = allUserGroups.find((g) => g.id === lastUsedGroupId);
+        if (!targetGroup) {
+          targetGroup = allUserGroups[0]; // lastUsedGroupId が無効なら最初のグループへ
+        }
+        showDashboardView(targetGroup.id, targetGroup.name);
+      } else {
+        showGroupDashboard(); // グループが一つもなければグループ作成画面へ
+      }
+    } catch (error) {
+      console.error(error);
+      showGroupDashboard(); // エラー時もグループ作成画面へ
     }
   }
 
@@ -543,6 +618,63 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
+  function updateGroupSwitcher() {
+    if (!groupSwitcher || !currentGroupName || !switcherGroupList) return;
+
+    groupSwitcher.style.display = 'block';
+
+    const currentGroup = allUserGroups.find((g) => g.id === currentGroupId);
+    if (currentGroup) {
+      currentGroupName.textContent = currentGroup.name;
+    }
+
+    switcherGroupList.innerHTML = '';
+    allUserGroups.forEach((group) => {
+      const li = document.createElement('li');
+      const button = document.createElement('button');
+      button.textContent = group.name;
+      button.dataset.groupId = group.id;
+      button.dataset.groupName = group.name;
+      if (group.id === currentGroupId) {
+        button.classList.add('active');
+      }
+      li.appendChild(button);
+      switcherGroupList.appendChild(li);
+    });
+  }
+
+  // グループスイッチャーの表示切替
+  if (currentGroupName) {
+    currentGroupName.addEventListener('click', (e) => {
+      e.stopPropagation();
+      groupDropdown.style.display = groupDropdown.style.display === 'block' ? 'none' : 'block';
+    });
+  }
+
+  // ドロップダウンからグループを選択
+  if (switcherGroupList) {
+    switcherGroupList.addEventListener('click', async (e) => {
+      if (e.target.tagName === 'BUTTON') {
+        const {groupId, groupName} = e.target.dataset;
+        showDashboardView(groupId, groupName);
+        groupDropdown.style.display = 'none';
+        // 最後に使ったグループIDをサーバーに保存
+        await fetch('/api/user/me/last-group', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({groupId}),
+        });
+        updateGroupSwitcher();
+      }
+    });
+  }
+
+  // グローバルクリックでドロップダウンを閉じる
+  window.addEventListener('click', () => {
+    if (groupDropdown && groupDropdown.style.display === 'block') {
+      groupDropdown.style.display = 'none';
+    }
+  });
 
   function drawLotteryBase(targetCtx, data, lineColor = '#ccc') {
     if (!targetCtx || !targetCtx.canvas || !data || !data.participants || data.participants.length === 0) return;
@@ -2266,4 +2398,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ----- 初期化処理 -----
   handleRouting();
+
+  // ページ読み込み時とウィンドウリサイズ時にpaddingを調整
+  adjustBodyPadding();
+  window.addEventListener('resize', adjustBodyPadding);
 });
