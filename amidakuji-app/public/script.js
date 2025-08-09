@@ -9,7 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // View Containers
   const groupDashboard = document.getElementById('groupDashboard');
-  const eventView = document.getElementById('eventView');
+  const dashboardView = document.getElementById('dashboardView');
+  const eventEditView = document.getElementById('eventEditView');
+  const broadcastView = document.getElementById('broadcastView');
   const participantView = document.getElementById('participantView');
   const adminDashboard = document.getElementById('adminDashboard');
 
@@ -46,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const prizeList = document.getElementById('prizeList');
   const displayModeSelect = document.getElementById('displayModeSelect');
   const eventPasswordInput = document.getElementById('eventPasswordInput');
+  const goToCreateEventViewButton = document.getElementById('goToCreateEventViewButton');
   const createEventButton = document.getElementById('createEventButton');
   const loadButton = document.getElementById('loadButton');
   const eventIdInput = document.getElementById('eventIdInput');
@@ -142,6 +145,47 @@ document.addEventListener('DOMContentLoaded', () => {
     step: 0,
   };
 
+  const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard'];
+
+  // ----- 画面表示ロジック -----
+
+  function showView(viewToShowId) {
+    ALL_VIEWS.forEach((viewId) => {
+      const el = document.getElementById(viewId);
+      if (el) {
+        el.style.display = viewId === viewToShowId ? 'block' : 'none';
+      }
+    });
+    stopAnimation();
+  }
+
+  function hideParticipantSubViews() {
+    if (nameEntrySection) nameEntrySection.style.display = 'none';
+    if (participantControlPanel) participantControlPanel.style.display = 'none';
+    if (joinSection) joinSection.style.display = 'none';
+    if (waitingMessage) waitingMessage.style.display = 'none';
+    if (resultSection) resultSection.style.display = 'none';
+  }
+
+  async function showGroupDashboard() {
+    showView('groupDashboard');
+    currentGroupId = null;
+    await loadGroups();
+  }
+
+  async function showAdminDashboard() {
+    showView('adminDashboard');
+    await loadAdminDashboard();
+  }
+
+  function showDashboardView(groupId, groupName) {
+    showView('dashboardView');
+    currentGroupId = groupId;
+    if (eventGroupName) eventGroupName.textContent = `グループ: ${groupName}`;
+    resetEventCreationForm();
+    loadEventsForGroup(groupId);
+  }
+
   // ----- URLルーティングと初期化 -----
 
   async function handleRouting() {
@@ -155,11 +199,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isParticipantView = eventIdMatch || customUrlMatch || shareMatch;
 
-    hideAllViews();
-
     if (isParticipantView) {
       document.querySelector('.main-header').style.display = 'none';
-      if (participantView) participantView.style.display = 'block';
+      showView('participantView');
     } else {
       document.querySelector('.main-header').style.display = 'flex';
       await checkGoogleAuthState();
@@ -184,7 +226,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentUser && currentUser.id) {
         showGroupDashboard();
       } else {
-        hideAllViews();
+        ALL_VIEWS.forEach((viewId) => {
+          const el = document.getElementById(viewId);
+          if (el) el.style.display = 'none';
+        });
         document.querySelector('.main-header').style.display = 'flex';
         if (authStatus) authStatus.textContent = 'イベント管理はログインが必要です。';
         if (loginButton) loginButton.style.display = 'block';
@@ -239,46 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
       console.error('Auth check failed', e);
     }
-  }
-
-  // ----- 画面表示ロジック -----
-
-  function hideAllViews() {
-    if (groupDashboard) groupDashboard.style.display = 'none';
-    if (eventView) eventView.style.display = 'none';
-    if (participantView) participantView.style.display = 'none';
-    if (adminDashboard) adminDashboard.style.display = 'none';
-    stopAnimation();
-  }
-
-  function hideParticipantSubViews() {
-    if (nameEntrySection) nameEntrySection.style.display = 'none';
-    if (participantControlPanel) participantControlPanel.style.display = 'none';
-    if (joinSection) joinSection.style.display = 'none';
-    if (waitingMessage) waitingMessage.style.display = 'none';
-    if (resultSection) resultSection.style.display = 'none';
-  }
-
-  async function showGroupDashboard() {
-    hideAllViews();
-    if (groupDashboard) groupDashboard.style.display = 'block';
-    currentGroupId = null;
-    await loadGroups();
-  }
-
-  async function showAdminDashboard() {
-    hideAllViews();
-    if (adminDashboard) adminDashboard.style.display = 'block';
-    await loadAdminDashboard();
-  }
-
-  function showEventView(groupId, groupName) {
-    hideAllViews();
-    if (eventView) eventView.style.display = 'block';
-    currentGroupId = groupId;
-    if (eventGroupName) eventGroupName.textContent = `グループ: ${groupName}`;
-    resetEventCreationForm();
-    loadEventsForGroup(groupId);
   }
 
   function resetEventCreationForm() {
@@ -895,11 +900,27 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="event-status">${filledSlots} / ${event.participantCount} 名参加</span>
           </span>
           <div class="item-buttons">
+              <button class="edit-event-btn" data-event-id="${event.id}">編集</button>
+              <button class="start-event-btn" data-event-id="${event.id}">実施</button>
               <button class="copy-event-btn" data-event-id="${event.id}">コピー</button>
           </div>
       `;
         li.className = 'item-list-item';
-        li.dataset.eventId = event.id;
+
+        // イベントリスナーをボタンに直接追加
+        li.querySelector('.edit-event-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          loadEvent(event.id, 'eventEditView');
+        });
+        li.querySelector('.start-event-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          loadEvent(event.id, 'broadcastView');
+        });
+        li.querySelector('.copy-event-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          copyEvent(event.id);
+        });
+
         eventList.appendChild(li);
       });
     } catch (error) {
@@ -953,10 +974,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!res.ok) throw new Error(result.error || 'イベント作成に失敗');
 
       alert(`イベントが作成されました！ ID: ${result.id}`);
-
-      resetEventCreationForm();
+      showView('dashboardView');
       await loadEventsForGroup(currentGroupId);
-      await loadEvent(result.id);
     } catch (error) {
       console.error('Create failed:', error);
       alert(error.message);
@@ -966,7 +985,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function loadEvent(eventId) {
+  async function loadEvent(eventId, viewToShow = 'eventEditView') {
     if (!eventId) return;
     currentEventId = eventId;
     try {
@@ -975,46 +994,73 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       currentLotteryData = data;
 
-      prizes = data.prizes || [];
-      if (participantCountInput) participantCountInput.value = data.participantCount;
-      if (displayModeSelect) displayModeSelect.value = data.displayMode;
-      if (eventPasswordInput) {
-        eventPasswordInput.value = '';
-        eventPasswordInput.placeholder = data.eventPassword ? '（パスワード設定済み）' : '（任意）';
-      }
-      renderPrizeList();
-
-      if (eventIdInput) eventIdInput.value = eventId;
+      // --- 共通のデータ更新 ---
       const url = `${window.location.origin}/events/${eventId}`;
       if (currentEventUrl) {
         currentEventUrl.textContent = url;
         currentEventUrl.href = url;
       }
+      if (eventIdInput) eventIdInput.value = eventId;
 
-      if (adminControls) adminControls.style.display = 'block';
-      if (data.status === 'pending') {
-        if (startEventButton) startEventButton.style.display = 'inline-block';
-        if (startBroadcastButton) startBroadcastButton.style.display = 'none';
-        if (broadcastControls) broadcastControls.style.display = 'none';
-        if (adminCanvas) adminCanvas.style.display = 'none';
-      } else if (data.status === 'started') {
-        if (startEventButton) startEventButton.style.display = 'none';
-        if (startBroadcastButton) startBroadcastButton.style.display = 'inline-block';
-        if (broadcastControls) broadcastControls.style.display = 'none';
-        if (adminCanvas) adminCanvas.style.display = 'none';
-        if (highlightUserSelect) {
-          highlightUserSelect.innerHTML = '';
-          data.participants.forEach((p) => {
-            if (p.name) {
+      // --- 表示するビューに応じた準備処理 ---
+      showView(viewToShow); // 先にコンテナを表示
+
+      if (viewToShow === 'eventEditView') {
+        prizes = data.prizes || [];
+        if (participantCountInput) participantCountInput.value = data.participantCount;
+        if (displayModeSelect) displayModeSelect.value = data.displayMode;
+        if (eventPasswordInput) {
+          eventPasswordInput.value = '';
+          eventPasswordInput.placeholder = data.eventPassword ? '（パスワード設定済み）' : '（任意）';
+        }
+        renderPrizeList();
+      } else if (viewToShow === 'broadcastView') {
+        // broadcastViewの内部状態を管理
+        if (data.status === 'pending') {
+          if (adminControls) adminControls.style.display = 'block';
+          if (startEventButton) startEventButton.style.display = 'inline-block';
+          if (startBroadcastButton) startBroadcastButton.style.display = 'none';
+          if (broadcastControls) broadcastControls.style.display = 'none';
+          if (adminCanvas) adminCanvas.style.display = 'none';
+        } else if (data.status === 'started') {
+          if (adminControls) adminControls.style.display = 'none';
+          if (broadcastControls) broadcastControls.style.display = 'flex';
+          if (adminCanvas) adminCanvas.style.display = 'block';
+
+          // --- Animation Setup ---
+          const allParticipants = currentLotteryData.participants.filter((p) => p.name);
+          await preloadIcons(allParticipants);
+
+          if (highlightUserSelect) {
+            highlightUserSelect.innerHTML = '';
+            allParticipants.forEach((p) => {
               const option = document.createElement('option');
               option.value = p.name;
               option.textContent = p.name;
               highlightUserSelect.appendChild(option);
-            }
+            });
+          }
+
+          animator.tracers = allParticipants.map((p) => {
+            const startIdx = p.slot;
+            const path = calculatePath(startIdx, currentLotteryData.lines, currentLotteryData.participants.length);
+            return {
+              name: p.name,
+              color: p.color || '#333',
+              path: path,
+              pathIndex: 0,
+              progress: 0,
+              x: path[0].x,
+              y: path[0].y,
+              isFinished: true,
+            };
           });
+
+          resizeCanvasToDisplaySize(adminCanvas);
+          drawLotteryBase(ctxAdmin, currentLotteryData, '#333');
+          animator.context = ctxAdmin;
+          animator.tracers.forEach((tracer) => drawTracerIcon(animator.context, tracer));
         }
-      } else {
-        if (adminControls) adminControls.style.display = 'none';
       }
     } catch (error) {
       console.error('Load failed:', error);
@@ -1027,13 +1073,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!confirm('イベントを開始しますか？\n開始後は新規参加ができなくなります。')) return;
 
     try {
-      const res = await fetch(`/api/events/${currentEventId}/start`, {
-        method: 'POST',
-      });
+      const res = await fetch(`/api/events/${currentEventId}/start`, {method: 'POST'});
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
       alert('イベントを開始しました！');
-      await loadEvent(currentEventId);
+      // broadcastViewを再読み込みしてアニメーション準備を行う
+      await loadEvent(currentEventId, 'broadcastView');
     } catch (error) {
       console.error('Failed to start event:', error);
       alert(`エラー: ${error.message}`);
@@ -1962,7 +2007,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const item = event.target.closest('.item-list-item');
       if (!item || event.target.closest('.item-buttons')) return;
       const {groupId, groupName} = item.dataset;
-      if (groupId && groupName) showEventView(groupId, groupName);
+      if (groupId && groupName) showDashboardView(groupId, groupName);
     });
   }
 
@@ -1977,7 +2022,15 @@ document.addEventListener('DOMContentLoaded', () => {
     participantManagementList.addEventListener('change', (e) => {
       if (e.target.type === 'color') handleColorChange(e);
     });
-  if (backToGroupsButton) backToGroupsButton.addEventListener('click', showGroupDashboard);
+  if (backToGroupsButton) backToGroupsButton.addEventListener('click', () => showView('dashboardView'));
+
+  if (goToCreateEventViewButton) {
+    goToCreateEventViewButton.addEventListener('click', () => {
+      resetEventCreationForm();
+      showView('eventEditView');
+    });
+  }
+
   if (addPrizeButton)
     addPrizeButton.addEventListener('click', () => {
       if (!prizeInput) return;
@@ -2016,110 +2069,89 @@ document.addEventListener('DOMContentLoaded', () => {
         copyEvent(eventIdToCopy);
         return;
       }
+      if (event.target.classList.contains('edit-event-btn')) {
+        event.stopPropagation();
+        loadEvent(item.dataset.eventId);
+        return;
+      }
+      if (event.target.classList.contains('start-event-btn')) {
+        event.stopPropagation();
+        loadEvent(item.dataset.eventId).then(() => {
+          showView('broadcastView');
+        });
+        return;
+      }
 
       loadEvent(item.dataset.eventId);
     });
   }
+
   // --- 配信モード用イベントリスナー ---
   if (startBroadcastButton)
     startBroadcastButton.addEventListener('click', async () => {
-      if (adminCanvas) adminCanvas.style.display = 'block';
-      if (broadcastControls) broadcastControls.style.display = 'flex';
-      animator.step = 0; // ステップカウントをリセット
-
-      const allParticipants = currentLotteryData.participants.filter((p) => p.name);
-      await preloadIcons(allParticipants);
-
-      // 全参加者の最終ゴールまでのフルパスを事前に計算して保持
-      animator.tracers = allParticipants.map((p) => {
-        const startIdx = p.slot;
-        const path = calculatePath(startIdx, currentLotteryData.lines, currentLotteryData.participants.length);
-        return {
-          name: p.name,
-          color: p.color || '#333',
-          path: path,
-          pathIndex: 0,
-          progress: 0,
-          x: path[0].x,
-          y: path[0].y,
-          isFinished: true, // 初期状態は停止
-        };
-      });
-
-      resizeCanvasToDisplaySize(adminCanvas);
-      drawLotteryBase(ctxAdmin, currentLotteryData, '#333');
-
-      // 静止したアイコンを描画するために一度だけループを回す
-      animator.context = ctxAdmin;
-      animator.onComplete = null;
-      animator.running = true;
-      requestAnimationFrame(() => {
-        animator.tracers.forEach((tracer) => drawTracerIcon(animator.context, tracer));
-        animator.running = false;
-      });
+      // このボタンは現在直接使用されないが、念のためロジックをloadEventに統合
+      if (currentEventId) {
+        await loadEvent(currentEventId, 'broadcastView');
+      }
     });
 
   if (animateAllButton)
     animateAllButton.addEventListener('click', () => {
-      // 全トレーサーの停止位置を解除し、未完了状態にする
+      if (animator.tracers.length === 0 || animator.running) return;
+
+      // 全トレーサーの状態を完全に初期化し、未完了状態にする
       animator.tracers.forEach((tracer) => {
         tracer.isFinished = false;
-        delete tracer.stopY;
+        tracer.pathIndex = 0;
+        tracer.progress = 0;
+        if (tracer.path && tracer.path.length > 0) {
+          tracer.x = tracer.path[0].x;
+          tracer.y = tracer.path[0].y;
+        }
+        delete tracer.stopY; // ステップ実行の停止点をクリア
       });
 
       animator.context = ctxAdmin;
-      if (!animator.running) {
-        animator.running = true;
-        animationLoop();
-      }
+      animator.running = true;
+      animationLoop();
     });
 
   if (nextStepButton)
     nextStepButton.addEventListener('click', () => {
+      if (animator.tracers.length === 0 || animator.running) return;
+
       let isAnyTracerMoving = false;
 
       animator.tracers.forEach((tracer) => {
-        // 既にゴールしている場合は何もしない
-        if (tracer.isFinished && tracer.pathIndex >= tracer.path.length - 1) {
+        // 既にゴールしているトレーサーは無視
+        if (tracer.pathIndex >= tracer.path.length - 1) {
+          tracer.isFinished = true;
           return;
         }
 
-        let nextStopY = -1;
-        // ★ 修正：トレーサーの完全な経路の中から、現在Y座標より「下」にある最初の分岐点を探す
-        for (let i = 0; i < tracer.path.length - 1; i++) {
+        tracer.isFinished = false; // アニメーションを許可
+        delete tracer.stopY; // 前回のstopYをクリア
+
+        // 現在位置から次の分岐点を探す
+        for (let i = tracer.pathIndex; i < tracer.path.length - 1; i++) {
           const p1 = tracer.path[i];
           const p2 = tracer.path[i + 1];
-
-          // 横線（分岐点）かチェック
+          // 水平移動（分岐）かチェック
           if (p1.y === p2.y && p1.x !== p2.x) {
-            // 現在地より少しでも下にある最初の分岐点を見つける
-            // (0.1を加えるのは、浮動小数点数の誤差や、現在地に完全に一致するのを防ぐため)
+            // 現在のY座標より下にある最初の分岐点を見つける
             if (p1.y > tracer.y + 0.1) {
-              nextStopY = p1.y;
-              break; // 最初の分岐点が見つかったので探索終了
+              tracer.stopY = p1.y; // その分岐点のY座標で停止
+              break;
             }
           }
         }
-
-        // 次の分岐点が見つかったか、あるいはゴールまで進むかを決定
-        if (nextStopY !== -1) {
-          tracer.stopY = nextStopY;
-          tracer.isFinished = false;
-          isAnyTracerMoving = true;
-        } else {
-          // この先に分岐点がない場合は、ゴールまで進む
-          delete tracer.stopY;
-          tracer.isFinished = false;
-          isAnyTracerMoving = true;
-        }
+        isAnyTracerMoving = true;
       });
 
       if (isAnyTracerMoving) {
         animator.context = ctxAdmin;
-        if (!animator.running) {
-          animator.running = true;
-          animationLoop();
-        }
+        animator.running = true;
+        animationLoop();
       }
     });
 
