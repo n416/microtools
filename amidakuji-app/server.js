@@ -179,6 +179,7 @@ app.get('/api/user/me', async (req, res) => {
     return res.json(null);
   }
 
+  // userオブジェクトにlastUsedGroupIdを追加
   const user = {...req.user};
 
   if (user.role === 'user') {
@@ -191,6 +192,7 @@ app.get('/api/user/me', async (req, res) => {
 
   res.json(user);
 });
+
 
 app.delete('/api/user/me', ensureAuthenticated, async (req, res) => {
   try {
@@ -247,6 +249,20 @@ app.delete('/api/user/me', ensureAuthenticated, async (req, res) => {
   }
 });
 
+app.post('/api/user/me/last-group', ensureAuthenticated, async (req, res) => {
+  try {
+    const { groupId } = req.body;
+    if (!groupId) {
+      return res.status(400).json({ error: 'Group ID is required.' });
+    }
+    const userRef = firestore.collection('users').doc(req.user.id);
+    await userRef.update({ lastUsedGroupId: groupId });
+    res.status(200).json({ message: 'Last used group updated.' });
+  } catch (error) {
+    console.error('Error updating last used group:', error);
+    res.status(500).json({ error: 'Failed to update last used group.' });
+  }
+});
 function generateLines(numParticipants) {
   const lines = [];
   const horizontalLines = Math.floor(numParticipants * 2.5);
@@ -1096,53 +1112,52 @@ app.post('/api/members/:memberId/set-password', async (req, res) => {
  * ログイン済みのユーザーがスロットに参加するためのAPI
  */
 app.post('/api/events/:eventId/join-slot', async (req, res) => {
-    try {
-        const { eventId } = req.params;
-        const { memberId, slot } = req.body;
-        const token = req.headers['x-auth-token'];
+  try {
+    const {eventId} = req.params;
+    const {memberId, slot} = req.body;
+    const token = req.headers['x-auth-token'];
 
-        if (!token) {
-            return res.status(401).json({ error: '認証トークンが必要です。' });
-        }
-        if (slot === undefined || slot === null) {
-            return res.status(400).json({ error: '参加枠が指定されていません。' });
-        }
-
-        const eventRef = firestore.collection('events').doc(eventId);
-        const eventDoc = await eventRef.get();
-        if (!eventDoc.exists) {
-            return res.status(404).json({ error: 'イベントが見つかりません。' });
-        }
-
-        const eventData = eventDoc.data();
-        const groupId = eventData.groupId;
-        
-        // ★★★★★ 修正：この行を追加 ★★★★★
-        const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
-        const memberDoc = await memberRef.get();
-
-        if (!memberDoc.exists || memberDoc.data().deleteToken !== token) {
-            return res.status(403).json({ error: '認証情報が無効です。' });
-        }
-        const memberData = memberDoc.data();
-
-        const newParticipants = [...eventData.participants];
-        if (slot < 0 || slot >= newParticipants.length || newParticipants[slot].name !== null) {
-            return res.status(409).json({ error: 'この参加枠は既に埋まっているか、無効です。' });
-        }
-        newParticipants[slot].name = memberData.name;
-        newParticipants[slot].memberId = memberDoc.id;
-        newParticipants[slot].iconUrl = memberData.iconUrl;
-        newParticipants[slot].color = memberData.color;
-
-        await eventRef.update({ participants: newParticipants });
-
-        res.status(200).json({ message: 'イベントに参加しました。' });
-
-    } catch (error) {
-        console.error('Error joining slot:', error);
-        res.status(500).json({ error: '参加処理中にエラーが発生しました。' });
+    if (!token) {
+      return res.status(401).json({error: '認証トークンが必要です。'});
     }
+    if (slot === undefined || slot === null) {
+      return res.status(400).json({error: '参加枠が指定されていません。'});
+    }
+
+    const eventRef = firestore.collection('events').doc(eventId);
+    const eventDoc = await eventRef.get();
+    if (!eventDoc.exists) {
+      return res.status(404).json({error: 'イベントが見つかりません。'});
+    }
+
+    const eventData = eventDoc.data();
+    const groupId = eventData.groupId;
+
+    // ★★★★★ 修正：この行を追加 ★★★★★
+    const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
+    const memberDoc = await memberRef.get();
+
+    if (!memberDoc.exists || memberDoc.data().deleteToken !== token) {
+      return res.status(403).json({error: '認証情報が無効です。'});
+    }
+    const memberData = memberDoc.data();
+
+    const newParticipants = [...eventData.participants];
+    if (slot < 0 || slot >= newParticipants.length || newParticipants[slot].name !== null) {
+      return res.status(409).json({error: 'この参加枠は既に埋まっているか、無効です。'});
+    }
+    newParticipants[slot].name = memberData.name;
+    newParticipants[slot].memberId = memberDoc.id;
+    newParticipants[slot].iconUrl = memberData.iconUrl;
+    newParticipants[slot].color = memberData.color;
+
+    await eventRef.update({participants: newParticipants});
+
+    res.status(200).json({message: 'イベントに参加しました。'});
+  } catch (error) {
+    console.error('Error joining slot:', error);
+    res.status(500).json({error: '参加処理中にエラーが発生しました。'});
+  }
 });
 
 app.post('/api/events/:eventId/join', async (req, res) => {
