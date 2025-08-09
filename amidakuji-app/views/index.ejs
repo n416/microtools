@@ -10,6 +10,8 @@
 
     <% if (typeof noIndex !== 'undefined' && noIndex) { %>
     <meta name="robots" content="noindex" />
+ 
+
     <% } %>
 
     <title>ダイナミックあみだくじ</title>
@@ -25,8 +27,11 @@
 
     <header class="main-header">
       <h1>ダイナミックあみだくじ</h1>
+      <div id="groupSwitcher"></div>
       <div class="auth-controls">
-        <div id="authStatus"></div>
+     
+   <div id="authStatus"></div>
+    
         <button id="loginButton">Googleでログイン</button>
         <button id="logoutButton" style="display: none">ログアウト</button>
         <button id="deleteAccountButton" style="display: none" class="delete-btn">アカウント削除</button>
@@ -36,8 +41,10 @@
       </div>
     </header>
 
-    <div id="groupDashboard" class="view-container" style="display: none">
+    <div id="groupDashboard" class="view-container" 
+style="display: none">
       <h2>マイグループ一覧</h2>
+     
       <div class="controls">
         <div class="input-group">
           <input type="text" id="groupNameInput" placeholder="新しいグループ名" />
@@ -47,10 +54,12 @@
       <ul id="groupList" class="item-list"></ul>
       <div class="controls" style="margin-top: 20px">
         <button id="requestAdminButton" style="display: none">管理者権限を申請する</button>
-      </div>
+     
+ </div>
     </div>
 
     <div id="adminDashboard" class="view-container" style="display: none">
+    
       <h2>システム管理ダッシュボード</h2>
       <div class="controls">
         <h3>管理者申請一覧</h3>
@@ -61,11 +70,13 @@
         <ul id="adminUserList" class="item-list"></ul>
       </div>
       <div class="controls">
-        <h3>システム管理者一覧</h3>
+        
+<h3>システム管理者一覧</h3>
         <ul id="systemAdminList" class="item-list"></ul>
       </div>
     </div>
 
+ 
     <div id="groupSettingsModal" class="modal" style="display: none">
       <div class="modal-content">
         <span class="close-button">&times;</span>
@@ -74,8 +85,10 @@
         <div class="input-group">
           <label for="customUrlInput">カスタムURL:</label>
           <input type="text" id="customUrlInput" placeholder="例: my-event-2025" />
-        </div>
+ 
+       </div>
         <p class="url-preview">
+      
           <code>/g/<span id="customUrlPreview"></span></code>
         </p>
 
@@ -84,9 +97,11 @@
           <input type="password" id="groupPasswordInput" placeholder="変更する場合のみ入力" />
         </div>
         <div class="input-group checkbox-group">
-          <input type="checkbox" id="noIndexCheckbox" />
+       
+   <input type="checkbox" id="noIndexCheckbox" />
           <label for="noIndexCheckbox">検索エンジンに表示しない</label>
         </div>
+   
         <hr />
         <h4>参加者リスト</h4>
         <div class="input-group">
@@ -95,9 +110,11 @@
         </div>
         <ul id="participantManagementList"></ul>
 
-        <hr />
+    
+    <hr />
         <h4>賞品マスター管理</h4>
         <div class="input-group">
+         
           <input type="text" id="addMasterPrizeNameInput" placeholder="新しい賞品名" />
           <input type="file" id="addMasterPrizeImageInput" accept="image/*" />
           <button id="addMasterPrizeButton">マスターに追加</button>
@@ -105,111 +122,132 @@
         <ul id="prizeMasterList" class="item-list prize-master-list"></ul>
         <hr />
 
-        <h4>合言葉リセット依頼</h4>
+  
+      <h4>合言葉リセット依頼</h4>
         <ul id="passwordResetRequestList" class="item-list"></ul>
 
         <button id="saveGroupSettingsButton" class="primary-action">設定を保存</button>
       </div>
     </div>
 
-    <div id="eventView" class="view-container" style="display: none">
-      <div class="event-header">
+    <div id="dashboardView" class="view-container" style="display: none;">
         <h2 id="eventGroupName"></h2>
-        <button id="backToGroupsButton">← グループ一覧に戻る</button>
-      </div>
-
-      <h3>イベント新規作成・編集</h3>
-      <div id="settings" class="controls">
-        <div class="settings-column">
-          <h4>1. 参加人数と景品</h4>
-          <div class="input-group">
-            <label for="participantCountInput">参加人数:</label>
-            <input type="number" id="participantCountInput" min="2" placeholder="グループの参加者数に応じて自動設定" />
-            <button id="syncWithGroupButton">グループの参加者数に同期</button>
-          </div>
-          <div class="input-group">
-            <input type="text" id="prizeInput" placeholder="景品名を追加" />
-            <button id="addPrizeButton">追加</button>
-            <button id="selectFromMasterButton">マスターから選択</button>
-          </div>
-          <ul id="prizeList"></ul>
-          <p>※参加人数と景品の数を一致させてください。</p>
+        <div class="controls">
+            <button id="goToCreateEventViewButton" class="primary-action">イベント新規作成</button>
         </div>
-        <div class="settings-column">
-          <h4>2. 公開設定</h4>
-          <div class="input-group">
-            <label for="displayModeSelect">景品表示:</label>
-            <select id="displayModeSelect">
-              <option value="public">全員に公開</option>
-              <option value="private">非公開 (???)</option>
-            </select>
-          </div>
-          <div class="input-group">
-            <label for="eventPasswordInput">合言葉:</label>
-            <input type="password" id="eventPasswordInput" placeholder="（任意）" />
-          </div>
-          <h4>3. 作成</h4>
-          <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
+        <h3>このグループのイベント一覧</h3>
+     
+   <ul id="eventList" class="item-list"></ul>
+    </div>
+
+    <div id="eventEditView" class="view-container" style="display: none;">
+        <div class="event-header">
+            <button id="backToGroupsButton">← グループ一覧に戻る</button>
         </div>
-      </div>
-
-      <h3>既存イベントの管理</h3>
-      <div class="controls">
-        <div class="save-load-controls">
-          <input type="text" id="eventIdInput" placeholder="イベントIDを入力して読み込み/編集" />
-          <button id="loadButton">読み込み</button>
+        <h3>イベント新規作成・編集</h3>
+        <div id="settings" class="controls">
+            <div class="settings-column">
+                <h4>1.
+参加人数と景品</h4>
+                <div class="input-group">
+                    <label for="participantCountInput">参加人数:</label>
+                    <input type="number" id="participantCountInput" min="2" placeholder="グループの参加者数に応じて自動設定" />
+                    <button id="syncWithGroupButton">グループの参加者数に同期</button>
+                
+</div>
+                <div class="input-group">
+                    <input type="text" id="prizeInput" placeholder="景品名を追加" />
+                    <button id="addPrizeButton">追加</button>
+                    <button id="selectFromMasterButton">マスターから選択</button>
+                </div>
+ 
+               <ul id="prizeList"></ul>
+                <p>※参加人数と景品の数を一致させてください。</p>
+            </div>
+            <div class="settings-column">
+                <h4>2.
+公開設定</h4>
+                <div class="input-group">
+                    <label for="displayModeSelect">景品表示:</label>
+                    <select id="displayModeSelect">
+                        <option value="public">全員に公開</option>
+                
+        <option value="private">非公開 (???)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="eventPasswordInput">合言葉:</label>
+                
+    <input type="password" id="eventPasswordInput" placeholder="（任意）" />
+                </div>
+                <h4>3.
+作成</h4>
+                <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
+            </div>
         </div>
-        <p>現在のイベントURL: <a id="currentEventUrl" href="#" target="_blank">（未作成または未読み込み）</a></p>
-      </div>
+        <h3>既存イベントの管理</h3>
+        
+<div class="controls">
+            <div class="save-load-controls">
+                <input type="text" id="eventIdInput" placeholder="イベントIDを入力して読み込み/編集" />
+                <button id="loadButton">読み込み</button>
+            </div>
+            <p>現在のイベントURL: <a id="currentEventUrl" href="#" target="_blank">（未作成または未読み込み）</a></p>
+        </div>
+    </div>
 
-      <div id="adminControls" style="display: none">
-        <button id="startEventButton" class="primary-action">🎉 イベントを開始する</button>
-        <button id="startBroadcastButton" style="display: none">🎥 配信モードを開始</button>
-      </div>
-
-      <canvas id="adminCanvas" width="800" height="400" style="display: none;"></canvas>
-
-      <div class="broadcast-controls" style="display: none;">
-        <button id="animateAllButton">全結果をアニメーション再生</button>
-        <button id="nextStepButton">ステップ実行</button>
-        <select id="highlightUserSelect"></select>
-        <button id="highlightUserButton">この参加者をハイライト</button>
-      </div>
-      
-      <h3>このグループのイベント一覧</h3>
-      <ul id="eventList" class="item-list"></ul>
+    <div id="broadcastView" class="view-container" style="display: none;">
+        <div id="adminControls">
+            <button id="startEventButton" class="primary-action">🎉 イベントを開始する</button>
+            <button id="startBroadcastButton">🎥 配信モードを開始</button>
+        </div>
+    
+    <canvas id="adminCanvas" width="800" height="400"></canvas>
+        <div class="broadcast-controls">
+            <button id="animateAllButton">全結果をアニメーション再生</button>
+            <button id="nextStepButton">ステップ実行</button>
+            <select id="highlightUserSelect"></select>
+            <button id="highlightUserButton">この参加者をハイライト</button>
+        </div>
     </div>
 
     <div id="participantView" class="view-container" style="display: none">
       <h2 id="participantEventName">イベント読み込み中...</h2>
 
-      <div id="participantFlow">
+     
+ <div id="participantFlow">
         <div id="nameEntrySection" class="controls" style="display: none">
           <h3>イベントに参加</h3>
           <div class="input-group">
             <input type="text" id="nameInput" placeholder="あなたの名前を入力してください" />
+      
             <button id="confirmNameButton">OK</button>
           </div>
           <div id="suggestionList" class="suggestion-list"></div>
-        </div>
+        
+</div>
 
         <div id="participantControlPanel" class="controls" style="display: none">
           <h3>ようこそ、<span id="welcomeName"></span> さん</h3>
           <div class="control-panel-buttons">
             <button id="goToAmidaButton">あみだくじに参加する</button>
             <button id="setPasswordButton">合言葉を設定する</button>
+  
             <button id="editProfileButton">プロフィール編集</button>
             <button id="participantLogoutButton">ログアウト</button>
-            <button id="deleteMyAccountButton" class="delete-btn">アカウントを削除する</button>
+           
+ <button id="deleteMyAccountButton" class="delete-btn">アカウントを削除する</button>
           </div>
         </div>
 
         <div id="joinSection" style="display: none">
           <button id="backToControlPanelButton">← メニューに戻る</button>
           <div id="prizeDisplay"></div>
+          
           <div class="slot-selection-container">
             <h3>参加枠を選んでください</h3>
-            <div id="slotList"></div>
+            
+<div id="slotList"></div>
           </div>
           <div class="join-form">
             <button id="joinButton" disabled>この枠で参加する</button>
@@ -217,9 +255,11 @@
         </div>
 
         <div id="waitingMessage" style="display: none">
+          
           <p>参加登録しました！結果発表をお待ちください...</p>
           <button id="deleteParticipantWaitingButton" class="delete-btn">参加を取り消す</button>
-        </div>
+   
+     </div>
       </div>
 
       <div id="resultSection" style="display: none">
@@ -230,8 +270,10 @@
         <p id="myResult"></p>
         <div id="allResultsContainer"></div>
         <button id="shareButton" style="display: none">結果をシェアする</button>
+       
         <button id="backToControlPanelFromResultButton" style="display: none">戻る</button>
-      </div>
+    
+  </div>
     </div>
 
     <div id="passwordSetModal" class="modal" style="display: none">
@@ -243,7 +285,9 @@
           <label for="newPasswordInput">新しい合言葉:</label>
           <input type="password" id="newPasswordInput" placeholder="4文字以上" />
         </div>
-        <button id="savePasswordButton" class="primary-action">設定する</button>
+    
+        
+<button id="savePasswordButton" class="primary-action">設定する</button>
       </div>
     </div>
 
@@ -255,7 +299,9 @@
           <img id="profileIconPreview" src="" alt="Profile Icon" width="100" height="100" />
           <input type="file" id="profileIconInput" accept="image/*" />
         </div>
-        <div class="input-group">
+    
+    
+    <div class="input-group">
           <label for="profileColorInput">テーマカラー:</label>
           <input type="color" id="profileColorInput" />
         </div>
@@ -267,7 +313,9 @@
       <div class="modal-content">
         <span class="close-button">&times;</span>
         <h3>賞品をマスターから選択</h3>
-        <ul id="prizeMasterSelectList" class="item-list prize-master-list"></ul>
+        <ul id="prizeMasterSelectList" class="item-list 
+
+        prize-master-list"></ul>
         <button id="addSelectedPrizesButton" class="primary-action">選択した賞品を追加</button>
       </div>
     </div>
