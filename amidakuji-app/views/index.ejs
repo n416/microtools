@@ -75,11 +75,22 @@
       </div>
     </div>
 
+    <div id="groupEventListView" class="view-container" style="display: none">
+      <h2 id="groupEventListName">イベント一覧を読み込んでいます...</h2>
+      <ul id="groupEventList" class="item-list"></ul>
+    </div>
+
     <div id="groupSettingsModal" class="modal" style="display: none">
       <div class="modal-content">
         <span class="close-button">&times;</span>
         <h3>グループ設定</h3>
         <input type="hidden" id="settingsGroupId" />
+
+        <div class="input-group">
+          <label for="groupNameEditInput">グループ名:</label>
+          <input type="text" id="groupNameEditInput" placeholder="グループ名" />
+        </div>
+
         <div class="input-group">
           <label for="customUrlInput">カスタムURL:</label>
           <input type="text" id="customUrlInput" placeholder="例: my-event-2025" />
@@ -92,6 +103,7 @@
           <label for="groupPasswordInput">合言葉:</label>
           <input type="password" id="groupPasswordInput" placeholder="変更する場合のみ入力" />
         </div>
+
         <div class="input-group checkbox-group">
           <input type="checkbox" id="noIndexCheckbox" />
           <label for="noIndexCheckbox">検索エンジンに表示しない</label>
@@ -114,7 +126,6 @@
         </div>
         <ul id="prizeMasterList" class="item-list prize-master-list"></ul>
         <hr />
-
         <h4>合言葉リセット依頼</h4>
         <ul id="passwordResetRequestList" class="item-list"></ul>
 
@@ -131,7 +142,6 @@
       <h3>このグループのイベント一覧</h3>
       <ul id="eventList" class="item-list"></ul>
     </div>
-
     <div id="eventEditView" class="view-container" style="display: none">
       <div class="event-header">
         <button id="backToGroupsButton">← グループ一覧に戻る</button>
@@ -139,7 +149,13 @@
       <h3>イベント新規作成・編集</h3>
       <div id="settings" class="controls">
         <div class="settings-column">
-          <h4>1. 参加人数と景品</h4>
+          <h4>1. イベント名</h4>
+          <div class="input-group">
+            <label for="eventNameInput">イベント名:</label>
+            <input type="text" id="eventNameInput" placeholder="（例: 忘年会2025）" />
+          </div>
+
+          <h4>2. 参加人数と景品</h4>
           <div class="input-group">
             <label for="participantCountInput">参加人数:</label>
             <input type="number" id="participantCountInput" min="2" placeholder="グループの参加者数に応じて自動設定" />
@@ -155,21 +171,19 @@
           <p>※参加人数と景品の数を一致させてください。</p>
         </div>
         <div class="settings-column">
-          <h4>2. 公開設定</h4>
+          <h4>3. 公開設定</h4>
           <div class="input-group">
             <label for="displayModeSelect">景品表示:</label>
             <select id="displayModeSelect">
               <option value="public">全員に公開</option>
-
               <option value="private">非公開 (???)</option>
             </select>
           </div>
           <div class="input-group">
             <label for="eventPasswordInput">合言葉:</label>
-
             <input type="password" id="eventPasswordInput" placeholder="（任意）" />
           </div>
-          <h4>3. 作成</h4>
+          <h4>4. 作成</h4>
           <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
         </div>
       </div>
@@ -183,6 +197,7 @@
         <p>現在のイベントURL: <a id="currentEventUrl" href="#" target="_blank">（未作成または未読み込み）</a></p>
       </div>
     </div>
+    
 
     <div id="broadcastView" class="view-container" style="display: none">
       <div class="event-header">
@@ -303,5 +318,14 @@
     </div>
 
     <script src="/script.js"></script>
+    <script>
+      <% if (typeof groupData !== 'undefined' && groupData) { %>
+        // groupDataがサーバーから渡され、かつnullでない場合
+        const initialGroupData = <%- groupData %>;
+      <% } else { %>
+        // groupDataが渡されなかったか、nullだった場合
+        const initialGroupData = null;
+      <% } %>
+    </script>
   </body>
 </html>
