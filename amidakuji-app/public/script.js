@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const startEventButton = document.getElementById('startEventButton');
   const startBroadcastButton = document.getElementById('startBroadcastButton');
 
-  // ★ 2つのキャンバスとコンテキストを取得
+  // 2つのキャンバスとコンテキストを取得
   const adminCanvas = document.getElementById('adminCanvas');
   const ctxAdmin = adminCanvas ? adminCanvas.getContext('2d') : null;
   const participantCanvas = document.getElementById('participantCanvas');
@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (eventGroupName) eventGroupName.textContent = `グループ: ${groupName}`;
     resetEventCreationForm();
     loadEventsForGroup(groupId);
-    updateGroupSwitcher(); // ★ 追加
+    updateGroupSwitcher();
   }
 
   if (backToDashboardButton) {
@@ -235,13 +235,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // ----- URLルーティングと初期化 -----
 
-  // 修正後
-  // handleRouting 関数をまるごと以下のように置き換えます。
   async function handleRouting() {
     stopAnimation();
     const path = window.location.pathname;
 
-    // 新しいURL形式に対応した正規表現
     const groupEventListMatch = path.match(/\/g\/([a-zA-Z0-9-_]+)\/?$/);
     const eventFromGroupMatch = path.match(/\/g\/([a-zA-Z0-9-_]+)\/([a-zA-Z0-9]+)/);
     const directEventMatch = path.match(/\/events\/([a-zA-Z0-9]+)/);
@@ -253,15 +250,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const loggedInUser = await checkGoogleAuthState();
 
     if (isParticipantView) {
-      document.querySelector('.main-header').style.display = 'none'; // ヘッダーは非表示
+      document.querySelector('.main-header').style.display = 'none';
 
       if (groupEventListMatch) {
-        // グループのイベント一覧表示
         const customUrl = groupEventListMatch[1];
         showView('groupEventListView');
         await initializeGroupEventListView(customUrl);
       } else {
-        // イベント参加画面表示
         showView('participantView');
         let eventId, customUrl;
 
@@ -281,20 +276,16 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 管理者用ページへのアクセスの場合
     document.querySelector('.main-header').style.display = 'flex';
-    adjustBodyPadding(); // ヘッダー表示後にpaddingを調整
+    adjustBodyPadding();
 
     if (loggedInUser) {
-      // ログインしている場合
       if (adminMatch && loggedInUser.role === 'system_admin' && !loggedInUser.isImpersonating) {
         showAdminDashboard();
       } else {
-        // lastUsedGroupIdに基づいてリダイレクト、なければ最初のグループへ
         await loadUserGroupsAndRedirect(loggedInUser.lastUsedGroupId);
       }
     } else {
-      // ログインしていない場合
       ALL_VIEWS.forEach((viewId) => {
         const el = document.getElementById(viewId);
         if (el) el.style.display = 'none';
@@ -304,13 +295,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 新たに initializeGroupEventListView 関数を追加します。
   async function initializeGroupEventListView(customUrl) {
     const eventListContainer = document.getElementById('groupEventList');
     const groupNameTitle = document.getElementById('groupEventListName');
     if (!eventListContainer || !groupNameTitle) return;
 
-    // ★修正点：ページに埋め込まれた initialGroupData を直接使用する
     if (initialGroupData) {
       groupNameTitle.textContent = `${initialGroupData.name} のイベント一覧`;
     } else {
@@ -339,10 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <span>${eventDate} 作成のイベント</span>
         <button data-event-id="${event.id}" data-custom-url="${customUrl}">このイベントに参加する</button>
       `;
-        // イベントリスナーで直接イベント参加画面へ遷移
         li.querySelector('button').addEventListener('click', (e) => {
           const {eventId, customUrl} = e.target.dataset;
-          // 新しいURL形式に沿ってリダイレクト
           window.location.href = `/g/${customUrl}/${eventId}`;
         });
         eventListContainer.appendChild(li);
@@ -353,11 +340,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 修正後
   async function checkGoogleAuthState() {
     try {
       const res = await fetch('/api/user/me');
-      if (!res.ok) throw new Error('Failed to fetch auth state');
+      if (!res.ok) {
+        // ログインしていない場合、サーバーはHTMLを返す可能性があるためJSONパースエラーを避ける
+        if (res.headers.get('content-type')?.includes('application/json')) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to fetch auth state');
+        } else {
+          throw new Error('User not logged in');
+        }
+      }
       const user = await res.json();
       currentUser = user;
       const impersonationBanner = document.querySelector('.impersonation-banner');
@@ -392,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
             requestAdminButton.style.display = 'none';
           }
         }
-        return user; // ★取得したユーザー情報を返す
+        return user;
       } else {
         if (authStatus) authStatus.textContent = '';
         if (loginButton) loginButton.style.display = 'block';
@@ -401,13 +395,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (adminDashboardButton) adminDashboardButton.style.display = 'none';
         if (requestAdminButton) requestAdminButton.style.display = 'none';
         if (impersonationBanner) impersonationBanner.style.display = 'none';
-        return null; // ★ログインしていない場合はnullを返す
+        return null;
       }
     } catch (e) {
       console.error('Auth check failed', e);
-      return null; // ★エラー時もnullを返す
+      return null;
     } finally {
-      adjustBodyPadding(); // 最後に必ずpaddingを調整
+      adjustBodyPadding();
     }
   }
 
@@ -416,20 +410,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/groups');
       if (!res.ok) throw new Error('グループの読み込みに失敗');
       allUserGroups = await res.json();
-      updateGroupSwitcher(); // ★ スイッチャーUIを更新
+      updateGroupSwitcher();
 
       if (allUserGroups.length > 0) {
         let targetGroup = allUserGroups.find((g) => g.id === lastUsedGroupId);
         if (!targetGroup) {
-          targetGroup = allUserGroups[0]; // lastUsedGroupId が無効なら最初のグループへ
+          targetGroup = allUserGroups[0];
         }
         showDashboardView(targetGroup.id, targetGroup.name);
       } else {
-        showGroupDashboard(); // グループが一つもなければグループ作成画面へ
+        showGroupDashboard();
       }
     } catch (error) {
       console.error(error);
-      showGroupDashboard(); // エラー時もグループ作成画面へ
+      showGroupDashboard();
     }
   }
 
@@ -448,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (eventIdInput) eventIdInput.value = '';
     currentEventId = null;
     currentLotteryData = null;
-    if (createEventButton) createEventButton.textContent = 'この内容でイベントを作成'; // ボタンテキストを元に戻す
+    if (createEventButton) createEventButton.textContent = 'この内容でイベントを作成';
     if (adminControls) adminControls.style.display = 'none';
     if (broadcastControls) broadcastControls.style.display = 'none';
   }
@@ -523,25 +517,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ----- アニメーション & 描画ロジック -----
-  /**
-   * キャンバスの解像度を表示サイズに合わせる関数
-   * @param {HTMLCanvasElement} canvas 対象のキャンバス
-   */
   function resizeCanvasToDisplaySize(canvas) {
     if (!canvas) return;
     const {width, height} = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
 
-    // 解像度が異なっていたら再設定
     if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       const ctx = canvas.getContext('2d');
-      ctx.scale(dpr, dpr); // 高解像度ディスプレイに対応
-      return true; // サイズが変更された
+      ctx.scale(dpr, dpr);
+      return true;
     }
-    return false; // サイズ変更なし
+    return false;
   }
+
   function stopAnimation() {
     animator.running = false;
     if (animationFrameId) {
@@ -550,37 +540,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function calculatePath(startIdx, lines, numParticipants) {
-    const VIRTUAL_WIDTH = 800; // 基準となる幅
-    const VIRTUAL_HEIGHT = 400; // 基準となる高さ
+    const VIRTUAL_WIDTH = 800;
+    const VIRTUAL_HEIGHT = 400;
     const path = [];
     const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
     const sortedLines = [...lines].sort((a, b) => a.y - b.y);
 
     let currentPathIdx = startIdx;
 
-    // 始点を追加
     path.push({x: participantSpacing * (currentPathIdx + 1), y: 30});
 
-    // 全ての横線を順番に確認
     sortedLines.forEach((line) => {
-      // ★ 修正：現在の自分の経路に横線が関係ある場合のみ、点を追加する
       if (line.fromIndex === currentPathIdx || line.toIndex === currentPathIdx) {
-        // 横線のある高さまで垂直に移動した点を追加
         path.push({x: participantSpacing * (currentPathIdx + 1), y: line.y});
 
-        // 横線を渡ってインデックスを更新
         if (line.fromIndex === currentPathIdx) {
           currentPathIdx = line.toIndex;
         } else {
           currentPathIdx = line.fromIndex;
         }
-
-        // 横線を渡りきった後の点を追加
         path.push({x: participantSpacing * (currentPathIdx + 1), y: line.y});
       }
     });
 
-    // 最終的なゴール地点を追加
     path.push({x: participantSpacing * (currentPathIdx + 1), y: VIRTUAL_HEIGHT - 30});
     return path;
   }
@@ -643,20 +625,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateTracerPosition(tracer) {
-    // ★ ステップ実行用の停止ロジックを追加
     if (tracer.stopY && tracer.y >= tracer.stopY) {
-      // 停止Y座標に到達したら、正確な位置に補正して停止
       const start = tracer.path[tracer.pathIndex];
       const end = tracer.path[tracer.pathIndex + 1];
       if (end && start.y < tracer.stopY && end.y >= tracer.stopY) {
         const ratio = (tracer.stopY - start.y) / (end.y - start.y);
-        // 停止Y座標ピッタリのX座標を計算
         const stopX = start.x + (end.x - start.x) * ratio;
         if (!isNaN(stopX)) tracer.x = stopX;
       }
       tracer.y = tracer.stopY;
       tracer.isFinished = true;
-      delete tracer.stopY; // 停止位置指定をクリア
+      delete tracer.stopY;
       return;
     }
 
@@ -716,7 +695,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // グループスイッチャーの表示切替
   if (currentGroupName) {
     currentGroupName.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -724,14 +702,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ドロップダウンからグループを選択
   if (switcherGroupList) {
     switcherGroupList.addEventListener('click', async (e) => {
       if (e.target.tagName === 'BUTTON') {
         const {groupId, groupName} = e.target.dataset;
         showDashboardView(groupId, groupName);
         groupDropdown.style.display = 'none';
-        // 最後に使ったグループIDをサーバーに保存
         await fetch('/api/user/me/last-group', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -742,7 +718,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // グローバルクリックでドロップダウンを閉じる
   window.addEventListener('click', () => {
     if (groupDropdown && groupDropdown.style.display === 'block') {
       groupDropdown.style.display = 'none';
@@ -752,7 +727,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function drawLotteryBase(targetCtx, data, lineColor = '#ccc') {
     if (!targetCtx || !targetCtx.canvas || !data || !data.participants || data.participants.length === 0) return;
 
-    // ★ 描画サイズと倍率を計算
     const rect = targetCtx.canvas.getBoundingClientRect();
     targetCtx.canvas.width = rect.width * devicePixelRatio;
     targetCtx.canvas.height = rect.height * devicePixelRatio;
@@ -862,7 +836,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     animator.tracers = participantsToAnimate.map((p) => {
       const startIdx = p.slot;
-      // ★ 修正：サイズ引数を削除
       const path = calculatePath(startIdx, currentLotteryData.lines, currentLotteryData.participants.length);
       return {
         name: p.name,
@@ -878,39 +851,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     animator.context = targetCtx;
     animator.onComplete = onComplete;
-    animator.running = true;
-    animationLoop();
-  }
-
-  async function startStepAnimation(targetCtx) {
-    stopAnimation();
-    if (!targetCtx || !currentLotteryData) return;
-
-    const allParticipants = currentLotteryData.participants.filter((p) => p.name);
-    await preloadIcons(allParticipants);
-
-    const sortedLines = [...currentLotteryData.lines].sort((a, b) => a.y - b.y);
-    const linesForStep = sortedLines.slice(0, animator.step);
-
-    animator.tracers = allParticipants.map((p) => {
-      const startIdx = p.slot;
-      // ★ 修正：サイズ引数を削除
-      const path = calculatePath(startIdx, linesForStep, currentLotteryData.participants.length);
-
-      return {
-        name: p.name,
-        color: p.color || '#333',
-        path: path,
-        pathIndex: 0,
-        progress: 0,
-        x: path[0].x,
-        y: path[0].y,
-        isFinished: false,
-      };
-    });
-
-    animator.context = targetCtx;
-    animator.onComplete = null;
     animator.running = true;
     animationLoop();
   }
@@ -992,7 +932,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!groupSettingsModal) return;
     settingsGroupId.value = group.id;
     currentGroupId = group.id;
-    // ▼▼▼ グループ名入力欄に現在の名前を設定 ▼▼▼
     document.getElementById('groupNameEditInput').value = group.name || '';
     customUrlInput.value = group.customUrl || '';
     if (customUrlPreview) customUrlPreview.textContent = group.customUrl || '';
@@ -1012,20 +951,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function saveGroupSettings() {
     const groupId = settingsGroupId.value;
-    // ▼▼▼ 新しいグループ名を取得 ▼▼▼
     const groupName = document.getElementById('groupNameEditInput').value.trim();
     const customUrl = customUrlInput.value.trim();
     const password = groupPasswordInput.value;
     const noIndex = noIndexCheckbox.checked;
 
-    // 送信するデータ（ペイロード）を定義
     const payload = {
       groupName,
       customUrl,
       noIndex,
     };
 
-    // パスワードが入力されている（空文字列でない）場合のみ、ペイロードに追加
     if (password) {
       payload.password = password;
     }
@@ -1035,7 +971,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const settingsRes = await fetch(`/api/groups/${groupId}/settings`, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
-        // ▼▼▼ 送信するデータに groupName を追加 ▼▼▼
         body: JSON.stringify(payload),
       });
       if (!settingsRes.ok) throw new Error((await settingsRes.json()).error);
@@ -1112,18 +1047,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const events = await res.json();
       eventList.innerHTML = '';
 
-      // ▼▼▼ ここからが修正箇所です ▼▼▼
       events.forEach((event) => {
         const li = document.createElement('li');
 
-        // 1. 堅牢な日付変換ロジック
-        // FirestoreのTimestampオブジェクト({_seconds: ...})でも、ISO文字列でも対応
         const date = event.createdAt && event.createdAt._seconds ? new Date(event.createdAt._seconds * 1000) : new Date(event.createdAt);
 
-        // toLocaleString()で、ユーザーの環境に合わせた読みやすい形式で表示
         const displayDate = !isNaN(date) ? date.toLocaleString() : '日付不明';
 
-        // 2. イベント名を表示（なければ「無題のイベント」）
         const eventName = event.eventName || '無題のイベント';
 
         const filledSlots = event.participants.filter((p) => p.name).length;
@@ -1140,15 +1070,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="copy-event-btn" data-event-id="${event.id}">コピー</button>
         </div>
       `;
-        // ▲▲▲ ここまでが修正箇所です ▲▲▲
-
         li.className = 'item-list-item';
-
-        li.querySelector('.edit-event-btn').addEventListener('click', (e) => {
-          e.stopPropagation();
-          loadEvent(event.id, 'eventEditView');
-        });
-        // ... (以降のリスナーは変更なし) ...
         eventList.appendChild(li);
       });
     } catch (error) {
@@ -1183,7 +1105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (participantCount !== prizes.length) return alert('参加人数と景品の数は同じにしてください。');
 
     const eventData = {
-      eventName: document.getElementById('eventNameInput').value.trim(), // ▼▼▼ 追加 ▼▼▼
+      eventName: document.getElementById('eventNameInput').value.trim(),
       prizes,
       groupId: currentGroupId,
       participantCount,
@@ -1220,7 +1142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (participantCount !== prizes.length) return alert('参加人数と景品の数は同じにしてください。');
 
     const eventData = {
-      eventName: document.getElementById('eventNameInput').value.trim(), // ▼▼▼ 追加 ▼▼▼
+      eventName: document.getElementById('eventNameInput').value.trim(),
       prizes,
       participantCount,
       displayMode: displayModeSelect.value,
@@ -1259,10 +1181,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       currentLotteryData = data;
 
-      // 1. 先にビューを表示して、HTML要素を確実にレンダリングさせる
       showView(viewToShow);
 
-      // 2. 表示されたビューの要素にデータを書き込む
       const parentGroup = allUserGroups.find((g) => g.id === data.groupId);
       let url;
       if (parentGroup && parentGroup.customUrl) {
@@ -1277,7 +1197,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (eventIdInput) eventIdInput.value = eventId;
 
       if (viewToShow === 'eventEditView') {
-        // これで document.getElementById('eventNameInput') は null にならない
         document.getElementById('eventNameInput').value = data.eventName || '';
         prizes = data.prizes || [];
         if (participantCountInput) participantCountInput.value = data.participantCount;
@@ -1291,7 +1210,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderPrizeList();
       } else if (viewToShow === 'broadcastView') {
-        // (broadcastViewのロジックは変更なし)
         if (data.status === 'pending') {
           if (adminControls) adminControls.style.display = 'block';
           if (startEventButton) startEventButton.style.display = 'inline-block';
@@ -1352,7 +1270,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
       alert('イベントを開始しました！');
-      // broadcastViewを再読み込みしてアニメーション準備を行う
       await loadEvent(currentEventId, 'broadcastView');
     } catch (error) {
       console.error('Failed to start event:', error);
@@ -1747,7 +1664,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (myResult) myResult.innerHTML = `<b>${targetName}さんの結果をアニメーションで確認中...</b>`;
-    // ★★★★★ 修正 ★★★★★
     await startAnimation(ctxParticipant, [targetName], onAnimationComplete);
   }
 
@@ -2270,10 +2186,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (goToGroupSettingsButton) {
     goToGroupSettingsButton.addEventListener('click', () => {
       if (currentGroupId) {
-        // ユーザーが管理するグループリストから現在のグループ情報を検索
         const currentGroup = allUserGroups.find((g) => g.id === currentGroupId);
         if (currentGroup) {
-          openSettingsModal(currentGroup); // 設定モーダルを開く
+          openSettingsModal(currentGroup);
         } else {
           alert('グループ情報が見つかりませんでした。');
         }
@@ -2282,20 +2197,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (switcherCreateGroup) {
     switcherCreateGroup.addEventListener('click', () => {
-      groupDropdown.style.display = 'none'; // ドロップダウンを閉じる
-      showGroupDashboard(); // グループ作成画面を表示
+      groupDropdown.style.display = 'none';
+      showGroupDashboard();
       if (groupNameInput) {
-        groupNameInput.focus(); // 入力フィールドにフォーカス
+        groupNameInput.focus();
       }
     });
   }
   if (stopImpersonatingButton) stopImpersonatingButton.addEventListener('click', stopImpersonating);
   if (loginButton) loginButton.addEventListener('click', () => (window.location.href = '/auth/google'));
+
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★ ここが今回の修正箇所です
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
   if (logoutButton)
     logoutButton.addEventListener('click', () => {
       clearParticipantState();
-      window.location.href = '/logout';
+      window.location.href = '/auth/logout'; // '/logout' から '/auth/logout' に変更
     });
+
   if (deleteAccountButton) deleteAccountButton.addEventListener('click', deleteAccount);
   if (requestAdminButton) requestAdminButton.addEventListener('click', requestAdminAccess);
   if (createGroupButton) createGroupButton.addEventListener('click', createGroup);
@@ -2350,9 +2270,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (createEventButton) {
     createEventButton.addEventListener('click', () => {
       if (currentEventId) {
-        updateEvent(); // 編集モードなら更新処理
+        updateEvent();
       } else {
-        createEvent(); // 新規作成モードなら作成処理
+        createEvent();
       }
     });
   }
@@ -2365,36 +2285,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (eventList) {
     eventList.addEventListener('click', (event) => {
-      const item = event.target.closest('.item-list-item');
+      const target = event.target;
+      const item = target.closest('.item-list-item');
       if (!item) return;
 
-      if (event.target.classList.contains('copy-event-btn')) {
-        event.stopPropagation();
-        const eventIdToCopy = event.target.dataset.eventId;
-        copyEvent(eventIdToCopy);
-        return;
-      }
-      if (event.target.classList.contains('edit-event-btn')) {
-        event.stopPropagation();
-        loadEvent(item.dataset.eventId);
-        return;
-      }
-      if (event.target.classList.contains('start-event-btn')) {
-        event.stopPropagation();
-        loadEvent(item.dataset.eventId).then(() => {
-          showView('broadcastView');
-        });
+      // イベントIDは常にボタンから取得する
+      const eventId = target.dataset.eventId;
+      if (!eventId) {
+        // もしボタン以外（例えばリストの余白）がクリックされた場合、何もしない
+        if (!target.closest('.item-buttons')) {
+          const editButton = item.querySelector('.edit-event-btn');
+          if (editButton && editButton.dataset.eventId) {
+            loadEvent(editButton.dataset.eventId, 'eventEditView');
+          }
+        }
         return;
       }
 
-      loadEvent(item.dataset.eventId);
+      if (target.classList.contains('copy-event-btn')) {
+        event.stopPropagation();
+        copyEvent(eventId);
+        return;
+      }
+      if (target.classList.contains('edit-event-btn')) {
+        event.stopPropagation();
+        loadEvent(eventId, 'eventEditView');
+        return;
+      }
+      if (target.classList.contains('start-event-btn')) {
+        event.stopPropagation();
+        loadEvent(eventId, 'broadcastView');
+        return;
+      }
     });
   }
 
   // --- 配信モード用イベントリスナー ---
   if (startBroadcastButton)
     startBroadcastButton.addEventListener('click', async () => {
-      // このボタンは現在直接使用されないが、念のためロジックをloadEventに統合
       if (currentEventId) {
         await loadEvent(currentEventId, 'broadcastView');
       }
@@ -2404,7 +2332,6 @@ document.addEventListener('DOMContentLoaded', () => {
     animateAllButton.addEventListener('click', () => {
       if (animator.tracers.length === 0 || animator.running) return;
 
-      // 全トレーサーの状態を完全に初期化し、未完了状態にする
       animator.tracers.forEach((tracer) => {
         tracer.isFinished = false;
         tracer.pathIndex = 0;
@@ -2413,7 +2340,7 @@ document.addEventListener('DOMContentLoaded', () => {
           tracer.x = tracer.path[0].x;
           tracer.y = tracer.path[0].y;
         }
-        delete tracer.stopY; // ステップ実行の停止点をクリア
+        delete tracer.stopY;
       });
 
       animator.context = ctxAdmin;
@@ -2428,24 +2355,20 @@ document.addEventListener('DOMContentLoaded', () => {
       let isAnyTracerMoving = false;
 
       animator.tracers.forEach((tracer) => {
-        // 既にゴールしているトレーサーは無視
         if (tracer.pathIndex >= tracer.path.length - 1) {
           tracer.isFinished = true;
           return;
         }
 
-        tracer.isFinished = false; // アニメーションを許可
-        delete tracer.stopY; // 前回のstopYをクリア
+        tracer.isFinished = false;
+        delete tracer.stopY;
 
-        // 現在位置から次の分岐点を探す
         for (let i = tracer.pathIndex; i < tracer.path.length - 1; i++) {
           const p1 = tracer.path[i];
           const p2 = tracer.path[i + 1];
-          // 水平移動（分岐）かチェック
           if (p1.y === p2.y && p1.x !== p2.x) {
-            // 現在のY座標より下にある最初の分岐点を見つける
             if (p1.y > tracer.y + 0.1) {
-              tracer.stopY = p1.y; // その分岐点のY座標で停止
+              tracer.stopY = p1.y;
               break;
             }
           }
