@@ -1,4 +1,5 @@
 const {firestore, bucket} = require('../utils/firestore');
+const {FieldValue} = require('@google-cloud/firestore'); // FieldValueを追加
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
@@ -125,6 +126,7 @@ exports.updateGroupSettings = async (req, res) => {
       }
       updateData.customUrl = trimmedUrl;
     }
+    // パスワードが空文字列で送信された場合は何もしない（削除は別APIで行う）
     if (typeof password === 'string' && password) {
       updateData.password = await bcrypt.hash(password, saltRounds);
     }
@@ -137,13 +139,40 @@ exports.updateGroupSettings = async (req, res) => {
   }
 };
 
-exports.checkGroupPassword = async (req, res) => {
+/**
+ * 【新規】グループの合言葉を削除するAPI
+ */
+exports.deleteGroupPassword = async (req, res) => {
+  try {
+    const {groupId} = req.params;
+    const groupRef = firestore.collection('groups').doc(groupId);
+    const groupDoc = await groupRef.get();
+
+    if (!groupDoc.exists || groupDoc.data().ownerId !== req.user.id) {
+      return res.status(403).json({error: '権限がありません。'});
+    }
+
+    await groupRef.update({
+      password: FieldValue.delete(),
+    });
+
+    res.status(200).json({message: '合言葉を削除しました。'});
+  } catch (error) {
+    console.error('Error deleting group password:', error);
+    res.status(500).json({error: '合言葉の削除に失敗しました。'});
+  }
+};
+
+/**
+ * 【修正】グループの合言葉を検証し、セッションに認証済みフラグを立てる
+ */
+exports.verifyPassword = async (req, res) => {
   try {
     const {groupId} = req.params;
     const {password} = req.body;
 
     if (!password) {
-      return res.status(400).json({error: 'パスワードが必要です。'});
+      return res.status(400).json({error: '合言葉が必要です。'});
     }
 
     const groupRef = firestore.collection('groups').doc(groupId);
@@ -154,15 +183,32 @@ exports.checkGroupPassword = async (req, res) => {
     }
 
     const groupData = groupDoc.data();
-    if (!groupData.password) {
-      return res.status(200).json({success: true});
-    }
+    const match = groupData.password ? await bcrypt.compare(password, groupData.password) : true;
 
-    const match = await bcrypt.compare(password, groupData.password);
-    res.status(200).json({success: match});
+    if (match) {
+      if (!req.session.verifiedGroups) {
+        req.session.verifiedGroups = [];
+      }
+      if (!req.session.verifiedGroups.includes(groupId)) {
+        req.session.verifiedGroups.push(groupId);
+      }
+
+      // ★★★ 修正箇所 ★★★
+      // セッションの保存が完了してからレスポンスを返すように変更
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({success: false, error: 'セッションの保存に失敗しました。'});
+        }
+        res.status(200).json({success: true, message: '認証に成功しました。'});
+      });
+      // ★★★ 修正箇所ここまで ★★★
+    } else {
+      res.status(401).json({success: false, error: '合言葉が違います。'});
+    }
   } catch (error) {
     console.error('Error checking group password:', error);
-    res.status(500).json({error: 'パスワードの確認中にエラーが発生しました。'});
+    res.status(500).json({error: '合言葉の確認中にエラーが発生しました。'});
   }
 };
 

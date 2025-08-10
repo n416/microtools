@@ -10,7 +10,6 @@
 
     <% if (typeof noIndex !== 'undefined' && noIndex) { %>
     <meta name="robots" content="noindex" />
-
     <% } %>
 
     <title>ダイナミックあみだくじ</title>
@@ -101,7 +100,8 @@
 
         <div class="input-group">
           <label for="groupPasswordInput">合言葉:</label>
-          <input type="password" id="groupPasswordInput" placeholder="変更する場合のみ入力" />
+          <input type="password" id="groupPasswordInput" placeholder="新規設定・変更時のみ入力" />
+          <button id="deletePasswordButton" class="delete-btn" style="display: none;">合言葉を削除</button>
         </div>
 
         <div class="input-group checkbox-group">
@@ -142,6 +142,7 @@
       <h3>このグループのイベント一覧</h3>
       <ul id="eventList" class="item-list"></ul>
     </div>
+
     <div id="eventEditView" class="view-container" style="display: none">
       <div class="event-header">
         <button id="backToGroupsButton">← グループ一覧に戻る</button>
@@ -178,10 +179,6 @@
               <option value="public">全員に公開</option>
               <option value="private">非公開 (???)</option>
             </select>
-          </div>
-          <div class="input-group">
-            <label for="eventPasswordInput">合言葉:</label>
-            <input type="password" id="eventPasswordInput" placeholder="（任意）" />
           </div>
           <h4>4. 作成</h4>
           <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
@@ -225,7 +222,6 @@
           <h3>イベントに参加</h3>
           <div class="input-group">
             <input type="text" id="nameInput" placeholder="あなたの名前を入力してください" />
-
             <button id="confirmNameButton">OK</button>
           </div>
           <div id="suggestionList" class="suggestion-list"></div>
@@ -236,10 +232,8 @@
           <div class="control-panel-buttons">
             <button id="goToAmidaButton">あみだくじに参加する</button>
             <button id="setPasswordButton">合言葉を設定する</button>
-
             <button id="editProfileButton">プロフィール編集</button>
             <button id="participantLogoutButton">ログアウト</button>
-
             <button id="deleteMyAccountButton" class="delete-btn">アカウントを削除する</button>
           </div>
         </div>
@@ -247,10 +241,8 @@
         <div id="joinSection" style="display: none">
           <button id="backToControlPanelButton">← メニューに戻る</button>
           <div id="prizeDisplay"></div>
-
           <div class="slot-selection-container">
             <h3>参加枠を選んでください</h3>
-
             <div id="slotList"></div>
           </div>
           <div class="join-form">
@@ -266,13 +258,10 @@
 
       <div id="resultSection" style="display: none">
         <h3>🎉 結果発表 🎉</h3>
-
         <canvas id="participantCanvas" width="800" height="400"></canvas>
-
         <p id="myResult"></p>
         <div id="allResultsContainer"></div>
         <button id="shareButton" style="display: none">結果をシェアする</button>
-
         <button id="backToControlPanelFromResultButton" style="display: none">戻る</button>
       </div>
     </div>
@@ -286,7 +275,6 @@
           <label for="newPasswordInput">新しい合言葉:</label>
           <input type="password" id="newPasswordInput" placeholder="4文字以上" />
         </div>
-
         <button id="savePasswordButton" class="primary-action">設定する</button>
       </div>
     </div>
@@ -299,7 +287,6 @@
           <img id="profileIconPreview" src="" alt="Profile Icon" width="100" height="100" />
           <input type="file" id="profileIconInput" accept="image/*" />
         </div>
-
         <div class="input-group">
           <label for="profileColorInput">テーマカラー:</label>
           <input type="color" id="profileColorInput" />
@@ -317,6 +304,21 @@
       </div>
     </div>
 
+    <div id="groupPasswordModal" class="modal" style="display: none">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3>合言葉の入力</h3>
+            <p>グループ「<strong id="verificationTargetGroupName"></strong>」へのアクセスには合言葉が必要です。</p>
+            <input type="hidden" id="verificationTargetGroupId" />
+            <div class="input-group">
+                <label for="groupPasswordVerifyInput">合言葉:</label>
+                <input type="password" id="groupPasswordVerifyInput" />
+            </div>
+            <button id="verifyPasswordButton" class="primary-action">認証</button>
+        </div>
+    </div>
+
+
     <script src="/script.js"></script>
     <script>
       <% if (typeof groupData !== 'undefined' && groupData) { %>
@@ -326,6 +328,12 @@
         // groupDataが渡されなかったか、nullだった場合
         const initialGroupData = null;
       <% } %>
+
+      <% if (typeof eventData !== 'undefined' && eventData) { %>
+        // シェアページ用にサーバーから直接渡されたイベントデータ
+        const initialEventData = <%- eventData %>;
+      <% } else { %>
+        const initialEventData = null;
     </script>
   </body>
 </html>

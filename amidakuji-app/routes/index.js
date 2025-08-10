@@ -6,21 +6,21 @@ const fetch = require('node-fetch');
 
 // Avatar proxy (APIルートなので先頭に配置)
 router.get('/api/avatar-proxy', async (req, res) => {
-    const {name} = req.query;
-    if (!name) {
-      return res.status(400).send('Name query parameter is required');
+  const {name} = req.query;
+  if (!name) {
+    return res.status(400).send('Name query parameter is required');
+  }
+  try {
+    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
+    const response = await fetch(avatarUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch avatar: ${response.statusText}`);
     }
-    try {
-      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
-      const response = await fetch(avatarUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch avatar: ${response.statusText}`);
-      }
-      response.body.pipe(res);
-    } catch (error) {
-      console.error('Avatar proxy error:', error);
-      res.status(500).send('Error fetching avatar');
-    }
+    response.body.pipe(res);
+  } catch (error) {
+    console.error('Avatar proxy error:', error);
+    res.status(500).send('Error fetching avatar');
+  }
 });
 
 // OGP and page rendering routes
@@ -104,7 +104,7 @@ router.get('/share/:eventId/:participantName', async (req, res) => {
     const groupDoc = await firestore.collection('groups').doc(eventData.groupId).get();
     const noIndex = groupDoc.exists && groupDoc.data().noIndex;
 
-    res.render('index', {user: req.user, ogpData, noIndex});
+    res.render('index', {user: req.user, ogpData, noIndex, eventData: JSON.stringify(eventData), groupData: null});
   } catch (error) {
     console.error('Share page error:', error);
     res.status(500).send('ページの表示中にエラーが発生しました。');

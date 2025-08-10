@@ -23,16 +23,12 @@ exports.getEventsForGroup = async (req, res) => {
 
 exports.createEvent = async (req, res) => {
   try {
-    const {prizes, groupId, participantCount, displayMode, eventPassword, eventName} = req.body;
+    // イベントごとの合言葉（eventPassword）を削除
+    const {prizes, groupId, participantCount, displayMode, eventName} = req.body;
 
     if (!groupId) return res.status(400).json({error: 'グループIDは必須です。'});
     if (!participantCount || participantCount < 2) return res.status(400).json({error: '参加人数は2人以上で設定してください。'});
     if (!prizes || !Array.isArray(prizes) || prizes.length !== participantCount) return res.status(400).json({error: '参加人数と景品の数が一致していません。'});
-
-    let hashedPassword = null;
-    if (eventPassword && eventPassword.trim() !== '') {
-      hashedPassword = await bcrypt.hash(eventPassword, saltRounds);
-    }
 
     const groupDoc = await firestore.collection('groups').doc(groupId).get();
     const groupParticipants = groupDoc.data().participants || [];
@@ -58,7 +54,7 @@ exports.createEvent = async (req, res) => {
       participantCount,
       participants,
       displayMode,
-      eventPassword: hashedPassword,
+      // eventPasswordを削除
       createdAt: new Date(),
       ownerId: req.user.id,
       status: 'pending',
@@ -102,8 +98,10 @@ exports.copyEvent = async (req, res) => {
       createdAt: new Date(),
       status: 'pending',
       participants: initialParticipants,
+      ownerId: req.user.id, // コピー元にもオーナーIDを付与
     };
     delete newEventData.results;
+    delete newEventData.eventPassword; // コピー時に古いeventPasswordを削除
 
     const newDocRef = await firestore.collection('events').add(newEventData);
     res.status(201).json({newId: newDocRef.id});
@@ -117,10 +115,33 @@ exports.getEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
     const doc = await firestore.collection('events').doc(eventId).get();
-    if (!doc.exists || doc.data().ownerId !== req.user.id) {
-      return res.status(404).json({error: 'イベントが見つからないか、アクセス権がありません。'});
+    if (!doc.exists) {
+      return res.status(404).json({error: 'イベントが見つかりません。'});
     }
-    res.status(200).json({id: doc.id, ...doc.data()});
+    const eventData = doc.data();
+    const groupRef = firestore.collection('groups').doc(eventData.groupId);
+    const groupDoc = await groupRef.get();
+    if (!groupDoc.exists) {
+      return res.status(404).json({error: '所属グループが見つかりません。'});
+    }
+
+    const groupData = groupDoc.data();
+    const isOwner = req.user && groupData.ownerId === req.user.id;
+
+    // グループにパスワードが設定されているかチェック
+    if (groupData.password) {
+      // オーナーでもなく、セッションで認証済みでもない場合
+      if (!isOwner && (!req.session.verifiedGroups || !req.session.verifiedGroups.includes(eventData.groupId))) {
+        return res.status(403).json({error: 'このグループへのアクセスには合言葉が必要です。', requiresPassword: true, groupId: eventData.groupId, groupName: groupData.name});
+      }
+    }
+
+    // 従来のオーナーチェックも残す
+    if (eventData.ownerId !== req.user?.id) {
+      // return res.status(404).json({error: 'イベントが見つからないか、アクセス権がありません。'});
+    }
+
+    res.status(200).json({id: doc.id, ...eventData});
   } catch (error) {
     console.error(`Error fetching event ${req.params.id}:`, error);
     res.status(500).json({error: 'イベントの読み込みに失敗しました。'});
@@ -130,7 +151,8 @@ exports.getEvent = async (req, res) => {
 exports.updateEvent = async (req, res) => {
   try {
     const {id: eventId} = req.params;
-    const {prizes, participantCount, displayMode, eventPassword, eventName} = req.body;
+    // eventPasswordを削除
+    const {prizes, participantCount, displayMode, eventName} = req.body;
 
     if (!participantCount || participantCount < 2) return res.status(400).json({error: '参加人数は2人以上で設定してください。'});
     if (!prizes || !Array.isArray(prizes) || prizes.length !== participantCount) return res.status(400).json({error: '参加人数と景品の数が一致していません。'});
@@ -151,9 +173,7 @@ exports.updateEvent = async (req, res) => {
       displayMode,
     };
 
-    if (eventPassword && eventPassword.trim() !== '') {
-      updateData.eventPassword = await bcrypt.hash(eventPassword, saltRounds);
-    }
+    // eventPasswordのハッシュ化ロジックを削除
 
     if (participantCount !== eventData.participantCount) {
       const groupDoc = await firestore.collection('groups').doc(eventData.groupId).get();
@@ -210,24 +230,35 @@ exports.getPublicEventData = async (req, res) => {
   try {
     const {eventId} = req.params;
     const eventRef = firestore.collection('events').doc(eventId);
-    const doc = await eventRef.get();
-    if (!doc.exists) return res.status(404).json({error: 'イベントが見つかりません。'});
-    const data = doc.data();
+    const eventDoc = await eventRef.get();
 
-    const groupDoc = await firestore.collection('groups').doc(data.groupId).get();
-    const eventName = groupDoc.exists ? groupDoc.data().name : `イベント`;
+    if (!eventDoc.exists) {
+      return res.status(404).json({error: 'イベントが見つかりません。'});
+    }
+    const eventData = eventDoc.data();
+    const groupDoc = await firestore.collection('groups').doc(eventData.groupId).get();
+    const groupData = groupDoc.exists ? groupDoc.data() : {};
 
-    const publicPrizes = data.displayMode === 'private' ? data.prizes.map(() => '？？？') : data.prizes;
+    // グループ合言葉のチェック
+    if (groupData.password) {
+      if (!req.session.verifiedGroups || !req.session.verifiedGroups.includes(eventData.groupId)) {
+        return res.status(403).json({error: 'このグループへのアクセスには合言葉が必要です。', requiresPassword: true, groupId: eventData.groupId, groupName: groupData.name});
+      }
+    }
+
+    const eventName = groupData.name ? `${groupData.name} - ${eventData.eventName}` : eventData.eventName;
+    const publicPrizes = eventData.displayMode === 'private' ? eventData.prizes.map(() => '？？？') : eventData.prizes;
+
     const publicData = {
       eventName: eventName,
-      participants: data.participants,
+      participants: eventData.participants,
       prizes: publicPrizes,
-      lines: data.lines,
-      hasPassword: !!data.eventPassword,
-      displayMode: data.displayMode,
-      status: data.status,
-      results: data.status === 'started' ? data.results : null,
-      groupId: data.groupId,
+      lines: eventData.lines,
+      hasPassword: !!groupData.password, // グループのパスワード有無を返す
+      displayMode: eventData.displayMode,
+      status: eventData.status,
+      results: eventData.status === 'started' ? eventData.results : null,
+      groupId: eventData.groupId,
     };
     res.status(200).json(publicData);
   } catch (error) {
@@ -504,7 +535,16 @@ exports.getEventsByCustomUrl = async (req, res) => {
     if (groupSnapshot.empty) {
       return res.status(404).json({error: '指定されたURLのグループが見つかりません。'});
     }
-    const groupId = groupSnapshot.docs[0].id;
+    const groupDoc = groupSnapshot.docs[0];
+    const groupId = groupDoc.id;
+    const groupData = groupDoc.data();
+
+    // グループ合言葉のチェック
+    if (groupData.password) {
+      if (!req.session.verifiedGroups || !req.session.verifiedGroups.includes(groupId)) {
+        return res.status(403).json({error: 'このグループへのアクセスには合言葉が必要です。', requiresPassword: true, groupId: groupId, groupName: groupData.name});
+      }
+    }
 
     const eventsSnapshot = await firestore.collection('events').where('groupId', '==', groupId).where('status', '!=', 'started').orderBy('status').orderBy('createdAt', 'desc').get();
 
