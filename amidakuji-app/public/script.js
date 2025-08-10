@@ -308,10 +308,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const res = await fetch(`/api/groups/url/${customUrl}/events`);
+
+      // ▼▼▼ 変更部分 ▼▼▼
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'イベント一覧の読み込みに失敗しました。');
+        if (res.status === 403 && err.requiresPassword) {
+          showGroupPasswordModal(err.groupId, err.groupName);
+          return;
+        }
+        throw new Error(err.error || `サーバーエラー: ${res.status}`);
       }
+      // ▲▲▲ 変更部分 ▲▲▲
+
       const events = await res.json();
 
       eventListContainer.innerHTML = '';
@@ -887,6 +895,121 @@ document.addEventListener('DOMContentLoaded', () => {
     animator.onComplete = null;
     animator.running = true;
     animationLoop();
+  }
+
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★ ここからが追加するコードです
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+  // --- グループ合言葉認証モーダル関連 ---
+
+  // ★新規★ 合言葉確認モーダル関連のUI要素
+  const groupPasswordModal = document.getElementById('groupPasswordModal');
+  const closeGroupPasswordModalButton = groupPasswordModal ? groupPasswordModal.querySelector('.close-button') : null;
+  const verifyPasswordButton = document.getElementById('verifyPasswordButton');
+  const groupPasswordVerifyInput = document.getElementById('groupPasswordVerifyInput');
+  const verificationTargetGroupId = document.getElementById('verificationTargetGroupId');
+  const verificationTargetGroupName = document.getElementById('verificationTargetGroupName');
+  let lastFailedAction = null; // 認証後に再実行するアクションを保持
+
+  /**
+   * 合言葉入力モーダルを表示する関数
+   */
+  function showGroupPasswordModal(groupId, groupName) {
+    if (!groupPasswordModal) return;
+    console.log(`合言葉モーダルを表示します。対象グループID: ${groupId}`);
+    verificationTargetGroupId.value = groupId;
+    verificationTargetGroupName.textContent = groupName;
+    groupPasswordVerifyInput.value = '';
+    groupPasswordModal.style.display = 'block';
+    groupPasswordVerifyInput.focus();
+  }
+
+  /**
+   * 合言葉入力モーダルを閉じる関数
+   */
+  function closeGroupPasswordModalFunc() {
+    if (groupPasswordModal) groupPasswordModal.style.display = 'none';
+  }
+
+  /**
+   * 入力された合言葉をサーバーに送信して認証する関数
+   */
+  async function verifyGroupPassword() {
+    const groupId = verificationTargetGroupId.value;
+    const password = groupPasswordVerifyInput.value;
+    if (!password) return alert('合言葉を入力してください。');
+
+    try {
+      const res = await fetch(`/api/groups/${groupId}/verify-password`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({password}),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || '合言葉の認証に失敗しました。');
+      }
+
+      alert('認証しました！');
+
+      const actionToRetry = lastFailedAction;
+
+      closeGroupPasswordModalFunc();
+      lastFailedAction = null;
+
+      if (actionToRetry) {
+        actionToRetry();
+      }
+    } catch (error) {
+      alert(`エラー: ${error.message}`);
+    }
+  }
+
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★ 追加するコードはここまでです
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+  // ★新規★ 合言葉確認モーダル関連
+  function showGroupPasswordModal(groupId, groupName) {
+    if (!groupPasswordModal) return;
+    verificationTargetGroupId.value = groupId;
+    verificationTargetGroupName.textContent = groupName;
+    groupPasswordVerifyInput.value = '';
+    groupPasswordModal.style.display = 'block';
+    groupPasswordVerifyInput.focus();
+  }
+
+  function closeGroupPasswordModal() {
+    if (groupPasswordModal) groupPasswordModal.style.display = 'none';
+    // lastFailedActionをクリアする処理を削除
+  }
+
+  async function verifyGroupPassword() {
+    const groupId = verificationTargetGroupId.value;
+    const password = groupPasswordVerifyInput.value;
+    if (!password) return alert('合言葉を入力してください。');
+
+    try {
+      const res = await fetch(`/api/groups/${groupId}/verify-password`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({password}),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || '合言葉の認証に失敗しました。');
+      }
+
+      // ★★★ 修正箇所 ★★★
+      // 認証成功のメッセージを表示した直後、ページをリロードして
+      // サーバーから最新の認証状態を反映したページを再取得します。
+      alert('認証しました！ページを再読み込みします。');
+      window.location.reload();
+      // ★★★ 修正箇所ここまで ★★★
+    } catch (error) {
+      alert(`エラー: ${error.message}`);
+    }
   }
 
   // ----- API通信 (管理者) -----
@@ -1546,7 +1669,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       currentEventId = finalEventId;
       const res = await fetch(`/api/events/${currentEventId}/public`);
-      if (!res.ok) throw new Error((await res.json()).error || 'イベントの読み込みに失敗');
+
+      // ▼▼▼ 変更部分 ▼▼▼
+      if (!res.ok) {
+        const err = await res.json();
+        // 403エラーかつ、requiresPasswordフラグがある場合のみモーダルを表示
+        if (res.status === 403 && err.requiresPassword) {
+          showGroupPasswordModal(err.groupId, err.groupName);
+          return; // モーダル表示後は後続の処理を中断
+        }
+        // それ以外のエラーは従来通り投げる
+        throw new Error(err.error || 'イベントの読み込みに失敗');
+      }
+      // ▲▲▲ 変更部分 ▲▲▲
       const eventData = await res.json();
       currentLotteryData = eventData;
       currentGroupId = eventData.groupId;
@@ -2230,6 +2365,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (saveGroupSettingsButton) saveGroupSettingsButton.addEventListener('click', saveGroupSettings);
   if (closeModalButton) closeModalButton.addEventListener('click', closeSettingsModal);
+  // ▼▼▼▼▼ この2行を追加 ▼▼▼▼▼
+  if (verifyPasswordButton) verifyPasswordButton.addEventListener('click', verifyGroupPassword);
+  if (closeGroupPasswordModalButton) closeGroupPasswordModalButton.addEventListener('click', closeGroupPasswordModalFunc);
+  // ▲▲▲▲▲ 追加ここまで ▲▲▲▲▲
+
   if (customUrlInput)
     customUrlInput.addEventListener('keyup', () => {
       if (customUrlPreview) customUrlPreview.textContent = customUrlInput.value.trim();
