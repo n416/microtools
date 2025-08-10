@@ -393,11 +393,10 @@ app.get('/api/groups', ensureAuthenticated, async (req, res) => {
     res.status(500).json({error: 'グループの読み込みに失敗しました。'});
   }
 });
-
 app.put('/api/groups/:groupId/settings', ensureAuthenticated, async (req, res) => {
   try {
     const {groupId} = req.params;
-    const {customUrl, password, noIndex} = req.body;
+    const {customUrl, password, noIndex, groupName} = req.body;
     const groupRef = firestore.collection('groups').doc(groupId);
     const groupDoc = await groupRef.get();
 
@@ -409,16 +408,28 @@ app.put('/api/groups/:groupId/settings', ensureAuthenticated, async (req, res) =
       noIndex: !!noIndex,
     };
 
-    if (customUrl) {
-      const querySnapshot = await firestore.collection('groups').where('customUrl', '==', customUrl).get();
-      const isTaken = !querySnapshot.empty && querySnapshot.docs.some((doc) => doc.id !== groupId);
-      if (isTaken) {
-        return res.status(409).json({error: 'このカスタムURLは既に使用されています。'});
-      }
-      updateData.customUrl = customUrl;
+    // グループ名が提供されていれば更新対象に加える
+    if (groupName && groupName.trim()) {
+      updateData.name = groupName.trim();
     }
 
-    if (password) {
+    // ▼▼▼ ここが重要な修正点です ▼▼▼
+    // customUrlがリクエストに含まれているか(undefinedでないか)で判断する
+    if (customUrl !== undefined) {
+      const trimmedUrl = customUrl.trim();
+
+      // URLが空でない場合のみ、ユニーク制約のチェックを行う
+      if (trimmedUrl) {
+        const querySnapshot = await firestore.collection('groups').where('customUrl', '==', trimmedUrl).get();
+        const isTaken = !querySnapshot.empty && querySnapshot.docs.some((doc) => doc.id !== groupId);
+        if (isTaken) {
+          return res.status(409).json({error: 'このカスタムURLは既に使用されています。'});
+        }
+      }
+      // 更新対象に加える (空文字列も許可する)
+      updateData.customUrl = trimmedUrl;
+    }
+    if (typeof password === 'string' && password) {
       updateData.password = await bcrypt.hash(password, saltRounds);
     }
 
@@ -671,7 +682,9 @@ app.get('/api/groups/:groupId/events', ensureAuthenticated, async (req, res) => 
 
 app.post('/api/events', ensureAuthenticated, async (req, res) => {
   try {
-    const {prizes, groupId, participantCount, displayMode, eventPassword} = req.body;
+    // ▼▼▼ eventName を受け取る ▼▼▼
+    const {prizes, groupId, participantCount, displayMode, eventPassword, eventName} = req.body;
+
     if (!groupId) return res.status(400).json({error: 'グループIDは必須です。'});
     if (!participantCount || participantCount < 2) return res.status(400).json({error: '参加人数は2人以上で設定してください。'});
     if (!prizes || !Array.isArray(prizes) || prizes.length !== participantCount) return res.status(400).json({error: '参加人数と景品の数が一致していません。'});
@@ -705,7 +718,8 @@ app.post('/api/events', ensureAuthenticated, async (req, res) => {
     });
 
     const eventData = {
-      prizes: formattedPrizes,
+      eventName: eventName || '無題のイベント', // ▼▼▼ ここで保存 ▼▼▼
+      prizes: prizes.map((p) => (typeof p === 'string' ? {name: p, imageUrl: null} : p)),
       lines,
       groupId,
       participantCount,
@@ -782,7 +796,8 @@ app.get('/api/events/:id', ensureAuthenticated, async (req, res) => {
 app.put('/api/events/:id', ensureAuthenticated, async (req, res) => {
   try {
     const {id: eventId} = req.params;
-    const {prizes, participantCount, displayMode, eventPassword} = req.body;
+    // ▼▼▼ eventName を受け取る ▼▼▼
+    const {prizes, participantCount, displayMode, eventPassword, eventName} = req.body;
 
     if (!participantCount || participantCount < 2) return res.status(400).json({error: '参加人数は2人以上で設定してください。'});
     if (!prizes || !Array.isArray(prizes) || prizes.length !== participantCount) return res.status(400).json({error: '参加人数と景品の数が一致していません。'});
@@ -797,6 +812,7 @@ app.put('/api/events/:id', ensureAuthenticated, async (req, res) => {
     if (eventData.status === 'started') return res.status(400).json({error: '開始済みのイベントは編集できません。'});
 
     const updateData = {
+      eventName: eventName || '無題のイベント', // ▼▼▼ ここで更新 ▼▼▼
       prizes: prizes.map((p) => (typeof p === 'string' ? {name: p, imageUrl: null} : p)),
       participantCount,
       displayMode,
@@ -1569,17 +1585,86 @@ app.get('/g/:customUrl', async (req, res) => {
   try {
     const {customUrl} = req.params;
     const snapshot = await firestore.collection('groups').where('customUrl', '==', customUrl).limit(1).get();
+
     if (snapshot.empty) {
-      return res.status(404).render('index', {user: req.user, ogpData: {}, noIndex: false});
+      return res.status(404).render('index', {
+        user: req.user,
+        ogpData: {},
+        noIndex: false,
+        groupData: null, // グループ情報がないことを明示
+      });
     }
+
     const groupDoc = snapshot.docs[0];
-    const groupData = groupDoc.data();
+    const groupData = {id: groupDoc.id, ...groupDoc.data()};
     const noIndex = groupData.noIndex || false;
 
-    res.render('index', {user: req.user, ogpData: {}, noIndex});
+    // EJSに渡すデータに groupData をJSON文字列として含める
+    res.render('index', {
+      user: req.user,
+      ogpData: {},
+      noIndex,
+      groupData: JSON.stringify(groupData),
+    });
   } catch (error) {
     console.error('Custom URL routing error:', error);
-    res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false});
+    res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
+  }
+});
+
+// 同様に、イベント個別URLのルートハンドラ app.get('/g/:customUrl/:eventId', ...) も修正します。
+// 新しいイベントURL（/g/:customUrl/:eventId）用のルートを追加します
+app.get('/g/:customUrl/:eventId', async (req, res) => {
+  try {
+    const {eventId} = req.params;
+    const eventDoc = await firestore.collection('events').doc(eventId).get();
+
+    if (!eventDoc.exists) {
+      return res.status(404).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
+    }
+
+    const eventData = eventDoc.data();
+    const groupDoc = await firestore.collection('groups').doc(eventData.groupId).get();
+    const groupData = groupDoc.exists ? {id: groupDoc.id, ...groupDoc.data()} : null;
+    const noIndex = groupDoc.exists && groupDoc.data().noIndex;
+
+    // こちらにもgroupDataを渡すようにする
+    res.render('index', {
+      user: req.user,
+      ogpData: {},
+      noIndex,
+      groupData: groupData ? JSON.stringify(groupData) : null,
+    });
+  } catch (error) {
+    console.error('Event URL routing error:', error);
+    res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
+  }
+});
+
+// イベントURL解決のため、カスタムURLからイベントリストを取得するAPIを新規追加します。
+app.get('/api/groups/url/:customUrl/events', async (req, res) => {
+  try {
+    const {customUrl} = req.params;
+    const groupSnapshot = await firestore.collection('groups').where('customUrl', '==', customUrl).limit(1).get();
+
+    if (groupSnapshot.empty) {
+      return res.status(404).json({error: '指定されたURLのグループが見つかりません。'});
+    }
+    const groupId = groupSnapshot.docs[0].id;
+
+    const eventsSnapshot = await firestore
+      .collection('events')
+      .where('groupId', '==', groupId)
+      .where('status', '!=', 'started') // 開始済みのイベントは除外
+      .orderBy('status')
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const events = eventsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+    res.status(200).json(events);
+  } catch (error) {
+    console.error('Error fetching events by custom URL:', error);
+    res.status(500).json({error: 'イベントの読み込みに失敗しました。'});
   }
 });
 
