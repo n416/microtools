@@ -4,7 +4,9 @@ const {ensureAuthenticated} = require('../middleware/auth');
 const router = express.Router();
 
 router.get('/groups', ensureAuthenticated, groupController.getGroups);
+router.get('/groups/:groupId', groupController.getGroup); // <<< この行を追加
 router.post('/groups', ensureAuthenticated, groupController.createGroup);
+router.delete('/groups/:groupId', ensureAuthenticated, groupController.deleteGroup); // <<< この行を追加
 router.put('/groups/:groupId/participants', ensureAuthenticated, groupController.updateParticipants);
 router.put('/groups/:groupId/participants/:participantId/color', ensureAuthenticated, groupController.updateParticipantColor);
 router.put('/groups/:groupId/settings', ensureAuthenticated, groupController.updateGroupSettings);

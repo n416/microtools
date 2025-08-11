@@ -15,6 +15,7 @@ router.post('/events', ensureAuthenticated, eventController.createEvent);
 router.put('/events/:id', ensureAuthenticated, eventController.updateEvent);
 router.post('/events/:eventId/copy', ensureAuthenticated, eventController.copyEvent);
 router.post('/events/:eventId/start', ensureAuthenticated, eventController.startEvent);
+router.delete('/events/:eventId', ensureAuthenticated, eventController.deleteEvent); // <<< この行を追加
 
 // ★★★ 修正箇所: ensureAuthenticated を削除 ★★★
 router.get('/events/:eventId/public', eventController.getPublicEventData);

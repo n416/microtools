@@ -1,0 +1,77 @@
+// js/api.js
+
+async function request(endpoint, method = 'GET', body = null, headers = {}) {
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+  };
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  const res = await fetch(endpoint, options);
+  const contentType = res.headers.get('content-type');
+
+  if (!res.ok) {
+    if (contentType && contentType.includes('application/json')) {
+      const errData = await res.json();
+      throw errData;
+    }
+    throw new Error(`Server error: ${res.status} ${res.statusText}`);
+  }
+
+  if (contentType && contentType.includes('application/json')) {
+    return res.json();
+  }
+  return;
+}
+
+export const checkGoogleAuthState = () => request('/api/user/me');
+export const updateLastGroup = (groupId) => request('/api/user/me/last-group', 'POST', {groupId});
+export const deleteUserAccount = () => request('/api/user/me', 'DELETE');
+export const getGroups = () => request('/api/groups');
+export const getGroup = (groupId) => request(`/api/groups/${groupId}`); // <<< この行を追加
+export const createGroup = (groupName) => request('/api/groups', 'POST', {groupName, participants: []});
+export const deleteGroup = (groupId) => request(`/api/groups/${groupId}`, 'DELETE'); // <<< この行を追加
+export const updateGroupSettings = (groupId, settings) => request(`/api/groups/${groupId}/settings`, 'PUT', settings);
+export const updateParticipants = (groupId, participants) => request(`/api/groups/${groupId}/participants`, 'PUT', {participants});
+export const verifyGroupPassword = (groupId, password) => request(`/api/groups/${groupId}/verify-password`, 'POST', {password});
+export const deleteGroupPassword = (groupId) => request(`/api/groups/${groupId}/password`, 'DELETE');
+export const getEventsForGroup = (groupId) => request(`/api/groups/${groupId}/events`);
+export const getEventsByCustomUrl = (customUrl) => request(`/api/groups/url/${customUrl}/events`);
+export const getEvent = (id) => request(`/api/events/${id}`);
+export const createEvent = (eventData) => request('/api/events', 'POST', eventData);
+export const updateEvent = (id, eventData) => request(`/api/events/${id}`, 'PUT', eventData);
+export const copyEvent = (eventId) => request(`/api/events/${eventId}/copy`, 'POST');
+export const deleteEvent = (eventId) => request(`/api/events/${eventId}`, 'DELETE'); // <<< この行を追加
+export const startEvent = (eventId) => request(`/api/events/${eventId}/start`, 'POST');
+export const getPublicEventData = (eventId) => request(`/api/events/${eventId}/public`);
+export const getPublicShareData = (eventId) => request(`/api/share/${eventId}`);
+export const joinEvent = (eventId, name, memberId) => request(`/api/events/${eventId}/join`, 'POST', {name, memberId});
+export const joinSlot = (eventId, memberId, token, slot) => request(`/api/events/${eventId}/join-slot`, 'POST', {memberId, slot}, {'x-auth-token': token});
+export const verifyPasswordAndJoin = (eventId, memberId, password, slot) => request(`/api/events/${eventId}/verify-password`, 'POST', {memberId, password, slot});
+export const deleteParticipant = (eventId, token) => request(`/api/events/${eventId}/participants`, 'DELETE', {deleteToken: token});
+export const getMemberSuggestions = (groupId, q) => request(`/api/groups/${groupId}/member-suggestions?q=${encodeURIComponent(q)}`);
+export const getMemberDetails = (groupId, memberId) => request(`/api/members/${memberId}?groupId=${groupId}`);
+export const deleteMemberAccount = (groupId, memberId, token) => request(`/api/members/${memberId}`, 'DELETE', {groupId}, {'x-auth-token': token});
+export const requestPasswordDeletion = (memberId, groupId) => request(`/api/members/${memberId}/request-password-deletion`, 'POST', {groupId});
+export const generateUploadUrl = (memberId, fileType, groupId, token) => request(`/api/members/${memberId}/generate-upload-url`, 'POST', {fileType, groupId}, {'x-auth-token': token});
+export const updateProfile = (memberId, profileData, groupId, token) => request(`/api/members/${memberId}/profile`, 'PUT', {...profileData, groupId}, {'x-auth-token': token});
+export const setPassword = (memberId, password, groupId, token) => request(`/api/members/${memberId}/set-password`, 'POST', {password, groupId}, {'x-auth-token': token});
+export const getPrizeMasters = (groupId) => request(`/api/groups/${groupId}/prize-masters`);
+export const generatePrizeMasterUploadUrl = (groupId, fileType) => request(`/api/groups/${groupId}/prize-masters/generate-upload-url`, 'POST', {fileType});
+export const addPrizeMaster = (groupId, name, imageUrl) => request(`/api/groups/${groupId}/prize-masters`, 'POST', {name, imageUrl});
+export const deletePrizeMaster = (masterId, groupId) => request(`/api/prize-masters/${masterId}`, 'DELETE', {groupId});
+export const requestAdminAccess = () => request('/api/admin/request', 'POST');
+export const getAdminRequests = () => request('/api/admin/requests');
+export const approveAdminRequest = (requestId) => request('/api/admin/approve', 'POST', {requestId});
+export const getGroupAdmins = () => request('/api/admin/group-admins');
+export const getSystemAdmins = () => request('/api/admin/system-admins');
+export const demoteAdmin = (userId) => request('/api/admin/demote', 'POST', {userId});
+export const impersonateUser = (targetUserId) => request('/api/admin/impersonate', 'POST', {targetUserId});
+export const stopImpersonating = () => request('/api/admin/stop-impersonating', 'POST');
+export const getPasswordRequests = (groupId) => request(`/api/admin/groups/${groupId}/password-requests`);
+export const approvePasswordReset = (memberId, groupId, requestId) => request(`/api/admin/members/${memberId}/delete-password`, 'POST', {groupId, requestId});
