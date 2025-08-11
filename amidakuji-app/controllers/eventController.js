@@ -5,6 +5,42 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
+// 【新規】シェアページ専用の認証不要APIコントローラ
+exports.getPublicShareData = async (req, res) => {
+  try {
+    const {eventId} = req.params;
+    const eventRef = firestore.collection('events').doc(eventId);
+    const eventDoc = await eventRef.get();
+
+    if (!eventDoc.exists) {
+      return res.status(404).json({error: 'イベントが見つかりません。'});
+    }
+    const eventData = eventDoc.data();
+    const groupDoc = await firestore.collection('groups').doc(eventData.groupId).get();
+    const groupData = groupDoc.exists ? groupDoc.data() : {};
+
+    // 意図的に合言葉チェックを省略する
+
+    const eventName = groupData.name ? `${groupData.name} - ${eventData.eventName}` : eventData.eventName;
+
+    const publicData = {
+      eventName: eventName,
+      participants: eventData.participants,
+      prizes: eventData.prizes, // シェアページでは結果が重要なので常に公開
+      lines: eventData.lines,
+      displayMode: eventData.displayMode,
+      status: eventData.status,
+      results: eventData.status === 'started' ? eventData.results : null,
+      groupId: eventData.groupId,
+    };
+    res.status(200).json(publicData);
+  } catch (error) {
+    console.error('Error fetching public share data:', error);
+    res.status(500).json({error: 'イベント情報の取得に失敗しました。'});
+  }
+};
+
+
 exports.getEventsForGroup = async (req, res) => {
   try {
     const {groupId} = req.params;

@@ -1668,20 +1668,21 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!finalEventId) throw new Error('イベント情報が見つかりません。');
 
       currentEventId = finalEventId;
-      const res = await fetch(`/api/events/${currentEventId}/public`);
+      
+      // 【修正】シェアページかどうかで呼び出すAPIを変更する
+      const apiUrl = isShare ? `/api/share/${currentEventId}` : `/api/events/${currentEventId}/public`;
+      const res = await fetch(apiUrl);
 
-      // ▼▼▼ 変更部分 ▼▼▼
       if (!res.ok) {
         const err = await res.json();
-        // 403エラーかつ、requiresPasswordフラグがある場合のみモーダルを表示
-        if (res.status === 403 && err.requiresPassword) {
+        // 認証エラーの処理は /api/events/.../public のみで発生する
+        if (!isShare && res.status === 403 && err.requiresPassword) {
           showGroupPasswordModal(err.groupId, err.groupName);
-          return; // モーダル表示後は後続の処理を中断
+          return;
         }
-        // それ以外のエラーは従来通り投げる
         throw new Error(err.error || 'イベントの読み込みに失敗');
       }
-      // ▲▲▲ 変更部分 ▲▲▲
+      
       const eventData = await res.json();
       currentLotteryData = eventData;
       currentGroupId = eventData.groupId;

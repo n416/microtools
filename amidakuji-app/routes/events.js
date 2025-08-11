@@ -7,6 +7,9 @@ const router = express.Router();
 router.get('/groups/:groupId/events', eventController.getEventsForGroup);
 router.get('/groups/url/:customUrl/events', eventController.getEventsByCustomUrl);
 
+// 【新規】シェアページ専用の認証不要APIルートを追加
+router.get('/share/:eventId', eventController.getPublicShareData);
+
 router.get('/events/:id', ensureAuthenticated, eventController.getEvent);
 router.post('/events', ensureAuthenticated, eventController.createEvent);
 router.put('/events/:id', ensureAuthenticated, eventController.updateEvent);
