@@ -20,8 +20,9 @@ exports.getPublicShareData = async (req, res) => {
     const groupData = groupDoc.exists ? groupDoc.data() : {};
 
     // 意図的に合言葉チェックを省略する
-
-    const eventName = groupData.name ? `${groupData.name} - ${eventData.eventName}` : eventData.eventName;
+    // 【修正】eventData.eventNameが存在しない場合に備えて、フォールバックを追加
+    const safeEventName = eventData.eventName || '無題のイベント';
+    const eventName = groupData.name ? `${groupData.name} - ${safeEventName}` : safeEventName;
 
     const publicData = {
       eventName: eventName,
@@ -39,7 +40,6 @@ exports.getPublicShareData = async (req, res) => {
     res.status(500).json({error: 'イベント情報の取得に失敗しました。'});
   }
 };
-
 
 exports.getEventsForGroup = async (req, res) => {
   try {
@@ -282,7 +282,10 @@ exports.getPublicEventData = async (req, res) => {
       }
     }
 
-    const eventName = groupData.name ? `${groupData.name} - ${eventData.eventName}` : eventData.eventName;
+    // 【修正】eventData.eventNameが存在しない場合に備えて、フォールバックを追加
+    const safeEventName = eventData.eventName || '無題のイベント';
+    const eventName = groupData.name ? `${groupData.name} - ${safeEventName}` : safeEventName;
+
     const publicPrizes = eventData.displayMode === 'private' ? eventData.prizes.map(() => '？？？') : eventData.prizes;
 
     const publicData = {

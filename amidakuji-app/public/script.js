@@ -331,9 +331,14 @@ document.addEventListener('DOMContentLoaded', () => {
       events.forEach((event) => {
         const li = document.createElement('li');
         li.className = 'item-list-item';
-        const eventDate = new Date(event.createdAt.seconds * 1000).toLocaleDateString();
+
+        // 【修正】FirestoreのTimestampオブジェクトを正しく日時に変換する
+        const date = event.createdAt && event.createdAt._seconds ? new Date(event.createdAt._seconds * 1000) : new Date(event.createdAt);
+        const eventDate = !isNaN(date) ? date.toLocaleDateString() : '日付不明';
+        const eventName = event.eventName || '無題のイベント'; // イベント名も表示する
+
         li.innerHTML = `
-        <span>${eventDate} 作成のイベント</span>
+        <span><strong>${eventName}</strong>（${eventDate} 作成）</span>
         <button data-event-id="${event.id}" data-custom-url="${customUrl}">このイベントに参加する</button>
       `;
         li.querySelector('button').addEventListener('click', (e) => {
@@ -1668,7 +1673,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!finalEventId) throw new Error('イベント情報が見つかりません。');
 
       currentEventId = finalEventId;
-      
+
       // 【修正】シェアページかどうかで呼び出すAPIを変更する
       const apiUrl = isShare ? `/api/share/${currentEventId}` : `/api/events/${currentEventId}/public`;
       const res = await fetch(apiUrl);
@@ -1682,7 +1687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         throw new Error(err.error || 'イベントの読み込みに失敗');
       }
-      
+
       const eventData = await res.json();
       currentLotteryData = eventData;
       currentGroupId = eventData.groupId;
