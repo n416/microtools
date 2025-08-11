@@ -30,6 +30,50 @@ exports.createGroup = async (req, res) => {
   }
 };
 
+exports.deleteGroup = async (req, res) => {
+  try {
+    const {groupId} = req.params;
+    const groupRef = firestore.collection('groups').doc(groupId);
+    const groupDoc = await groupRef.get();
+
+    if (!groupDoc.exists || groupDoc.data().ownerId !== req.user.id) {
+      return res.status(403).json({error: 'このグループを削除する権限がありません。'});
+    }
+
+    // Firestoreのバッチ処理を開始
+    const batch = firestore.batch();
+
+    // 関連するイベントを削除
+    const eventsSnapshot = await firestore.collection('events').where('groupId', '==', groupId).get();
+    eventsSnapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    // 関連するメンバーを削除 (サブコレクション)
+    const membersSnapshot = await groupRef.collection('members').get();
+    membersSnapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    // 関連する賞品マスターを削除 (サブコレクション)
+    const prizeMastersSnapshot = await groupRef.collection('prizeMasters').get();
+    prizeMastersSnapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    // 最後にグループ自体を削除
+    batch.delete(groupRef);
+
+    // バッチ処理を実行
+    await batch.commit();
+
+    res.status(200).json({message: 'グループと関連データが正常に削除されました。'});
+  } catch (error) {
+    console.error('Error deleting group:', error);
+    res.status(500).json({error: 'グループの削除に失敗しました。'});
+  }
+};
+
 exports.getGroups = async (req, res) => {
   try {
     const groupsSnapshot = await firestore.collection('groups').where('ownerId', '==', req.user.id).orderBy('createdAt', 'desc').get();
@@ -37,6 +81,20 @@ exports.getGroups = async (req, res) => {
     res.status(200).json(groups);
   } catch (error) {
     console.error('Error fetching groups:', error);
+    res.status(500).json({error: 'グループの読み込みに失敗しました。'});
+  }
+};
+
+exports.getGroup = async (req, res) => {
+  try {
+    const {groupId} = req.params;
+    const groupDoc = await firestore.collection('groups').doc(groupId).get();
+    if (!groupDoc.exists) {
+      return res.status(404).json({error: 'グループが見つかりません。'});
+    }
+    res.status(200).json({id: groupDoc.id, ...groupDoc.data()});
+  } catch (error) {
+    console.error('Error fetching group:', error);
     res.status(500).json({error: 'グループの読み込みに失敗しました。'});
   }
 };
