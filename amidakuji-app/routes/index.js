@@ -54,6 +54,37 @@ router.get('/g/:customUrl', async (req, res) => {
   }
 });
 
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+// events/:eventId ルートを追加
+router.get('/events/:eventId', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const eventDoc = await firestore.collection('events').doc(eventId).get();
+
+    if (!eventDoc.exists) {
+      return res.status(404).render('index', { user: req.user, ogpData: {}, noIndex: false, groupData: null });
+    }
+
+    const eventData = eventDoc.data();
+    const groupDoc = await firestore.collection('groups').doc(eventData.groupId).get();
+    const noIndex = groupDoc.exists && groupDoc.data().noIndex;
+
+    res.render('index', {
+      user: req.user,
+      ogpData: {
+        title: eventData.eventName || 'ダイナミックあみだくじ',
+        description: 'イベントに参加しよう！'
+      },
+      noIndex,
+      groupData: null, // カスタムURL経由ではないのでグループデータは渡さない
+    });
+  } catch (error) {
+    console.error('Direct event URL routing error:', error);
+    res.status(500).render('index', { user: req.user, ogpData: {}, noIndex: false, groupData: null });
+  }
+});
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+
 router.get('/g/:customUrl/:eventId', async (req, res) => {
   try {
     const {eventId} = req.params;

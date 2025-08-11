@@ -1,6 +1,8 @@
 const {firestore, bucket} = require('../utils/firestore');
 const {getNextAvailableColor} = require('../utils/color');
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 exports.getCurrentUser = async (req, res) => {
   if (!req.user) {
@@ -275,6 +277,7 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 exports.setPassword = async (req, res) => {
   try {
     const {memberId} = req.params;
@@ -282,7 +285,6 @@ exports.setPassword = async (req, res) => {
     const token = req.headers['x-auth-token'];
 
     if (!token) return res.status(401).json({error: '認証トークンが必要です。'});
-    if (!password || password.length < 4) return res.status(400).json({error: '合言葉は4文字以上で設定してください。'});
     if (!groupId) return res.status(400).json({error: 'グループIDが必要です。'});
 
     const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
@@ -296,12 +298,22 @@ exports.setPassword = async (req, res) => {
       return res.status(403).json({error: '権限がありません。'});
     }
 
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-    await memberRef.update({password: hashedPassword});
-
-    res.status(200).json({message: '合言葉を設定しました。'});
+    // パスワードがnullでない場合（設定・変更の場合）のみ検証
+    if (password !== null) {
+      if (!password || password.length < 4) {
+        return res.status(400).json({error: '合言葉は4文字以上で設定してください。'});
+      }
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      await memberRef.update({password: hashedPassword});
+      res.status(200).json({message: '合言葉を設定しました。'});
+    } else {
+      // パスワードがnullの場合（削除の場合）
+      await memberRef.update({password: null});
+      res.status(200).json({message: '合言葉を削除しました。'});
+    }
   } catch (error) {
     console.error('Error setting password:', error);
-    res.status(500).json({error: '合言葉の設定に失敗しました。'});
+    res.status(500).json({error: '合言葉の処理に失敗しました。'});
   }
 };
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
