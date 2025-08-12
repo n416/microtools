@@ -133,7 +133,7 @@ async function loadEventForEditing(eventId, viewToShow = 'eventEditView') {
 }
 
 // --- イベントハンドラ ---
-
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 async function handleSaveSettings() {
   const groupId = elements.settingsGroupId.value;
   const settingsPayload = {
@@ -148,7 +148,8 @@ async function handleSaveSettings() {
   elements.saveGroupSettingsButton.disabled = true;
   try {
     await api.updateGroupSettings(groupId, settingsPayload);
-    await api.updateParticipants(groupId, {participants: state.groupParticipants});
+    // 参加者リストの配列を直接渡すように修正
+    await api.updateParticipants(groupId, state.groupParticipants);
     alert('設定を保存しました。');
     ui.closeSettingsModal();
     await loadUserGroupsAndRedirect(state.currentGroupId);
@@ -158,6 +159,7 @@ async function handleSaveSettings() {
     elements.saveGroupSettingsButton.disabled = false;
   }
 }
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 async function handleLoginOrRegister(name, memberId = null) {
   if (!name) return;
@@ -919,17 +921,6 @@ function setupEventListeners() {
       elements.groupDropdown.style.display = 'none';
     }
   });
-
-  // ▼▼▼▼▼ このリスナーをファイルの末尾近く、他のリスナーと並べて追記 ▼▼▼▼▼
-  const backToGroupEventListLink = document.getElementById('backToGroupEventListLink');
-  if (backToGroupEventListLink) {
-    backToGroupEventListLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.history.pushState({}, '', e.target.href);
-      handleRouting({group: state.allUserGroups.find((g) => g.id === state.currentGroupId), event: null});
-    });
-  }
-  // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp);

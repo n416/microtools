@@ -30,24 +30,14 @@ router.get('/g/:customUrl', async (req, res) => {
     const snapshot = await firestore.collection('groups').where('customUrl', '==', customUrl).limit(1).get();
 
     if (snapshot.empty) {
-      return res.status(404).render('index', {
-        user: req.user,
-        ogpData: {},
-        noIndex: false,
-        groupData: null,
-      });
+      return res.status(404).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
     }
 
     const groupDoc = snapshot.docs[0];
     const groupData = {id: groupDoc.id, ...groupDoc.data()};
     const noIndex = groupData.noIndex || false;
 
-    res.render('index', {
-      user: req.user,
-      ogpData: {},
-      noIndex,
-      groupData: JSON.stringify(groupData),
-    });
+    res.render('index', {user: req.user, ogpData: {}, noIndex, groupData: JSON.stringify(groupData)});
   } catch (error) {
     console.error('Custom URL routing error:', error);
     res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
@@ -55,14 +45,33 @@ router.get('/g/:customUrl', async (req, res) => {
 });
 
 // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
-// events/:eventId ルートを追加
+// カスタムURLがないグループのイベント一覧ページ用のルート
+router.get('/groups/:groupId', async (req, res) => {
+  try {
+    const {groupId} = req.params;
+    const groupDoc = await firestore.collection('groups').doc(groupId).get();
+
+    if (!groupDoc.exists) {
+      return res.status(404).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
+    }
+    const groupData = {id: groupDoc.id, ...groupDoc.data()};
+    const noIndex = groupData.noIndex || false;
+
+    res.render('index', {user: req.user, ogpData: {}, noIndex, groupData: JSON.stringify(groupData)});
+  } catch (error) {
+    console.error('Group ID routing error:', error);
+    res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
+  }
+});
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+
 router.get('/events/:eventId', async (req, res) => {
   try {
-    const { eventId } = req.params;
+    const {eventId} = req.params;
     const eventDoc = await firestore.collection('events').doc(eventId).get();
 
     if (!eventDoc.exists) {
-      return res.status(404).render('index', { user: req.user, ogpData: {}, noIndex: false, groupData: null });
+      return res.status(404).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
     }
 
     const eventData = eventDoc.data();
@@ -73,17 +82,16 @@ router.get('/events/:eventId', async (req, res) => {
       user: req.user,
       ogpData: {
         title: eventData.eventName || 'ダイナミックあみだくじ',
-        description: 'イベントに参加しよう！'
+        description: 'イベントに参加しよう！',
       },
       noIndex,
-      groupData: null, // カスタムURL経由ではないのでグループデータは渡さない
+      groupData: null,
     });
   } catch (error) {
     console.error('Direct event URL routing error:', error);
-    res.status(500).render('index', { user: req.user, ogpData: {}, noIndex: false, groupData: null });
+    res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
   }
 });
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 router.get('/g/:customUrl/:eventId', async (req, res) => {
   try {
