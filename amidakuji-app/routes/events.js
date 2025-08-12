@@ -3,8 +3,9 @@ const eventController = require('../controllers/eventController');
 const {ensureAuthenticated} = require('../middleware/auth');
 const router = express.Router();
 
-// ★★★ 修正箇所: ensureAuthenticated を削除 ★★★
-router.get('/groups/:groupId/events', eventController.getEventsForGroup);
+// 削除されていた ensureAuthenticated を元に戻し、管理者専用APIとして保護する
+router.get('/groups/:groupId/events', ensureAuthenticated, eventController.getEventsForGroup);
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 router.get('/groups/url/:customUrl/events', eventController.getEventsByCustomUrl);
 
 // 【新規】シェアページ専用の認証不要APIルートを追加

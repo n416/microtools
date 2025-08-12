@@ -6,6 +6,8 @@ import { startAnimation, stopAnimation } from './animation.js';
 
 async function initializeParticipantView(eventId, isShare, sharedParticipantName) {
     ui.hideParticipantSubViews();
+    if (ui.elements.otherEventsSection) ui.elements.otherEventsSection.style.display = 'none';
+
     try {
         state.setCurrentEventId(eventId);
         const eventData = isShare
@@ -22,8 +24,9 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
         if (backLink) {
             try {
                 const groupData = await api.getGroup(eventData.groupId);
-                if (groupData && groupData.customUrl) {
-                    backLink.href = `/g/${groupData.customUrl}`;
+                if (groupData) {
+                    const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
+                    backLink.href = backUrl;
                     backLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
                     backLink.style.display = 'inline-block';
                 } else {
@@ -33,6 +36,10 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
                 console.error("Failed to get group info for back link:", groupError);
                 backLink.style.display = 'none';
             }
+        }
+        
+        if (eventData.otherEvents) {
+            ui.renderOtherEvents(eventData.otherEvents);
         }
 
         if (isShare) {
@@ -58,7 +65,8 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
     }
 }
 
-async function initializeGroupEventListView(customUrl, groupData) {
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+async function initializeGroupEventListView(customUrlOrGroupId, groupData) {
     const { groupEventListContainer, groupNameTitle } = ui.elements;
     if (!groupEventListContainer || !groupNameTitle) return;
 
@@ -67,7 +75,10 @@ async function initializeGroupEventListView(customUrl, groupData) {
     }
 
     try {
-        const events = await api.getEventsByCustomUrl(customUrl);
+        const events = groupData && groupData.customUrl 
+            ? await api.getEventsByCustomUrl(customUrlOrGroupId)
+            : await api.getPublicEventsForGroup(customUrlOrGroupId); // admin用ではなく、公開用のAPIを呼び出す
+
         groupEventListContainer.innerHTML = '';
         if (events.length === 0) {
             groupEventListContainer.innerHTML = '<li class="item-list-item">現在参加できるイベントはありません。</li>';
@@ -78,27 +89,28 @@ async function initializeGroupEventListView(customUrl, groupData) {
             const li = document.createElement('li');
             li.className = 'item-list-item';
             const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
+            
+            const eventUrl = groupData && groupData.customUrl 
+                ? `/g/${groupData.customUrl}/${event.id}` 
+                : `/events/${event.id}`;
+
             li.innerHTML = `
                 <span><strong>${event.eventName || '無題のイベント'}</strong>（${date.toLocaleDateString()} 作成）</span>
-                <button data-event-id="${event.id}" data-custom-url="${customUrl}">このイベントに参加する</button>
+                <a href="${eventUrl}" class="button">このイベントに参加する</a>
             `;
-            li.querySelector('button').addEventListener('click', (e) => {
-                const { eventId, customUrl } = e.target.dataset;
-                window.history.pushState({}, '', `/g/${customUrl}/${eventId}`);
-                handleRouting({ group: groupData, event: null });
-            });
             groupEventListContainer.appendChild(li);
         });
     } catch (error) {
         console.error(error);
         if (error.requiresPassword) {
-            state.setLastFailedAction(() => initializeGroupEventListView(customUrl, groupData));
+            state.setLastFailedAction(() => initializeGroupEventListView(customUrlOrGroupId, groupData));
             ui.showGroupPasswordModal(error.groupId, error.groupName);
         } else {
             groupEventListContainer.innerHTML = `<li class="error-message">${error.error || error.message}</li>`;
         }
     }
 }
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 async function showResultsView(eventData, targetName, isShareView) {
     ui.showResultsView();
@@ -128,22 +140,22 @@ export async function handleRouting(initialData) {
     stopAnimation();
     const path = window.location.pathname;
 
-    const groupEventListMatch = path.match(/\/g\/([a-zA-Z0-9-_]+)\/?$/);
-    const eventFromGroupMatch = path.match(/\/g\/([a-zA-Z0-9-_]+)\/([a-zA-Z0-9]+)/);
+    const groupEventListMatch = path.match(/\/g\/(.+?)\/?$/);
+    const eventFromGroupMatch = path.match(/\/g\/(.+?)\/([a-zA-Z0-9]+)/);
     const directEventMatch = path.match(/\/events\/([a-zA-Z0-9]+)/);
     const shareMatch = path.match(/\/share\/([a-zA-Z0-9]+)\/(.+)/);
     const adminMatch = path.match(/\/admin/);
+    const groupByIdMatch = path.match(/\/groups\/([a-zA-Z0-9]+)\/?$/);
 
-    const isParticipantView = groupEventListMatch || eventFromGroupMatch || shareMatch || directEventMatch;
+    const isParticipantView = groupEventListMatch || eventFromGroupMatch || shareMatch || directEventMatch || groupByIdMatch;
 
     if (isParticipantView) {
         if(ui.elements.mainHeader) ui.elements.mainHeader.style.display = 'none';
         
-        if (groupEventListMatch) {
-            const customUrl = groupEventListMatch[1];
+        if (groupEventListMatch && !eventFromGroupMatch || groupByIdMatch) { 
+            const customUrlOrGroupId = groupEventListMatch ? groupEventListMatch[1] : groupByIdMatch[1];
             ui.showView('groupEventListView');
 
-            // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
             let groupDataObject = null;
             if (initialData && initialData.group) {
                 if (typeof initialData.group === 'string') {
@@ -155,9 +167,16 @@ export async function handleRouting(initialData) {
                 } else if (typeof initialData.group === 'object') {
                     groupDataObject = initialData.group;
                 }
+            } else {
+                 try {
+                    groupDataObject = groupEventListMatch 
+                        ? await api.getGroupByCustomUrl(customUrlOrGroupId) // このAPIも必要になります
+                        : await api.getGroup(customUrlOrGroupId);
+                 } catch(e) {
+                     console.error("Failed to fetch group data", e);
+                 }
             }
-            // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
-            await initializeGroupEventListView(customUrl, groupDataObject);
+            await initializeGroupEventListView(customUrlOrGroupId, groupDataObject);
 
         } else {
             ui.showView('participantView');
