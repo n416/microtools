@@ -40,7 +40,7 @@
       <button id="logoutButton" style="display: none">ログアウト</button>
       <button id="deleteAccountButton" style="display: none" class="delete-btn">アカウント削除</button>
       <% if (typeof user !== 'undefined' && user && user.role === 'system_admin' && !user.isImpersonating) { %>
-      <a href="/admin" id="adminDashboardButton">システム管理</a>
+      <a id="adminDashboardButton" style="cursor: pointer;">システム管理</a>
       <% } %>
     </div>
   </header>

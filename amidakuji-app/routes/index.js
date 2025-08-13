@@ -158,14 +158,16 @@ router.get('/admin-request', ensureAuthenticated, (req, res) => {
   res.render('index', {user: req.user, ogpData: {}, noIndex: true});
 });
 
-// Catch-all route (must be the very last route)
+// 上記のどのルートにも一致しなかった場合、SPAの起点となるindex.ejsを返す
+// このルートは必ず他のすべてのGETルートの後に記述すること
 router.get('*', (req, res) => {
-  const ogpData = {
-    title: 'ダイナミックあみだくじ',
-    description: 'インタラクティブなあみだくじアプリ',
-    imageUrl: '/default-image.png',
-  };
-  res.render('index', {user: req.user, ogpData, noIndex: false, groupData: null});
+  res.render('index', {
+    user: req.user,
+    ogpData: {}, // デフォルトのOGPデータ
+    noIndex: true, // URLが不定なためnoindexとする
+    groupData: null,
+    eventData: null,
+  });
 });
 
 module.exports = router;

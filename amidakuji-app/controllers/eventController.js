@@ -58,33 +58,28 @@ exports.getEventsForGroup = async (req, res) => {
 // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 exports.getPublicEventsForGroup = async (req, res) => {
   try {
-    const { groupId } = req.params;
+    const {groupId} = req.params;
     const groupDoc = await firestore.collection('groups').doc(groupId).get();
 
     if (!groupDoc.exists) {
-      return res.status(404).json({ error: '指定されたグループが見つかりません。' });
+      return res.status(404).json({error: '指定されたグループが見つかりません。'});
     }
-    
+
     const groupData = groupDoc.data();
 
     if (groupData.password) {
       if (!req.session.verifiedGroups || !req.session.verifiedGroups.includes(groupId)) {
-        return res.status(403).json({ error: 'このグループへのアクセスには合言葉が必要です。', requiresPassword: true, groupId: groupId, groupName: groupData.name });
+        return res.status(403).json({error: 'このグループへのアクセスには合言葉が必要です。', requiresPassword: true, groupId: groupId, groupName: groupData.name});
       }
     }
 
-    const eventsSnapshot = await firestore.collection('events')
-      .where('groupId', '==', groupId)
-      .where('status', '!=', 'started')
-      .orderBy('status')
-      .orderBy('createdAt', 'desc')
-      .get();
+    const eventsSnapshot = await firestore.collection('events').where('groupId', '==', groupId).where('status', '!=', 'started').orderBy('status').orderBy('createdAt', 'desc').get();
 
-    const events = eventsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const events = eventsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
     res.status(200).json(events);
   } catch (error) {
     console.error('Error fetching public events for group:', error);
-    res.status(500).json({ error: 'イベントの読み込みに失敗しました。' });
+    res.status(500).json({error: 'イベントの読み込みに失敗しました。'});
   }
 };
 // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
@@ -260,24 +255,24 @@ exports.updateEvent = async (req, res) => {
 
 exports.deleteEvent = async (req, res) => {
   try {
-    const { eventId } = req.params;
+    const {eventId} = req.params;
     const eventRef = firestore.collection('events').doc(eventId);
     const doc = await eventRef.get();
 
     if (!doc.exists) {
-      return res.status(404).json({ error: 'イベントが見つかりません。' });
+      return res.status(404).json({error: 'イベントが見つかりません。'});
     }
 
     const eventData = doc.data();
     if (eventData.ownerId !== req.user.id) {
-      return res.status(403).json({ error: 'このイベントを削除する権限がありません。' });
+      return res.status(403).json({error: 'このイベントを削除する権限がありません。'});
     }
 
     await eventRef.delete();
-    res.status(200).json({ message: 'イベントを削除しました。' });
+    res.status(200).json({message: 'イベントを削除しました。'});
   } catch (error) {
     console.error('Error deleting event:', error);
-    res.status(500).json({ error: 'イベントの削除に失敗しました。' });
+    res.status(500).json({error: 'イベントの削除に失敗しました。'});
   }
 };
 
@@ -329,14 +324,9 @@ exports.getPublicEventData = async (req, res) => {
 
     const publicPrizes = eventData.displayMode === 'private' ? eventData.prizes.map(() => '？？？') : eventData.prizes;
 
-    const otherEventsSnapshot = await firestore.collection('events')
-      .where('groupId', '==', eventData.groupId)
-      .where('status', '==', 'pending')
-      .get();
+    const otherEventsSnapshot = await firestore.collection('events').where('groupId', '==', eventData.groupId).where('status', '==', 'pending').get();
 
-    const otherEvents = otherEventsSnapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(event => event.id !== eventId);
+    const otherEvents = otherEventsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()})).filter((event) => event.id !== eventId);
 
     const publicData = {
       eventName: eventName,
@@ -360,7 +350,7 @@ exports.getPublicEventData = async (req, res) => {
 exports.joinEvent = async (req, res) => {
   try {
     const {eventId} = req.params;
-    const {name, slot, memberId} = req.body;
+    const {name, memberId} = req.body;
 
     if (!name || name.trim() === '') {
       return res.status(400).json({error: '名前は必須です。'});
@@ -385,8 +375,12 @@ exports.joinEvent = async (req, res) => {
       }
     }
 
+    let memberData;
+    let token;
+    let finalMemberId;
+
     if (memberDoc && memberDoc.exists) {
-      const memberData = memberDoc.data();
+      memberData = memberDoc.data();
       if (memberData.password) {
         return res.status(401).json({
           error: '合言葉が必要です。',
@@ -395,58 +389,55 @@ exports.joinEvent = async (req, res) => {
           name: memberData.name,
         });
       }
-      if (slot !== undefined && slot !== null) {
-        const newParticipants = [...eventData.participants];
-        if (slot < 0 || slot >= newParticipants.length || newParticipants[slot].name !== null) {
-          return res.status(409).json({error: 'この参加枠は既に埋まっているか、無効です。'});
-        }
-        newParticipants[slot].name = memberData.name;
-        newParticipants[slot].memberId = memberDoc.id;
-        newParticipants[slot].iconUrl = memberData.iconUrl;
-        newParticipants[slot].color = memberData.color;
+      token = memberData.deleteToken;
+      finalMemberId = memberDoc.id;
+    } else {
+      finalMemberId = crypto.randomBytes(16).toString('hex');
+      token = crypto.randomBytes(16).toString('hex');
+      const newColor = getNextAvailableColor((await membersRef.get()).docs.map((d) => d.data().color));
+      memberData = {
+        id: finalMemberId,
+        name: name.trim(),
+        password: null,
+        deleteToken: token,
+        color: newColor,
+        iconUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim())}&background=random&color=fff`,
+        createdAt: new Date(),
+      };
+      await membersRef.doc(finalMemberId).set(memberData);
+    }
 
-        await eventRef.update({participants: newParticipants});
-      }
+    const alreadyJoined = eventData.participants.some((p) => p.memberId === finalMemberId);
+    if (alreadyJoined) {
       return res.status(200).json({
-        message: 'ログインしました。',
-        token: memberData.deleteToken,
-        memberId: memberDoc.id,
+        message: '既にイベントに参加済みです。',
+        token: token,
+        memberId: finalMemberId,
         name: memberData.name,
       });
     }
 
-    const newMemberId = crypto.randomBytes(16).toString('hex');
-    const deleteToken = crypto.randomBytes(16).toString('hex');
-    const newColor = getNextAvailableColor((await membersRef.get()).docs.map((d) => d.data().color));
-    const newMemberData = {
-      id: newMemberId,
-      name: name.trim(),
-      password: null,
-      deleteToken,
-      color: newColor,
-      iconUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim())}&background=random&color=fff`,
-      createdAt: new Date(),
-    };
-
-    await membersRef.doc(newMemberId).set(newMemberData);
-
-    if (slot !== undefined && slot !== null) {
-      const newParticipants = [...eventData.participants];
-      if (slot < 0 || slot >= newParticipants.length || newParticipants[slot].name !== null) {
-        return res.status(409).json({error: 'この参加枠は既に埋まっているか、無効です。'});
-      }
-      newParticipants[slot].name = newMemberData.name;
-      newParticipants[slot].memberId = newMemberId;
-      newParticipants[slot].iconUrl = newMemberData.iconUrl;
-      newParticipants[slot].color = newMemberData.color;
-      await eventRef.update({participants: newParticipants});
+    const availableSlotIndex = eventData.participants.findIndex((p) => p.name === null);
+    if (availableSlotIndex === -1) {
+      return res.status(409).json({error: 'このイベントには空きがありません。'});
     }
 
+    const newParticipants = [...eventData.participants];
+    newParticipants[availableSlotIndex] = {
+      ...newParticipants[availableSlotIndex],
+      name: memberData.name,
+      memberId: finalMemberId,
+      iconUrl: memberData.iconUrl,
+      color: memberData.color,
+    };
+
+    await eventRef.update({participants: newParticipants});
+
     res.status(201).json({
-      message: '登録して参加しました。',
-      token: deleteToken,
-      memberId: newMemberId,
-      name: newMemberData.name,
+      message: 'イベントに参加しました。',
+      token: token,
+      memberId: finalMemberId,
+      name: memberData.name,
     });
   } catch (error) {
     console.error('Error joining event:', error);
