@@ -131,7 +131,15 @@ exports.updateParticipantColor = async (req, res) => {
 exports.updateParticipants = async (req, res) => {
   try {
     const {groupId} = req.params;
-    const {participants} = req.body;
+    // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+    // クライアントから送られてくるデータの形式が不安定なため、サーバー側で吸収する
+    const participants = Array.isArray(req.body) ? req.body : req.body.participants;
+
+    // participants が配列でない場合は、不正なリクエストとしてエラーを返す
+    if (!Array.isArray(participants)) {
+      return res.status(400).json({error: 'Invalid participants data format. Expected an array.'});
+    }
+    // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
     const groupRef = firestore.collection('groups').doc(groupId);
     const groupDoc = await groupRef.get();
