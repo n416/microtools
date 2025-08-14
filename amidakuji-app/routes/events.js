@@ -11,6 +11,15 @@ router.get('/groups/url/:customUrl/events', eventController.getEventsByCustomUrl
 // 【新規】シェアページ専用の認証不要APIルートを追加
 router.get('/share/:eventId', eventController.getPublicShareData);
 
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+// 誰でもアクセスできるグループのイベント一覧API
+router.get('/by-group/:groupId', eventController.getPublicEventsForGroup);
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+
+
+// 【新規】シェアページ専用の認証不要APIルートを追加
+router.get('/share/:eventId', eventController.getPublicShareData);
+
 router.get('/events/:id', ensureAuthenticated, eventController.getEvent);
 router.post('/events', ensureAuthenticated, eventController.createEvent);
 router.put('/events/:id', ensureAuthenticated, eventController.updateEvent);
