@@ -55,7 +55,6 @@ exports.getEventsForGroup = async (req, res) => {
   }
 };
 
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 exports.getPublicEventsForGroup = async (req, res) => {
   try {
     const {groupId} = req.params;
@@ -82,7 +81,6 @@ exports.getPublicEventsForGroup = async (req, res) => {
     res.status(500).json({error: 'イベントの読み込みに失敗しました。'});
   }
 };
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 exports.createEvent = async (req, res) => {
   try {
@@ -361,6 +359,12 @@ exports.joinEvent = async (req, res) => {
     if (!eventDoc.exists) return res.status(404).json({error: 'イベントが見つかりません。'});
 
     const eventData = eventDoc.data();
+
+    // ★★★ 修正箇所 ★★★
+    if (eventData.status === 'started') {
+      return res.status(403).json({error: 'このイベントは既に開始されているため、参加できません。'});
+    }
+
     const groupId = eventData.groupId;
     const membersRef = firestore.collection('groups').doc(groupId).collection('members');
 
@@ -465,6 +469,12 @@ exports.joinSlot = async (req, res) => {
     }
 
     const eventData = eventDoc.data();
+
+    // ★★★ 修正箇所 ★★★
+    if (eventData.status === 'started') {
+      return res.status(403).json({error: 'このイベントは既に開始されているため、参加できません。'});
+    }
+
     const groupId = eventData.groupId;
 
     const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
@@ -507,6 +517,12 @@ exports.verifyPasswordAndJoin = async (req, res) => {
     if (!eventDoc.exists) return res.status(404).json({error: 'イベントが見つかりません。'});
 
     const eventData = eventDoc.data();
+
+    // ★★★ 修正箇所 ★★★
+    if (eventData.status === 'started') {
+      return res.status(403).json({error: 'このイベントは既に開始されているため、参加できません。'});
+    }
+
     const groupId = eventData.groupId;
 
     const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
