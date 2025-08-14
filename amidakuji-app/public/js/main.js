@@ -2,21 +2,25 @@
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
-// handleRouting と loadEventForEditing を router からインポート
-import {handleRouting, loadEventForEditing} from './router.js';
+import {handleRouting, loadEventForEditing, handleLoginOrRegister, verifyAndLogin} from './router.js';
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, stepAnimation} from './animation.js';
 
-function navigateTo(path, pushState = true) {
+async function navigateTo(path, pushState = true) {
+  // asyncを追加
   if (pushState && window.location.pathname !== path) {
     history.pushState({path}, '', path);
   }
-  handleRouting();
+  const action = await handleRouting(); // 戻り値を受け取る
+  if (action === 'loadAdminDashboard') {
+    await loadAdminDashboard(); // データを読み込む
+  }
 }
 
 const {elements} = ui;
 
 // --- アプリケーションの初期化 ---
 async function initializeApp() {
+  ui.init();
   setupEventListeners();
 
   const initialData = {
@@ -24,7 +28,10 @@ async function initializeApp() {
     event: typeof initialEventData !== 'undefined' ? initialEventData : null,
   };
 
-  await handleRouting(initialData);
+  const action = await handleRouting(initialData); // 戻り値を受け取る
+  if (action === 'loadAdminDashboard') {
+    await loadAdminDashboard(); // データを読み込む
+  }
 
   // 初回ロード時のみ、URLが指定されていない場合にリダイレクト処理を行う
   if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
@@ -91,58 +98,6 @@ async function handleSaveSettings() {
     alert(error.error || '設定の保存に失敗しました。');
   } finally {
     elements.saveGroupSettingsButton.disabled = false;
-  }
-}
-
-async function handleLoginOrRegister(name, memberId = null) {
-  if (!name) return;
-  try {
-    const eventId = ui.elements.nameEntryEventId.value;
-    if (!eventId) {
-      throw new Error('イベントIDが見つかりません。ページを再読み込みしてください。');
-    }
-    const result = await api.joinEvent(eventId, name, memberId);
-    state.saveParticipantState(result.token, result.memberId, result.name);
-    await handleRouting(); // 参加成功後、再度ルーティングを実行して正しい画面を表示
-  } catch (error) {
-    if (error.requiresPassword) {
-      const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
-      if (password) {
-        await verifyAndLogin(error.memberId, password);
-      } else {
-        const forgot = confirm('合言葉を忘れましたか？管理者にリセットを依頼します。');
-        if (forgot) {
-          await api.requestPasswordDeletion(error.memberId, state.currentGroupId);
-          alert('管理者に合言葉の削除を依頼しました。');
-        }
-      }
-    } else {
-      alert(error.error);
-    }
-  }
-}
-
-async function verifyAndLogin(memberId, password, slot = null) {
-  try {
-    const eventId = ui.elements.nameEntryEventId.value;
-    const result = await api.verifyPasswordAndJoin(eventId, memberId, password, slot);
-    state.saveParticipantState(result.token, result.memberId, result.name);
-    if (slot !== null) {
-      ui.showWaitingView();
-    } else {
-      await handleRouting({group: null, event: null});
-    }
-  } catch (error) {
-    alert(error.error);
-    const forgot = confirm('合言葉を忘れましたか？管理者にリセットを依頼します。');
-    if (forgot) {
-      try {
-        await api.requestPasswordDeletion(memberId, state.currentGroupId);
-        alert('管理者に合言葉の削除を依頼しました。');
-      } catch (resetError) {
-        alert(resetError.error || '依頼の送信に失敗しました。');
-      }
-    }
   }
 }
 
@@ -461,8 +416,9 @@ function setupEventListeners() {
       if (state.currentGroupId) {
         const currentGroup = state.allUserGroups.find((g) => g.id === state.currentGroupId);
         if (currentGroup) {
-          const settingsButton = document.querySelector(`.item-list-item[data-group-id="${state.currentGroupId}"] button`);
-          if (settingsButton) settingsButton.click();
+          // 修正箇所：直接設定モーダルを開く処理を呼び出す
+          const settingsButtonInList = document.querySelector(`.item-list-item[data-group-id="${state.currentGroupId}"] button`);
+          if (settingsButtonInList) settingsButtonInList.click();
         } else {
           alert('グループ情報が見つかりませんでした。');
         }
@@ -489,13 +445,10 @@ function setupEventListeners() {
         if (result.success) {
           alert('認証しました！');
           ui.closeGroupPasswordModal();
-          // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
-          // ページリロードをやめ、必ず lastFailedAction を実行する
           if (state.lastFailedAction) {
             await state.lastFailedAction();
             state.setLastFailedAction(null);
           }
-          // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
         }
       } catch (error) {
         alert(`エラー: ${error.error}`);
@@ -653,9 +606,9 @@ function setupEventListeners() {
               elements.suggestionList.innerHTML = '';
               if (hasPassword) {
                 const password = prompt(`「${name}」さんの合言葉を入力してください:`);
-                if (password) await verifyAndLogin(memberId, password);
+                if (password) await verifyAndLogin(state.currentEventId, memberId, password);
               } else {
-                await handleLoginOrRegister(name, memberId);
+                await handleLoginOrRegister(state.currentEventId, name, memberId);
               }
             });
           } catch (e) {
@@ -664,7 +617,7 @@ function setupEventListeners() {
         }, 300)
       );
     });
-  if (elements.confirmNameButton) elements.confirmNameButton.addEventListener('click', () => handleLoginOrRegister(elements.nameInput.value.trim()));
+
   if (elements.goToAmidaButton)
     elements.goToAmidaButton.addEventListener('click', async () => {
       const eventData = await api.getPublicEventData(state.currentEventId);

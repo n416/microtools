@@ -2,131 +2,170 @@
 import * as state from './state.js';
 import {stopAnimation} from './animation.js';
 
-export const elements = {
-  loginButton: document.getElementById('loginButton'),
-  logoutButton: document.getElementById('logoutButton'),
-  deleteAccountButton: document.getElementById('deleteAccountButton'),
-  authStatus: document.getElementById('authStatus'),
-  adminDashboardButton: document.getElementById('adminDashboardButton'),
-  impersonationBanner: document.querySelector('.impersonation-banner'),
-  stopImpersonatingButton: document.getElementById('stopImpersonatingButton'),
-  mainHeader: document.querySelector('.main-header'),
-  groupDashboard: document.getElementById('groupDashboard'),
-  dashboardView: document.getElementById('dashboardView'),
-  eventEditView: document.getElementById('eventEditView'),
-  broadcastView: document.getElementById('broadcastView'),
-  participantView: document.getElementById('participantView'),
-  adminDashboard: document.getElementById('adminDashboard'),
-  groupEventListView: document.getElementById('groupEventListView'),
-  groupNameInput: document.getElementById('groupNameInput'),
-  createGroupButton: document.getElementById('createGroupButton'),
-  groupList: document.getElementById('groupList'),
-  requestAdminButton: document.getElementById('requestAdminButton'),
-  groupSettingsModal: document.getElementById('groupSettingsModal'),
-  settingsGroupId: document.getElementById('settingsGroupId'),
-  groupNameEditInput: document.getElementById('groupNameEditInput'),
-  customUrlInput: document.getElementById('customUrlInput'),
-  groupPasswordInput: document.getElementById('groupPasswordInput'),
-  noIndexCheckbox: document.getElementById('noIndexCheckbox'),
-  saveGroupSettingsButton: document.getElementById('saveGroupSettingsButton'),
-  closeSettingsModalButton: document.querySelector('#groupSettingsModal .close-button'),
-  customUrlPreview: document.getElementById('customUrlPreview'),
-  participantManagementList: document.getElementById('participantManagementList'),
-  addParticipantButton: document.getElementById('addParticipantButton'),
-  addParticipantNameInput: document.getElementById('addParticipantNameInput'),
-  passwordResetRequestList: document.getElementById('passwordResetRequestList'),
-  prizeMasterList: document.getElementById('prizeMasterList'),
-  addMasterPrizeNameInput: document.getElementById('addMasterPrizeNameInput'),
-  addMasterPrizeImageInput: document.getElementById('addMasterPrizeImageInput'),
-  addMasterPrizeButton: document.getElementById('addMasterPrizeButton'),
-  deletePasswordButton: document.getElementById('deletePasswordButton'),
-  eventGroupName: document.getElementById('eventGroupName'),
-  backToGroupsButton: document.getElementById('backToGroupsButton'),
-  participantCountInput: document.getElementById('participantCountInput'),
-  prizeInput: document.getElementById('prizeInput'),
-  addPrizeButton: document.getElementById('addPrizeButton'),
-  prizeList: document.getElementById('prizeList'),
-  displayModeSelect: document.getElementById('displayModeSelect'),
-  eventNameInput: document.getElementById('eventNameInput'),
-  syncWithGroupButton: document.getElementById('syncWithGroupButton'),
-  selectFromMasterButton: document.getElementById('selectFromMasterButton'),
-  createEventButton: document.getElementById('createEventButton'),
-  loadButton: document.getElementById('loadButton'),
-  eventIdInput: document.getElementById('eventIdInput'),
-  currentEventUrl: document.getElementById('currentEventUrl'),
-  eventList: document.getElementById('eventList'),
-  goToCreateEventViewButton: document.getElementById('goToCreateEventViewButton'),
-  adminControls: document.getElementById('adminControls'),
-  startEventButton: document.getElementById('startEventButton'),
-  startBroadcastButton: document.getElementById('startBroadcastButton'),
-  adminCanvas: document.getElementById('adminCanvas'),
-  broadcastControls: document.querySelector('.broadcast-controls'),
-  animateAllButton: document.getElementById('animateAllButton'),
-  nextStepButton: document.getElementById('nextStepButton'),
-  highlightUserSelect: document.getElementById('highlightUserSelect'),
-  highlightUserButton: document.getElementById('highlightUserButton'),
-  backToDashboardButton: document.getElementById('backToDashboardButton'),
-  participantEventName: document.getElementById('participantEventName'),
-  prizeDisplay: document.getElementById('prizeDisplay'),
-  nameEntrySection: document.getElementById('nameEntrySection'),
-  nameInput: document.getElementById('nameInput'),
-  confirmNameButton: document.getElementById('confirmNameButton'),
-  suggestionList: document.getElementById('suggestionList'),
-  participantControlPanel: document.getElementById('participantControlPanel'),
-  welcomeName: document.getElementById('welcomeName'),
-  goToAmidaButton: document.getElementById('goToAmidaButton'),
-  setPasswordButton: document.getElementById('setPasswordButton'),
-  participantLogoutButton: document.getElementById('participantLogoutButton'),
-  deleteMyAccountButton: document.getElementById('deleteMyAccountButton'),
-  joinSection: document.getElementById('joinSection'),
-  backToControlPanelButton: document.getElementById('backToControlPanelButton'),
-  slotList: document.getElementById('slotList'),
-  joinButton: document.getElementById('joinButton'),
-  waitingMessage: document.getElementById('waitingMessage'),
-  deleteParticipantWaitingButton: document.getElementById('deleteParticipantWaitingButton'),
-  backToDashboardFromWaitingButton: document.getElementById('backToDashboardFromWaitingButton'),
-  resultSection: document.getElementById('resultSection'),
-  myResult: document.getElementById('myResult'),
-  allResultsContainer: document.getElementById('allResultsContainer'),
-  shareButton: document.getElementById('shareButton'),
-  editProfileButton: document.getElementById('editProfileButton'),
-  backToControlPanelFromResultButton: document.getElementById('backToControlPanelFromResultButton'),
-  participantCanvas: document.getElementById('participantCanvas'),
-  passwordSetModal: document.getElementById('passwordSetModal'),
-  closePasswordSetModal: document.querySelector('#passwordSetModal .close-button'),
-  newPasswordInput: document.getElementById('newPasswordInput'),
-  savePasswordButton: document.getElementById('savePasswordButton'),
-  deleteUserPasswordButton: document.getElementById('deleteUserPasswordButton'),
-  profileEditModal: document.getElementById('profileEditModal'),
-  closeProfileModalButton: document.querySelector('#profileEditModal .close-button'),
-  profileIconPreview: document.getElementById('profileIconPreview'),
-  profileIconInput: document.getElementById('profileIconInput'),
-  profileColorInput: document.getElementById('profileColorInput'),
-  saveProfileButton: document.getElementById('saveProfileButton'),
-  prizeMasterSelectModal: document.getElementById('prizeMasterSelectModal'),
-  prizeMasterSelectList: document.getElementById('prizeMasterSelectList'),
-  addSelectedPrizesButton: document.getElementById('addSelectedPrizesButton'),
-  closePrizeMasterSelectModal: document.querySelector('#prizeMasterSelectModal .close-button'),
-  groupPasswordModal: document.getElementById('groupPasswordModal'),
-  closeGroupPasswordModalButton: document.querySelector('#groupPasswordModal .close-button'),
-  verifyPasswordButton: document.getElementById('verifyPasswordButton'),
-  groupPasswordVerifyInput: document.getElementById('groupPasswordVerifyInput'),
-  verificationTargetGroupId: document.getElementById('verificationTargetGroupId'),
-  verificationTargetGroupName: document.getElementById('verificationTargetGroupName'),
-  groupSwitcher: document.getElementById('groupSwitcher'),
-  currentGroupName: document.getElementById('currentGroupName'),
-  groupDropdown: document.getElementById('groupDropdown'),
-  switcherGroupList: document.getElementById('switcherGroupList'),
-  switcherCreateGroup: document.getElementById('switcherCreateGroup'),
-  goToGroupSettingsButton: document.getElementById('goToGroupSettingsButton'),
-  groupEventListContainer: document.getElementById('groupEventList'),
-  groupNameTitle: document.getElementById('groupEventListName'),
-  adminUserList: document.getElementById('adminUserList'),
-  pendingRequestsList: document.getElementById('pendingRequestsList'),
-  systemAdminList: document.getElementById('systemAdminList'),
-  otherEventsSection: document.getElementById('otherEventsSection'), // <<< この行を追加
-  otherEventsList: document.getElementById('otherEventsList'), // <<< この行を追加
+export const elements = {};
+
+// ▼▼▼▼▼ ここから追加 ▼▼▼▼▼
+const elementSelectors = {
+  // Header & Auth
+  mainHeader: '.main-header',
+  impersonationBanner: '.impersonation-banner',
+  loginButton: '#loginButton',
+  logoutButton: '#logoutButton',
+  deleteAccountButton: '#deleteAccountButton',
+  authStatus: '#authStatus',
+  adminDashboardButton: '#adminDashboardButton',
+  stopImpersonatingButton: '#stopImpersonatingButton',
+
+  // Views
+  groupDashboard: '#groupDashboard',
+  dashboardView: '#dashboardView',
+  eventEditView: '#eventEditView',
+  broadcastView: '#broadcastView',
+  participantView: '#participantView',
+  adminDashboard: '#adminDashboard',
+  groupEventListView: '#groupEventListView',
+
+  // Group Dashboard
+  groupNameInput: '#groupNameInput',
+  createGroupButton: '#createGroupButton',
+  groupList: '#groupList',
+  requestAdminButton: '#requestAdminButton',
+
+  // Group Switcher
+  groupSwitcher: '#groupSwitcher',
+  currentGroupName: '#currentGroupName',
+  groupDropdown: '#groupDropdown',
+  switcherGroupList: '#switcherGroupList',
+  switcherCreateGroup: '#switcherCreateGroup',
+
+  // Group Settings Modal
+  groupSettingsModal: '#groupSettingsModal',
+  closeSettingsModalButton: '#groupSettingsModal .close-button',
+  settingsGroupId: '#settingsGroupId',
+  groupNameEditInput: '#groupNameEditInput',
+  customUrlInput: '#customUrlInput',
+  customUrlPreview: '#customUrlPreview',
+  groupPasswordInput: '#groupPasswordInput',
+  deletePasswordButton: '#deletePasswordButton',
+  noIndexCheckbox: '#noIndexCheckbox',
+  saveGroupSettingsButton: '#saveGroupSettingsButton',
+  participantManagementList: '#participantManagementList',
+  addParticipantButton: '#addParticipantButton',
+  addParticipantNameInput: '#addParticipantNameInput',
+  passwordResetRequestList: '#passwordResetRequestList',
+
+  // Prize Master (in Settings Modal)
+  prizeMasterList: '#prizeMasterList',
+  addMasterPrizeNameInput: '#addMasterPrizeNameInput',
+  addMasterPrizeImageInput: '#addMasterPrizeImageInput',
+  addMasterPrizeButton: '#addMasterPrizeButton',
+
+  // Event Dashboard (dashboardView)
+  eventGroupName: '#eventGroupName',
+  goToGroupSettingsButton: '#goToGroupSettingsButton',
+  goToCreateEventViewButton: '#goToCreateEventViewButton',
+  eventList: '#eventList',
+
+  // Event Edit View
+  backToGroupsButton: '#backToGroupsButton',
+  eventNameInput: '#eventNameInput',
+  participantCountInput: '#participantCountInput',
+  syncWithGroupButton: '#syncWithGroupButton',
+  prizeInput: '#prizeInput',
+  addPrizeButton: '#addPrizeButton',
+  selectFromMasterButton: '#selectFromMasterButton',
+  prizeList: '#prizeList',
+  displayModeSelect: '#displayModeSelect',
+  createEventButton: '#createEventButton',
+  eventIdInput: '#eventIdInput',
+  loadButton: '#loadButton',
+  currentEventUrl: '#currentEventUrl',
+
+  // Broadcast View
+  backToDashboardButton: '#backToDashboardButton',
+  adminControls: '#adminControls',
+  startEventButton: '#startEventButton',
+  startBroadcastButton: '#startBroadcastButton',
+  adminCanvas: '#adminCanvas',
+  broadcastControls: '.broadcast-controls',
+  animateAllButton: '#animateAllButton',
+  nextStepButton: '#nextStepButton',
+  highlightUserSelect: '#highlightUserSelect',
+  highlightUserButton: '#highlightUserButton',
+
+  // Participant View
+  participantEventName: '#participantEventName',
+  backToGroupEventListLink: '#backToGroupEventListLink',
+  nameEntrySection: '#nameEntrySection',
+  nameInput: '#nameInput',
+  confirmNameButton: '#confirmNameButton',
+  suggestionList: '#suggestionList',
+  participantControlPanel: '#participantControlPanel',
+  welcomeName: '#welcomeName',
+  goToAmidaButton: '#goToAmidaButton',
+  setPasswordButton: '#setPasswordButton',
+  editProfileButton: '#editProfileButton',
+  participantLogoutButton: '#participantLogoutButton',
+  deleteMyAccountButton: '#deleteMyAccountButton',
+  otherEventsSection: '#otherEventsSection',
+  otherEventsList: '#otherEventsList',
+  joinSection: '#joinSection',
+  backToControlPanelButton: '#backToControlPanelButton',
+  prizeDisplay: '#prizeDisplay',
+  slotList: '#slotList',
+  joinButton: '#joinButton',
+  waitingMessage: '#waitingMessage',
+  deleteParticipantWaitingButton: '#deleteParticipantWaitingButton',
+  backToDashboardFromWaitingButton: '#backToDashboardFromWaitingButton',
+  resultSection: '#resultSection',
+  participantCanvas: '#participantCanvas',
+  myResult: '#myResult',
+  allResultsContainer: '#allResultsContainer',
+  shareButton: '#shareButton',
+  backToControlPanelFromResultButton: '#backToControlPanelFromResultButton',
+
+  // Admin Dashboard
+  pendingRequestsList: '#pendingRequestsList',
+  adminUserList: '#adminUserList',
+  systemAdminList: '#systemAdminList',
+
+  // Modals
+  groupPasswordModal: '#groupPasswordModal',
+  closeGroupPasswordModalButton: '#groupPasswordModal .close-button',
+  verificationTargetGroupId: '#verificationTargetGroupId',
+  verificationTargetGroupName: '#verificationTargetGroupName',
+  groupPasswordVerifyInput: '#groupPasswordVerifyInput',
+  verifyPasswordButton: '#verifyPasswordButton',
+
+  passwordSetModal: '#passwordSetModal',
+  closePasswordSetModal: '#passwordSetModal .close-button',
+  newPasswordInput: '#newPasswordInput',
+  savePasswordButton: '#savePasswordButton',
+  deleteUserPasswordButton: '#deleteUserPasswordButton',
+
+  profileEditModal: '#profileEditModal',
+  closeProfileModalButton: '#profileEditModal .close-button',
+  profileIconPreview: '#profileIconPreview',
+  profileIconInput: '#profileIconInput',
+  profileColorInput: '#profileColorInput',
+  saveProfileButton: '#saveProfileButton',
+
+  prizeMasterSelectModal: '#prizeMasterSelectModal',
+  closePrizeMasterSelectModal: '#prizeMasterSelectModal .close-button',
+  prizeMasterSelectList: '#prizeMasterSelectList',
+  addSelectedPrizesButton: '#addSelectedPrizesButton',
+
+  // Group Event List View (public)
+  groupEventListContainer: '#groupEventList',
+  groupNameTitle: '#groupEventListName',
 };
+
+export function init() {
+  for (const key in elementSelectors) {
+    elements[key] = document.querySelector(elementSelectors[key]);
+  }
+}
+// ▲▲▲▲▲ 追加ここまで ▲▲▲▲▲
 
 const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];
 
@@ -487,11 +526,9 @@ export function renderAdminLists(requests, groupAdmins, systemAdmins, handlers) 
 
   if (pendingRequestsList) {
     pendingRequestsList.innerHTML = requests.length === 0 ? '<li>現在、承認待ちの申請はありません。</li>' : requests.map((req) => `<li class="item-list-item"><span>${req.name} (${req.email})</span><div class="item-buttons"><button class="approve-btn" data-request-id="${req.id}">承認</button></div></li>`).join('');
-    pendingRequestsList.querySelectorAll('.approve-btn').forEach((btn) => btn.addEventListener('click', () => handlers.onApprove(btn.dataset.requestId)));
   }
   if (adminUserList) {
     adminUserList.innerHTML = groupAdmins.map((user) => `<li class="item-list-item"><span>${user.name} (${user.email})</span><div class="item-buttons"><button class="impersonate-btn" data-user-id="${user.id}">成り代わり</button></div></li>`).join('');
-    adminUserList.querySelectorAll('.impersonate-btn').forEach((btn) => btn.addEventListener('click', () => handlers.onImpersonate(btn.dataset.userId)));
   }
   if (systemAdminList) {
     systemAdminList.innerHTML = systemAdmins
@@ -501,7 +538,6 @@ export function renderAdminLists(requests, groupAdmins, systemAdmins, handlers) 
         return `<li class="item-list-item"><span>${admin.name} (${admin.email})</span> ${buttons}</li>`;
       })
       .join('');
-    systemAdminList.querySelectorAll('.demote-btn').forEach((btn) => btn.addEventListener('click', () => handlers.onDemote(btn.dataset.userId)));
   }
 }
 
@@ -570,11 +606,15 @@ export function hideParticipantSubViews() {
   if (elements.resultSection) elements.resultSection.style.display = 'none';
 }
 
-export function showNameEntryView() {
+export function showNameEntryView(onConfirm) { // onConfirm引数を追加
   hideParticipantSubViews();
   if (elements.nameEntrySection) elements.nameEntrySection.style.display = 'block';
   if (elements.nameInput) elements.nameInput.value = '';
   if (elements.suggestionList) elements.suggestionList.innerHTML = '';
+  // ボタンがクリックされたときの処理を設定
+  if (elements.confirmNameButton) {
+    elements.confirmNameButton.onclick = () => onConfirm(elements.nameInput.value.trim());
+  }
 }
 
 export function showControlPanelView(eventData) {
