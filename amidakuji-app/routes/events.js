@@ -13,9 +13,9 @@ router.get('/share/:eventId', eventController.getPublicShareData);
 
 // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 // 誰でもアクセスできるグループのイベント一覧API
-router.get('/by-group/:groupId', eventController.getPublicEventsForGroup);
+// URLの不一致を修正 ('/events' を追加)
+router.get('/events/by-group/:groupId', eventController.getPublicEventsForGroup);
 // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
-
 
 // 【新規】シェアページ専用の認証不要APIルートを追加
 router.get('/share/:eventId', eventController.getPublicShareData);

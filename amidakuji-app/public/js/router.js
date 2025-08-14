@@ -278,12 +278,28 @@ export async function handleRouting(initialData) {
   stopAnimation();
   const path = window.location.pathname;
 
-  // 最初に認証状態を確認
+  // 1. 最初に認証状態を取得
   const user = await api.checkGoogleAuthState().catch(() => null);
   state.setCurrentUser(user);
-  ui.updateAuthUI(user);
 
+  // 2. ヘッダーを表示すべきでない公開ページ（かつ非ログイン時）のルートを定義
+  const publicRoutesToHideHeader = ['/g/', '/share/', '/events/'];
+  // /groups/ はログイン状態によって挙動が変わるため、ここには含めない
+  const isPublicPage = publicRoutesToHideHeader.some((route) => path.startsWith(route));
+
+  // 3. ログイン状態とURLに基づいてヘッダーの表示を決定
+  if (!user && (isPublicPage || path.startsWith('/groups/'))) {
+    // 未ログインで、かつヘッダーを隠すべき公開ページの場合
+    ui.setMainHeaderVisibility(false);
+  } else {
+    // 上記以外（ログインしている全ページ、または未ログインのトップページなど）
+    ui.setMainHeaderVisibility(true);
+    ui.updateAuthUI(user);
+  }
+
+  // 4. 表示するビューを決定
   if (user) {
+    // --- ログイン済みユーザーのルーティング ---
     const adminMatch = path.match(/\/admin/);
     const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)$/);
     const eventEditMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/edit$/);
@@ -321,12 +337,11 @@ export async function handleRouting(initialData) {
     }
     if (adminMatch && user.role === 'system_admin' && !user.isImpersonating) {
       ui.showView('adminDashboard');
-      return 'loadAdminDashboard'; // 戻り値を追加
+      return 'loadAdminDashboard';
     }
   }
 
   // --- 公開ページのルーティング ---
-  // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
   const shareMatch = path.match(/^\/share\/([a-zA-Z0-9]+)\/(.+)/);
   if (shareMatch) {
     const [, eventId, participantName] = shareMatch;
@@ -349,14 +364,16 @@ export async function handleRouting(initialData) {
 
   const groupIdMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)\/?$/);
   if (groupIdMatch) {
+    // このルートはログイン状態によって処理が分岐済みのため、ここでは未ログインの場合のみ到達する
     await initializeGroupEventListView(groupIdMatch[1], initialData ? initialData.group : null, false);
     return;
   }
-  // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
+  // --- フォールバック ---
   if (user && path !== '/') {
     ui.showView('groupDashboard');
-  } else if (!user) {
+  } else if (!user && path === '/') {
+    // 未ログインでトップページの場合は、ログインボタンのあるヘッダーだけ表示
     ui.showView(null);
   }
 

@@ -20,7 +20,7 @@ const {elements} = ui;
 
 // --- アプリケーションの初期化 ---
 async function initializeApp() {
-  ui.init();
+  // ui.init(); // この行を削除しました
   setupEventListeners();
 
   const initialData = {
