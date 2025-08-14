@@ -359,12 +359,6 @@ exports.joinEvent = async (req, res) => {
     if (!eventDoc.exists) return res.status(404).json({error: 'イベントが見つかりません。'});
 
     const eventData = eventDoc.data();
-
-    // ★★★ 修正箇所 ★★★
-    if (eventData.status === 'started') {
-      return res.status(403).json({error: 'このイベントは既に開始されているため、参加できません。'});
-    }
-
     const groupId = eventData.groupId;
     const membersRef = firestore.collection('groups').doc(groupId).collection('members');
 
@@ -411,34 +405,40 @@ exports.joinEvent = async (req, res) => {
       await membersRef.doc(finalMemberId).set(memberData);
     }
 
-    const alreadyJoined = eventData.participants.some((p) => p.memberId === finalMemberId);
-    if (alreadyJoined) {
-      return res.status(200).json({
-        message: '既にイベントに参加済みです。',
-        token: token,
-        memberId: finalMemberId,
+    // ▼▼▼ ログイン処理はここまで。ここから下はイベント参加処理 ▼▼▼
+    
+    // イベントが開始されていなければ、参加処理を試みる
+    if (eventData.status !== 'started') {
+      const alreadyJoined = eventData.participants.some((p) => p.memberId === finalMemberId);
+      if (alreadyJoined) {
+        return res.status(200).json({
+          message: '既にイベントに参加済みです。',
+          token: token,
+          memberId: finalMemberId,
+          name: memberData.name,
+        });
+      }
+
+      const availableSlotIndex = eventData.participants.findIndex((p) => p.name === null);
+      if (availableSlotIndex === -1) {
+        return res.status(409).json({error: 'このイベントには空きがありません。'});
+      }
+
+      const newParticipants = [...eventData.participants];
+      newParticipants[availableSlotIndex] = {
+        ...newParticipants[availableSlotIndex],
         name: memberData.name,
-      });
+        memberId: finalMemberId,
+        iconUrl: memberData.iconUrl,
+        color: memberData.color,
+      };
+
+      await eventRef.update({participants: newParticipants});
     }
 
-    const availableSlotIndex = eventData.participants.findIndex((p) => p.name === null);
-    if (availableSlotIndex === -1) {
-      return res.status(409).json({error: 'このイベントには空きがありません。'});
-    }
-
-    const newParticipants = [...eventData.participants];
-    newParticipants[availableSlotIndex] = {
-      ...newParticipants[availableSlotIndex],
-      name: memberData.name,
-      memberId: finalMemberId,
-      iconUrl: memberData.iconUrl,
-      color: memberData.color,
-    };
-
-    await eventRef.update({participants: newParticipants});
-
-    res.status(201).json({
-      message: 'イベントに参加しました。',
+    // ログイン成功レスポンスを返す
+    res.status(200).json({
+      message: eventData.status === 'started' ? 'ログインしました。イベントは開始済みのため、結果を確認してください。' : 'イベントに参加しました。',
       token: token,
       memberId: finalMemberId,
       name: memberData.name,
@@ -517,12 +517,6 @@ exports.verifyPasswordAndJoin = async (req, res) => {
     if (!eventDoc.exists) return res.status(404).json({error: 'イベントが見つかりません。'});
 
     const eventData = eventDoc.data();
-
-    // ★★★ 修正箇所 ★★★
-    if (eventData.status === 'started') {
-      return res.status(403).json({error: 'このイベントは既に開始されているため、参加できません。'});
-    }
-
     const groupId = eventData.groupId;
 
     const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
@@ -538,8 +532,11 @@ exports.verifyPasswordAndJoin = async (req, res) => {
     if (!match) {
       return res.status(401).json({error: '合言葉が違います。'});
     }
+    
+    // ▼▼▼ ログイン処理はここまで。ここから下はイベント参加処理 ▼▼▼
 
-    if (slot !== undefined && slot !== null) {
+    // スロット指定があり、かつイベントが開始されていない場合のみ参加処理
+    if (slot !== undefined && slot !== null && eventData.status !== 'started') {
       const newParticipants = [...eventData.participants];
       if (slot < 0 || slot >= newParticipants.length || newParticipants[slot].name !== null) {
         return res.status(409).json({error: 'この参加枠は既に埋まっているか、無効です。'});
@@ -552,6 +549,7 @@ exports.verifyPasswordAndJoin = async (req, res) => {
       await eventRef.update({participants: newParticipants});
     }
 
+    // ログイン成功レスポンスを返す
     res.status(200).json({
       message: 'ログインしました。',
       token: memberData.deleteToken,
