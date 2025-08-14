@@ -198,6 +198,10 @@ button:disabled {
 
 /* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
+  .main-header, .controls, .modal-content {
+    box-shadow: none; /* 影を削除 */
+    border: 1px solid var(--border-color); /* 微かな境界線を追加 */
+  }
   .url-preview code {
     background-color: #333;
     color: #e0e0e0;
@@ -430,6 +434,9 @@ canvas {
 
 /* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
+  .item-list-item:hover {
+    box-shadow: none;
+  }
   .slot.available {
     background-color: transparent;
     border-color: var(--primary-color);
@@ -440,6 +447,9 @@ canvas {
   .slot.taken {
     background-color: #333;
     color: #888;
+  }
+  .slot.selected {
+    box-shadow: 0 0 8px rgba(13, 132, 255, 0.6); /* 影を光の輪に変更 */
   }
   #waitingMessage {
     background-color: #1c2e23;
