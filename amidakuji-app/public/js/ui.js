@@ -2,170 +2,171 @@
 import * as state from './state.js';
 import {stopAnimation} from './animation.js';
 
-export const elements = {};
-
-// ▼▼▼▼▼ ここから追加 ▼▼▼▼▼
-const elementSelectors = {
+/* ==========================================================================
+   DOM要素の参照
+   --------------------------------------------------------------------------
+   [重要] このプロジェクトでは、SPAのライフサイクルにおけるDOM生成の
+   タイミング問題を回避するため、全ての要素を起動時に一括で取得する
+   `init()` や `elementSelectors` のような方式を**禁止**しています。
+   
+   新しい要素への参照が必要になった場合は、この `elements` オブジェクトに
+   直接 `document.getElementById` や `document.querySelector` を
+   追記する方式で統一してください。
+   ========================================================================== */
+export const elements = {
   // Header & Auth
-  mainHeader: '.main-header',
-  impersonationBanner: '.impersonation-banner',
-  loginButton: '#loginButton',
-  logoutButton: '#logoutButton',
-  deleteAccountButton: '#deleteAccountButton',
-  authStatus: '#authStatus',
-  adminDashboardButton: '#adminDashboardButton',
-  stopImpersonatingButton: '#stopImpersonatingButton',
+  mainHeader: document.querySelector('.main-header'),
+  impersonationBanner: document.querySelector('.impersonation-banner'),
+  loginButton: document.getElementById('loginButton'),
+  logoutButton: document.getElementById('logoutButton'),
+  deleteAccountButton: document.getElementById('deleteAccountButton'),
+  authStatus: document.getElementById('authStatus'),
+  adminDashboardButton: document.getElementById('adminDashboardButton'),
+  stopImpersonatingButton: document.getElementById('stopImpersonatingButton'),
 
   // Views
-  groupDashboard: '#groupDashboard',
-  dashboardView: '#dashboardView',
-  eventEditView: '#eventEditView',
-  broadcastView: '#broadcastView',
-  participantView: '#participantView',
-  adminDashboard: '#adminDashboard',
-  groupEventListView: '#groupEventListView',
+  groupDashboard: document.getElementById('groupDashboard'),
+  dashboardView: document.getElementById('dashboardView'),
+  eventEditView: document.getElementById('eventEditView'),
+  broadcastView: document.getElementById('broadcastView'),
+  participantView: document.getElementById('participantView'),
+  adminDashboard: document.getElementById('adminDashboard'),
+  groupEventListView: document.getElementById('groupEventListView'),
 
   // Group Dashboard
-  groupNameInput: '#groupNameInput',
-  createGroupButton: '#createGroupButton',
-  groupList: '#groupList',
-  requestAdminButton: '#requestAdminButton',
+  groupNameInput: document.getElementById('groupNameInput'),
+  createGroupButton: document.getElementById('createGroupButton'),
+  groupList: document.getElementById('groupList'),
+  requestAdminButton: document.getElementById('requestAdminButton'),
 
   // Group Switcher
-  groupSwitcher: '#groupSwitcher',
-  currentGroupName: '#currentGroupName',
-  groupDropdown: '#groupDropdown',
-  switcherGroupList: '#switcherGroupList',
-  switcherCreateGroup: '#switcherCreateGroup',
+  groupSwitcher: document.getElementById('groupSwitcher'),
+  currentGroupName: document.getElementById('currentGroupName'),
+  groupDropdown: document.getElementById('groupDropdown'),
+  switcherGroupList: document.getElementById('switcherGroupList'),
+  switcherCreateGroup: document.getElementById('switcherCreateGroup'),
 
   // Group Settings Modal
-  groupSettingsModal: '#groupSettingsModal',
-  closeSettingsModalButton: '#groupSettingsModal .close-button',
-  settingsGroupId: '#settingsGroupId',
-  groupNameEditInput: '#groupNameEditInput',
-  customUrlInput: '#customUrlInput',
-  customUrlPreview: '#customUrlPreview',
-  groupPasswordInput: '#groupPasswordInput',
-  deletePasswordButton: '#deletePasswordButton',
-  noIndexCheckbox: '#noIndexCheckbox',
-  saveGroupSettingsButton: '#saveGroupSettingsButton',
-  participantManagementList: '#participantManagementList',
-  addParticipantButton: '#addParticipantButton',
-  addParticipantNameInput: '#addParticipantNameInput',
-  passwordResetRequestList: '#passwordResetRequestList',
+  groupSettingsModal: document.getElementById('groupSettingsModal'),
+  closeSettingsModalButton: document.querySelector('#groupSettingsModal .close-button'),
+  settingsGroupId: document.getElementById('settingsGroupId'),
+  groupNameEditInput: document.getElementById('groupNameEditInput'),
+  customUrlInput: document.getElementById('customUrlInput'),
+  customUrlPreview: document.getElementById('customUrlPreview'),
+  groupPasswordInput: document.getElementById('groupPasswordInput'),
+  deletePasswordButton: document.getElementById('deletePasswordButton'),
+  noIndexCheckbox: document.getElementById('noIndexCheckbox'),
+  saveGroupSettingsButton: document.getElementById('saveGroupSettingsButton'),
+  participantManagementList: document.getElementById('participantManagementList'),
+  addParticipantButton: document.getElementById('addParticipantButton'),
+  addParticipantNameInput: document.getElementById('addParticipantNameInput'),
+  passwordResetRequestList: document.getElementById('passwordResetRequestList'),
 
   // Prize Master (in Settings Modal)
-  prizeMasterList: '#prizeMasterList',
-  addMasterPrizeNameInput: '#addMasterPrizeNameInput',
-  addMasterPrizeImageInput: '#addMasterPrizeImageInput',
-  addMasterPrizeButton: '#addMasterPrizeButton',
+  prizeMasterList: document.getElementById('prizeMasterList'),
+  addMasterPrizeNameInput: document.getElementById('addMasterPrizeNameInput'),
+  addMasterPrizeImageInput: document.getElementById('addMasterPrizeImageInput'),
+  addMasterPrizeButton: document.getElementById('addMasterPrizeButton'),
 
   // Event Dashboard (dashboardView)
-  eventGroupName: '#eventGroupName',
-  goToGroupSettingsButton: '#goToGroupSettingsButton',
-  goToCreateEventViewButton: '#goToCreateEventViewButton',
-  eventList: '#eventList',
+  eventGroupName: document.getElementById('eventGroupName'),
+  goToGroupSettingsButton: document.getElementById('goToGroupSettingsButton'),
+  goToCreateEventViewButton: document.getElementById('goToCreateEventViewButton'),
+  eventList: document.getElementById('eventList'),
 
   // Event Edit View
-  backToGroupsButton: '#backToGroupsButton',
-  eventNameInput: '#eventNameInput',
-  participantCountInput: '#participantCountInput',
-  syncWithGroupButton: '#syncWithGroupButton',
-  prizeInput: '#prizeInput',
-  addPrizeButton: '#addPrizeButton',
-  selectFromMasterButton: '#selectFromMasterButton',
-  prizeList: '#prizeList',
-  displayModeSelect: '#displayModeSelect',
-  createEventButton: '#createEventButton',
-  eventIdInput: '#eventIdInput',
-  loadButton: '#loadButton',
-  currentEventUrl: '#currentEventUrl',
+  backToGroupsButton: document.getElementById('backToGroupsButton'),
+  eventNameInput: document.getElementById('eventNameInput'),
+  participantCountInput: document.getElementById('participantCountInput'),
+  syncWithGroupButton: document.getElementById('syncWithGroupButton'),
+  prizeInput: document.getElementById('prizeInput'),
+  addPrizeButton: document.getElementById('addPrizeButton'),
+  selectFromMasterButton: document.getElementById('selectFromMasterButton'),
+  prizeList: document.getElementById('prizeList'),
+  displayModeSelect: document.getElementById('displayModeSelect'),
+  createEventButton: document.getElementById('createEventButton'),
+  eventIdInput: document.getElementById('eventIdInput'),
+  loadButton: document.getElementById('loadButton'),
+  currentEventUrl: document.getElementById('currentEventUrl'),
 
   // Broadcast View
-  backToDashboardButton: '#backToDashboardButton',
-  adminControls: '#adminControls',
-  startEventButton: '#startEventButton',
-  startBroadcastButton: '#startBroadcastButton',
-  adminCanvas: '#adminCanvas',
-  broadcastControls: '.broadcast-controls',
-  animateAllButton: '#animateAllButton',
-  nextStepButton: '#nextStepButton',
-  highlightUserSelect: '#highlightUserSelect',
-  highlightUserButton: '#highlightUserButton',
+  backToDashboardButton: document.getElementById('backToDashboardButton'),
+  adminControls: document.getElementById('adminControls'),
+  startEventButton: document.getElementById('startEventButton'),
+  startBroadcastButton: document.getElementById('startBroadcastButton'),
+  adminCanvas: document.getElementById('adminCanvas'),
+  broadcastControls: document.querySelector('.broadcast-controls'),
+  animateAllButton: document.getElementById('animateAllButton'),
+  nextStepButton: document.getElementById('nextStepButton'),
+  highlightUserSelect: document.getElementById('highlightUserSelect'),
+  highlightUserButton: document.getElementById('highlightUserButton'),
 
   // Participant View
-  participantEventName: '#participantEventName',
-  backToGroupEventListLink: '#backToGroupEventListLink',
-  nameEntrySection: '#nameEntrySection',
-  nameInput: '#nameInput',
-  confirmNameButton: '#confirmNameButton',
-  suggestionList: '#suggestionList',
-  participantControlPanel: '#participantControlPanel',
-  welcomeName: '#welcomeName',
-  goToAmidaButton: '#goToAmidaButton',
-  setPasswordButton: '#setPasswordButton',
-  editProfileButton: '#editProfileButton',
-  participantLogoutButton: '#participantLogoutButton',
-  deleteMyAccountButton: '#deleteMyAccountButton',
-  otherEventsSection: '#otherEventsSection',
-  otherEventsList: '#otherEventsList',
-  joinSection: '#joinSection',
-  backToControlPanelButton: '#backToControlPanelButton',
-  prizeDisplay: '#prizeDisplay',
-  slotList: '#slotList',
-  joinButton: '#joinButton',
-  waitingMessage: '#waitingMessage',
-  deleteParticipantWaitingButton: '#deleteParticipantWaitingButton',
-  backToDashboardFromWaitingButton: '#backToDashboardFromWaitingButton',
-  resultSection: '#resultSection',
-  participantCanvas: '#participantCanvas',
-  myResult: '#myResult',
-  allResultsContainer: '#allResultsContainer',
-  shareButton: '#shareButton',
-  backToControlPanelFromResultButton: '#backToControlPanelFromResultButton',
+  participantEventName: document.getElementById('participantEventName'),
+  backToGroupEventListLink: document.getElementById('backToGroupEventListLink'),
+  nameEntrySection: document.getElementById('nameEntrySection'),
+  nameInput: document.getElementById('nameInput'),
+  confirmNameButton: document.getElementById('confirmNameButton'),
+  suggestionList: document.getElementById('suggestionList'),
+  participantControlPanel: document.getElementById('participantControlPanel'),
+  welcomeName: document.getElementById('welcomeName'),
+  goToAmidaButton: document.getElementById('goToAmidaButton'),
+  setPasswordButton: document.getElementById('setPasswordButton'),
+  editProfileButton: document.getElementById('editProfileButton'),
+  participantLogoutButton: document.getElementById('participantLogoutButton'),
+  deleteMyAccountButton: document.getElementById('deleteMyAccountButton'),
+  otherEventsSection: document.getElementById('otherEventsSection'),
+  otherEventsList: document.getElementById('otherEventsList'),
+  joinSection: document.getElementById('joinSection'),
+  backToControlPanelButton: document.getElementById('backToControlPanelButton'),
+  prizeDisplay: document.getElementById('prizeDisplay'),
+  slotList: document.getElementById('slotList'),
+  joinButton: document.getElementById('joinButton'),
+  waitingMessage: document.getElementById('waitingMessage'),
+  deleteParticipantWaitingButton: document.getElementById('deleteParticipantWaitingButton'),
+  backToDashboardFromWaitingButton: document.getElementById('backToDashboardFromWaitingButton'),
+  resultSection: document.getElementById('resultSection'),
+  participantCanvas: document.getElementById('participantCanvas'),
+  myResult: document.getElementById('myResult'),
+  allResultsContainer: document.getElementById('allResultsContainer'),
+  shareButton: document.getElementById('shareButton'),
+  backToControlPanelFromResultButton: document.getElementById('backToControlPanelFromResultButton'),
 
   // Admin Dashboard
-  pendingRequestsList: '#pendingRequestsList',
-  adminUserList: '#adminUserList',
-  systemAdminList: '#systemAdminList',
+  pendingRequestsList: document.getElementById('pendingRequestsList'),
+  adminUserList: document.getElementById('adminUserList'),
+  systemAdminList: document.getElementById('systemAdminList'),
 
   // Modals
-  groupPasswordModal: '#groupPasswordModal',
-  closeGroupPasswordModalButton: '#groupPasswordModal .close-button',
-  verificationTargetGroupId: '#verificationTargetGroupId',
-  verificationTargetGroupName: '#verificationTargetGroupName',
-  groupPasswordVerifyInput: '#groupPasswordVerifyInput',
-  verifyPasswordButton: '#verifyPasswordButton',
+  groupPasswordModal: document.getElementById('groupPasswordModal'),
+  closeGroupPasswordModalButton: document.querySelector('#groupPasswordModal .close-button'),
+  verificationTargetGroupId: document.getElementById('verificationTargetGroupId'),
+  verificationTargetGroupName: document.getElementById('verificationTargetGroupName'),
+  groupPasswordVerifyInput: document.getElementById('groupPasswordVerifyInput'),
+  verifyPasswordButton: document.getElementById('verifyPasswordButton'),
 
-  passwordSetModal: '#passwordSetModal',
-  closePasswordSetModal: '#passwordSetModal .close-button',
-  newPasswordInput: '#newPasswordInput',
-  savePasswordButton: '#savePasswordButton',
-  deleteUserPasswordButton: '#deleteUserPasswordButton',
+  passwordSetModal: document.getElementById('passwordSetModal'),
+  closePasswordSetModal: document.querySelector('#passwordSetModal .close-button'),
+  newPasswordInput: document.getElementById('newPasswordInput'),
+  savePasswordButton: document.getElementById('savePasswordButton'),
+  deleteUserPasswordButton: document.getElementById('deleteUserPasswordButton'),
 
-  profileEditModal: '#profileEditModal',
-  closeProfileModalButton: '#profileEditModal .close-button',
-  profileIconPreview: '#profileIconPreview',
-  profileIconInput: '#profileIconInput',
-  profileColorInput: '#profileColorInput',
-  saveProfileButton: '#saveProfileButton',
+  profileEditModal: document.getElementById('profileEditModal'),
+  closeProfileModalButton: document.querySelector('#profileEditModal .close-button'),
+  profileIconPreview: document.getElementById('profileIconPreview'),
+  profileIconInput: document.getElementById('profileIconInput'),
+  profileColorInput: document.getElementById('profileColorInput'),
+  saveProfileButton: document.getElementById('saveProfileButton'),
 
-  prizeMasterSelectModal: '#prizeMasterSelectModal',
-  closePrizeMasterSelectModal: '#prizeMasterSelectModal .close-button',
-  prizeMasterSelectList: '#prizeMasterSelectList',
-  addSelectedPrizesButton: '#addSelectedPrizesButton',
+  prizeMasterSelectModal: document.getElementById('prizeMasterSelectModal'),
+  closePrizeMasterSelectModal: document.querySelector('#prizeMasterSelectModal .close-button'),
+  prizeMasterSelectList: document.getElementById('prizeMasterSelectList'),
+  addSelectedPrizesButton: document.getElementById('addSelectedPrizesButton'),
 
   // Group Event List View (public)
-  groupEventListContainer: '#groupEventList',
-  groupNameTitle: '#groupEventListName',
+  groupEventListContainer: document.getElementById('groupEventList'),
+  groupNameTitle: document.getElementById('groupEventListName'),
 };
-
-export function init() {
-  for (const key in elementSelectors) {
-    elements[key] = document.querySelector(elementSelectors[key]);
-  }
-}
-// ▲▲▲▲▲ 追加ここまで ▲▲▲▲▲
 
 const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];
 
@@ -178,6 +179,17 @@ export function adjustBodyPadding() {
     totalOffset += elements.impersonationBanner.offsetHeight;
   }
   document.body.style.paddingTop = `${totalOffset}px`;
+}
+
+/**
+ * ヘッダーの表示/非表示を切り替え、それに合わせてpaddingを調整する
+ * @param {boolean} visible 表示する場合はtrue
+ */
+export function setMainHeaderVisibility(visible) {
+    if (elements.mainHeader) {
+        elements.mainHeader.style.display = visible ? 'flex' : 'none';
+    }
+    adjustBodyPadding();
 }
 
 export function showView(viewToShowId) {
@@ -348,7 +360,6 @@ export function closeGroupPasswordModal() {
   if (elements.groupPasswordModal) elements.groupPasswordModal.style.display = 'none';
 }
 
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 export function renderGroupList(groups) {
   if (!elements.groupList) return;
   elements.groupList.innerHTML = '';
@@ -379,7 +390,6 @@ export function renderGroupList(groups) {
     elements.groupList.appendChild(li);
   });
 }
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 export function renderEventList(events, handlers) {
   if (!elements.eventList) return;
