@@ -92,18 +92,64 @@ async function loadAndShowEventForm(groupId) {
   ui.showView('eventEditView');
 }
 
+export async function handleLoginOrRegister(eventId, name, memberId = null) {
+  if (!name || !eventId) return;
+  try {
+    const result = await api.joinEvent(eventId, name, memberId);
+    state.saveParticipantState(result.token, result.memberId, result.name);
+    await handleRouting();
+  } catch (error) {
+    if (error.requiresPassword) {
+      const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
+      if (password) {
+        await verifyAndLogin(eventId, error.memberId, password);
+      } else {
+        const forgot = confirm('合言葉を忘れましたか？管理者にリセットを依頼します。');
+        if (forgot) {
+          await api.requestPasswordDeletion(error.memberId, state.currentGroupId);
+          alert('管理者に合言葉の削除を依頼しました。');
+        }
+      }
+    } else {
+      alert(error.error);
+    }
+  }
+}
+
+export async function verifyAndLogin(eventId, memberId, password, slot = null) {
+  try {
+    const result = await api.verifyPasswordAndJoin(eventId, memberId, password, slot);
+    state.saveParticipantState(result.token, result.memberId, result.name);
+    if (slot !== null) {
+      ui.showWaitingView();
+    } else {
+      await handleRouting();
+    }
+  } catch (error) {
+    alert(error.error);
+    const forgot = confirm('合言葉を忘れましたか？管理者にリセットを依頼します。');
+    if (forgot) {
+      try {
+        await api.requestPasswordDeletion(memberId, state.currentGroupId);
+        alert('管理者に合言葉の削除を依頼しました。');
+      } catch (resetError) {
+        alert(resetError.error || '依頼の送信に失敗しました。');
+      }
+    }
+  }
+}
+
 async function initializeParticipantView(eventId, isShare, sharedParticipantName) {
-  ui.showView('participantView'); // まず参加者ビューのコンテナを表示
-  ui.hideParticipantSubViews(); // 全てのサブビューを一旦隠す
+  state.setCurrentEventId(eventId);
+  ui.showView('participantView');
+  ui.hideParticipantSubViews();
 
   try {
-    const eventData = isShare
-      ? await api.getPublicShareData(eventId) // シェアページ用のAPI
-      : await api.getPublicEventData(eventId); // 通常の参加ページ用API
+    const eventData = isShare ? await api.getPublicShareData(eventId) : await api.getPublicEventData(eventId);
 
     state.setCurrentLotteryData(eventData);
     state.setCurrentGroupId(eventData.groupId);
-    state.loadParticipantState(); // localStorageから参加者情報を読み込む
+    state.loadParticipantState();
 
     if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
 
@@ -131,16 +177,14 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
 
     if (isShare) {
       await showResultsView(eventData, sharedParticipantName, true);
-    } else if (state.currentParticipantToken) {
-      // トークンがあるか？
+    } else if (state.currentParticipantToken && state.currentParticipantId) {
       if (eventData.status === 'started') {
         await showResultsView(eventData, state.currentParticipantName, false);
       } else {
         ui.showControlPanelView(eventData);
       }
     } else {
-      // トークンがなければ名前入力
-      ui.showNameEntryView();
+      ui.showNameEntryView((name) => handleLoginOrRegister(eventId, name));
     }
   } catch (error) {
     console.error('Error in initializeParticipantView:', error);
@@ -153,16 +197,28 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
   }
 }
 
-async function initializeGroupEventListView(customUrlOrGroupId, groupData) {
+async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCustomUrl) {
   const {groupEventListContainer, groupNameTitle} = ui.elements;
   if (!groupEventListContainer || !groupNameTitle) return;
 
-  if (groupData) {
+  ui.showView('groupEventListView');
+
+  // groupDataがなくても、APIから取得してタイトルを設定する
+  if (!groupData) {
+    try {
+      const groupDetails = await api.getGroup(customUrlOrGroupId);
+      groupNameTitle.textContent = `${groupDetails.name} のイベント一覧`;
+      groupData = groupDetails; // 後続の処理で使えるように格納
+    } catch (e) {
+      // グループが見つからない場合
+      groupNameTitle.textContent = '不明なグループのイベント一覧';
+    }
+  } else {
     groupNameTitle.textContent = `${groupData.name} のイベント一覧`;
   }
 
   try {
-    const events = groupData && groupData.customUrl ? await api.getEventsByCustomUrl(customUrlOrGroupId) : await api.getPublicEventsForGroup(customUrlOrGroupId);
+    const events = isCustomUrl ? await api.getEventsByCustomUrl(customUrlOrGroupId) : await api.getPublicEventsForGroup(customUrlOrGroupId);
 
     groupEventListContainer.innerHTML = '';
     if (events.length === 0) {
@@ -175,7 +231,8 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData) {
       li.className = 'item-list-item';
       const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
 
-      const eventUrl = groupData && groupData.customUrl ? `/g/${groupData.customUrl}/${event.id}` : `/events/${event.id}`;
+      // isCustomUrlフラグとgroupDataの有無でURLを正しく構築する
+      const eventUrl = isCustomUrl ? `/g/${customUrlOrGroupId}/${event.id}` : `/events/${event.id}`;
 
       li.innerHTML = `
                 <span><strong>${event.eventName || '無題のイベント'}</strong>（${date.toLocaleDateString()} 作成）</span>
@@ -186,7 +243,7 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData) {
   } catch (error) {
     console.error(error);
     if (error.requiresPassword) {
-      state.setLastFailedAction(() => initializeGroupEventListView(customUrlOrGroupId, groupData));
+      state.setLastFailedAction(() => initializeGroupEventListView(customUrlOrGroupId, groupData, isCustomUrl));
       ui.showGroupPasswordModal(error.groupId, error.groupName);
     } else {
       groupEventListContainer.innerHTML = `<li class="error-message">${error.error || error.message}</li>`;
@@ -264,24 +321,43 @@ export async function handleRouting(initialData) {
     }
     if (adminMatch && user.role === 'system_admin' && !user.isImpersonating) {
       ui.showView('adminDashboard');
-      return;
+      return 'loadAdminDashboard'; // 戻り値を追加
     }
   }
 
   // --- 公開ページのルーティング ---
-  const groupEventListMatch = path.match(/^\/g\/(.+?)\/?$/) || path.match(/^\/groups\/([a-zA-Z0-9]+)\/?$/);
-  const eventMatch = path.match(/^\/events\/([a-zA-Z0-9]+)/) || path.match(/^\/g\/.+?\/([a-zA-Z0-9]+)/);
+  // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
   const shareMatch = path.match(/^\/share\/([a-zA-Z0-9]+)\/(.+)/);
-
   if (shareMatch) {
     const [, eventId, participantName] = shareMatch;
     await initializeParticipantView(eventId, true, decodeURIComponent(participantName));
-  } else if (eventMatch) {
+    return;
+  }
+
+  const eventMatch = path.match(/^\/events\/([a-zA-Z0-9]+)/) || path.match(/^\/g\/.+?\/([a-zA-Z0-9]+)/);
+  if (eventMatch) {
     const eventId = eventMatch[1] || eventMatch[2];
     await initializeParticipantView(eventId, false, null);
-  } else if (groupEventListMatch) {
-    // 公開イベント一覧の表示ロジック
-    await initializeGroupEventListView(groupEventListMatch[1]);
+    return;
+  }
+
+  const customUrlMatch = path.match(/^\/g\/(.+?)\/?$/);
+  if (customUrlMatch) {
+    await initializeGroupEventListView(customUrlMatch[1], initialData ? initialData.group : null, true);
+    return;
+  }
+
+  const groupIdMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)\/?$/);
+  if (groupIdMatch) {
+    await initializeGroupEventListView(groupIdMatch[1], initialData ? initialData.group : null, false);
+    return;
+  }
+  // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+
+  if (user && path !== '/') {
+    ui.showView('groupDashboard');
+  } else if (!user) {
+    ui.showView(null);
   }
 
   ui.adjustBodyPadding();
