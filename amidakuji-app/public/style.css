@@ -773,9 +773,13 @@ canvas {
     .danger-zone {
         border-top-color: #444;
     }
-    /* ▼▼▼ このルールを追加 ▼▼▼ */
-    #backToGroupEventListLink {
+
+    /* ▼▼▼ リンク色のスタイルを修正 ▼▼▼ */
+    a, a:link, #backToGroupEventListLink {
       color: var(--primary-color);
+    }
+    a:visited, #backToGroupEventListLink:visited {
+      color: #bb86fc; /* A light, accessible purple for visited links */
     }
 }
 
