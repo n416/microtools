@@ -13,6 +13,21 @@
   --approve-hover-color: #218838;
 }
 
+/* ダークモード対応: 変数を定義 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-color: #0d84ff;
+    --primary-hover-color: #3b9aff;
+    --danger-color: #e5484d;
+    --danger-hover-color: #ff5c5c;
+    --light-bg-color: #121212;
+    --white-color: #1e1e1e;
+    --text-color: #dcdcdc; /* 文字色を少し落ち着いた色に変更 */
+    --border-color: #444;
+    --shadow-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
 body {
   font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
   background-color: var(--light-bg-color);
@@ -27,6 +42,13 @@ h4 {
   color: #4a4a4a;
   font-weight: 300;
 }
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  h1, h2, h3, h4 {
+    color: #e0e0e0; /* 見出しの色も少し落ち着かせる */
+  }
+}
+
 
 .impersonation-banner {
   background-color: var(--admin-color);
@@ -172,6 +194,22 @@ button.primary-action {
 button:disabled {
   background-color: #a0a0a0;
   cursor: not-allowed;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .url-preview code {
+    background-color: #333;
+    color: #e0e0e0;
+  }
+  input[type='text'],
+  input[type='number'],
+  input[type='password'],
+  select {
+    background-color: #2a2a2a;
+    color: var(--text-color);
+    border-color: #555;
+  }
 }
 
 .item-list {
@@ -390,6 +428,26 @@ canvas {
   border: 1px solid #a3e0b7;
 }
 
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .slot.available {
+    background-color: transparent;
+    border-color: var(--primary-color);
+  }
+  .slot.available:hover {
+    background-color: rgba(13, 132, 255, 0.1);
+  }
+  .slot.taken {
+    background-color: #333;
+    color: #888;
+  }
+  #waitingMessage {
+    background-color: #1c2e23;
+    border-color: #2f4f3a;
+    color: #6ee391;
+  }
+}
+
 .modal {
   display: none;
   position: fixed;
@@ -428,6 +486,21 @@ canvas {
   color: black;
   text-decoration: none;
   cursor: pointer;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .modal-content {
+    background-color: #2a2a2a;
+    border-color: #555;
+  }
+  .close-button {
+    color: #888;
+  }
+  .close-button:hover,
+  .close-button:focus {
+    color: #eee;
+  }
 }
 
 .prize-list-item {
@@ -549,6 +622,20 @@ canvas {
   color: var(--primary-color);
 }
 
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  #currentGroupName {
+    background-color: #2a2a2a;
+  }
+  .dropdown-content {
+    background-color: #333;
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.5);
+  }
+  .dropdown-content button:hover {
+    background-color: #444;
+  }
+}
+
 .event-header {
   margin-bottom: 20px;
 }
@@ -573,5 +660,144 @@ canvas {
   }
   to {
     transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   Participant Dashboard Styles
+   ========================================================================== */
+
+.participant-dashboard {
+  text-align: center;
+}
+
+.dashboard-main-action {
+  margin: 20px 0 30px;
+}
+
+.dashboard-main-action .primary-action.large {
+  padding: 15px 20px; /* 横パディングを調整 */
+  font-size: 1.2em;
+  font-weight: bold;
+  width: 80%;
+  max-width: 300px;
+  box-shadow: none; /* 影を削除 */
+  height: auto; /* 高さを自動調整 */
+  line-height: 1.4; /* 行間を調整 */
+  white-space: normal; /* テキストの折り返しを許可 */
+  word-wrap: break-word; /* 単語の途中でも折り返す */
+}
+
+.dashboard-secondary-actions {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.secondary-btn {
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 1.5px solid var(--primary-color); /* 枠線を少し太く */
+  padding: 8px 16px;
+  font-weight: bold;
+}
+
+.secondary-btn:hover {
+  background-color: #e6f2ff;
+}
+
+.secondary-btn.danger {
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.secondary-btn.danger:hover {
+  background-color: #fbe9eb;
+  color: var(--danger-hover-color);
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .secondary-btn:hover {
+    background-color: rgba(13, 132, 255, 0.1);
+  }
+  .secondary-btn.danger:hover {
+    background-color: rgba(229, 72, 77, 0.1);
+  }
+}
+
+.setting-group {
+  /* 枠線をなくし、余白でグルーピングを表現 */
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin-top: 40px; /* 上の要素との余白を増やす */
+  text-align: center; /* 中央寄せに変更 */
+}
+
+.setting-group-title {
+  /* 見出しを太く、大きくして区切りを明確に */
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.1em;
+  font-weight: 600; /* 太字にする */
+  color: #333;
+  padding-bottom: 0;
+  border-bottom: none; /* ボーダーを削除 */
+  text-align: center;
+}
+
+.setting-group-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* ボタンを中央に配置 */
+  gap: 15px; /* ボタン間の余白 */
+}
+
+.danger-zone {
+  margin-top: 40px; /* 上のグループとの余白を確保 */
+  padding-top: 20px;
+  /* 破線を非常に細い実線に変更 */
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+    .setting-group-title {
+        color: #ccc;
+    }
+    .danger-zone {
+        border-top-color: #444;
+    }
+    /* ▼▼▼ このルールを追加 ▼▼▼ */
+    #backToGroupEventListLink {
+      color: var(--primary-color);
+    }
+}
+
+.secondary-btn {
+  width: 100%;
+  max-width: 300px; /* 幅を他の要素と合わせる */
+}
+
+
+/* ==========================================================================
+   Responsive (Smartphone) Styles
+   ========================================================================== */
+
+@media (max-width: 600px) {
+  .dashboard-secondary-actions {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .secondary-btn {
+    width: 100%; /* スマホでは幅を最大にする */
+    max-width: 350px;
   }
 }
