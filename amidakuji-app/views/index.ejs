@@ -230,14 +230,21 @@
         </div>
         <div id="suggestionList" class="suggestion-list"></div>
       </div>
-      <div id="participantControlPanel" class="controls" style="display: none">
+      <div id="participantControlPanel" class="controls participant-dashboard" style="display: none">
         <h3>ようこそ、<span id="welcomeName"></span> さん</h3>
-        <div class="control-panel-buttons">
-          <button id="goToAmidaButton">あみだくじに参加する</button>
-          <button id="setPasswordButton">合言葉を設定する</button>
-          <button id="editProfileButton">プロフィール編集</button>
-          <button id="participantLogoutButton">ログアウト</button>
-          <button id="deleteMyAccountButton" class="delete-btn">アカウントを削除する</button>
+        <div class="dashboard-main-action">
+          <button id="goToAmidaButton" class="primary-action large">あみだくじに参加する</button>
+        </div>
+        <div class="setting-group">
+          <h4 class="setting-group-title">アカウント設定</h4>
+          <div class="setting-group-buttons">
+            <button id="editProfileButton" class="secondary-btn">プロフィール編集</button>
+            <button id="setPasswordButton" class="secondary-btn">合言葉を設定</button>
+          </div>
+        </div>
+        <div class="danger-zone">
+          <button id="participantLogoutButton" class="secondary-btn">ログアウト</button>
+          <button id="deleteMyAccountButton" class="secondary-btn danger">アカウントを削除</button>
         </div>
       </div>
 

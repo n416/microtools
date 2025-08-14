@@ -70,7 +70,7 @@ async function preloadIcons(participants) {
 function drawLotteryBase(targetCtx, data, lineColor = '#ccc') {
     if (!targetCtx || !targetCtx.canvas || !data || !data.participants || data.participants.length === 0) return;
 
-    resizeCanvasToDisplaySize(targetCtx.canvas);
+    // ▼▼▼ この関数のリサイズ処理は削除 ▼▼▼
     const rect = targetCtx.canvas.getBoundingClientRect();
     const scaleX = rect.width / 800;
     const scaleY = rect.height / 400;
@@ -81,16 +81,23 @@ function drawLotteryBase(targetCtx, data, lineColor = '#ccc') {
 
     targetCtx.font = '14px Arial';
     targetCtx.textAlign = 'center';
+    
+    // ▼▼▼ ここから修正 ▼▼▼
+    const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const mainTextColor = isDarkMode ? '#e0e0e0' : '#000';
+    const subTextColor = isDarkMode ? '#888' : '#888';
+    const prizeTextColor = isDarkMode ? '#dcdcdc' : '#333';
+    // ▲▲▲ ここまで修正 ▲▲▲
 
     participants.forEach((p, i) => {
       const x = participantSpacing * (i + 1) * scaleX;
       const displayName = p.name || `（参加枠 ${p.slot + 1}）`;
-      targetCtx.fillStyle = p.name ? '#000' : '#888';
+      targetCtx.fillStyle = p.name ? mainTextColor : subTextColor; // 修正
       targetCtx.fillText(displayName, x, 20 * scaleY);
 
       if (prizes && prizes[i]) {
         const prizeName = typeof prizes[i] === 'object' ? prizes[i].name : prizes[i];
-        targetCtx.fillStyle = '#333';
+        targetCtx.fillStyle = prizeTextColor; // 修正
         targetCtx.fillText(prizeName, x, (400 - 10) * scaleY);
       }
     });
@@ -124,7 +131,12 @@ function animationLoop() {
     if (!targetCtx || !targetCtx.canvas) { stopAnimation(); return; }
 
     targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
-    drawLotteryBase(targetCtx, state.currentLotteryData, '#e0e0e0');
+    
+    // ▼▼▼ ここから修正 ▼▼▼
+    const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const baseLineColor = isDarkMode ? '#444' : '#e0e0e0';
+    drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor);
+    // ▲▲▲ ここまで修正 ▲▲▲
 
     let allFinished = true;
     animator.tracers.forEach(tracer => {
@@ -229,6 +241,9 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
     stopAnimation();
     if (!targetCtx || !state.currentLotteryData) return;
 
+    // ▼▼▼ アニメーション開始前に一度だけリサイズ ▼▼▼
+    resizeCanvasToDisplaySize(targetCtx.canvas);
+
     const participantsToAnimate = state.currentLotteryData.participants.filter(p => p && p.name && userNames.includes(p.name));
     await preloadIcons(participantsToAnimate);
 
@@ -263,7 +278,13 @@ export async function prepareStepAnimation(targetCtx) {
 
     animator.context = targetCtx;
     targetCtx.clearRect(0,0,targetCtx.canvas.width, targetCtx.canvas.height);
-    drawLotteryBase(targetCtx, state.currentLotteryData, '#333');
+
+    // ▼▼▼ 描画前に一度だけリサイズ ▼▼▼
+    resizeCanvasToDisplaySize(targetCtx.canvas);
+    
+    const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';
+    drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor);
     animator.tracers.forEach(tracer => drawTracerIcon(targetCtx, tracer));
 }
 
