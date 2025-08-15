@@ -30,7 +30,7 @@
 
 body {
   font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-  background-color: var(--light-bg-color);
+  /* ▼▼▼ bodyの背景色は削除 ▼▼▼ */
   color: var(--text-color);
   margin: 0;
 }
@@ -44,11 +44,13 @@ h4 {
 }
 /* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     color: #e0e0e0; /* 見出しの色も少し落ち着かせる */
   }
 }
-
 
 .impersonation-banner {
   background-color: var(--admin-color);
@@ -198,7 +200,9 @@ button:disabled {
 
 /* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
-  .main-header, .controls, .modal-content {
+  .main-header,
+  .controls,
+  .modal-content {
     box-shadow: none; /* 影を削除 */
     border: 1px solid var(--border-color); /* 微かな境界線を追加 */
   }
@@ -777,20 +781,23 @@ canvas {
 
 /* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
-    .setting-group-title {
-        color: #ccc;
-    }
-    .danger-zone {
-        border-top-color: #444;
-    }
+  .setting-group-title {
+    color: #ccc;
+  }
+  .danger-zone {
+    border-top-color: #444;
+  }
 
-    /* ▼▼▼ リンク色のスタイルを修正 ▼▼▼ */
-    a, a:link, #backToGroupEventListLink {
-      color: var(--primary-color);
-    }
-    a:visited, #backToGroupEventListLink:visited {
-      color: #bb86fc; /* A light, accessible purple for visited links */
-    }
+  /* ▼▼▼ リンク色のスタイルを修正 ▼▼▼ */
+  a,
+  a:link,
+  #backToGroupEventListLink {
+    color: var(--primary-color);
+  }
+  a:visited,
+  #backToGroupEventListLink:visited {
+    color: #bb86fc; /* A light, accessible purple for visited links */
+  }
 }
 
 .secondary-btn {
@@ -813,5 +820,43 @@ canvas {
   .secondary-btn {
     width: 100%; /* スマホでは幅を最大にする */
     max-width: 350px;
+  }
+}
+/* ==========================================================================
+   Background Animation Styles (Final Fix with Masking)
+   ========================================================================== */
+
+.background-animation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+  background-color: var(--light-bg-color);
+}
+
+/* SVG内の格子自体のスタイル */
+.background-animation rect {
+  opacity: 0.2;
+}
+
+.light-path {
+  stroke-width: 2.5px;
+  stroke: var(--primary-color);
+  fill: none;
+  stroke-linecap: round;
+  /* ▼▼▼ マスクを適用 ▼▼▼ */
+  mask: url(#trail-mask);
+}
+
+/* ダークモードでは光と格子を調整 */
+@media (prefers-color-scheme: dark) {
+  .background-animation rect {
+    opacity: 1;
+  }
+  .light-path {
+    filter: drop-shadow(0 0 6px var(--primary-color));
   }
 }
