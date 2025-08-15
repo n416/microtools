@@ -5,6 +5,150 @@ import * as state from './state.js';
 import {handleRouting, loadEventForEditing, handleLoginOrRegister, verifyAndLogin} from './router.js';
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, stepAnimation} from './animation.js';
 
+/**
+ * Tron風の背景アニメーション (エラー修正FIX版)
+ */
+function initTronAnimation() {
+  const svg = document.querySelector('.background-animation svg');
+  const defs = svg.querySelector('defs');
+  const group = document.getElementById('animation-group');
+  if (!svg || !defs || !group) return;
+
+  const gridSize = 60;
+  const trailCount = 7;
+  const tailLength = 250; // 光の尾の長さ（ピクセル）
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  let lastTimestamp = 0;
+  let gridOffsetY = 0;
+  const trails = [];
+
+  function generateRandomPath(width, height, gridSize) {
+    let d = '';
+    let x, y;
+    let isMovingHorizontal;
+
+    const startSide = Math.floor(Math.random() * 4);
+    if (startSide === 0) {
+      x = Math.floor(Math.random() * (width / gridSize)) * gridSize;
+      y = -gridSize;
+      isMovingHorizontal = false;
+    } else if (startSide === 1) {
+      x = width + gridSize;
+      y = Math.floor(Math.random() * (height / gridSize)) * gridSize;
+      isMovingHorizontal = true;
+    } else if (startSide === 2) {
+      x = Math.floor(Math.random() * (width / gridSize)) * gridSize;
+      y = height + gridSize;
+      isMovingHorizontal = false;
+    } else {
+      x = -gridSize;
+      y = Math.floor(Math.random() * (height / gridSize)) * gridSize;
+      isMovingHorizontal = true;
+    }
+    d += `M ${x} ${y} `;
+
+    const turns = Math.floor(Math.random() * 3) + 4;
+    for (let i = 0; i < turns; i++) {
+      if (isMovingHorizontal) {
+        y = Math.floor(Math.random() * (height / gridSize)) * gridSize;
+      } else {
+        x = Math.floor(Math.random() * (width / gridSize)) * gridSize;
+      }
+      d += `L ${x} ${y} `;
+      isMovingHorizontal = !isMovingHorizontal;
+    }
+
+    if (isMovingHorizontal) {
+      x = Math.random() > 0.5 ? width + gridSize : -gridSize;
+    } else {
+      y = Math.random() > 0.5 ? height + gridSize : -gridSize;
+    }
+    d += `L ${x} ${y} `;
+
+    return d;
+  }
+
+  // アニメーションのメインループ
+  function animationLoop(timestamp) {
+    if (!lastTimestamp) lastTimestamp = timestamp;
+    const elapsed = (timestamp - lastTimestamp) / 1000;
+
+    gridOffsetY = (gridOffsetY + 20 * elapsed) % height;
+    group.setAttribute('transform', `translate(0, ${gridOffsetY})`);
+
+    trails.forEach((trail) => {
+      const trailElapsed = timestamp - trail.startTime;
+      let progress = trailElapsed / trail.duration;
+
+      if (progress > 1.2) {
+        // 軌跡が完全に通り過ぎたらリセット
+        trail.startTime = timestamp;
+        trail.element.setAttribute('d', generateRandomPath(width, height, gridSize));
+        trail.pathLength = trail.element.getTotalLength();
+        if (trail.pathLength === 0) return;
+        trail.duration = (trail.pathLength / 150) * 1000 * (Math.random() * 0.5 + 0.75);
+        progress = 0;
+      }
+
+      const headPosition = trail.pathLength * progress;
+      const tailPosition = headPosition - tailLength;
+
+      // 値が[0, pathLength]の範囲に収まるようにclampする
+      const headPoint = trail.element.getPointAtLength(Math.min(headPosition, trail.pathLength));
+      const tailPoint = trail.element.getPointAtLength(Math.max(0, tailPosition));
+
+      trail.gradient.setAttribute('x1', tailPoint.x);
+      trail.gradient.setAttribute('y1', tailPoint.y);
+      trail.gradient.setAttribute('x2', headPoint.x);
+      trail.gradient.setAttribute('y2', headPoint.y);
+    });
+
+    lastTimestamp = timestamp;
+    requestAnimationFrame(animationLoop);
+  }
+
+  // 初期化処理 (修正箇所)
+  group.querySelectorAll('.light-path').forEach((p) => p.remove());
+  const gradientTemplate = document.getElementById('trail-gradient-template');
+
+  for (let i = 0; i < trailCount; i++) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('class', 'light-path');
+    group.appendChild(path);
+
+    const gradient = gradientTemplate.cloneNode(true);
+    const gradientId = `trail-gradient-${i}`;
+    gradient.setAttribute('id', gradientId);
+    defs.appendChild(gradient);
+    path.style.stroke = `url(#${gradientId})`;
+
+    // ▼▼▼▼▼ ここからが重要な修正 ▼▼▼▼▼
+    path.setAttribute('d', generateRandomPath(width, height, gridSize));
+    const pathLength = path.getTotalLength();
+
+    if (pathLength === 0) {
+      group.removeChild(path);
+      defs.removeChild(gradient);
+      continue;
+    }
+
+    const trail = {
+      element: path,
+      gradient: gradient,
+      startTime: lastTimestamp - Math.random() * 5000,
+      pathLength: pathLength,
+      duration: (pathLength / 150) * 1000 * (Math.random() * 0.5 + 0.75),
+    };
+    // ▲▲▲▲▲ 修正ここまで ▲▲▲▲▲
+    trails.push(trail);
+  }
+
+  requestAnimationFrame(animationLoop);
+}
+
 async function navigateTo(path, pushState = true) {
   // asyncを追加
   if (pushState && window.location.pathname !== path) {
@@ -22,7 +166,7 @@ const {elements} = ui;
 async function initializeApp() {
   // ui.init(); // この行を削除しました
   setupEventListeners();
-
+  initTronAnimation();
   const initialData = {
     group: typeof initialGroupData !== 'undefined' ? initialGroupData : null,
     event: typeof initialEventData !== 'undefined' ? initialEventData : null,
