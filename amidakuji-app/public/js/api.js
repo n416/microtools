@@ -76,3 +76,5 @@ export const impersonateUser = (targetUserId) => request('/api/admin/impersonate
 export const stopImpersonating = () => request('/api/admin/stop-impersonating', 'POST');
 export const getPasswordRequests = (groupId) => request(`/api/admin/groups/${groupId}/password-requests`);
 export const approvePasswordReset = (memberId, groupId, requestId) => request(`/api/admin/members/${memberId}/delete-password`, 'POST', {groupId, requestId});
+export const logout = () => request('/auth/logout', 'GET'); // サーバーのルートに合わせてGETリクエスト
+export const clearGroupVerification = () => request('/auth/clear-group-verification', 'POST');
