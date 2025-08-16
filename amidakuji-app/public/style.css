@@ -33,6 +33,21 @@ body {
   /* ▼▼▼ bodyの背景色は削除 ▼▼▼ */
   color: var(--text-color);
   margin: 0;
+  transition: background-color 0.5s ease;
+}
+
+#canvas-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+#canvas-container canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 h1,
@@ -339,7 +354,9 @@ button:disabled {
   color: var(--danger-color);
 }
 
-canvas {
+/* セレクタを、あみだくじ用のCanvas IDに限定 */
+#adminCanvas,
+#participantCanvas {
   border: 1px solid var(--border-color);
   background-color: var(--white-color);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
@@ -805,7 +822,6 @@ canvas {
   max-width: 300px; /* 幅を他の要素と合わせる */
 }
 
-
 /* ==========================================================================
    Responsive (Smartphone) Styles
    ========================================================================== */
@@ -822,40 +838,9 @@ canvas {
     max-width: 350px;
   }
 }
-/* ==========================================================================
-   Background Animation Styles (Final Fix with Masking)
-   ========================================================================== */
-
-.background-animation {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  overflow: hidden;
-  background-color: var(--light-bg-color);
-}
-
-/* SVG内の格子自体のスタイル */
-.background-animation rect {
-  opacity: 0.2;
-}
-
-.light-path {
-  stroke-width: 2.5px;
-  stroke: var(--primary-color);
-  fill: none;
-  stroke-linecap: round;
-  /* ▼▼▼ マスクを適用 ▼▼▼ */
-  mask: url(#trail-mask);
-}
 
 /* ダークモードでは光と格子を調整 */
 @media (prefers-color-scheme: dark) {
-  .background-animation rect {
-    opacity: 1;
-  }
   .light-path {
     filter: drop-shadow(0 0 6px var(--primary-color));
   }

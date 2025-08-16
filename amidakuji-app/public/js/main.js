@@ -6,149 +6,197 @@ import {handleRouting, loadEventForEditing, handleLoginOrRegister, verifyAndLogi
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, stepAnimation} from './animation.js';
 
 /**
- * Tron風の背景アニメーション (エラー修正FIX版)
+ * Tron風の背景アニメーション (CSSアニメーション制御FIX版)
  */
+
 function initTronAnimation() {
-  const svg = document.querySelector('.background-animation svg');
-  const defs = svg.querySelector('defs');
-  const group = document.getElementById('animation-group');
-  if (!svg || !defs || !group) return;
+  const gridCanvas = document.getElementById('grid-canvas');
+  const gridCtx = gridCanvas.getContext('2d');
+  const animationCanvas = document.getElementById('animation-canvas');
+  const animationCtx = animationCanvas.getContext('2d');
 
-  const gridSize = 60;
-  const trailCount = 7;
-  const tailLength = 250; // 光の尾の長さ（ピクセル）
+  // --- 設定 ---
+  const SCROLL_SPEED = 0.25;
+  const CYCLE_COUNT = 5;
+  const GRID_SIZE = 50;
+  const TURN_CHANCE = 0.3;
+  const CYCLE_SPEED = 8;
+  const LINE_WIDTH = 1;
+  const TAIL_LENGTH = 45; // 軌跡の長さ（フレーム数）
 
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  const themes = {
+    dark: {background: '#121212', cycleColorRGB: '13, 132, 255', gridColor: '#444'},
+    light: {background: '#f4f7f6', cycleColorRGB: '255, 140, 0', gridColor: '#ddd'},
+  };
+  let currentTheme;
+  let cycles = [];
+  let scrollX = 0;
+  let scrollY = 0;
 
-  let lastTimestamp = 0;
-  let gridOffsetY = 0;
-  const trails = [];
-
-  function generateRandomPath(width, height, gridSize) {
-    let d = '';
-    let x, y;
-    let isMovingHorizontal;
-
-    const startSide = Math.floor(Math.random() * 4);
-    if (startSide === 0) {
-      x = Math.floor(Math.random() * (width / gridSize)) * gridSize;
-      y = -gridSize;
-      isMovingHorizontal = false;
-    } else if (startSide === 1) {
-      x = width + gridSize;
-      y = Math.floor(Math.random() * (height / gridSize)) * gridSize;
-      isMovingHorizontal = true;
-    } else if (startSide === 2) {
-      x = Math.floor(Math.random() * (width / gridSize)) * gridSize;
-      y = height + gridSize;
-      isMovingHorizontal = false;
-    } else {
-      x = -gridSize;
-      y = Math.floor(Math.random() * (height / gridSize)) * gridSize;
-      isMovingHorizontal = true;
-    }
-    d += `M ${x} ${y} `;
-
-    const turns = Math.floor(Math.random() * 3) + 4;
-    for (let i = 0; i < turns; i++) {
-      if (isMovingHorizontal) {
-        y = Math.floor(Math.random() * (height / gridSize)) * gridSize;
-      } else {
-        x = Math.floor(Math.random() * (width / gridSize)) * gridSize;
-      }
-      d += `L ${x} ${y} `;
-      isMovingHorizontal = !isMovingHorizontal;
-    }
-
-    if (isMovingHorizontal) {
-      x = Math.random() > 0.5 ? width + gridSize : -gridSize;
-    } else {
-      y = Math.random() > 0.5 ? height + gridSize : -gridSize;
-    }
-    d += `L ${x} ${y} `;
-
-    return d;
+  function resizeCanvases() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    gridCanvas.width = animationCanvas.width = width;
+    gridCanvas.height = animationCanvas.height = height;
   }
 
-  // アニメーションのメインループ
-  function animationLoop(timestamp) {
-    if (!lastTimestamp) lastTimestamp = timestamp;
-    const elapsed = (timestamp - lastTimestamp) / 1000;
+  function drawGrid() {
+    gridCtx.strokeStyle = currentTheme.gridColor;
+    gridCtx.lineWidth = 1;
+    gridCtx.beginPath();
+    for (let x = -GRID_SIZE; x < gridCanvas.width + GRID_SIZE; x += GRID_SIZE) {
+      gridCtx.moveTo(x, -GRID_SIZE);
+      gridCtx.lineTo(x, gridCanvas.height + GRID_SIZE);
+    }
+    for (let y = -GRID_SIZE; y < gridCanvas.height + GRID_SIZE; y += GRID_SIZE) {
+      gridCtx.moveTo(-GRID_SIZE, y);
+      gridCtx.lineTo(gridCanvas.width + GRID_SIZE, y);
+    }
+    gridCtx.stroke();
+  }
 
-    gridOffsetY = (gridOffsetY + 20 * elapsed) % height;
-    group.setAttribute('transform', `translate(0, ${gridOffsetY})`);
+  class LightCycle {
+    constructor() {
+      this.speed = CYCLE_SPEED;
+      this.colorRGB = currentTheme.cycleColorRGB;
+      this.tail = [];
+      this.reset();
+    }
+    reset() {
+      this.tail = [];
+      const edge = Math.floor(Math.random() * 4);
+      let startX, startY;
+      const viewWidth = animationCanvas.width;
+      const viewHeight = animationCanvas.height;
+      if (edge === 0) {
+        startX = -scrollX + Math.random() * viewWidth;
+        startY = -scrollY;
+      } else if (edge === 1) {
+        startX = -scrollX + viewWidth;
+        startY = -scrollY + Math.random() * viewHeight;
+      } else if (edge === 2) {
+        startX = -scrollX + Math.random() * viewWidth;
+        startY = -scrollY + viewHeight;
+      } else {
+        startX = -scrollX;
+        startY = -scrollY + Math.random() * viewHeight;
+      }
+      this.x = Math.round(startX / GRID_SIZE) * GRID_SIZE;
+      this.y = Math.round(startY / GRID_SIZE) * GRID_SIZE;
+      this.targetX = this.x;
+      this.targetY = this.y;
+      if (edge === 0) {
+        this.dx = 0;
+        this.dy = 1;
+      } else if (edge === 1) {
+        this.dx = -1;
+        this.dy = 0;
+      } else if (edge === 2) {
+        this.dx = 0;
+        this.dy = -1;
+      } else {
+        this.dx = 1;
+        this.dy = 0;
+      }
+    }
+    update() {
+      if (this.x === this.targetX && this.y === this.targetY) {
+        if (Math.random() < TURN_CHANCE) {
+          const isHorizontal = this.dx !== 0;
+          if (isHorizontal) {
+            this.dx = 0;
+            this.dy = Math.random() < 0.5 ? 1 : -1;
+          } else {
+            this.dx = Math.random() < 0.5 ? 1 : -1;
+            this.dy = 0;
+          }
+        }
+        this.targetX += this.dx * GRID_SIZE;
+        this.targetY += this.dy * GRID_SIZE;
+      }
+      this.x += this.dx * this.speed;
+      this.y += this.dy * this.speed;
+      if (this.dx > 0) this.x = Math.min(this.x, this.targetX);
+      if (this.dx < 0) this.x = Math.max(this.x, this.targetX);
+      if (this.dy > 0) this.y = Math.min(this.y, this.targetY);
+      if (this.dy < 0) this.y = Math.max(this.y, this.targetY);
 
-    trails.forEach((trail) => {
-      const trailElapsed = timestamp - trail.startTime;
-      let progress = trailElapsed / trail.duration;
-
-      if (progress > 1.2) {
-        // 軌跡が完全に通り過ぎたらリセット
-        trail.startTime = timestamp;
-        trail.element.setAttribute('d', generateRandomPath(width, height, gridSize));
-        trail.pathLength = trail.element.getTotalLength();
-        if (trail.pathLength === 0) return;
-        trail.duration = (trail.pathLength / 150) * 1000 * (Math.random() * 0.5 + 0.75);
-        progress = 0;
+      this.tail.unshift({x: this.x, y: this.y});
+      if (this.tail.length > TAIL_LENGTH) {
+        this.tail.pop();
       }
 
-      const headPosition = trail.pathLength * progress;
-      const tailPosition = headPosition - tailLength;
+      const margin = GRID_SIZE * 2;
+      const viewLeft = -scrollX - margin;
+      const viewRight = -scrollX + animationCanvas.width + margin;
+      const viewTop = -scrollY - margin;
+      const viewBottom = -scrollY + animationCanvas.height + margin;
+      if (this.x < viewLeft || this.x > viewRight || this.y < viewTop || this.y > viewBottom) {
+        this.reset();
+      }
+    }
+    draw(currentScrollX, currentScrollY) {
+      for (let i = 0; i < this.tail.length - 1; i++) {
+        const p1 = this.tail[i];
+        const p2 = this.tail[i + 1];
+        const alpha = 1.0 - i / this.tail.length;
 
-      // 値が[0, pathLength]の範囲に収まるようにclampする
-      const headPoint = trail.element.getPointAtLength(Math.min(headPosition, trail.pathLength));
-      const tailPoint = trail.element.getPointAtLength(Math.max(0, tailPosition));
+        animationCtx.strokeStyle = `rgba(${this.colorRGB}, ${alpha})`;
+        animationCtx.lineWidth = LINE_WIDTH;
+        animationCtx.shadowColor = `rgba(${this.colorRGB}, ${alpha})`;
+        animationCtx.shadowBlur = 15;
+        animationCtx.lineCap = 'round';
 
-      trail.gradient.setAttribute('x1', tailPoint.x);
-      trail.gradient.setAttribute('y1', tailPoint.y);
-      trail.gradient.setAttribute('x2', headPoint.x);
-      trail.gradient.setAttribute('y2', headPoint.y);
+        animationCtx.beginPath();
+        animationCtx.moveTo(p1.x + currentScrollX, p1.y + currentScrollY);
+        animationCtx.lineTo(p2.x + currentScrollX, p2.y + currentScrollY);
+        animationCtx.stroke();
+      }
+    }
+  }
+
+  function animate() {
+    scrollX -= SCROLL_SPEED;
+    scrollY -= SCROLL_SPEED;
+
+    gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+    gridCtx.save();
+    gridCtx.translate(scrollX % GRID_SIZE, scrollY % GRID_SIZE);
+    drawGrid();
+    gridCtx.restore();
+
+    animationCtx.clearRect(0, 0, animationCanvas.width, animationCanvas.height);
+
+    cycles.forEach((cycle) => {
+      cycle.update();
+      cycle.draw(scrollX, scrollY);
     });
 
-    lastTimestamp = timestamp;
-    requestAnimationFrame(animationLoop);
+    requestAnimationFrame(animate);
   }
 
-  // 初期化処理 (修正箇所)
-  group.querySelectorAll('.light-path').forEach((p) => p.remove());
-  const gradientTemplate = document.getElementById('trail-gradient-template');
-
-  for (let i = 0; i < trailCount; i++) {
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('class', 'light-path');
-    group.appendChild(path);
-
-    const gradient = gradientTemplate.cloneNode(true);
-    const gradientId = `trail-gradient-${i}`;
-    gradient.setAttribute('id', gradientId);
-    defs.appendChild(gradient);
-    path.style.stroke = `url(#${gradientId})`;
-
-    // ▼▼▼▼▼ ここからが重要な修正 ▼▼▼▼▼
-    path.setAttribute('d', generateRandomPath(width, height, gridSize));
-    const pathLength = path.getTotalLength();
-
-    if (pathLength === 0) {
-      group.removeChild(path);
-      defs.removeChild(gradient);
-      continue;
+  function setupTheme(isDarkMode) {
+    currentTheme = isDarkMode ? themes.dark : themes.light;
+    document.body.style.backgroundColor = currentTheme.background;
+    if (cycles.length > 0) {
+      cycles.forEach((c) => (c.colorRGB = currentTheme.cycleColorRGB));
     }
-
-    const trail = {
-      element: path,
-      gradient: gradient,
-      startTime: lastTimestamp - Math.random() * 5000,
-      pathLength: pathLength,
-      duration: (pathLength / 150) * 1000 * (Math.random() * 0.5 + 0.75),
-    };
-    // ▲▲▲▲▲ 修正ここまで ▲▲▲▲▲
-    trails.push(trail);
   }
 
-  requestAnimationFrame(animationLoop);
-}
+  const darkModeMatcher = window.matchMedia('(prefers-color-scheme: dark)');
+  darkModeMatcher.addEventListener('change', (e) => {
+    setupTheme(e.matches);
+  });
 
+  window.addEventListener('resize', resizeCanvases);
+
+  setupTheme(darkModeMatcher.matches);
+  resizeCanvases();
+  for (let i = 0; i < CYCLE_COUNT; i++) {
+    cycles.push(new LightCycle());
+  }
+  animate();
+}
 async function navigateTo(path, pushState = true) {
   // asyncを追加
   if (pushState && window.location.pathname !== path) {
@@ -308,9 +356,18 @@ function setupEventListeners() {
       window.location.href = '/auth/google';
     });
   if (elements.logoutButton)
-    elements.logoutButton.addEventListener('click', () => {
-      state.clearParticipantState();
-      window.location.href = '/auth/logout';
+    elements.logoutButton.addEventListener('click', async () => {
+      try {
+        // APIを呼び出してサーバー側でログアウト処理を実行
+        await api.logout();
+        // 現在のページをリロードして表示を更新
+        window.location.reload();
+      } catch (error) {
+        console.error('Logout failed:', error);
+        alert('ログアウトに失敗しました。');
+        // 失敗した場合もリロードを試みる
+        window.location.reload();
+      }
     });
   if (elements.deleteAccountButton)
     elements.deleteAccountButton.addEventListener('click', async () => {
@@ -833,9 +890,17 @@ function setupEventListeners() {
     });
   }
   if (elements.participantLogoutButton)
-    elements.participantLogoutButton.addEventListener('click', () => {
-      state.clearParticipantState();
-      window.location.reload();
+    elements.participantLogoutButton.addEventListener('click', async () => {
+      try {
+        // サーバー側のグループ合言葉セッションをクリア
+        await api.clearGroupVerification();
+      } catch (error) {
+        console.error('Failed to clear group verification session:', error);
+      } finally {
+        // サーバー側の処理成否に関わらず、フロント側の処理は実行
+        state.clearParticipantState(); // ローカルストレージの参加者情報をクリア
+        window.location.reload();
+      }
     });
   if (elements.deleteMyAccountButton)
     elements.deleteMyAccountButton.addEventListener('click', async () => {
