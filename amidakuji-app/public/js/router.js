@@ -197,9 +197,33 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
   }
 }
 
+export async function initializeGroupDashboardView(groupId) {
+  try {
+    // Get group data and public events in parallel
+    const [groupData, events] = await Promise.all([
+      api.getGroup(groupId),
+      api.getPublicEventsForGroup(groupId)
+    ]);
+
+    // Use the ui function to configure and show the participantView as a dashboard
+    ui.showUserDashboardView(groupData, events);
+
+  } catch (error) {
+    console.error('Failed to initialize group dashboard view:', error);
+    if (error.requiresPassword) {
+      // If password is required, show modal and set this function to be retried
+      state.setLastFailedAction(() => initializeGroupDashboardView(groupId));
+      ui.showGroupPasswordModal(error.groupId, error.groupName);
+    } else {
+      // Show a generic error for other issues
+      alert(error.error || 'ダッシュボードの表示に失敗しました。');
+    }
+  }
+}
+
 async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCustomUrl) {
-  const {groupEventListContainer, groupNameTitle} = ui.elements;
-  if (!groupEventListContainer || !groupNameTitle) return;
+  const {groupEventListContainer, groupNameTitle, backToDashboardFromEventListButton} = ui.elements;
+  if (!groupEventListContainer || !groupNameTitle || !backToDashboardFromEventListButton) return;
 
   ui.showView('groupEventListView');
 
@@ -216,6 +240,26 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
   } else {
     groupNameTitle.textContent = `${groupData.name} のイベント一覧`;
   }
+
+  if (groupData) {
+    state.setCurrentGroupId(groupData.id); // Set group context
+    backToDashboardFromEventListButton.dataset.groupId = groupData.id;
+    state.loadParticipantState(); // Check participation status for this group
+
+    if (state.currentUser) {
+      // State A: Admin is logged in
+      backToDashboardFromEventListButton.textContent = '管理ダッシュボードに戻る';
+      backToDashboardFromEventListButton.dataset.role = 'admin';
+    } else {
+      // State B & C: General Participant or Not Logged In
+      backToDashboardFromEventListButton.textContent = 'ダッシュボードに戻る';
+      backToDashboardFromEventListButton.dataset.role = 'dashboard';
+    }
+    backToDashboardFromEventListButton.style.display = 'block';
+  } else {
+    backToDashboardFromEventListButton.style.display = 'none';
+  }
+
 
   try {
     const events = isCustomUrl ? await api.getEventsByCustomUrl(customUrlOrGroupId) : await api.getPublicEventsForGroup(customUrlOrGroupId);

@@ -2,6 +2,7 @@ const {firestore, bucket} = require('../utils/firestore');
 const {FieldValue} = require('@google-cloud/firestore'); // FieldValueを追加
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const {getNextAvailableColor} = require('../utils/color');
 const saltRounds = 10;
 
 exports.createGroup = async (req, res) => {
@@ -345,6 +346,69 @@ exports.loginMember = async (req, res) => {
     }
   } catch (error) {
     console.error('Error logging in:', error);
+    res.status(500).json({error: 'ログイン処理中にエラーが発生しました。'});
+  }
+};
+
+exports.loginOrRegisterMember = async (req, res) => {
+  try {
+    const {groupId} = req.params;
+    const {name} = req.body;
+
+    if (!name || name.trim() === '') {
+      return res.status(400).json({error: '名前は必須です。'});
+    }
+
+    const membersRef = firestore.collection('groups').doc(groupId).collection('members');
+
+    let memberDoc;
+    const memberQuery = await membersRef.where('name', '==', name.trim()).limit(1).get();
+    if (!memberQuery.empty) {
+      memberDoc = memberQuery.docs[0];
+    }
+
+    let memberData;
+    let token;
+    let finalMemberId;
+
+    if (memberDoc && memberDoc.exists) {
+      memberData = memberDoc.data();
+      if (memberData.password) {
+        return res.status(401).json({
+          error: '合言葉が必要です。',
+          requiresPassword: true,
+          memberId: memberDoc.id,
+          name: memberData.name,
+        });
+      }
+      token = memberData.deleteToken;
+      finalMemberId = memberDoc.id;
+    } else {
+      finalMemberId = crypto.randomBytes(16).toString('hex');
+      token = crypto.randomBytes(16).toString('hex');
+      const allMembersSnapshot = await membersRef.get();
+      const existingColors = allMembersSnapshot.docs.map((d) => d.data().color);
+      const newColor = getNextAvailableColor(existingColors);
+      memberData = {
+        id: finalMemberId,
+        name: name.trim(),
+        password: null,
+        deleteToken: token,
+        color: newColor,
+        iconUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim())}&background=random&color=fff`,
+        createdAt: new Date(),
+      };
+      await membersRef.doc(finalMemberId).set(memberData);
+    }
+
+    res.status(200).json({
+      message: 'ログインしました。',
+      token: token,
+      memberId: finalMemberId,
+      name: memberData.name,
+    });
+  } catch (error) {
+    console.error('Error in loginOrRegisterMember:', error);
     res.status(500).json({error: 'ログイン処理中にエラーが発生しました。'});
   }
 };

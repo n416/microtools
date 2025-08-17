@@ -42,6 +42,8 @@ export const verifyGroupPassword = (groupId, password) => request(`/api/groups/$
 export const deleteGroupPassword = (groupId) => request(`/api/groups/${groupId}/password`, 'DELETE');
 export const getEventsForGroup = (groupId) => request(`/api/groups/${groupId}/events`);
 export const getEventsByCustomUrl = (customUrl) => request(`/api/groups/url/${customUrl}/events`);
+export const loginOrRegisterToGroup = (groupId, name) => request(`/api/groups/${groupId}/login-or-register`, 'POST', {name});
+export const loginMemberToGroup = (groupId, memberId, password) => request(`/api/groups/${groupId}/login`, 'POST', {memberId, password});
 export const getPublicEventsForGroup = (groupId) => request(`/api/events/by-group/${groupId}`);
 export const getEvent = (id) => request(`/api/events/${id}`);
 export const createEvent = (eventData) => request('/api/events', 'POST', eventData);
