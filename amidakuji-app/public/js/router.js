@@ -136,7 +136,6 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
   }
 }
 
-
 export async function handleLoginOrRegister(eventId, name, memberId = null) {
   if (!name || !eventId) return;
   try {
@@ -233,14 +232,10 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
 export async function initializeGroupDashboardView(groupId) {
   try {
     // Get group data and public events in parallel
-    const [groupData, events] = await Promise.all([
-      api.getGroup(groupId),
-      api.getPublicEventsForGroup(groupId)
-    ]);
+    const [groupData, events] = await Promise.all([api.getGroup(groupId), api.getPublicEventsForGroup(groupId)]);
 
     // Use the ui function to configure and show the participantView as a dashboard
     ui.showUserDashboardView(groupData, events);
-
   } catch (error) {
     console.error('Failed to initialize group dashboard view:', error);
     if (error.requiresPassword) {
@@ -292,7 +287,6 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
   } else {
     backToDashboardFromEventListButton.style.display = 'none';
   }
-
 
   try {
     const events = isCustomUrl ? await api.getEventsByCustomUrl(customUrlOrGroupId) : await api.getPublicEventsForGroup(customUrlOrGroupId);
@@ -376,9 +370,12 @@ export async function handleRouting(initialData) {
 
   // 4. 表示するビューを決定
   if (user) {
-    // --- ログイン済みユーザーのルーティング ---
+    // --- ログイン済み管理者 のルーティング ---
     const adminMatch = path.match(/\/admin/);
-    const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)$/);
+    // ▼▼▼ この正規表現のマッチングを新しく1行追加 ▼▼▼
+    const adminGroupDashboardMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)$/);
+
+    const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)$/); // ユーザー向けなので変更しない
     const eventEditMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/edit$/);
     const eventBroadcastMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/broadcast$/);
     const newEventMatch = path.match(/^\/group\/([a-zA-Z0-9]+)\/event\/new$/);
@@ -391,12 +388,22 @@ export async function handleRouting(initialData) {
       ui.updateGroupSwitcher();
       return;
     }
-    if (groupDashboardMatch) {
-      const groupId = groupDashboardMatch[1];
-      await loadAndShowGroupEvents(groupId);
+
+    // ▼▼▼ このifブロックを、既存の groupDashboardMatch の前に追加 ▼▼▼
+    if (adminGroupDashboardMatch) {
+      const groupId = adminGroupDashboardMatch[1];
+      await loadAndShowGroupEvents(groupId); // 既存の管理者向けダッシュボード表示関数を再利用
       await api.updateLastGroup(groupId);
       return;
     }
+
+    if (groupDashboardMatch) {
+      // このルートは今後ユーザー専用となるため、処理は変更しない
+      const groupId = groupDashboardMatch[1];
+      await initializeGroupEventListView(groupId, initialData ? initialData.group : null, false);
+      return;
+    }
+
     if (eventEditMatch) {
       const eventId = eventEditMatch[1];
       await loadEventForEditing(eventId, 'eventEditView');
@@ -416,6 +423,13 @@ export async function handleRouting(initialData) {
       ui.showView('adminDashboard');
       return 'loadAdminDashboard';
     }
+  }
+
+  // ▼▼▼ このifブロックを新しく追加 ▼▼▼
+  if (path === '/admin/dashboard') {
+    ui.showView('adminDashboard');
+    await loadAdminDashboard(); // 既存の管理者ダッシュボード表示関数を呼び出す
+    return; // 必ずreturnで処理を終了させる
   }
 
   // --- 公開ページのルーティング ---

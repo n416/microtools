@@ -44,6 +44,29 @@ router.get('/g/:customUrl', async (req, res) => {
   }
 });
 
+// ▼▼▼ このブロックを新しく追加 ▼▼▼
+router.get('/admin/groups/:groupId', ensureAuthenticated, async (req, res) => {
+  try {
+    const {groupId} = req.params;
+    const groupDoc = await firestore.collection('groups').doc(groupId).get();
+
+    if (!groupDoc.exists) {
+      return res.status(404).render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null});
+    }
+    const groupData = {id: groupDoc.id, ...groupDoc.data()};
+
+    // ログイン中の管理者本人のグループであるかを確認
+    if (groupData.ownerId !== req.user.id) {
+      return res.status(403).render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null, message: 'アクセス権がありません'});
+    }
+
+    res.render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: JSON.stringify(groupData)});
+  } catch (error) {
+    console.error('Admin Group ID routing error:', error);
+    res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
+  }
+});
+
 // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 // カスタムURLがないグループのイベント一覧ページ用のルート
 router.get('/groups/:groupId', async (req, res) => {
@@ -148,6 +171,11 @@ router.get('/share/:eventId/:participantName', async (req, res) => {
     console.error('Share page error:', error);
     res.status(500).send('ページの表示中にエラーが発生しました。');
   }
+});
+
+// ▼▼▼ このブロックを新しく追加 ▼▼▼
+router.get('/admin/dashboard', ensureAuthenticated, isSystemAdmin, (req, res) => {
+  res.render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null, eventData: null});
 });
 
 router.get('/admin', ensureAuthenticated, isSystemAdmin, (req, res) => {

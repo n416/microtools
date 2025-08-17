@@ -241,7 +241,7 @@ async function loadUserAndRedirect(lastUsedGroupId) {
     if (groups.length > 0) {
       let targetGroup = groups.find((g) => g.id === lastUsedGroupId) || groups[0];
       // URLを変更して、ルーターに画面表示を委ねる
-      navigateTo(`/groups/${targetGroup.id}`);
+      navigateTo(`/admin/groups/${targetGroup.id}`);
     } else {
       ui.showView('groupDashboard');
     }
@@ -405,7 +405,7 @@ function setupEventListeners() {
   if (elements.adminDashboardButton) {
     elements.adminDashboardButton.addEventListener('click', (e) => {
       e.preventDefault(); // <a>タグのデフォルト動作をキャンセル
-      navigateTo('/admin');
+      navigateTo('/admin/dashboard');
     });
   }
 
@@ -555,7 +555,9 @@ function setupEventListeners() {
           }
         }
       } else {
-        navigateTo(`/groups/${groupId}`);
+        // ▼▼▼ この行のパスを '/admin' 始まりに変更 ▼▼▼
+        navigateTo(`/admin/groups/${groupId}`);
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
       }
     });
   }
@@ -618,7 +620,7 @@ function setupEventListeners() {
       if (e.target.tagName === 'BUTTON') {
         const {groupId} = e.target.dataset;
         elements.groupDropdown.style.display = 'none';
-        navigateTo(`/groups/${groupId}`);
+        navigateTo(`/admin/groups/${groupId}`);
       }
     });
   }
