@@ -695,29 +695,8 @@ export function showUserDashboardView(groupData, events) {
     }
   } else {
     // --- State C: Not Logged In ---
-    showNameEntryView(async (name) => {
-      if (!name) return;
-      try {
-        const result = await api.loginOrRegisterToGroup(state.currentGroupId, name);
-        state.saveParticipantState(result.token, result.memberId, result.name);
-        // After successful login, re-render the dashboard in the logged-in state.
-        await router.initializeGroupDashboardView(state.currentGroupId);
-      } catch (error) {
-        if (error.requiresPassword) {
-          const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
-          if (password) {
-            try {
-              const result = await api.loginMemberToGroup(state.currentGroupId, error.memberId, password);
-              state.saveParticipantState(result.token, result.memberId, result.name);
-              await router.initializeGroupDashboardView(state.currentGroupId);
-            } catch (loginError) {
-              alert(loginError.error || '合言葉が違います。');
-            }
-          }
-        } else {
-          alert(error.error || 'ログインに失敗しました。');
-        }
-      }
+    showNameEntryView((name) => {
+      router.handleParticipantLogin(state.currentGroupId, name);
     });
     if (elements.nameInput) elements.nameInput.placeholder = '名前を入力して参加/ログイン';
     if (elements.confirmNameButton) {
