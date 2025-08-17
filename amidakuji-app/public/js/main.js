@@ -584,11 +584,12 @@ function setupEventListeners() {
             .catch((err) => alert(err.error || 'イベントの削除に失敗しました。'));
         }
       } else if (button?.classList.contains('start-event-btn')) {
-        navigateTo(`/event/${eventId}/broadcast`);
+        navigateTo(`/admin/event/${eventId}/broadcast`);
       } else if (button?.classList.contains('copy-event-btn')) {
         handleCopyEvent(eventId);
       } else {
-        navigateTo(`/event/${eventId}/edit`);
+        // ▼▼▼ この行のパスに '/admin' を追加 ▼▼▼
+        navigateTo(`/admin/event/${eventId}/edit`);
       }
     });
   }
@@ -686,14 +687,17 @@ function setupEventListeners() {
 
   if (elements.goToCreateEventViewButton)
     elements.goToCreateEventViewButton.addEventListener('click', () => {
-      navigateTo(`/group/${state.currentGroupId}/event/new`);
+      // ▼▼▼ この行のパスに '/admin' を追加 ▼▼▼
+      navigateTo(`/admin/group/${state.currentGroupId}/event/new`);
     });
 
   if (elements.backToGroupsButton) {
     elements.backToGroupsButton.addEventListener('click', () => {
       if (state.currentGroupId) {
-        navigateTo(`/groups/${state.currentGroupId}`);
+        // FIX: "/admin" プレフィックスを追加して正しいURLへ遷移
+        navigateTo(`/admin/groups/${state.currentGroupId}`);
       } else {
+        // グループIDがない場合は、トップページ（マイグループ一覧）へ
         navigateTo('/');
       }
     });
@@ -776,7 +780,8 @@ function setupEventListeners() {
           await api.createEvent(eventData);
           alert(`イベントが作成されました！`);
         }
-        navigateTo(`/groups/${state.currentGroupId}`);
+        // FIX: "/admin" プレフィックスを追加して正しいURLへ遷移
+        navigateTo(`/admin/groups/${state.currentGroupId}`);
       } catch (error) {
         alert(error.error);
       } finally {
@@ -788,7 +793,7 @@ function setupEventListeners() {
   if (elements.backToDashboardButton)
     elements.backToDashboardButton.addEventListener('click', () => {
       if (state.currentGroupId) {
-        navigateTo(`/groups/${state.currentGroupId}`);
+        navigateTo(`/admin/groups/${state.currentGroupId}`);
       } else {
         navigateTo('/');
       }

@@ -178,10 +178,46 @@ router.get('/admin/dashboard', ensureAuthenticated, isSystemAdmin, (req, res) =>
   res.render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null, eventData: null});
 });
 
+// ▼▼▼ このブロックを新しく追加 ▼▼▼
+router.get('/admin/group/:groupId/event/new', ensureAuthenticated, (req, res) => {
+  // このルートはSPAのコンテナを返すだけなので、特別なデータ取得は不要
+  res.render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null, eventData: null});
+});
+
+router.get('/admin/event/:eventId/edit', ensureAuthenticated, async (req, res) => {
+  try {
+    // 編集画面ではOGPなどは不要だが、サーバー側で存在チェックは行っておく
+    const {eventId} = req.params;
+    const eventDoc = await firestore.collection('events').doc(eventId).get();
+    if (!eventDoc.exists) {
+      return res.status(404).render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null});
+    }
+    res.render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null, eventData: null});
+  } catch (error) {
+    console.error('Admin Event Edit routing error:', error);
+    res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
+  }
+});
+
+// ▼▼▼ このブロックを新しく追加 ▼▼▼
+router.get('/admin/event/:eventId/broadcast', ensureAuthenticated, async (req, res) => {
+  try {
+    // 配信画面もSPAのコンテナを返すだけなので、サーバー側でのデータ取得は不要
+    const {eventId} = req.params;
+    const eventDoc = await firestore.collection('events').doc(eventId).get();
+    if (!eventDoc.exists) {
+      return res.status(404).render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null});
+    }
+    res.render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null, eventData: null});
+  } catch (error) {
+    console.error('Admin Event Broadcast routing error:', error);
+    res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
+  }
+});
+
 router.get('/admin', ensureAuthenticated, isSystemAdmin, (req, res) => {
   res.render('index', {user: req.user, ogpData: {}, noIndex: true});
 });
-
 router.get('/admin-request', ensureAuthenticated, (req, res) => {
   res.render('index', {user: req.user, ogpData: {}, noIndex: true});
 });

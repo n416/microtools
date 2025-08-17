@@ -372,13 +372,18 @@ export async function handleRouting(initialData) {
   if (user) {
     // --- ログイン済み管理者 のルーティング ---
     const adminMatch = path.match(/\/admin/);
-    // ▼▼▼ この正規表現のマッチングを新しく1行追加 ▼▼▼
     const adminGroupDashboardMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)$/);
+    // ▼▼▼ この2つの正規表現のマッチングを新しく追加 ▼▼▼
+    const adminEventEditMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/edit$/);
+    const adminNewEventMatch = path.match(/^\/admin\/group\/([a-zA-Z0-9]+)\/event\/new$/);
+    // ▼▼▼ この正規表現のマッチングを新しく1行追加 ▼▼▼
+    const adminEventBroadcastMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/broadcast$/);
 
-    const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)$/); // ユーザー向けなので変更しない
+    // 既存の eventEditMatch などを削除しないこと
     const eventEditMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/edit$/);
-    const eventBroadcastMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/broadcast$/);
     const newEventMatch = path.match(/^\/group\/([a-zA-Z0-9]+)\/event\/new$/);
+    const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)$/); // ユーザー向けなので変更しない
+    const eventBroadcastMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/broadcast$/);
 
     if (path === '/') {
       ui.showView('groupDashboard');
@@ -389,7 +394,6 @@ export async function handleRouting(initialData) {
       return;
     }
 
-    // ▼▼▼ このifブロックを、既存の groupDashboardMatch の前に追加 ▼▼▼
     if (adminGroupDashboardMatch) {
       const groupId = adminGroupDashboardMatch[1];
       await loadAndShowGroupEvents(groupId); // 既存の管理者向けダッシュボード表示関数を再利用
@@ -404,17 +408,40 @@ export async function handleRouting(initialData) {
       return;
     }
 
+    // ▼▼▼ 既存の eventEditMatch のif文の前に、以下のifブロックを追加 ▼▼▼
+    if (adminEventEditMatch) {
+      const eventId = adminEventEditMatch[1];
+      await loadEventForEditing(eventId, 'eventEditView'); // 既存の関数を再利用
+      return;
+    }
+
     if (eventEditMatch) {
+      // 既存のものは残しておく
       const eventId = eventEditMatch[1];
       await loadEventForEditing(eventId, 'eventEditView');
       return;
     }
+    // ▼▼▼ 既存の eventBroadcastMatch のif文の前に、以下のifブロックを追加 ▼▼▼
+    if (adminEventBroadcastMatch) {
+      const eventId = adminEventBroadcastMatch[1];
+      await loadAndShowBroadcast(eventId); // 既存の関数を再利用
+      return;
+    }
+
     if (eventBroadcastMatch) {
       const eventId = eventBroadcastMatch[1];
       await loadAndShowBroadcast(eventId);
       return;
     }
+    // ▼▼▼ 既存の newEventMatch のif文の前に、以下のifブロックを追加 ▼▼▼
+    if (adminNewEventMatch) {
+      const groupId = adminNewEventMatch[1];
+      await loadAndShowEventForm(groupId); // 既存の関数を再利用
+      return;
+    }
+
     if (newEventMatch) {
+      // 既存のものは残しておく
       const groupId = newEventMatch[1];
       await loadAndShowEventForm(groupId);
       return;
