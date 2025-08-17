@@ -92,6 +92,51 @@ async function loadAndShowEventForm(groupId) {
   ui.showView('eventEditView');
 }
 
+async function handlePasswordError(memberId, groupId) {
+  const forgot = confirm('合言葉を忘れましたか？管理者にリセットを依頼します。');
+  if (forgot) {
+    try {
+      await api.requestPasswordDeletion(memberId, groupId);
+      alert('管理者に合言葉の削除を依頼しました。');
+    } catch (resetError) {
+      alert(resetError.error || '依頼の送信に失敗しました。');
+    }
+  }
+}
+
+export async function handleParticipantLogin(groupId, name, memberId = null) {
+  if (!name) return;
+
+  try {
+    // ログイン/登録APIを呼び出す
+    const result = await api.loginOrRegisterToGroup(groupId, name);
+    state.saveParticipantState(result.token, result.memberId, result.name);
+    // 成功したら現在のビューを再読み込みして表示を更新
+    await handleRouting();
+  } catch (error) {
+    if (error.requiresPassword) {
+      // 合言葉が必要な場合
+      const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
+      if (password) {
+        try {
+          // 合言葉を検証
+          const result = await api.loginMemberToGroup(groupId, error.memberId, password);
+          state.saveParticipantState(result.token, result.memberId, result.name);
+          await handleRouting();
+        } catch (loginError) {
+          // 合言葉が違う場合
+          alert(loginError.error || '合言葉が違います。');
+          await handlePasswordError(error.memberId, groupId);
+        }
+      }
+    } else {
+      // その他のエラー
+      alert(error.error || '処理に失敗しました。');
+    }
+  }
+}
+
+
 export async function handleLoginOrRegister(eventId, name, memberId = null) {
   if (!name || !eventId) return;
   try {
@@ -104,11 +149,7 @@ export async function handleLoginOrRegister(eventId, name, memberId = null) {
       if (password) {
         await verifyAndLogin(eventId, error.memberId, password);
       } else {
-        const forgot = confirm('合言葉を忘れましたか？管理者にリセットを依頼します。');
-        if (forgot) {
-          await api.requestPasswordDeletion(error.memberId, state.currentGroupId);
-          alert('管理者に合言葉の削除を依頼しました。');
-        }
+        await handlePasswordError(error.memberId, state.currentGroupId);
       }
     } else {
       alert(error.error);
@@ -127,15 +168,7 @@ export async function verifyAndLogin(eventId, memberId, password, slot = null) {
     }
   } catch (error) {
     alert(error.error);
-    const forgot = confirm('合言葉を忘れましたか？管理者にリセットを依頼します。');
-    if (forgot) {
-      try {
-        await api.requestPasswordDeletion(memberId, state.currentGroupId);
-        alert('管理者に合言葉の削除を依頼しました。');
-      } catch (resetError) {
-        alert(resetError.error || '依頼の送信に失敗しました。');
-      }
-    }
+    await handlePasswordError(memberId, state.currentGroupId);
   }
 }
 

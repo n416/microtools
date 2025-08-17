@@ -411,21 +411,21 @@ function setupEventListeners() {
 
   if (elements.backToDashboardFromEventListButton) {
     elements.backToDashboardFromEventListButton.addEventListener('click', async (e) => {
-        const button = e.currentTarget;
-        const role = button.dataset.role;
-        const groupId = button.dataset.groupId;
+      const button = e.currentTarget;
+      const role = button.dataset.role;
+      const groupId = button.dataset.groupId;
 
-        if (role === 'admin') {
-            // A. Admin behavior: Navigate to the main management screen.
-            navigateTo(state.currentUser.lastUsedGroupId ? `/groups/${state.currentUser.lastUsedGroupId}` : '/');
+      if (role === 'admin') {
+        // A. Admin behavior: Navigate to the main management screen.
+        navigateTo(state.currentUser.lastUsedGroupId ? `/groups/${state.currentUser.lastUsedGroupId}` : '/');
+      } else {
+        // B & C. Participant or non-logged-in user behavior: Switch to the User's Dashboard view.
+        if (groupId) {
+          await router.initializeGroupDashboardView(groupId);
         } else {
-            // B & C. Participant or non-logged-in user behavior: Switch to the User's Dashboard view.
-            if (groupId) {
-                await router.initializeGroupDashboardView(groupId);
-            } else {
-                console.error("No groupId found on dashboard button, cannot switch view.");
-            }
+          console.error('No groupId found on dashboard button, cannot switch view.');
         }
+      }
     });
   }
 
@@ -771,7 +771,7 @@ function setupEventListeners() {
           alert('イベントを更新しました！');
         } else {
           eventData.groupId = state.currentGroupId;
-          const newEvent = await api.createEvent(eventData);
+          await api.createEvent(eventData);
           alert(`イベントが作成されました！`);
         }
         navigateTo(`/groups/${state.currentGroupId}`);
@@ -826,11 +826,18 @@ function setupEventListeners() {
             ui.renderSuggestions(suggestions, async (name, memberId, hasPassword) => {
               elements.nameInput.value = name;
               elements.suggestionList.innerHTML = '';
-              if (hasPassword) {
-                const password = prompt(`「${name}」さんの合言葉を入力してください:`);
-                if (password) await router.verifyAndLogin(state.currentEventId, memberId, password);
-              } else {
-                await router.handleLoginOrRegister(state.currentEventId, name, memberId);
+              const contextGroupId = state.currentGroupId;
+              if (state.currentEventId) {
+                // Event context
+                if (hasPassword) {
+                  const password = prompt(`「${name}」さんの合言葉を入力してください:`);
+                  if (password) await router.verifyAndLogin(state.currentEventId, memberId, password);
+                } else {
+                  await router.handleLoginOrRegister(state.currentEventId, name, memberId);
+                }
+              } else if (contextGroupId) {
+                // Dashboard context
+                await router.handleParticipantLogin(contextGroupId, name, memberId);
               }
             });
           } catch (e) {
