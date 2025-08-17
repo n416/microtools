@@ -18,6 +18,7 @@ router.delete('/groups/:groupId/password', ensureAuthenticated, groupController.
 
 router.get('/groups/:groupId/member-suggestions', groupController.getMemberSuggestions);
 router.post('/groups/:groupId/login', groupController.loginMember);
+router.post('/groups/:groupId/login-or-register', groupController.loginOrRegisterMember);
 
 // Prize Master Routes
 router.get('/groups/:groupId/prize-masters', ensureAuthenticated, groupController.getPrizeMasters);

@@ -1,6 +1,8 @@
 // js/ui.js
 import * as state from './state.js';
 import {stopAnimation} from './animation.js';
+import * as api from './api.js';
+import * as router from './router.js';
 
 /* ==========================================================================
    DOM要素の参照
@@ -166,6 +168,7 @@ export const elements = {
   // Group Event List View (public)
   groupEventListContainer: document.getElementById('groupEventList'),
   groupNameTitle: document.getElementById('groupEventListName'),
+  backToDashboardFromEventListButton: document.getElementById('backToDashboardFromEventListButton'),
 };
 
 const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];
@@ -660,6 +663,71 @@ export function showWaitingView() {
 export function showResultsView() {
   hideParticipantSubViews();
   if (elements.resultSection) elements.resultSection.style.display = 'block';
+}
+
+export function showUserDashboardView(groupData, events) {
+  showView('participantView');
+  hideParticipantSubViews();
+
+  if (elements.participantEventName) {
+    elements.participantEventName.textContent = `${groupData.name} のダッシュボード`;
+  }
+
+  // Configure the "back to list" link
+  if (elements.backToGroupEventListLink) {
+    elements.backToGroupEventListLink.style.display = 'inline-block';
+    elements.backToGroupEventListLink.textContent = `← イベント一覧に戻る`;
+    elements.backToGroupEventListLink.href = '#'; // It's a view switch, not a navigation
+    elements.backToGroupEventListLink.onclick = (e) => {
+      e.preventDefault();
+      showView('groupEventListView');
+    };
+  }
+
+  state.loadParticipantState();
+  if (state.currentParticipantId && state.currentParticipantToken) {
+    // --- State B: General Participant ---
+    showControlPanelView({participants: [], status: 'pending'}); // Use dummy data
+    if (elements.goToAmidaButton) {
+      // Override the default button behavior for the dashboard context
+      elements.goToAmidaButton.textContent = 'イベント一覧から参加する';
+      elements.goToAmidaButton.onclick = () => showView('groupEventListView');
+    }
+  } else {
+    // --- State C: Not Logged In ---
+    showNameEntryView(async (name) => {
+      if (!name) return;
+      try {
+        const result = await api.loginOrRegisterToGroup(state.currentGroupId, name);
+        state.saveParticipantState(result.token, result.memberId, result.name);
+        // After successful login, re-render the dashboard in the logged-in state.
+        await router.initializeGroupDashboardView(state.currentGroupId);
+      } catch (error) {
+        if (error.requiresPassword) {
+          const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
+          if (password) {
+            try {
+              const result = await api.loginMemberToGroup(state.currentGroupId, error.memberId, password);
+              state.saveParticipantState(result.token, result.memberId, result.name);
+              await router.initializeGroupDashboardView(state.currentGroupId);
+            } catch (loginError) {
+              alert(loginError.error || '合言葉が違います。');
+            }
+          }
+        } else {
+          alert(error.error || 'ログインに失敗しました。');
+        }
+      }
+    });
+    if (elements.nameInput) elements.nameInput.placeholder = '名前を入力して参加/ログイン';
+    if (elements.confirmNameButton) {
+        elements.confirmNameButton.textContent = 'OK';
+        elements.confirmNameButton.style.display = 'block';
+    }
+  }
+
+  // Always show the list of other available events
+  renderOtherEvents(events);
 }
 
 export function resetEventCreationForm() {

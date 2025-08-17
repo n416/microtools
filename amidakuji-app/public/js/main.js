@@ -2,7 +2,7 @@
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
-import {handleRouting, loadEventForEditing, handleLoginOrRegister, verifyAndLogin} from './router.js';
+import * as router from './router.js'; // Import router as a namespace
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, stepAnimation} from './animation.js';
 
 /**
@@ -202,7 +202,7 @@ async function navigateTo(path, pushState = true) {
   if (pushState && window.location.pathname !== path) {
     history.pushState({path}, '', path);
   }
-  const action = await handleRouting(); // 戻り値を受け取る
+  const action = await router.handleRouting(); // 戻り値を受け取る
   if (action === 'loadAdminDashboard') {
     await loadAdminDashboard(); // データを読み込む
   }
@@ -220,7 +220,7 @@ async function initializeApp() {
     event: typeof initialEventData !== 'undefined' ? initialEventData : null,
   };
 
-  const action = await handleRouting(initialData); // 戻り値を受け取る
+  const action = await router.handleRouting(initialData); // 戻り値を受け取る
   if (action === 'loadAdminDashboard') {
     await loadAdminDashboard(); // データを読み込む
   }
@@ -298,7 +298,7 @@ async function handleCopyEvent(eventId) {
   try {
     await api.copyEvent(eventId);
     alert('イベントをコピーしました。');
-    handleRouting(); // 画面を再描画
+    router.handleRouting(); // 画面を再描画
   } catch (error) {
     alert(`エラー: ${error.error}`);
   }
@@ -408,6 +408,27 @@ function setupEventListeners() {
       navigateTo('/admin');
     });
   }
+
+  if (elements.backToDashboardFromEventListButton) {
+    elements.backToDashboardFromEventListButton.addEventListener('click', async (e) => {
+        const button = e.currentTarget;
+        const role = button.dataset.role;
+        const groupId = button.dataset.groupId;
+
+        if (role === 'admin') {
+            // A. Admin behavior: Navigate to the main management screen.
+            navigateTo(state.currentUser.lastUsedGroupId ? `/groups/${state.currentUser.lastUsedGroupId}` : '/');
+        } else {
+            // B & C. Participant or non-logged-in user behavior: Switch to the User's Dashboard view.
+            if (groupId) {
+                await router.initializeGroupDashboardView(groupId);
+            } else {
+                console.error("No groupId found on dashboard button, cannot switch view.");
+            }
+        }
+    });
+  }
+
   if (elements.createGroupButton)
     elements.createGroupButton.addEventListener('click', async () => {
       const name = elements.groupNameInput.value.trim();
@@ -556,7 +577,7 @@ function setupEventListeners() {
             .deleteEvent(eventId)
             .then(() => {
               alert('イベントを削除しました。');
-              handleRouting();
+              router.handleRouting();
             })
             .catch((err) => alert(err.error || 'イベントの削除に失敗しました。'));
         }
@@ -750,7 +771,7 @@ function setupEventListeners() {
           alert('イベントを更新しました！');
         } else {
           eventData.groupId = state.currentGroupId;
-          await api.createEvent(eventData);
+          const newEvent = await api.createEvent(eventData);
           alert(`イベントが作成されました！`);
         }
         navigateTo(`/groups/${state.currentGroupId}`);
@@ -761,7 +782,7 @@ function setupEventListeners() {
       }
     });
 
-  if (elements.loadButton) elements.loadButton.addEventListener('click', () => loadEventForEditing(elements.eventIdInput.value.trim()));
+  if (elements.loadButton) elements.loadButton.addEventListener('click', () => router.loadEventForEditing(elements.eventIdInput.value.trim()));
   if (elements.backToDashboardButton)
     elements.backToDashboardButton.addEventListener('click', () => {
       if (state.currentGroupId) {
@@ -807,9 +828,9 @@ function setupEventListeners() {
               elements.suggestionList.innerHTML = '';
               if (hasPassword) {
                 const password = prompt(`「${name}」さんの合言葉を入力してください:`);
-                if (password) await verifyAndLogin(state.currentEventId, memberId, password);
+                if (password) await router.verifyAndLogin(state.currentEventId, memberId, password);
               } else {
-                await handleLoginOrRegister(state.currentEventId, name, memberId);
+                await router.handleLoginOrRegister(state.currentEventId, name, memberId);
               }
             });
           } catch (e) {
@@ -824,7 +845,7 @@ function setupEventListeners() {
       const eventData = await api.getPublicEventData(state.currentEventId);
       state.setCurrentLotteryData(eventData);
       if (eventData.status === 'started') {
-        await handleRouting({group: null, event: null});
+        await router.handleRouting({group: null, event: null});
       } else {
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
         if (myParticipation && myParticipation.name) {
