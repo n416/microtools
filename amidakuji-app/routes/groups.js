@@ -4,16 +4,17 @@ const {ensureAuthenticated} = require('../middleware/auth');
 const router = express.Router();
 
 router.get('/groups', ensureAuthenticated, groupController.getGroups);
-router.get('/groups/:groupId', groupController.getGroup); // <<< この行を追加
+router.get('/groups/:groupId', groupController.getGroup);
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+router.get('/groups/url/:customUrl', groupController.getGroupByCustomUrl);
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 router.post('/groups', ensureAuthenticated, groupController.createGroup);
-router.delete('/groups/:groupId', ensureAuthenticated, groupController.deleteGroup); // <<< この行を追加
+router.delete('/groups/:groupId', ensureAuthenticated, groupController.deleteGroup);
 router.put('/groups/:groupId/participants', ensureAuthenticated, groupController.updateParticipants);
 router.put('/groups/:groupId/participants/:participantId/color', ensureAuthenticated, groupController.updateParticipantColor);
 router.put('/groups/:groupId/settings', ensureAuthenticated, groupController.updateGroupSettings);
 
-// 【修正】古いcheck-passwordから新しいverify-passwordに変更
 router.post('/groups/:groupId/verify-password', groupController.verifyPassword);
-// 【新規】合言葉削除APIのルート
 router.delete('/groups/:groupId/password', ensureAuthenticated, groupController.deleteGroupPassword);
 
 router.get('/groups/:groupId/member-suggestions', groupController.getMemberSuggestions);

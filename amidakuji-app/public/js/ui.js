@@ -1,8 +1,6 @@
 // js/ui.js
 import * as state from './state.js';
 import {stopAnimation} from './animation.js';
-import * as api from './api.js';
-import * as router from './router.js';
 
 /* ==========================================================================
    DOM要素の参照
@@ -184,10 +182,6 @@ export function adjustBodyPadding() {
   document.body.style.paddingTop = `${totalOffset}px`;
 }
 
-/**
- * ヘッダーの表示/非表示を切り替え、それに合わせてpaddingを調整する
- * @param {boolean} visible 表示する場合はtrue
- */
 export function setMainHeaderVisibility(visible) {
     if (elements.mainHeader) {
         elements.mainHeader.style.display = visible ? 'flex' : 'none';
@@ -534,7 +528,7 @@ export function renderPasswordRequests(requests) {
   });
 }
 
-export function renderAdminLists(requests, groupAdmins, systemAdmins, handlers) {
+export function renderAdminLists(requests, groupAdmins, systemAdmins) {
   const {pendingRequestsList, adminUserList, systemAdminList} = elements;
 
   if (pendingRequestsList) {
@@ -619,12 +613,11 @@ export function hideParticipantSubViews() {
   if (elements.resultSection) elements.resultSection.style.display = 'none';
 }
 
-export function showNameEntryView(onConfirm) { // onConfirm引数を追加
+export function showNameEntryView(onConfirm) {
   hideParticipantSubViews();
   if (elements.nameEntrySection) elements.nameEntrySection.style.display = 'block';
   if (elements.nameInput) elements.nameInput.value = '';
   if (elements.suggestionList) elements.suggestionList.innerHTML = '';
-  // ボタンがクリックされたときの処理を設定
   if (elements.confirmNameButton) {
     elements.confirmNameButton.onclick = () => onConfirm(elements.nameInput.value.trim());
   }
@@ -673,28 +666,20 @@ export function showUserDashboardView(groupData, events) {
     elements.participantEventName.textContent = `${groupData.name} のダッシュボード`;
   }
 
-  // Configure the "back to list" link
   if (elements.backToGroupEventListLink) {
-    elements.backToGroupEventListLink.style.display = 'inline-block';
+    const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
+    elements.backToGroupEventListLink.href = backUrl;
     elements.backToGroupEventListLink.textContent = `← イベント一覧に戻る`;
-    elements.backToGroupEventListLink.href = '#'; // It's a view switch, not a navigation
-    elements.backToGroupEventListLink.onclick = (e) => {
-      e.preventDefault();
-      showView('groupEventListView');
-    };
+    elements.backToGroupEventListLink.style.display = 'inline-block';
   }
 
   state.loadParticipantState();
   if (state.currentParticipantId && state.currentParticipantToken) {
-    // --- State B: General Participant ---
-    showControlPanelView({participants: [], status: 'pending'}); // Use dummy data
+    showControlPanelView({participants: [], status: 'pending'});
     if (elements.goToAmidaButton) {
-      // Override the default button behavior for the dashboard context
       elements.goToAmidaButton.textContent = 'イベント一覧から参加する';
-      elements.goToAmidaButton.onclick = () => showView('groupEventListView');
     }
   } else {
-    // --- State C: Not Logged In ---
     showNameEntryView((name) => {
       router.handleParticipantLogin(state.currentGroupId, name);
     });
@@ -705,7 +690,6 @@ export function showUserDashboardView(groupData, events) {
     }
   }
 
-  // Always show the list of other available events
   renderOtherEvents(events);
 }
 

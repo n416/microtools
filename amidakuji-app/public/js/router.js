@@ -108,29 +108,23 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
   if (!name) return;
 
   try {
-    // ログイン/登録APIを呼び出す
     const result = await api.loginOrRegisterToGroup(groupId, name);
     state.saveParticipantState(result.token, result.memberId, result.name);
-    // 成功したら現在のビューを再読み込みして表示を更新
     await handleRouting();
   } catch (error) {
     if (error.requiresPassword) {
-      // 合言葉が必要な場合
       const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
       if (password) {
         try {
-          // 合言葉を検証
           const result = await api.loginMemberToGroup(groupId, error.memberId, password);
           state.saveParticipantState(result.token, result.memberId, result.name);
           await handleRouting();
         } catch (loginError) {
-          // 合言葉が違う場合
           alert(loginError.error || '合言葉が違います。');
           await handlePasswordError(error.memberId, groupId);
         }
       }
     } else {
-      // その他のエラー
       alert(error.error || '処理に失敗しました。');
     }
   }
@@ -185,6 +179,7 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
 
     if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
 
+    // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
     const backLink = document.getElementById('backToGroupEventListLink');
     if (backLink) {
       try {
@@ -194,6 +189,10 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
           backLink.href = backUrl;
           backLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
           backLink.style.display = 'inline-block';
+          backLink.onclick = (e) => {
+            e.preventDefault();
+            navigateTo(backUrl);
+          };
         } else {
           backLink.style.display = 'none';
         }
@@ -202,6 +201,7 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
         backLink.style.display = 'none';
       }
     }
+    // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
     if (eventData.otherEvents) {
       ui.renderOtherEvents(eventData.otherEvents);
@@ -231,19 +231,31 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
 
 export async function initializeGroupDashboardView(groupId) {
   try {
-    // Get group data and public events in parallel
     const [groupData, events] = await Promise.all([api.getGroup(groupId), api.getPublicEventsForGroup(groupId)]);
-
-    // Use the ui function to configure and show the participantView as a dashboard
     ui.showUserDashboardView(groupData, events);
   } catch (error) {
     console.error('Failed to initialize group dashboard view:', error);
     if (error.requiresPassword) {
-      // If password is required, show modal and set this function to be retried
       state.setLastFailedAction(() => initializeGroupDashboardView(groupId));
       ui.showGroupPasswordModal(error.groupId, error.groupName);
     } else {
-      // Show a generic error for other issues
+      alert(error.error || 'ダッシュボードの表示に失敗しました。');
+    }
+  }
+}
+
+async function initializeParticipantDashboardView(customUrl) {
+  try {
+    const groupData = await api.getGroupByCustomUrl(customUrl);
+    state.setCurrentGroupId(groupData.id);
+    state.loadParticipantState();
+    ui.showUserDashboardView(groupData, []);
+  } catch (error) {
+    console.error('Failed to initialize participant dashboard:', error);
+    if (error.requiresPassword) {
+      state.setLastFailedAction(() => initializeParticipantDashboardView(customUrl));
+      ui.showGroupPasswordModal(error.groupId, error.groupName);
+    } else {
       alert(error.error || 'ダッシュボードの表示に失敗しました。');
     }
   }
@@ -255,14 +267,12 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
 
   ui.showView('groupEventListView');
 
-  // groupDataがなくても、APIから取得してタイトルを設定する
   if (!groupData) {
     try {
       const groupDetails = await api.getGroup(customUrlOrGroupId);
       groupNameTitle.textContent = `${groupDetails.name} のイベント一覧`;
-      groupData = groupDetails; // 後続の処理で使えるように格納
+      groupData = groupDetails;
     } catch (e) {
-      // グループが見つからない場合
       groupNameTitle.textContent = '不明なグループのイベント一覧';
     }
   } else {
@@ -270,16 +280,14 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
   }
 
   if (groupData) {
-    state.setCurrentGroupId(groupData.id); // Set group context
+    state.setCurrentGroupId(groupData.id);
     backToDashboardFromEventListButton.dataset.groupId = groupData.id;
-    state.loadParticipantState(); // Check participation status for this group
+    state.loadParticipantState();
 
     if (state.currentUser) {
-      // State A: Admin is logged in
       backToDashboardFromEventListButton.textContent = '管理ダッシュボードに戻る';
       backToDashboardFromEventListButton.dataset.role = 'admin';
     } else {
-      // State B & C: General Participant or Not Logged In
       backToDashboardFromEventListButton.textContent = 'ダッシュボードに戻る';
       backToDashboardFromEventListButton.dataset.role = 'dashboard';
     }
@@ -301,10 +309,7 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
       const li = document.createElement('li');
       li.className = 'item-list-item';
       const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
-
-      // isCustomUrlフラグとgroupDataの有無でURLを正しく構築する
       const eventUrl = isCustomUrl ? `/g/${customUrlOrGroupId}/${event.id}` : `/events/${event.id}`;
-
       li.innerHTML = `
                 <span><strong>${event.eventName || '無題のイベント'}</strong>（${date.toLocaleDateString()} 作成）</span>
                 <a href="${eventUrl}" class="button">このイベントに参加する</a>
@@ -349,40 +354,29 @@ export async function handleRouting(initialData) {
   stopAnimation();
   const path = window.location.pathname;
 
-  // 1. 最初に認証状態を取得
   const user = await api.checkGoogleAuthState().catch(() => null);
   state.setCurrentUser(user);
 
-  // 2. ヘッダーを表示すべきでない公開ページ（かつ非ログイン時）のルートを定義
   const publicRoutesToHideHeader = ['/g/', '/share/', '/events/'];
-  // /groups/ はログイン状態によって挙動が変わるため、ここには含めない
   const isPublicPage = publicRoutesToHideHeader.some((route) => path.startsWith(route));
 
-  // 3. ログイン状態とURLに基づいてヘッダーの表示を決定
   if (!user && (isPublicPage || path.startsWith('/groups/'))) {
-    // 未ログインで、かつヘッダーを隠すべき公開ページの場合
     ui.setMainHeaderVisibility(false);
   } else {
-    // 上記以外（ログインしている全ページ、または未ログインのトップページなど）
     ui.setMainHeaderVisibility(true);
     ui.updateAuthUI(user);
   }
 
-  // 4. 表示するビューを決定
   if (user) {
-    // --- ログイン済み管理者 のルーティング ---
     const adminMatch = path.match(/\/admin/);
     const adminGroupDashboardMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)$/);
-    // ▼▼▼ この2つの正規表現のマッチングを新しく追加 ▼▼▼
     const adminEventEditMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/edit$/);
     const adminNewEventMatch = path.match(/^\/admin\/group\/([a-zA-Z0-9]+)\/event\/new$/);
-    // ▼▼▼ この正規表現のマッチングを新しく1行追加 ▼▼▼
     const adminEventBroadcastMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/broadcast$/);
 
-    // 既存の eventEditMatch などを削除しないこと
     const eventEditMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/edit$/);
     const newEventMatch = path.match(/^\/group\/([a-zA-Z0-9]+)\/event\/new$/);
-    const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)$/); // ユーザー向けなので変更しない
+    const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)$/);
     const eventBroadcastMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/broadcast$/);
 
     if (path === '/') {
@@ -396,35 +390,32 @@ export async function handleRouting(initialData) {
 
     if (adminGroupDashboardMatch) {
       const groupId = adminGroupDashboardMatch[1];
-      await loadAndShowGroupEvents(groupId); // 既存の管理者向けダッシュボード表示関数を再利用
+      await loadAndShowGroupEvents(groupId);
       await api.updateLastGroup(groupId);
       return;
     }
 
     if (groupDashboardMatch) {
-      // このルートは今後ユーザー専用となるため、処理は変更しない
       const groupId = groupDashboardMatch[1];
       await initializeGroupEventListView(groupId, initialData ? initialData.group : null, false);
       return;
     }
 
-    // ▼▼▼ 既存の eventEditMatch のif文の前に、以下のifブロックを追加 ▼▼▼
     if (adminEventEditMatch) {
       const eventId = adminEventEditMatch[1];
-      await loadEventForEditing(eventId, 'eventEditView'); // 既存の関数を再利用
+      await loadEventForEditing(eventId, 'eventEditView');
       return;
     }
 
     if (eventEditMatch) {
-      // 既存のものは残しておく
       const eventId = eventEditMatch[1];
       await loadEventForEditing(eventId, 'eventEditView');
       return;
     }
-    // ▼▼▼ 既存の eventBroadcastMatch のif文の前に、以下のifブロックを追加 ▼▼▼
+
     if (adminEventBroadcastMatch) {
       const eventId = adminEventBroadcastMatch[1];
-      await loadAndShowBroadcast(eventId); // 既存の関数を再利用
+      await loadAndShowBroadcast(eventId);
       return;
     }
 
@@ -433,15 +424,14 @@ export async function handleRouting(initialData) {
       await loadAndShowBroadcast(eventId);
       return;
     }
-    // ▼▼▼ 既存の newEventMatch のif文の前に、以下のifブロックを追加 ▼▼▼
+
     if (adminNewEventMatch) {
       const groupId = adminNewEventMatch[1];
-      await loadAndShowEventForm(groupId); // 既存の関数を再利用
+      await loadAndShowEventForm(groupId);
       return;
     }
 
     if (newEventMatch) {
-      // 既存のものは残しておく
       const groupId = newEventMatch[1];
       await loadAndShowEventForm(groupId);
       return;
@@ -452,14 +442,18 @@ export async function handleRouting(initialData) {
     }
   }
 
-  // ▼▼▼ このifブロックを新しく追加 ▼▼▼
   if (path === '/admin/dashboard') {
     ui.showView('adminDashboard');
-    await loadAdminDashboard(); // 既存の管理者ダッシュボード表示関数を呼び出す
-    return; // 必ずreturnで処理を終了させる
+    // await loadAdminDashboard();
+    return;
   }
 
-  // --- 公開ページのルーティング ---
+  const participantDashboardMatch = path.match(/^\/g\/(.+?)\/dashboard\/?$/);
+  if (participantDashboardMatch) {
+    await initializeParticipantDashboardView(participantDashboardMatch[1]);
+    return;
+  }
+
   const shareMatch = path.match(/^\/share\/([a-zA-Z0-9]+)\/(.+)/);
   if (shareMatch) {
     const [, eventId, participantName] = shareMatch;
@@ -482,16 +476,13 @@ export async function handleRouting(initialData) {
 
   const groupIdMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)\/?$/);
   if (groupIdMatch) {
-    // このルートはログイン状態によって処理が分岐済みのため、ここでは未ログインの場合のみ到達する
     await initializeGroupEventListView(groupIdMatch[1], initialData ? initialData.group : null, false);
     return;
   }
 
-  // --- フォールバック ---
   if (user && path !== '/') {
     ui.showView('groupDashboard');
   } else if (!user && path === '/') {
-    // 未ログインでトップページの場合は、ログインボタンのあるヘッダーだけ表示
     ui.showView(null);
   }
 

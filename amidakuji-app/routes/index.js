@@ -44,7 +44,28 @@ router.get('/g/:customUrl', async (req, res) => {
   }
 });
 
-// ▼▼▼ このブロックを新しく追加 ▼▼▼
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+router.get('/g/:customUrl/dashboard', async (req, res) => {
+  try {
+    const {customUrl} = req.params;
+    const snapshot = await firestore.collection('groups').where('customUrl', '==', customUrl).limit(1).get();
+
+    if (snapshot.empty) {
+      return res.status(404).render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null});
+    }
+
+    const groupDoc = snapshot.docs[0];
+    const groupData = {id: groupDoc.id, ...groupDoc.data()};
+    const noIndex = groupData.noIndex || false;
+
+    res.render('index', {user: req.user, ogpData: {}, noIndex, groupData: JSON.stringify(groupData), eventData: null});
+  } catch (error) {
+    console.error('Participant dashboard routing error:', error);
+    res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null, eventData: null});
+  }
+});
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+
 router.get('/admin/groups/:groupId', ensureAuthenticated, async (req, res) => {
   try {
     const {groupId} = req.params;
@@ -55,7 +76,6 @@ router.get('/admin/groups/:groupId', ensureAuthenticated, async (req, res) => {
     }
     const groupData = {id: groupDoc.id, ...groupDoc.data()};
 
-    // ログイン中の管理者本人のグループであるかを確認
     if (groupData.ownerId !== req.user.id) {
       return res.status(403).render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null, message: 'アクセス権がありません'});
     }
@@ -67,8 +87,6 @@ router.get('/admin/groups/:groupId', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
-// カスタムURLがないグループのイベント一覧ページ用のルート
 router.get('/groups/:groupId', async (req, res) => {
   try {
     const {groupId} = req.params;
@@ -86,7 +104,6 @@ router.get('/groups/:groupId', async (req, res) => {
     res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null});
   }
 });
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 router.get('/events/:eventId', async (req, res) => {
   try {
@@ -173,20 +190,16 @@ router.get('/share/:eventId/:participantName', async (req, res) => {
   }
 });
 
-// ▼▼▼ このブロックを新しく追加 ▼▼▼
 router.get('/admin/dashboard', ensureAuthenticated, isSystemAdmin, (req, res) => {
   res.render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null, eventData: null});
 });
 
-// ▼▼▼ このブロックを新しく追加 ▼▼▼
 router.get('/admin/group/:groupId/event/new', ensureAuthenticated, (req, res) => {
-  // このルートはSPAのコンテナを返すだけなので、特別なデータ取得は不要
   res.render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null, eventData: null});
 });
 
 router.get('/admin/event/:eventId/edit', ensureAuthenticated, async (req, res) => {
   try {
-    // 編集画面ではOGPなどは不要だが、サーバー側で存在チェックは行っておく
     const {eventId} = req.params;
     const eventDoc = await firestore.collection('events').doc(eventId).get();
     if (!eventDoc.exists) {
@@ -199,10 +212,8 @@ router.get('/admin/event/:eventId/edit', ensureAuthenticated, async (req, res) =
   }
 });
 
-// ▼▼▼ このブロックを新しく追加 ▼▼▼
 router.get('/admin/event/:eventId/broadcast', ensureAuthenticated, async (req, res) => {
   try {
-    // 配信画面もSPAのコンテナを返すだけなので、サーバー側でのデータ取得は不要
     const {eventId} = req.params;
     const eventDoc = await firestore.collection('events').doc(eventId).get();
     if (!eventDoc.exists) {
@@ -222,13 +233,11 @@ router.get('/admin-request', ensureAuthenticated, (req, res) => {
   res.render('index', {user: req.user, ogpData: {}, noIndex: true});
 });
 
-// 上記のどのルートにも一致しなかった場合、SPAの起点となるindex.ejsを返す
-// このルートは必ず他のすべてのGETルートの後に記述すること
 router.get('*', (req, res) => {
   res.render('index', {
     user: req.user,
-    ogpData: {}, // デフォルトのOGPデータ
-    noIndex: true, // URLが不定なためnoindexとする
+    ogpData: {},
+    noIndex: true,
     groupData: null,
     eventData: null,
   });
