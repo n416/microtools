@@ -192,8 +192,6 @@ function initTronAnimation() {
   }
   animate();
 }
-
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 async function navigateTo(path, pushState = true) {
   if (pushState && window.location.pathname !== path) {
     history.pushState({path}, '', path);
@@ -206,7 +204,6 @@ async function navigateTo(path, pushState = true) {
     await loadAdminDashboard();
   }
 }
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 const {elements} = ui;
 
@@ -395,7 +392,6 @@ function setupEventListeners() {
     });
   }
 
-  // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
   if (elements.backToDashboardFromEventListButton) {
     elements.backToDashboardFromEventListButton.addEventListener('click', async (e) => {
       const button = e.currentTarget;
@@ -425,8 +421,6 @@ function setupEventListeners() {
       }
     });
   }
-  // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
-
 
   if (elements.createGroupButton)
     elements.createGroupButton.addEventListener('click', async () => {
@@ -859,7 +853,6 @@ function setupEventListeners() {
       }
     });
 
-  // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
   if (elements.backToControlPanelButton)
     elements.backToControlPanelButton.addEventListener('click', async () => {
       try {
@@ -889,7 +882,6 @@ function setupEventListeners() {
         navigateTo('/');
       }
     });
-  // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
   if (elements.setPasswordButton)
     elements.setPasswordButton.addEventListener('click', async () => {
@@ -1058,6 +1050,16 @@ function setupEventListeners() {
     if (elements.groupDropdown && elements.groupDropdown.style.display === 'block' && !elements.groupSwitcher.contains(event.target)) {
       elements.groupDropdown.style.display = 'none';
     }
+    // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+    const link = event.target.closest('a');
+    if (link && link.href && link.target !== '_blank') {
+      const url = new URL(link.href);
+      if (url.origin === window.location.origin) {
+        event.preventDefault();
+        navigateTo(url.pathname);
+      }
+    }
+    // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
   });
 }
 
