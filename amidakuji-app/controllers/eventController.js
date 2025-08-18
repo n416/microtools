@@ -380,6 +380,7 @@ exports.joinEvent = async (req, res) => {
     if (memberDoc && memberDoc.exists) {
       memberData = memberDoc.data();
       if (memberData.password) {
+        // 【修正点】パスワードが設定されている場合は、必ず401エラーを返す
         return res.status(401).json({
           error: '合言葉が必要です。',
           requiresPassword: true,
@@ -406,8 +407,7 @@ exports.joinEvent = async (req, res) => {
     }
 
     // ▼▼▼ ログイン処理はここまで。ここから下はイベント参加処理 ▼▼▼
-    
-    // イベントが開始されていなければ、参加処理を試みる
+
     if (eventData.status !== 'started') {
       const alreadyJoined = eventData.participants.some((p) => p.memberId === finalMemberId);
       if (alreadyJoined) {
@@ -436,7 +436,6 @@ exports.joinEvent = async (req, res) => {
       await eventRef.update({participants: newParticipants});
     }
 
-    // ログイン成功レスポンスを返す
     res.status(200).json({
       message: eventData.status === 'started' ? 'ログインしました。イベントは開始済みのため、結果を確認してください。' : 'イベントに参加しました。',
       token: token,
@@ -532,7 +531,7 @@ exports.verifyPasswordAndJoin = async (req, res) => {
     if (!match) {
       return res.status(401).json({error: '合言葉が違います。'});
     }
-    
+
     // ▼▼▼ ログイン処理はここまで。ここから下はイベント参加処理 ▼▼▼
 
     // スロット指定があり、かつイベントが開始されていない場合のみ参加処理
