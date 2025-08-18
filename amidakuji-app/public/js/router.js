@@ -14,7 +14,7 @@ async function loadAndShowGroupEvents(groupId) {
 
   try {
     const events = await api.getEventsForGroup(groupId);
-    ui.renderEventList(events, {});
+    ui.renderEventList(events);
     if (state.allUserGroups.length === 0) {
       const allGroups = await api.getGroups();
       state.setAllUserGroups(allGroups);
@@ -110,7 +110,7 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
   try {
     const result = await api.loginOrRegisterToGroup(groupId, name);
     state.saveParticipantState(result.token, result.memberId, result.name);
-    await handleRouting();
+    navigateTo(window.location.pathname, false);
   } catch (error) {
     if (error.requiresPassword) {
       const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
@@ -118,7 +118,7 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
         try {
           const result = await api.loginMemberToGroup(groupId, error.memberId, password);
           state.saveParticipantState(result.token, result.memberId, result.name);
-          await handleRouting();
+          navigateTo(window.location.pathname, false);
         } catch (loginError) {
           alert(loginError.error || '合言葉が違います。');
           await handlePasswordError(error.memberId, groupId);
@@ -135,7 +135,7 @@ export async function handleLoginOrRegister(eventId, name, memberId = null) {
   try {
     const result = await api.joinEvent(eventId, name, memberId);
     state.saveParticipantState(result.token, result.memberId, result.name);
-    await handleRouting();
+    navigateTo(window.location.pathname, false);
   } catch (error) {
     if (error.requiresPassword) {
       const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
@@ -157,7 +157,7 @@ export async function verifyAndLogin(eventId, memberId, password, slot = null) {
     if (slot !== null) {
       ui.showWaitingView();
     } else {
-      await handleRouting();
+      navigateTo(window.location.pathname, false);
     }
   } catch (error) {
     alert(error.error);
@@ -179,42 +179,42 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
 
     if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
 
-    // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
-    const backLink = document.getElementById('backToGroupEventListLink');
-    if (backLink) {
+    if (ui.elements.backToGroupEventListLink) {
       try {
         const groupData = await api.getGroup(eventData.groupId);
         if (groupData) {
           const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
-          backLink.href = backUrl;
-          backLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
-          backLink.style.display = 'inline-block';
-          backLink.onclick = (e) => {
-            e.preventDefault();
-            navigateTo(backUrl);
-          };
+          ui.elements.backToGroupEventListLink.href = backUrl;
+          ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
+          ui.elements.backToGroupEventListLink.style.display = 'inline-block';
         } else {
-          backLink.style.display = 'none';
+          ui.elements.backToGroupEventListLink.style.display = 'none';
         }
       } catch (groupError) {
         console.error('Failed to get group info for back link:', groupError);
-        backLink.style.display = 'none';
+        ui.elements.backToGroupEventListLink.style.display = 'none';
       }
     }
-    // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
     if (eventData.otherEvents) {
-      ui.renderOtherEvents(eventData.otherEvents);
+      ui.renderOtherEvents(eventData.otherEvents, state.currentLotteryData.groupCustomUrl);
     }
 
     if (isShare) {
       await showResultsView(eventData, sharedParticipantName, true);
     } else if (state.currentParticipantToken && state.currentParticipantId) {
+      // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
       if (eventData.status === 'started') {
         await showResultsView(eventData, state.currentParticipantName, false);
       } else {
-        ui.showControlPanelView(eventData);
+        const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
+        if (myParticipation && myParticipation.name) {
+          ui.showWaitingView();
+        } else {
+          ui.showJoinView(eventData);
+        }
       }
+      // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
     } else {
       ui.showNameEntryView((name) => handleLoginOrRegister(eventId, name));
     }
@@ -229,27 +229,15 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
   }
 }
 
-export async function initializeGroupDashboardView(groupId) {
-  try {
-    const [groupData, events] = await Promise.all([api.getGroup(groupId), api.getPublicEventsForGroup(groupId)]);
-    ui.showUserDashboardView(groupData, events);
-  } catch (error) {
-    console.error('Failed to initialize group dashboard view:', error);
-    if (error.requiresPassword) {
-      state.setLastFailedAction(() => initializeGroupDashboardView(groupId));
-      ui.showGroupPasswordModal(error.groupId, error.groupName);
-    } else {
-      alert(error.error || 'ダッシュボードの表示に失敗しました。');
-    }
-  }
-}
-
 async function initializeParticipantDashboardView(customUrl) {
   try {
     const groupData = await api.getGroupByCustomUrl(customUrl);
+    const events = await api.getPublicEventsForGroup(groupData.id);
+
     state.setCurrentGroupId(groupData.id);
     state.loadParticipantState();
-    ui.showUserDashboardView(groupData, []);
+
+    ui.showUserDashboardView(groupData, events);
   } catch (error) {
     console.error('Failed to initialize participant dashboard:', error);
     if (error.requiresPassword) {
@@ -269,7 +257,7 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
 
   if (!groupData) {
     try {
-      const groupDetails = await api.getGroup(customUrlOrGroupId);
+      const groupDetails = isCustomUrl ? await api.getGroupByCustomUrl(customUrlOrGroupId) : await api.getGroup(customUrlOrGroupId);
       groupNameTitle.textContent = `${groupDetails.name} のイベント一覧`;
       groupData = groupDetails;
     } catch (e) {
@@ -310,10 +298,12 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
       li.className = 'item-list-item';
       const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
       const eventUrl = isCustomUrl ? `/g/${customUrlOrGroupId}/${event.id}` : `/events/${event.id}`;
+      // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
       li.innerHTML = `
                 <span><strong>${event.eventName || '無題のイベント'}</strong>（${date.toLocaleDateString()} 作成）</span>
-                <a href="${eventUrl}" class="button">このイベントに参加する</a>
+                <a href="${eventUrl}" class="button">参加する</a>
             `;
+      // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
       groupEventListContainer.appendChild(li);
     });
   } catch (error) {
@@ -366,6 +356,10 @@ export async function handleRouting(initialData) {
     ui.setMainHeaderVisibility(true);
     ui.updateAuthUI(user);
   }
+
+  // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+  state.loadParticipantState();
+  // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
   if (user) {
     const adminMatch = path.match(/\/admin/);
@@ -444,8 +438,7 @@ export async function handleRouting(initialData) {
 
   if (path === '/admin/dashboard') {
     ui.showView('adminDashboard');
-    // await loadAdminDashboard();
-    return;
+    return 'loadAdminDashboard';
   }
 
   const participantDashboardMatch = path.match(/^\/g\/(.+?)\/dashboard\/?$/);
@@ -470,13 +463,25 @@ export async function handleRouting(initialData) {
 
   const customUrlMatch = path.match(/^\/g\/(.+?)\/?$/);
   if (customUrlMatch) {
-    await initializeGroupEventListView(customUrlMatch[1], initialData ? initialData.group : null, true);
+    // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+    if (state.currentParticipantId) {
+      await initializeParticipantDashboardView(customUrlMatch[1]);
+    } else {
+      await initializeGroupEventListView(customUrlMatch[1], initialData ? initialData.group : null, true);
+    }
+    // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
     return;
   }
 
   const groupIdMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)\/?$/);
   if (groupIdMatch) {
-    await initializeGroupEventListView(groupIdMatch[1], initialData ? initialData.group : null, false);
+    // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+    if (state.currentParticipantId) {
+      await initializeParticipantDashboardView(groupIdMatch[1]);
+    } else {
+      await initializeGroupEventListView(groupIdMatch[1], initialData ? initialData.group : null, false);
+    }
+    // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
     return;
   }
 
