@@ -100,6 +100,24 @@ exports.getGroup = async (req, res) => {
   }
 };
 
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+exports.getGroupByCustomUrl = async (req, res) => {
+  try {
+    const {customUrl} = req.params;
+    const snapshot = await firestore.collection('groups').where('customUrl', '==', customUrl).limit(1).get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({error: 'グループが見つかりません。'});
+    }
+    const groupDoc = snapshot.docs[0];
+    res.status(200).json({id: groupDoc.id, ...groupDoc.data()});
+  } catch (error) {
+    console.error('Error fetching group by custom URL:', error);
+    res.status(500).json({error: 'グループの読み込みに失敗しました。'});
+  }
+};
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+
 exports.updateParticipantColor = async (req, res) => {
   try {
     const {groupId, participantId} = req.params;
@@ -132,15 +150,11 @@ exports.updateParticipantColor = async (req, res) => {
 exports.updateParticipants = async (req, res) => {
   try {
     const {groupId} = req.params;
-    // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
-    // クライアントから送られてくるデータの形式が不安定なため、サーバー側で吸収する
     const participants = Array.isArray(req.body) ? req.body : req.body.participants;
 
-    // participants が配列でない場合は、不正なリクエストとしてエラーを返す
     if (!Array.isArray(participants)) {
       return res.status(400).json({error: 'Invalid participants data format. Expected an array.'});
     }
-    // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
     const groupRef = firestore.collection('groups').doc(groupId);
     const groupDoc = await groupRef.get();
@@ -193,7 +207,6 @@ exports.updateGroupSettings = async (req, res) => {
       }
       updateData.customUrl = trimmedUrl;
     }
-    // パスワードが空文字列で送信された場合は何もしない（削除は別APIで行う）
     if (typeof password === 'string' && password) {
       updateData.password = await bcrypt.hash(password, saltRounds);
     }
@@ -206,9 +219,6 @@ exports.updateGroupSettings = async (req, res) => {
   }
 };
 
-/**
- * 【新規】グループの合言葉を削除するAPI
- */
 exports.deleteGroupPassword = async (req, res) => {
   try {
     const {groupId} = req.params;
@@ -230,9 +240,6 @@ exports.deleteGroupPassword = async (req, res) => {
   }
 };
 
-/**
- * 【修正】グループの合言葉を検証し、セッションに認証済みフラグを立てる
- */
 exports.verifyPassword = async (req, res) => {
   try {
     const {groupId} = req.params;
@@ -260,8 +267,6 @@ exports.verifyPassword = async (req, res) => {
         req.session.verifiedGroups.push(groupId);
       }
 
-      // ★★★ 修正箇所 ★★★
-      // セッションの保存が完了してからレスポンスを返すように変更
       req.session.save((err) => {
         if (err) {
           console.error('Session save error:', err);
@@ -269,7 +274,6 @@ exports.verifyPassword = async (req, res) => {
         }
         res.status(200).json({success: true, message: '認証に成功しました。'});
       });
-      // ★★★ 修正箇所ここまで ★★★
     } else {
       res.status(401).json({success: false, error: '合言葉が違います。'});
     }
