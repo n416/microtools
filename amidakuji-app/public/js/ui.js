@@ -183,10 +183,10 @@ export function adjustBodyPadding() {
 }
 
 export function setMainHeaderVisibility(visible) {
-    if (elements.mainHeader) {
-        elements.mainHeader.style.display = visible ? 'flex' : 'none';
-    }
-    adjustBodyPadding();
+  if (elements.mainHeader) {
+    elements.mainHeader.style.display = visible ? 'flex' : 'none';
+  }
+  adjustBodyPadding();
 }
 
 export function showView(viewToShowId) {
@@ -388,7 +388,7 @@ export function renderGroupList(groups) {
   });
 }
 
-export function renderEventList(events, handlers) {
+export function renderEventList(events) {
   if (!elements.eventList) return;
   elements.eventList.innerHTML = '';
   events.forEach((event) => {
@@ -627,18 +627,6 @@ export function showControlPanelView(eventData) {
   hideParticipantSubViews();
   if (elements.participantControlPanel) elements.participantControlPanel.style.display = 'block';
   if (elements.welcomeName) elements.welcomeName.textContent = state.currentParticipantName;
-
-  const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
-
-  if (elements.goToAmidaButton) {
-    if (eventData.status === 'started') {
-      elements.goToAmidaButton.textContent = '結果を見る';
-    } else if (myParticipation && myParticipation.name) {
-      elements.goToAmidaButton.textContent = '参加状況を確認する';
-    } else {
-      elements.goToAmidaButton.textContent = 'あみだくじに参加する';
-    }
-  }
 }
 
 export function showJoinView(eventData) {
@@ -661,36 +649,27 @@ export function showResultsView() {
 export function showUserDashboardView(groupData, events) {
   showView('participantView');
   hideParticipantSubViews();
+  elements.backToGroupEventListLink.style.display = 'none';
 
   if (elements.participantEventName) {
     elements.participantEventName.textContent = `${groupData.name} のダッシュボード`;
   }
 
-  if (elements.backToGroupEventListLink) {
-    const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
-    elements.backToGroupEventListLink.href = backUrl;
-    elements.backToGroupEventListLink.textContent = `← イベント一覧に戻る`;
-    elements.backToGroupEventListLink.style.display = 'inline-block';
-  }
-
   state.loadParticipantState();
   if (state.currentParticipantId && state.currentParticipantToken) {
     showControlPanelView({participants: [], status: 'pending'});
-    if (elements.goToAmidaButton) {
-      elements.goToAmidaButton.textContent = 'イベント一覧から参加する';
-    }
   } else {
     showNameEntryView((name) => {
-      router.handleParticipantLogin(state.currentGroupId, name);
+      handleParticipantLogin(state.currentGroupId, name);
     });
     if (elements.nameInput) elements.nameInput.placeholder = '名前を入力して参加/ログイン';
     if (elements.confirmNameButton) {
-        elements.confirmNameButton.textContent = 'OK';
-        elements.confirmNameButton.style.display = 'block';
+      elements.confirmNameButton.textContent = 'OK';
+      elements.confirmNameButton.style.display = 'block';
     }
   }
 
-  renderOtherEvents(events);
+  renderOtherEvents(events, groupData.customUrl);
 }
 
 export function resetEventCreationForm() {
@@ -716,25 +695,28 @@ export function resetEventCreationForm() {
   if (elements.broadcastControls) elements.broadcastControls.style.display = 'none';
 }
 
-export function renderOtherEvents(events) {
-    if (!elements.otherEventsList || !elements.otherEventsSection) return;
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+export function renderOtherEvents(events, groupCustomUrl) {
+  if (!elements.otherEventsList || !elements.otherEventsSection) return;
 
-    if (!events || events.length === 0) {
-        elements.otherEventsSection.style.display = 'none';
-        return;
-    }
+  if (!events || events.length === 0) {
+    elements.otherEventsSection.style.display = 'none';
+    return;
+  }
 
-    elements.otherEventsList.innerHTML = '';
-    events.forEach(event => {
-        const li = document.createElement('li');
-        li.className = 'item-list-item';
-        const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
-        
-        li.innerHTML = `
+  elements.otherEventsList.innerHTML = '';
+  events.forEach((event) => {
+    const li = document.createElement('li');
+    li.className = 'item-list-item';
+    const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
+    const eventUrl = groupCustomUrl ? `/g/${groupCustomUrl}/${event.id}` : `/events/${event.id}`;
+
+    li.innerHTML = `
             <span><strong>${event.eventName || '無題のイベント'}</strong>（${date.toLocaleDateString()} 作成）</span>
-            <a href="/events/${event.id}" class="button">このイベントへ移動</a>
+            <a href="${eventUrl}" class="button">参加する</a>
         `;
-        elements.otherEventsList.appendChild(li);
-    });
-    elements.otherEventsSection.style.display = 'block';
+    elements.otherEventsList.appendChild(li);
+  });
+  elements.otherEventsSection.style.display = 'block';
 }
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
