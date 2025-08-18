@@ -203,7 +203,6 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
     if (isShare) {
       await showResultsView(eventData, sharedParticipantName, true);
     } else if (state.currentParticipantToken && state.currentParticipantId) {
-      // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
       if (eventData.status === 'started') {
         await showResultsView(eventData, state.currentParticipantName, false);
       } else {
@@ -214,7 +213,6 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
           ui.showJoinView(eventData);
         }
       }
-      // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
     } else {
       ui.showNameEntryView((name) => handleLoginOrRegister(eventId, name));
     }
@@ -229,9 +227,9 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
   }
 }
 
-async function initializeParticipantDashboardView(customUrl) {
+async function initializeParticipantDashboardView(customUrlOrGroupId, isCustomUrl = true) {
   try {
-    const groupData = await api.getGroupByCustomUrl(customUrl);
+    const groupData = isCustomUrl ? await api.getGroupByCustomUrl(customUrlOrGroupId) : await api.getGroup(customUrlOrGroupId);
     const events = await api.getPublicEventsForGroup(groupData.id);
 
     state.setCurrentGroupId(groupData.id);
@@ -241,7 +239,7 @@ async function initializeParticipantDashboardView(customUrl) {
   } catch (error) {
     console.error('Failed to initialize participant dashboard:', error);
     if (error.requiresPassword) {
-      state.setLastFailedAction(() => initializeParticipantDashboardView(customUrl));
+      state.setLastFailedAction(() => initializeParticipantDashboardView(customUrlOrGroupId, isCustomUrl));
       ui.showGroupPasswordModal(error.groupId, error.groupName);
     } else {
       alert(error.error || 'ダッシュボードの表示に失敗しました。');
@@ -298,12 +296,10 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
       li.className = 'item-list-item';
       const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
       const eventUrl = isCustomUrl ? `/g/${customUrlOrGroupId}/${event.id}` : `/events/${event.id}`;
-      // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
       li.innerHTML = `
                 <span><strong>${event.eventName || '無題のイベント'}</strong>（${date.toLocaleDateString()} 作成）</span>
                 <a href="${eventUrl}" class="button">参加する</a>
             `;
-      // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
       groupEventListContainer.appendChild(li);
     });
   } catch (error) {
@@ -357,9 +353,7 @@ export async function handleRouting(initialData) {
     ui.updateAuthUI(user);
   }
 
-  // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
   state.loadParticipantState();
-  // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
   if (user) {
     const adminMatch = path.match(/\/admin/);
@@ -443,7 +437,7 @@ export async function handleRouting(initialData) {
 
   const participantDashboardMatch = path.match(/^\/g\/(.+?)\/dashboard\/?$/);
   if (participantDashboardMatch) {
-    await initializeParticipantDashboardView(participantDashboardMatch[1]);
+    await initializeParticipantDashboardView(participantDashboardMatch[1], true);
     return;
   }
 
@@ -463,13 +457,11 @@ export async function handleRouting(initialData) {
 
   const customUrlMatch = path.match(/^\/g\/(.+?)\/?$/);
   if (customUrlMatch) {
-    // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
     if (state.currentParticipantId) {
-      await initializeParticipantDashboardView(customUrlMatch[1]);
+      await initializeParticipantDashboardView(customUrlMatch[1], true);
     } else {
       await initializeGroupEventListView(customUrlMatch[1], initialData ? initialData.group : null, true);
     }
-    // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
     return;
   }
 
@@ -477,7 +469,7 @@ export async function handleRouting(initialData) {
   if (groupIdMatch) {
     // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
     if (state.currentParticipantId) {
-      await initializeParticipantDashboardView(groupIdMatch[1]);
+      await initializeParticipantDashboardView(groupIdMatch[1], false);
     } else {
       await initializeGroupEventListView(groupIdMatch[1], initialData ? initialData.group : null, false);
     }

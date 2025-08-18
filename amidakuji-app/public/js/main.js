@@ -803,6 +803,18 @@ function setupEventListeners() {
         await startAnimation(ctx, [elements.highlightUserSelect.value]);
       }
     });
+  
+  if (elements.confirmNameButton) {
+    elements.confirmNameButton.addEventListener('click', () => {
+      const name = elements.nameInput.value.trim();
+      if (state.currentEventId) {
+        router.handleLoginOrRegister(state.currentEventId, name);
+      } else if (state.currentGroupId) {
+        router.handleParticipantLogin(state.currentGroupId, name);
+      }
+    });
+  }
+
   if (elements.nameInput)
     elements.nameInput.addEventListener('keyup', () => {
       clearTimeout(state.debounceTimer);
@@ -1050,7 +1062,6 @@ function setupEventListeners() {
     if (elements.groupDropdown && elements.groupDropdown.style.display === 'block' && !elements.groupSwitcher.contains(event.target)) {
       elements.groupDropdown.style.display = 'none';
     }
-    // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
     const link = event.target.closest('a');
     if (link && link.href && link.target !== '_blank') {
       const url = new URL(link.href);
@@ -1059,7 +1070,6 @@ function setupEventListeners() {
         navigateTo(url.pathname);
       }
     }
-    // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
   });
 }
 
