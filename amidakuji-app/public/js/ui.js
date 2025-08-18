@@ -613,14 +613,11 @@ export function hideParticipantSubViews() {
   if (elements.resultSection) elements.resultSection.style.display = 'none';
 }
 
-export function showNameEntryView(onConfirm) {
+export function showNameEntryView() {
   hideParticipantSubViews();
   if (elements.nameEntrySection) elements.nameEntrySection.style.display = 'block';
   if (elements.nameInput) elements.nameInput.value = '';
   if (elements.suggestionList) elements.suggestionList.innerHTML = '';
-  if (elements.confirmNameButton) {
-    elements.confirmNameButton.onclick = () => onConfirm(elements.nameInput.value.trim());
-  }
 }
 
 export function showControlPanelView(eventData) {
@@ -659,9 +656,7 @@ export function showUserDashboardView(groupData, events) {
   if (state.currentParticipantId && state.currentParticipantToken) {
     showControlPanelView({participants: [], status: 'pending'});
   } else {
-    showNameEntryView((name) => {
-      handleParticipantLogin(state.currentGroupId, name);
-    });
+    showNameEntryView();
     if (elements.nameInput) elements.nameInput.placeholder = '名前を入力して参加/ログイン';
     if (elements.confirmNameButton) {
       elements.confirmNameButton.textContent = 'OK';
@@ -695,7 +690,6 @@ export function resetEventCreationForm() {
   if (elements.broadcastControls) elements.broadcastControls.style.display = 'none';
 }
 
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 export function renderOtherEvents(events, groupCustomUrl) {
   if (!elements.otherEventsList || !elements.otherEventsSection) return;
 
@@ -719,4 +713,3 @@ export function renderOtherEvents(events, groupCustomUrl) {
   });
   elements.otherEventsSection.style.display = 'block';
 }
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
