@@ -371,7 +371,7 @@ exports.loginOrRegisterMember = async (req, res) => {
       const memberDoc = memberQuery.docs[0];
       const memberData = memberDoc.data();
       if (memberData.password) {
-        // 【修正点】パスワードが設定されている場合は、必ず401エラーを返して処理を中断する
+        // パスワードが設定されている場合は、必ず401エラーを返して処理を中断する
         return res.status(401).json({
           error: '合言葉が必要です。',
           requiresPassword: true,
@@ -379,7 +379,7 @@ exports.loginOrRegisterMember = async (req, res) => {
           name: memberData.name,
         });
       } else {
-        // 【修正点】パスワードが設定されていない場合は、ここで正常なログイン情報を返して処理を完了する
+        // パスワードが設定されていない場合は、ここで正常なログイン情報を返して処理を完了する
         return res.status(200).json({
           message: 'ログインしました。',
           token: memberData.deleteToken,
@@ -405,7 +405,7 @@ exports.loginOrRegisterMember = async (req, res) => {
       };
       await membersRef.doc(finalMemberId).set(memberData);
 
-      // 【修正点】新規登録後、ここで正常なログイン情報を返して処理を完了する
+      // 新規登録後、ここで正常なログイン情報を返して処理を完了する
       return res.status(200).json({
         message: 'ログインしました。',
         token: token,
@@ -418,6 +418,7 @@ exports.loginOrRegisterMember = async (req, res) => {
     res.status(500).json({error: 'ログイン処理中にエラーが発生しました。'});
   }
 };
+
 exports.getPrizeMasters = async (req, res) => {
   try {
     const {groupId} = req.params;

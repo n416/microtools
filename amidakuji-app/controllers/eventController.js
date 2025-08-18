@@ -380,7 +380,7 @@ exports.joinEvent = async (req, res) => {
     if (memberDoc && memberDoc.exists) {
       memberData = memberDoc.data();
       if (memberData.password) {
-        // 【修正点】パスワードが設定されている場合は、必ず401エラーを返す
+        // パスワードが設定されている場合は、必ず401エラーを返す
         return res.status(401).json({
           error: '合言葉が必要です。',
           requiresPassword: true,
