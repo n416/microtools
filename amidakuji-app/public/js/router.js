@@ -110,7 +110,8 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
   try {
     const result = await api.loginOrRegisterToGroup(groupId, name);
     state.saveParticipantState(result.token, result.memberId, result.name);
-    navigateTo(window.location.pathname, false);
+    ui.showControlPanelView({ participants: [], status: 'pending' });
+    await handleRouting();
   } catch (error) {
     if (error.requiresPassword) {
       const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
@@ -118,7 +119,8 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
         try {
           const result = await api.loginMemberToGroup(groupId, error.memberId, password);
           state.saveParticipantState(result.token, result.memberId, result.name);
-          navigateTo(window.location.pathname, false);
+          ui.showControlPanelView({ participants: [], status: 'pending' });
+          await handleRouting();
         } catch (loginError) {
           alert(loginError.error || '合言葉が違います。');
           await handlePasswordError(error.memberId, groupId);
@@ -183,9 +185,18 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
       try {
         const groupData = await api.getGroup(eventData.groupId);
         if (groupData) {
-          const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
-          ui.elements.backToGroupEventListLink.href = backUrl;
-          ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
+          // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+          if (state.currentParticipantId && groupData.customUrl) {
+            // 参加者としてログインしている場合はダッシュボードへ
+            ui.elements.backToGroupEventListLink.href = `/g/${groupData.customUrl}/dashboard`;
+            ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のダッシュボードに戻る`;
+          } else {
+            // ログインしていない場合は通常のイベント一覧へ
+            const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
+            ui.elements.backToGroupEventListLink.href = backUrl;
+            ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
+          }
+          // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
           ui.elements.backToGroupEventListLink.style.display = 'inline-block';
         } else {
           ui.elements.backToGroupEventListLink.style.display = 'none';
@@ -467,13 +478,11 @@ export async function handleRouting(initialData) {
 
   const groupIdMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)\/?$/);
   if (groupIdMatch) {
-    // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
     if (state.currentParticipantId) {
       await initializeParticipantDashboardView(groupIdMatch[1], false);
     } else {
       await initializeGroupEventListView(groupIdMatch[1], initialData ? initialData.group : null, false);
     }
-    // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
     return;
   }
 

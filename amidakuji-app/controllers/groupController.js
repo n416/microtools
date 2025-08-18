@@ -364,36 +364,37 @@ exports.loginOrRegisterMember = async (req, res) => {
     }
 
     const membersRef = firestore.collection('groups').doc(groupId).collection('members');
-
-    let memberDoc;
     const memberQuery = await membersRef.where('name', '==', name.trim()).limit(1).get();
+
     if (!memberQuery.empty) {
-      memberDoc = memberQuery.docs[0];
-    }
-
-    let memberData;
-    let token;
-    let finalMemberId;
-
-    if (memberDoc && memberDoc.exists) {
-      memberData = memberDoc.data();
+      // --- 既存ユーザーの場合 ---
+      const memberDoc = memberQuery.docs[0];
+      const memberData = memberDoc.data();
       if (memberData.password) {
+        // 【修正点】パスワードが設定されている場合は、必ず401エラーを返して処理を中断する
         return res.status(401).json({
           error: '合言葉が必要です。',
           requiresPassword: true,
           memberId: memberDoc.id,
           name: memberData.name,
         });
+      } else {
+        // 【修正点】パスワードが設定されていない場合は、ここで正常なログイン情報を返して処理を完了する
+        return res.status(200).json({
+          message: 'ログインしました。',
+          token: memberData.deleteToken,
+          memberId: memberDoc.id,
+          name: memberData.name,
+        });
       }
-      token = memberData.deleteToken;
-      finalMemberId = memberDoc.id;
     } else {
-      finalMemberId = crypto.randomBytes(16).toString('hex');
-      token = crypto.randomBytes(16).toString('hex');
+      // --- 新規ユーザーの場合 ---
+      const finalMemberId = crypto.randomBytes(16).toString('hex');
+      const token = crypto.randomBytes(16).toString('hex');
       const allMembersSnapshot = await membersRef.get();
       const existingColors = allMembersSnapshot.docs.map((d) => d.data().color);
       const newColor = getNextAvailableColor(existingColors);
-      memberData = {
+      const memberData = {
         id: finalMemberId,
         name: name.trim(),
         password: null,
@@ -403,20 +404,20 @@ exports.loginOrRegisterMember = async (req, res) => {
         createdAt: new Date(),
       };
       await membersRef.doc(finalMemberId).set(memberData);
-    }
 
-    res.status(200).json({
-      message: 'ログインしました。',
-      token: token,
-      memberId: finalMemberId,
-      name: memberData.name,
-    });
+      // 【修正点】新規登録後、ここで正常なログイン情報を返して処理を完了する
+      return res.status(200).json({
+        message: 'ログインしました。',
+        token: token,
+        memberId: finalMemberId,
+        name: memberData.name,
+      });
+    }
   } catch (error) {
     console.error('Error in loginOrRegisterMember:', error);
     res.status(500).json({error: 'ログイン処理中にエラーが発生しました。'});
   }
 };
-
 exports.getPrizeMasters = async (req, res) => {
   try {
     const {groupId} = req.params;
