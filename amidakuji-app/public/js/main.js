@@ -2,12 +2,8 @@
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
-import * as router from './router.js'; // Import router as a namespace
+import * as router from './router.js';
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, stepAnimation} from './animation.js';
-
-/**
- * Tron風の背景アニメーション (CSSアニメーション制御FIX版)
- */
 
 function initTronAnimation() {
   const gridCanvas = document.getElementById('grid-canvas');
@@ -15,14 +11,13 @@ function initTronAnimation() {
   const animationCanvas = document.getElementById('animation-canvas');
   const animationCtx = animationCanvas.getContext('2d');
 
-  // --- 設定 ---
   const SCROLL_SPEED = 0.25;
   const CYCLE_COUNT = 5;
   const GRID_SIZE = 50;
   const TURN_CHANCE = 0.3;
   const CYCLE_SPEED = 8;
   const LINE_WIDTH = 1;
-  const TAIL_LENGTH = 45; // 軌跡の長さ（フレーム数）
+  const TAIL_LENGTH = 45;
 
   const themes = {
     dark: {background: '#121212', cycleColorRGB: '13, 132, 255', gridColor: '#444'},
@@ -197,22 +192,25 @@ function initTronAnimation() {
   }
   animate();
 }
+
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 async function navigateTo(path, pushState = true) {
-  // asyncを追加
   if (pushState && window.location.pathname !== path) {
     history.pushState({path}, '', path);
   }
-  const action = await router.handleRouting(); // 戻り値を受け取る
+  const action = await router.handleRouting({
+    group: window.history.state?.groupData,
+    event: window.history.state?.eventData,
+  });
   if (action === 'loadAdminDashboard') {
-    await loadAdminDashboard(); // データを読み込む
+    await loadAdminDashboard();
   }
 }
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 const {elements} = ui;
 
-// --- アプリケーションの初期化 ---
 async function initializeApp() {
-  // ui.init(); // この行を削除しました
   setupEventListeners();
   initTronAnimation();
   const initialData = {
@@ -220,18 +218,16 @@ async function initializeApp() {
     event: typeof initialEventData !== 'undefined' ? initialEventData : null,
   };
 
-  const action = await router.handleRouting(initialData); // 戻り値を受け取る
+  const action = await router.handleRouting(initialData);
   if (action === 'loadAdminDashboard') {
-    await loadAdminDashboard(); // データを読み込む
+    await loadAdminDashboard();
   }
 
-  // 初回ロード時のみ、URLが指定されていない場合にリダイレクト処理を行う
   if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
     await loadUserAndRedirect(state.currentUser.lastUsedGroupId);
   }
 }
 
-// --- データ読み込み & 表示 ---
 async function loadUserAndRedirect(lastUsedGroupId) {
   try {
     const groups = await api.getGroups();
@@ -240,7 +236,6 @@ async function loadUserAndRedirect(lastUsedGroupId) {
 
     if (groups.length > 0) {
       let targetGroup = groups.find((g) => g.id === lastUsedGroupId) || groups[0];
-      // URLを変更して、ルーターに画面表示を委ねる
       navigateTo(`/admin/groups/${targetGroup.id}`);
     } else {
       ui.showView('groupDashboard');
@@ -254,17 +249,12 @@ async function loadUserAndRedirect(lastUsedGroupId) {
 async function loadAdminDashboard() {
   try {
     const [requests, groupAdmins, systemAdmins] = await Promise.all([api.getAdminRequests(), api.getGroupAdmins(), api.getSystemAdmins()]);
-    ui.renderAdminLists(requests, groupAdmins, systemAdmins, {
-      onApprove: handleApproveAdmin,
-      onImpersonate: handleImpersonate,
-      onDemote: handleDemoteAdmin,
-    });
+    ui.renderAdminLists(requests, groupAdmins, systemAdmins);
   } catch (error) {
     console.error('管理ダッシュボードの読み込みに失敗:', error);
   }
 }
 
-// --- イベントハンドラ ---
 async function handleSaveSettings() {
   const groupId = elements.settingsGroupId.value;
   const settingsPayload = {
@@ -282,7 +272,6 @@ async function handleSaveSettings() {
     await api.updateParticipants(groupId, state.groupParticipants);
     alert('設定を保存しました。');
     ui.closeSettingsModal();
-    // データを再読み込みして表示を更新
     const groups = await api.getGroups();
     state.setAllUserGroups(groups);
     ui.renderGroupList(groups);
@@ -298,7 +287,7 @@ async function handleCopyEvent(eventId) {
   try {
     await api.copyEvent(eventId);
     alert('イベントをコピーしました。');
-    router.handleRouting(); // 画面を再描画
+    navigateTo(window.location.pathname, false);
   } catch (error) {
     alert(`エラー: ${error.error}`);
   }
@@ -358,14 +347,11 @@ function setupEventListeners() {
   if (elements.logoutButton)
     elements.logoutButton.addEventListener('click', async () => {
       try {
-        // APIを呼び出してサーバー側でログアウト処理を実行
         await api.logout();
-        // 現在のページをリロードして表示を更新
         window.location.reload();
       } catch (error) {
         console.error('Logout failed:', error);
         alert('ログアウトに失敗しました。');
-        // 失敗した場合もリロードを試みる
         window.location.reload();
       }
     });
@@ -404,30 +390,43 @@ function setupEventListeners() {
     });
   if (elements.adminDashboardButton) {
     elements.adminDashboardButton.addEventListener('click', (e) => {
-      e.preventDefault(); // <a>タグのデフォルト動作をキャンセル
+      e.preventDefault();
       navigateTo('/admin/dashboard');
     });
   }
 
+  // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
   if (elements.backToDashboardFromEventListButton) {
     elements.backToDashboardFromEventListButton.addEventListener('click', async (e) => {
       const button = e.currentTarget;
       const role = button.dataset.role;
       const groupId = button.dataset.groupId;
 
+      if (!groupId) {
+        console.error('No groupId found on dashboard button, cannot switch view.');
+        navigateTo('/');
+        return;
+      }
+
       if (role === 'admin') {
-        // A. Admin behavior: Navigate to the main management screen.
-        navigateTo(state.currentUser.lastUsedGroupId ? `/groups/${state.currentUser.lastUsedGroupId}` : '/');
+        navigateTo(`/admin/groups/${groupId}`);
       } else {
-        // B & C. Participant or non-logged-in user behavior: Switch to the User's Dashboard view.
-        if (groupId) {
-          await router.initializeGroupDashboardView(groupId);
-        } else {
-          console.error('No groupId found on dashboard button, cannot switch view.');
+        try {
+          const group = await api.getGroup(groupId);
+          if (group && group.customUrl) {
+            navigateTo(`/g/${group.customUrl}/dashboard`);
+          } else {
+            navigateTo(`/groups/${groupId}`);
+          }
+        } catch (error) {
+          console.error('Failed to get group info for navigation:', error);
+          navigateTo('/');
         }
       }
     });
   }
+  // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+
 
   if (elements.createGroupButton)
     elements.createGroupButton.addEventListener('click', async () => {
@@ -555,9 +554,7 @@ function setupEventListeners() {
           }
         }
       } else {
-        // ▼▼▼ この行のパスを '/admin' 始まりに変更 ▼▼▼
         navigateTo(`/admin/groups/${groupId}`);
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
       }
     });
   }
@@ -579,7 +576,7 @@ function setupEventListeners() {
             .deleteEvent(eventId)
             .then(() => {
               alert('イベントを削除しました。');
-              router.handleRouting();
+              navigateTo(window.location.pathname, false);
             })
             .catch((err) => alert(err.error || 'イベントの削除に失敗しました。'));
         }
@@ -588,7 +585,6 @@ function setupEventListeners() {
       } else if (button?.classList.contains('copy-event-btn')) {
         handleCopyEvent(eventId);
       } else {
-        // ▼▼▼ この行のパスに '/admin' を追加 ▼▼▼
         navigateTo(`/admin/event/${eventId}/edit`);
       }
     });
@@ -641,7 +637,6 @@ function setupEventListeners() {
       if (state.currentGroupId) {
         const currentGroup = state.allUserGroups.find((g) => g.id === state.currentGroupId);
         if (currentGroup) {
-          // 修正箇所：直接設定モーダルを開く処理を呼び出す
           const settingsButtonInList = document.querySelector(`.item-list-item[data-group-id="${state.currentGroupId}"] button`);
           if (settingsButtonInList) settingsButtonInList.click();
         } else {
@@ -687,17 +682,14 @@ function setupEventListeners() {
 
   if (elements.goToCreateEventViewButton)
     elements.goToCreateEventViewButton.addEventListener('click', () => {
-      // ▼▼▼ この行のパスに '/admin' を追加 ▼▼▼
       navigateTo(`/admin/group/${state.currentGroupId}/event/new`);
     });
 
   if (elements.backToGroupsButton) {
     elements.backToGroupsButton.addEventListener('click', () => {
       if (state.currentGroupId) {
-        // FIX: "/admin" プレフィックスを追加して正しいURLへ遷移
         navigateTo(`/admin/groups/${state.currentGroupId}`);
       } else {
-        // グループIDがない場合は、トップページ（マイグループ一覧）へ
         navigateTo('/');
       }
     });
@@ -780,7 +772,6 @@ function setupEventListeners() {
           await api.createEvent(eventData);
           alert(`イベントが作成されました！`);
         }
-        // FIX: "/admin" プレフィックスを追加して正しいURLへ遷移
         navigateTo(`/admin/groups/${state.currentGroupId}`);
       } catch (error) {
         alert(error.error);
@@ -835,7 +826,6 @@ function setupEventListeners() {
               elements.suggestionList.innerHTML = '';
               const contextGroupId = state.currentGroupId;
               if (state.currentEventId) {
-                // Event context
                 if (hasPassword) {
                   const password = prompt(`「${name}」さんの合言葉を入力してください:`);
                   if (password) await router.verifyAndLogin(state.currentEventId, memberId, password);
@@ -843,7 +833,6 @@ function setupEventListeners() {
                   await router.handleLoginOrRegister(state.currentEventId, name, memberId);
                 }
               } else if (contextGroupId) {
-                // Dashboard context
                 await router.handleParticipantLogin(contextGroupId, name, memberId);
               }
             });
@@ -859,7 +848,7 @@ function setupEventListeners() {
       const eventData = await api.getPublicEventData(state.currentEventId);
       state.setCurrentLotteryData(eventData);
       if (eventData.status === 'started') {
-        await router.handleRouting({group: null, event: null});
+        navigateTo(window.location.pathname, false);
       } else {
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
         if (myParticipation && myParticipation.name) {
@@ -869,17 +858,39 @@ function setupEventListeners() {
         }
       }
     });
+
+  // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
   if (elements.backToControlPanelButton)
     elements.backToControlPanelButton.addEventListener('click', async () => {
-      const eventData = await api.getPublicEventData(state.currentEventId);
-      ui.showControlPanelView(eventData);
+      try {
+        const group = await api.getGroup(state.currentGroupId);
+        if (group && group.customUrl) {
+          navigateTo(`/g/${group.customUrl}/dashboard`);
+        } else {
+          navigateTo('/');
+        }
+      } catch (error) {
+        console.error('Failed to get group info for navigation:', error);
+        navigateTo('/');
+      }
     });
+
   if (elements.backToControlPanelFromResultButton)
     elements.backToControlPanelFromResultButton.addEventListener('click', async () => {
-      const eventData = await api.getPublicEventData(state.currentEventId);
-      ui.hideParticipantSubViews();
-      ui.showControlPanelView(eventData);
+      try {
+        const group = await api.getGroup(state.currentGroupId);
+        if (group && group.customUrl) {
+          navigateTo(`/g/${group.customUrl}/dashboard`);
+        } else {
+          navigateTo('/');
+        }
+      } catch (error) {
+        console.error('Failed to get group info for navigation:', error);
+        navigateTo('/');
+      }
     });
+  // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+
   if (elements.setPasswordButton)
     elements.setPasswordButton.addEventListener('click', async () => {
       try {
@@ -927,13 +938,11 @@ function setupEventListeners() {
   if (elements.participantLogoutButton)
     elements.participantLogoutButton.addEventListener('click', async () => {
       try {
-        // サーバー側のグループ合言葉セッションをクリア
         await api.clearGroupVerification();
       } catch (error) {
         console.error('Failed to clear group verification session:', error);
       } finally {
-        // サーバー側の処理成否に関わらず、フロント側の処理は実行
-        state.clearParticipantState(); // ローカルストレージの参加者情報をクリア
+        state.clearParticipantState();
         window.location.reload();
       }
     });
@@ -1038,7 +1047,6 @@ function setupEventListeners() {
     });
 
   window.addEventListener('popstate', (event) => {
-    // URLはブラウザが既に変更済みなので、pushStateせずに画面更新のみ行う
     navigateTo(window.location.pathname, false);
   });
   window.addEventListener('resize', ui.adjustBodyPadding);

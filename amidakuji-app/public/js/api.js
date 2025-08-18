@@ -33,9 +33,12 @@ export const checkGoogleAuthState = () => request('/api/user/me');
 export const updateLastGroup = (groupId) => request('/api/user/me/last-group', 'POST', {groupId});
 export const deleteUserAccount = () => request('/api/user/me', 'DELETE');
 export const getGroups = () => request('/api/groups');
-export const getGroup = (groupId) => request(`/api/groups/${groupId}`); // <<< この行を追加
+export const getGroup = (groupId) => request(`/api/groups/${groupId}`);
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+export const getGroupByCustomUrl = (customUrl) => request(`/api/groups/url/${customUrl}`);
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 export const createGroup = (groupName) => request('/api/groups', 'POST', {groupName, participants: []});
-export const deleteGroup = (groupId) => request(`/api/groups/${groupId}`, 'DELETE'); // <<< この行を追加
+export const deleteGroup = (groupId) => request(`/api/groups/${groupId}`, 'DELETE');
 export const updateGroupSettings = (groupId, settings) => request(`/api/groups/${groupId}/settings`, 'PUT', settings);
 export const updateParticipants = (groupId, participants) => request(`/api/groups/${groupId}/participants`, 'PUT', {participants});
 export const verifyGroupPassword = (groupId, password) => request(`/api/groups/${groupId}/verify-password`, 'POST', {password});
@@ -49,7 +52,7 @@ export const getEvent = (id) => request(`/api/events/${id}`);
 export const createEvent = (eventData) => request('/api/events', 'POST', eventData);
 export const updateEvent = (id, eventData) => request(`/api/events/${id}`, 'PUT', eventData);
 export const copyEvent = (eventId) => request(`/api/events/${eventId}/copy`, 'POST');
-export const deleteEvent = (eventId) => request(`/api/events/${eventId}`, 'DELETE'); // <<< この行を追加
+export const deleteEvent = (eventId) => request(`/api/events/${eventId}`, 'DELETE');
 export const startEvent = (eventId) => request(`/api/events/${eventId}/start`, 'POST');
 export const getPublicEventData = (eventId) => request(`/api/events/${eventId}/public`);
 export const getPublicShareData = (eventId) => request(`/api/share/${eventId}`);
@@ -78,5 +81,5 @@ export const impersonateUser = (targetUserId) => request('/api/admin/impersonate
 export const stopImpersonating = () => request('/api/admin/stop-impersonating', 'POST');
 export const getPasswordRequests = (groupId) => request(`/api/admin/groups/${groupId}/password-requests`);
 export const approvePasswordReset = (memberId, groupId, requestId) => request(`/api/admin/members/${memberId}/delete-password`, 'POST', {groupId, requestId});
-export const logout = () => request('/auth/logout', 'GET'); // サーバーのルートに合わせてGETリクエスト
+export const logout = () => request('/auth/logout', 'GET');
 export const clearGroupVerification = () => request('/auth/clear-group-verification', 'POST');
