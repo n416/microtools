@@ -4,6 +4,32 @@ import * as ui from './ui.js';
 import * as state from './state.js';
 import {startAnimation, stopAnimation, prepareStepAnimation} from './animation.js';
 
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
+
+async function loadAdminDashboard() {
+  try {
+    const [requests, groupAdmins, systemAdmins] = await Promise.all([api.getAdminRequests(), api.getGroupAdmins(), api.getSystemAdmins()]);
+    ui.renderAdminLists(requests, groupAdmins, systemAdmins);
+  } catch (error) {
+    console.error('管理ダッシュボードの読み込みに失敗:', error);
+  }
+}
+
+export async function navigateTo(path, pushState = true) {
+  if (pushState && window.location.pathname !== path) {
+    history.pushState({path}, '', path);
+  }
+  const action = await handleRouting({
+    group: window.history.state?.groupData,
+    event: window.history.state?.eventData,
+  });
+  if (action === 'loadAdminDashboard') {
+    await loadAdminDashboard();
+  }
+}
+
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+
 async function loadAndShowGroupEvents(groupId) {
   const groupData = await api.getGroup(groupId).catch(() => null);
   const groupName = groupData ? groupData.name : '不明なグループ';
@@ -142,7 +168,18 @@ export async function handleLoginOrRegister(eventId, name, memberId = null) {
   try {
     const result = await api.joinEvent(eventId, name, memberId);
     state.saveParticipantState(result.token, result.memberId, result.name);
-    navigateTo(window.location.pathname, false);
+
+    if (result.status === 'event_full') {
+      alert('枠がいっぱいで参加できませんでした。ダッシュボードに遷移します。');
+      const groupData = await api.getGroup(state.currentGroupId);
+      if (groupData && groupData.customUrl) {
+        navigateTo(`/g/${groupData.customUrl}/dashboard`);
+      } else {
+        navigateTo(`/groups/${state.currentGroupId}`);
+      }
+    } else {
+      navigateTo(window.location.pathname, false);
+    }
   } catch (error) {
     if (error.requiresPassword) {
       const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
@@ -152,7 +189,8 @@ export async function handleLoginOrRegister(eventId, name, memberId = null) {
         await handlePasswordError(error.memberId, state.currentGroupId);
       }
     } else {
-      alert(error.error);
+      const errorMessage = error.error || error.message || '処理中に予期せぬエラーが発生しました。';
+      alert(errorMessage);
     }
   }
 }
@@ -164,11 +202,14 @@ export async function verifyAndLogin(eventId, memberId, password, slot = null) {
     if (slot !== null) {
       ui.showWaitingView();
     } else {
-      navigateTo(window.location.pathname, false);
+      await handleRouting();
     }
   } catch (error) {
-    alert(error.error);
-    await handlePasswordError(memberId, state.currentGroupId);
+    const errorMessage = error.error || error.message || 'ログイン処理中に予期せぬエラーが発生しました。';
+    alert(errorMessage);
+    if (error.error) {
+      await handlePasswordError(memberId, state.currentGroupId);
+    }
   }
 }
 
@@ -190,18 +231,14 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
       try {
         const groupData = await api.getGroup(eventData.groupId);
         if (groupData) {
-          // ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
           if (state.currentParticipantId && groupData.customUrl) {
-            // 参加者としてログインしている場合はダッシュボードへ
             ui.elements.backToGroupEventListLink.href = `/g/${groupData.customUrl}/dashboard`;
             ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のダッシュボードに戻る`;
           } else {
-            // ログインしていない場合は通常のイベント一覧へ
             const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
             ui.elements.backToGroupEventListLink.href = backUrl;
             ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
           }
-          // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
           ui.elements.backToGroupEventListLink.style.display = 'inline-block';
         } else {
           ui.elements.backToGroupEventListLink.style.display = 'none';
