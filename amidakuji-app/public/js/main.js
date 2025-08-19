@@ -999,7 +999,13 @@ function setupEventListeners() {
       elements.joinButton.disabled = true;
       try {
         await api.joinSlot(state.currentEventId, state.currentParticipantId, state.currentParticipantToken, state.selectedSlot);
-        await ui.showWaitingView();
+
+        // --- ▼▼▼ 修正箇所 ▼▼▼ ---
+        // 変更前: await ui.showWaitingView();
+        // UIを直接変更するのではなく、ルーターに現在のURLを再評価させることで、
+        // 状態に応じた正しいビュー（待機画面）を表示させる。
+        await router.navigateTo(window.location.pathname, false);
+        // --- ▲▲▲ 修正はここまで ▲▲▲ ---
       } catch (error) {
         alert(error.error);
       } finally {
