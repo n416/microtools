@@ -110,7 +110,7 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
   try {
     const result = await api.loginOrRegisterToGroup(groupId, name);
     state.saveParticipantState(result.token, result.memberId, result.name);
-    ui.showControlPanelView({ participants: [], status: 'pending' });
+    ui.showControlPanelView({participants: [], status: 'pending'});
     await handleRouting();
   } catch (error) {
     if (error.requiresPassword) {
@@ -119,7 +119,7 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
         try {
           const result = await api.loginMemberToGroup(groupId, error.memberId, password);
           state.saveParticipantState(result.token, result.memberId, result.name);
-          ui.showControlPanelView({ participants: [], status: 'pending' });
+          ui.showControlPanelView({participants: [], status: 'pending'});
           await handleRouting();
         } catch (loginError) {
           alert(loginError.error || '合言葉が違います。');
@@ -323,14 +323,21 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
     }
   }
 }
-
 async function showResultsView(eventData, targetName, isShareView) {
   ui.showResultsView();
   const onAnimationComplete = () => {
     const result = eventData.results ? eventData.results[targetName] : null;
     if (result) {
-      const prizeName = typeof result.prize === 'object' ? result.prize.name : result.prize;
-      if (ui.elements.myResult) ui.elements.myResult.innerHTML = `<b>${targetName}さんの結果は…「${prizeName}」でした！</b>`;
+      const prize = result.prize;
+      const prizeName = typeof prize === 'object' ? prize.name : prize;
+      const prizeImageUrl = typeof prize === 'object' ? prize.imageUrl : null;
+
+      let resultHtml = `<b>${targetName}さんの結果は…「${prizeName}」でした！</b>`;
+      if (prizeImageUrl) {
+        resultHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image large"><br>` + resultHtml;
+      }
+
+      if (ui.elements.myResult) ui.elements.myResult.innerHTML = resultHtml;
     } else {
       if (ui.elements.myResult) ui.elements.myResult.textContent = 'まだ結果は発表されていません。';
     }

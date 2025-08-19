@@ -1,4 +1,4 @@
-const {firestore} = require('../utils/firestore');
+const {firestore, bucket} = require('../utils/firestore');
 const {generateLines, calculateResults} = require('../utils/amidakuji');
 const {getNextAvailableColor} = require('../utils/color');
 const crypto = require('crypto');
@@ -646,5 +646,40 @@ exports.getEventsByCustomUrl = async (req, res) => {
   } catch (error) {
     console.error('Error fetching events by custom URL:', error);
     res.status(500).json({error: 'イベントの読み込みに失敗しました。'});
+  }
+};
+exports.generatePrizeUploadUrl = async (req, res) => {
+  try {
+    const {eventId} = req.params;
+    const {fileType} = req.body;
+    const eventRef = firestore.collection('events').doc(eventId);
+    const eventDoc = await eventRef.get();
+
+    if (!eventDoc.exists || eventDoc.data().ownerId !== req.user.id) {
+      return res.status(403).json({error: 'このイベントの画像をアップロードする権限がありません。'});
+    }
+
+    const fileExt = fileType.split('/')[1];
+    if (!['png', 'jpeg', 'jpg', 'gif', 'webp'].includes(fileExt)) {
+      return res.status(400).json({error: '無効なファイルタイプです。'});
+    }
+
+    const fileName = `events/${eventId}/${Date.now()}.${fileExt}`;
+    const file = bucket.file(fileName);
+
+    const [url] = await file.getSignedUrl({
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      contentType: fileType,
+    });
+
+    res.status(200).json({
+      signedUrl: url,
+      imageUrl: `https://storage.googleapis.com/${bucket.name}/${fileName}`,
+    });
+  } catch (error) {
+    console.error('Error generating upload URL for event prize:', error);
+    res.status(500).json({error: 'URLの生成に失敗しました。'});
   }
 };

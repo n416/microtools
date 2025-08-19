@@ -16,6 +16,7 @@ router.get('/share/:eventId', eventController.getPublicShareData);
 // URLの不一致を修正 ('/events' を追加)
 router.get('/events/by-group/:groupId', eventController.getPublicEventsForGroup);
 // ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+router.post('/events/:eventId/generate-upload-url', ensureAuthenticated, eventController.generatePrizeUploadUrl);
 
 // 【新規】シェアページ専用の認証不要APIルートを追加
 router.get('/share/:eventId', eventController.getPublicShareData);
@@ -23,6 +24,7 @@ router.get('/share/:eventId', eventController.getPublicShareData);
 router.get('/events/:id', ensureAuthenticated, eventController.getEvent);
 router.post('/events', ensureAuthenticated, eventController.createEvent);
 router.put('/events/:id', ensureAuthenticated, eventController.updateEvent);
+router.get('/events/:eventId/public', eventController.getPublicEventData);
 router.post('/events/:eventId/copy', ensureAuthenticated, eventController.copyEvent);
 router.post('/events/:eventId/start', ensureAuthenticated, eventController.startEvent);
 router.delete('/events/:eventId', ensureAuthenticated, eventController.deleteEvent); // <<< この行を追加
