@@ -621,10 +621,7 @@ function setupEventListeners() {
   if (elements.switcherCreateGroup) {
     elements.switcherCreateGroup.addEventListener('click', () => {
       elements.groupDropdown.style.display = 'none';
-      ui.showView('groupDashboard');
-      if (elements.groupNameInput) {
-        elements.groupNameInput.focus();
-      }
+      navigateTo('/'); // ブラウザ履歴を管理するnavigateTo関数を使用
     });
   }
 
@@ -977,8 +974,18 @@ function setupEventListeners() {
 
   if (elements.backToDashboardFromWaitingButton) {
     elements.backToDashboardFromWaitingButton.addEventListener('click', async () => {
-      const eventData = await api.getPublicEventData(state.currentEventId);
-      ui.showControlPanelView(eventData);
+      // ダッシュボードのURLへ遷移させる
+      try {
+        const group = await api.getGroup(state.currentGroupId);
+        if (group && group.customUrl) {
+          navigateTo(`/g/${group.customUrl}/dashboard`);
+        } else {
+          navigateTo(`/groups/${state.currentGroupId}`);
+        }
+      } catch (error) {
+        console.error('Failed to get group info for navigation:', error);
+        navigateTo('/');
+      }
     });
   }
   if (elements.participantLogoutButton)
