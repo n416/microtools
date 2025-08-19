@@ -787,7 +787,6 @@ function setupEventListeners() {
     });
   }
 
-  if (elements.loadButton) elements.loadButton.addEventListener('click', () => router.loadEventForEditing(elements.eventIdInput.value.trim()));
   if (elements.backToDashboardButton)
     elements.backToDashboardButton.addEventListener('click', async () => {
       if (state.currentGroupId) {
