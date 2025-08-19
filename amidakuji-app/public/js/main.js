@@ -4,7 +4,9 @@
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 import * as router from './router.js';
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, stepAnimation} from './animation.js';
 
 function initTronAnimation() {
@@ -194,21 +196,10 @@ function initTronAnimation() {
   }
   animate();
 }
-async function navigateTo(path, pushState = true) {
-  if (pushState && window.location.pathname !== path) {
-    history.pushState({path}, '', path);
-  }
-  const action = await router.handleRouting({
-    group: window.history.state?.groupData,
-    event: window.history.state?.eventData,
-  });
-  if (action === 'loadAdminDashboard') {
-    await loadAdminDashboard();
-  }
-}
 
 const {elements} = ui;
 
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 async function initializeApp() {
   setupEventListeners();
   initTronAnimation();
@@ -217,10 +208,7 @@ async function initializeApp() {
     event: typeof initialEventData !== 'undefined' ? initialEventData : null,
   };
 
-  const action = await router.handleRouting(initialData);
-  if (action === 'loadAdminDashboard') {
-    await loadAdminDashboard();
-  }
+  await router.navigateTo(window.location.pathname, false);
 
   if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
     await loadUserAndRedirect(state.currentUser.lastUsedGroupId);
@@ -235,7 +223,7 @@ async function loadUserAndRedirect(lastUsedGroupId) {
 
     if (groups.length > 0) {
       let targetGroup = groups.find((g) => g.id === lastUsedGroupId) || groups[0];
-      navigateTo(`/admin/groups/${targetGroup.id}`);
+      await router.navigateTo(`/admin/groups/${targetGroup.id}`);
     } else {
       ui.showView('groupDashboard');
     }
@@ -244,15 +232,7 @@ async function loadUserAndRedirect(lastUsedGroupId) {
     ui.showView('groupDashboard');
   }
 }
-
-async function loadAdminDashboard() {
-  try {
-    const [requests, groupAdmins, systemAdmins] = await Promise.all([api.getAdminRequests(), api.getGroupAdmins(), api.getSystemAdmins()]);
-    ui.renderAdminLists(requests, groupAdmins, systemAdmins);
-  } catch (error) {
-    console.error('管理ダッシュボードの読み込みに失敗:', error);
-  }
-}
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 async function handleSaveSettings() {
   const groupId = elements.settingsGroupId.value;
@@ -286,7 +266,7 @@ async function handleCopyEvent(eventId) {
   try {
     await api.copyEvent(eventId);
     alert('イベントをコピーしました。');
-    navigateTo(window.location.pathname, false);
+    await router.navigateTo(window.location.pathname, false);
   } catch (error) {
     alert(`エラー: ${error.error}`);
   }
@@ -297,7 +277,7 @@ async function handleApproveAdmin(requestId) {
   try {
     await api.approveAdminRequest(requestId);
     alert('申請を承認しました。');
-    await loadAdminDashboard();
+    await router.navigateTo('/admin/dashboard', false); // Refresh admin dashboard
   } catch (error) {
     alert(error.error);
   }
@@ -319,7 +299,7 @@ async function handleDemoteAdmin(userId) {
   try {
     await api.demoteAdmin(userId);
     alert('ユーザーを降格させました。');
-    await loadAdminDashboard();
+    await router.navigateTo('/admin/dashboard', false); // Refresh admin dashboard
   } catch (error) {
     alert(error.error);
   }
@@ -390,7 +370,7 @@ function setupEventListeners() {
   if (elements.adminDashboardButton) {
     elements.adminDashboardButton.addEventListener('click', (e) => {
       e.preventDefault();
-      navigateTo('/admin/dashboard');
+      router.navigateTo('/admin/dashboard');
     });
   }
 
@@ -402,23 +382,23 @@ function setupEventListeners() {
 
       if (!groupId) {
         console.error('No groupId found on dashboard button, cannot switch view.');
-        navigateTo('/');
+        await router.navigateTo('/');
         return;
       }
 
       if (role === 'admin') {
-        navigateTo(`/admin/groups/${groupId}`);
+        await router.navigateTo(`/admin/groups/${groupId}`);
       } else {
         try {
           const group = await api.getGroup(groupId);
           if (group && group.customUrl) {
-            navigateTo(`/g/${group.customUrl}/dashboard`);
+            await router.navigateTo(`/g/${group.customUrl}/dashboard`);
           } else {
-            navigateTo(`/groups/${groupId}`);
+            await router.navigateTo(`/groups/${groupId}`);
           }
         } catch (error) {
           console.error('Failed to get group info for navigation:', error);
-          navigateTo('/');
+          await router.navigateTo('/');
         }
       }
     });
@@ -550,13 +530,13 @@ function setupEventListeners() {
           }
         }
       } else {
-        navigateTo(`/admin/groups/${groupId}`);
+        await router.navigateTo(`/admin/groups/${groupId}`);
       }
     });
   }
 
   if (elements.eventList) {
-    elements.eventList.addEventListener('click', (e) => {
+    elements.eventList.addEventListener('click', async (e) => {
       const button = e.target.closest('button');
       const item = e.target.closest('.item-list-item');
       if (!item) return;
@@ -570,33 +550,33 @@ function setupEventListeners() {
         if (confirm('このイベントを削除しますか？元に戻せません。')) {
           api
             .deleteEvent(eventId)
-            .then(() => {
+            .then(async () => {
               alert('イベントを削除しました。');
-              navigateTo(window.location.pathname, false);
+              await router.navigateTo(window.location.pathname, false);
             })
             .catch((err) => alert(err.error || 'イベントの削除に失敗しました。'));
         }
       } else if (button?.classList.contains('start-event-btn')) {
-        navigateTo(`/admin/event/${eventId}/broadcast`);
+        await router.navigateTo(`/admin/event/${eventId}/broadcast`);
       } else if (button?.classList.contains('copy-event-btn')) {
-        handleCopyEvent(eventId);
+        await handleCopyEvent(eventId);
       } else {
-        navigateTo(`/admin/event/${eventId}/edit`);
+        await router.navigateTo(`/admin/event/${eventId}/edit`);
       }
     });
   }
 
   if (elements.adminDashboard) {
-    elements.adminDashboard.addEventListener('click', (e) => {
+    elements.adminDashboard.addEventListener('click', async (e) => {
       const button = e.target.closest('button');
       if (!button) return;
 
       if (button.classList.contains('impersonate-btn')) {
-        handleImpersonate(button.dataset.userId);
+        await handleImpersonate(button.dataset.userId);
       } else if (button.classList.contains('approve-btn')) {
-        handleApproveAdmin(button.dataset.requestId);
+        await handleApproveAdmin(button.dataset.requestId);
       } else if (button.classList.contains('demote-btn')) {
-        handleDemoteAdmin(button.dataset.userId);
+        await handleDemoteAdmin(button.dataset.userId);
       }
     });
   }
@@ -609,19 +589,19 @@ function setupEventListeners() {
   }
 
   if (elements.switcherGroupList) {
-    elements.switcherGroupList.addEventListener('click', (e) => {
+    elements.switcherGroupList.addEventListener('click', async (e) => {
       if (e.target.tagName === 'BUTTON') {
         const {groupId} = e.target.dataset;
         elements.groupDropdown.style.display = 'none';
-        navigateTo(`/admin/groups/${groupId}`);
+        await router.navigateTo(`/admin/groups/${groupId}`);
       }
     });
   }
 
   if (elements.switcherCreateGroup) {
-    elements.switcherCreateGroup.addEventListener('click', () => {
+    elements.switcherCreateGroup.addEventListener('click', async () => {
       elements.groupDropdown.style.display = 'none';
-      navigateTo('/'); // ブラウザ履歴を管理するnavigateTo関数を使用
+      await router.navigateTo('/');
     });
   }
 
@@ -674,16 +654,16 @@ function setupEventListeners() {
     });
 
   if (elements.goToCreateEventViewButton)
-    elements.goToCreateEventViewButton.addEventListener('click', () => {
-      navigateTo(`/admin/group/${state.currentGroupId}/event/new`);
+    elements.goToCreateEventViewButton.addEventListener('click', async () => {
+      await router.navigateTo(`/admin/group/${state.currentGroupId}/event/new`);
     });
 
   if (elements.backToGroupsButton) {
-    elements.backToGroupsButton.addEventListener('click', () => {
+    elements.backToGroupsButton.addEventListener('click', async () => {
       if (state.currentGroupId) {
-        navigateTo(`/admin/groups/${state.currentGroupId}`);
+        await router.navigateTo(`/admin/groups/${state.currentGroupId}`);
       } else {
-        navigateTo('/');
+        await router.navigateTo('/');
       }
     });
   }
@@ -740,7 +720,6 @@ function setupEventListeners() {
     });
   }
 
-  // --- ▼▼▼ ここからが修正箇所です ▼▼▼ ---
   if (elements.createEventButton) {
     elements.createEventButton.addEventListener('click', async () => {
       const isUpdate = !!state.currentEventId;
@@ -754,22 +733,20 @@ function setupEventListeners() {
       try {
         let eventId = state.currentEventId;
 
-        // --- ステップ1: 新規イベントの場合、まず画像なしで作成してIDを取得 ---
         if (!isUpdate) {
           elements.createEventButton.textContent = 'イベント作成中...';
           const initialEventData = {
             eventName: elements.eventNameInput.value.trim(),
-            prizes: state.prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})), // ファイル情報を含めずに作成
+            prizes: state.prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
             participantCount,
             displayMode: elements.displayModeSelect.value,
             groupId: state.currentGroupId,
           };
           const newEvent = await api.createEvent(initialEventData);
           eventId = newEvent.id;
-          state.setCurrentEventId(eventId); // 後続の処理のためにIDをstateにセット
+          state.setCurrentEventId(eventId);
         }
 
-        // --- ステップ2: 新しく追加された画像をアップロード ---
         const prizesWithNewImages = state.prizes.filter((p) => p.newImageFile);
         if (prizesWithNewImages.length > 0) {
           elements.createEventButton.textContent = '画像をアップロード中...';
@@ -782,15 +759,14 @@ function setupEventListeners() {
                 headers: {'Content-Type': prize.newImageFile.type},
                 body: prize.newImageFile,
               });
-              prize.imageUrl = imageUrl; // stateのprizeオブジェクトのURLを更新
-              delete prize.newImageFile; // 一時的なファイル情報を削除
+              prize.imageUrl = imageUrl;
+              delete prize.newImageFile;
             }
             return prize;
           });
           await Promise.all(uploadPromises);
         }
 
-        // --- ステップ3: 画像URLを含む最終的なイベントデータで更新 ---
         elements.createEventButton.textContent = '最終保存中...';
         const finalEventData = {
           eventName: elements.eventNameInput.value.trim(),
@@ -802,24 +778,22 @@ function setupEventListeners() {
         await api.updateEvent(eventId, finalEventData);
 
         alert('イベントを保存しました！');
-        navigateTo(`/admin/groups/${state.currentGroupId}`);
+        await router.navigateTo(`/admin/groups/${state.currentGroupId}`);
       } catch (error) {
         alert(error.error || 'イベントの保存に失敗しました。');
         elements.createEventButton.disabled = false;
         elements.createEventButton.textContent = originalButtonText;
       }
-      // finallyブロックは不要。成功時に画面遷移するため。
     });
   }
-  // --- ▲▲▲ 修正はここまで ▲▲▲ ---
 
   if (elements.loadButton) elements.loadButton.addEventListener('click', () => router.loadEventForEditing(elements.eventIdInput.value.trim()));
   if (elements.backToDashboardButton)
-    elements.backToDashboardButton.addEventListener('click', () => {
+    elements.backToDashboardButton.addEventListener('click', async () => {
       if (state.currentGroupId) {
-        navigateTo(`/admin/groups/${state.currentGroupId}`);
+        await router.navigateTo(`/admin/groups/${state.currentGroupId}`);
       } else {
-        navigateTo('/');
+        await router.navigateTo('/');
       }
     });
   if (elements.startEventButton)
@@ -828,7 +802,7 @@ function setupEventListeners() {
       try {
         await api.startEvent(state.currentEventId);
         alert('イベントを開始しました！');
-        navigateTo(`/admin/event/${state.currentEventId}/broadcast`);
+        await router.navigateTo(`/admin/event/${state.currentEventId}/broadcast`);
       } catch (error) {
         alert(`エラー: ${error.error}`);
       }
@@ -844,12 +818,12 @@ function setupEventListeners() {
     });
 
   if (elements.confirmNameButton) {
-    elements.confirmNameButton.addEventListener('click', () => {
+    elements.confirmNameButton.addEventListener('click', async () => {
       const name = elements.nameInput.value.trim();
       if (state.currentEventId) {
-        router.handleLoginOrRegister(state.currentEventId, name);
+        await router.handleLoginOrRegister(state.currentEventId, name);
       } else if (state.currentGroupId) {
-        router.handleParticipantLogin(state.currentGroupId, name);
+        await router.handleParticipantLogin(state.currentGroupId, name);
       }
     });
   }
@@ -893,7 +867,7 @@ function setupEventListeners() {
       const eventData = await api.getPublicEventData(state.currentEventId);
       state.setCurrentLotteryData(eventData);
       if (eventData.status === 'started') {
-        navigateTo(window.location.pathname, false);
+        await router.navigateTo(window.location.pathname, false);
       } else {
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
         if (myParticipation && myParticipation.name) {
@@ -909,13 +883,13 @@ function setupEventListeners() {
       try {
         const group = await api.getGroup(state.currentGroupId);
         if (group && group.customUrl) {
-          navigateTo(`/g/${group.customUrl}/dashboard`);
+          await router.navigateTo(`/g/${group.customUrl}/dashboard`);
         } else {
-          navigateTo('/');
+          await router.navigateTo('/');
         }
       } catch (error) {
         console.error('Failed to get group info for navigation:', error);
-        navigateTo('/');
+        await router.navigateTo('/');
       }
     });
 
@@ -924,13 +898,13 @@ function setupEventListeners() {
       try {
         const group = await api.getGroup(state.currentGroupId);
         if (group && group.customUrl) {
-          navigateTo(`/g/${group.customUrl}/dashboard`);
+          await router.navigateTo(`/g/${group.customUrl}/dashboard`);
         } else {
-          navigateTo('/');
+          await router.navigateTo('/');
         }
       } catch (error) {
         console.error('Failed to get group info for navigation:', error);
-        navigateTo('/');
+        await router.navigateTo('/');
       }
     });
 
@@ -974,17 +948,16 @@ function setupEventListeners() {
 
   if (elements.backToDashboardFromWaitingButton) {
     elements.backToDashboardFromWaitingButton.addEventListener('click', async () => {
-      // ダッシュボードのURLへ遷移させる
       try {
         const group = await api.getGroup(state.currentGroupId);
         if (group && group.customUrl) {
-          navigateTo(`/g/${group.customUrl}/dashboard`);
+          await router.navigateTo(`/g/${group.customUrl}/dashboard`);
         } else {
-          navigateTo(`/groups/${state.currentGroupId}`);
+          await router.navigateTo(`/groups/${state.currentGroupId}`);
         }
       } catch (error) {
         console.error('Failed to get group info for navigation:', error);
-        navigateTo('/');
+        await router.navigateTo('/');
       }
     });
   }
@@ -1100,7 +1073,7 @@ function setupEventListeners() {
     });
 
   window.addEventListener('popstate', (event) => {
-    navigateTo(window.location.pathname, false);
+    router.navigateTo(window.location.pathname, false);
   });
   window.addEventListener('resize', ui.adjustBodyPadding);
   window.addEventListener('click', (event) => {
@@ -1116,7 +1089,7 @@ function setupEventListeners() {
       const url = new URL(link.href);
       if (url.origin === window.location.origin) {
         event.preventDefault();
-        navigateTo(url.pathname);
+        router.navigateTo(url.pathname);
       }
     }
   });

@@ -421,7 +421,14 @@ exports.joinEvent = async (req, res) => {
 
       const availableSlotIndex = eventData.participants.findIndex((p) => p.name === null);
       if (availableSlotIndex === -1) {
-        return res.status(409).json({error: 'このイベントには空きがありません。'});
+        // イベントが満員の場合、エラーではなく成功ステータスで特別なフラグを返す
+        return res.status(200).json({
+          message: 'ログインには成功しましたが、イベントが満員のため参加できませんでした。',
+          token: token,
+          memberId: finalMemberId,
+          name: memberData.name,
+          status: 'event_full', // 満員であることを示すフラグ
+        });
       }
 
       const newParticipants = [...eventData.participants];
@@ -502,6 +509,7 @@ exports.joinSlot = async (req, res) => {
   }
 };
 
+// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 exports.verifyPasswordAndJoin = async (req, res) => {
   try {
     const {eventId} = req.params;
@@ -532,9 +540,6 @@ exports.verifyPasswordAndJoin = async (req, res) => {
       return res.status(401).json({error: '合言葉が違います。'});
     }
 
-    // ▼▼▼ ログイン処理はここまで。ここから下はイベント参加処理 ▼▼▼
-
-    // スロット指定があり、かつイベントが開始されていない場合のみ参加処理
     if (slot !== undefined && slot !== null && eventData.status !== 'started') {
       const newParticipants = [...eventData.participants];
       if (slot < 0 || slot >= newParticipants.length || newParticipants[slot].name !== null) {
@@ -548,6 +553,9 @@ exports.verifyPasswordAndJoin = async (req, res) => {
       await eventRef.update({participants: newParticipants});
     }
 
+    // Content-Typeヘッダーを明示的に設定
+    res.type('application/json');
+
     // ログイン成功レスポンスを返す
     res.status(200).json({
       message: 'ログインしました。',
@@ -560,6 +568,7 @@ exports.verifyPasswordAndJoin = async (req, res) => {
     res.status(500).json({error: '認証中にエラーが発生しました。'});
   }
 };
+// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 exports.deleteParticipant = async (req, res) => {
   try {
