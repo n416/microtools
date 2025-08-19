@@ -199,6 +199,7 @@ button {
   cursor: pointer;
   border: none;
   transition: background-color 0.2s;
+  white-space: nowrap;
 }
 button:hover {
   background-color: var(--primary-hover-color);
@@ -334,12 +335,24 @@ button:disabled {
   min-height: 80px;
   padding: 10px;
 }
+@media (prefers-color-scheme: dark) {
+  #settings ul {
+    background-color: #2a2a2a;
+    color: var(--text-color);
+    border-color: #555;
+  }
+}
 #settings li {
   padding: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #eee;
+}
+@media (prefers-color-scheme: dark) {
+  #settings li {
+    border-color: #555;
+  }
 }
 #settings li:last-child {
   border-bottom: none;
@@ -557,6 +570,7 @@ button:disabled {
   align-items: center;
   gap: 10px;
 }
+
 /* ▼▼▼ 既存の .prize-list-image を .prize-list-image-preview に変更し、スタイルを調整 ▼▼▼ */
 .prize-list-image-preview {
   width: 40px;
