@@ -1,3 +1,5 @@
+// amidakuji-app/public/js/main.js
+
 // js/main.js
 import * as api from './api.js';
 import * as ui from './ui.js';
@@ -741,38 +743,78 @@ function setupEventListeners() {
     });
   }
 
-  if (elements.createEventButton)
+  // --- ▼▼▼ ここからが修正箇所です ▼▼▼ ---
+  if (elements.createEventButton) {
     elements.createEventButton.addEventListener('click', async () => {
       const isUpdate = !!state.currentEventId;
       const participantCount = parseInt(elements.participantCountInput.value, 10);
       if (!participantCount || participantCount < 2) return alert('参加人数は2人以上で設定してください。');
       if (state.prizes.length !== participantCount) return alert('参加人数と景品の数は同じにしてください。');
 
-      const eventData = {
-        eventName: elements.eventNameInput.value.trim(),
-        prizes: state.prizes,
-        participantCount,
-        displayMode: elements.displayModeSelect.value,
-      };
+      elements.createEventButton.disabled = true;
+      let originalButtonText = elements.createEventButton.textContent;
 
       try {
-        elements.createEventButton.disabled = true;
-        elements.createEventButton.textContent = isUpdate ? '保存中...' : '作成中...';
-        if (isUpdate) {
-          await api.updateEvent(state.currentEventId, eventData);
-          alert('イベントを更新しました！');
-        } else {
-          eventData.groupId = state.currentGroupId;
-          await api.createEvent(eventData);
-          alert(`イベントが作成されました！`);
+        let eventId = state.currentEventId;
+
+        // --- ステップ1: 新規イベントの場合、まず画像なしで作成してIDを取得 ---
+        if (!isUpdate) {
+          elements.createEventButton.textContent = 'イベント作成中...';
+          const initialEventData = {
+            eventName: elements.eventNameInput.value.trim(),
+            prizes: state.prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})), // ファイル情報を含めずに作成
+            participantCount,
+            displayMode: elements.displayModeSelect.value,
+            groupId: state.currentGroupId,
+          };
+          const newEvent = await api.createEvent(initialEventData);
+          eventId = newEvent.id;
+          state.setCurrentEventId(eventId); // 後続の処理のためにIDをstateにセット
         }
+
+        // --- ステップ2: 新しく追加された画像をアップロード ---
+        const prizesWithNewImages = state.prizes.filter((p) => p.newImageFile);
+        if (prizesWithNewImages.length > 0) {
+          elements.createEventButton.textContent = '画像をアップロード中...';
+
+          const uploadPromises = state.prizes.map(async (prize) => {
+            if (prize.newImageFile) {
+              const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, prize.newImageFile.type);
+              await fetch(signedUrl, {
+                method: 'PUT',
+                headers: {'Content-Type': prize.newImageFile.type},
+                body: prize.newImageFile,
+              });
+              prize.imageUrl = imageUrl; // stateのprizeオブジェクトのURLを更新
+              delete prize.newImageFile; // 一時的なファイル情報を削除
+            }
+            return prize;
+          });
+          await Promise.all(uploadPromises);
+        }
+
+        // --- ステップ3: 画像URLを含む最終的なイベントデータで更新 ---
+        elements.createEventButton.textContent = '最終保存中...';
+        const finalEventData = {
+          eventName: elements.eventNameInput.value.trim(),
+          prizes: state.prizes,
+          participantCount,
+          displayMode: elements.displayModeSelect.value,
+        };
+
+        await api.updateEvent(eventId, finalEventData);
+
+        alert('イベントを保存しました！');
         navigateTo(`/admin/groups/${state.currentGroupId}`);
       } catch (error) {
-        alert(error.error);
-      } finally {
+        alert(error.error || 'イベントの保存に失敗しました。');
         elements.createEventButton.disabled = false;
+        elements.createEventButton.textContent = originalButtonText;
       }
+      // finallyブロックは不要。成功時に画面遷移するため。
     });
+  }
+  // --- ▲▲▲ 修正はここまで ▲▲▲ ---
 
   if (elements.loadButton) elements.loadButton.addEventListener('click', () => router.loadEventForEditing(elements.eventIdInput.value.trim()));
   if (elements.backToDashboardButton)
@@ -789,7 +831,7 @@ function setupEventListeners() {
       try {
         await api.startEvent(state.currentEventId);
         alert('イベントを開始しました！');
-        navigateTo(`/event/${state.currentEventId}/broadcast`);
+        navigateTo(`/admin/event/${state.currentEventId}/broadcast`);
       } catch (error) {
         alert(`エラー: ${error.error}`);
       }
@@ -803,7 +845,7 @@ function setupEventListeners() {
         await startAnimation(ctx, [elements.highlightUserSelect.value]);
       }
     });
-  
+
   if (elements.confirmNameButton) {
     elements.confirmNameButton.addEventListener('click', () => {
       const name = elements.nameInput.value.trim();

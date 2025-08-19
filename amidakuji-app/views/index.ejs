@@ -19,9 +19,7 @@
 
 <body>
   <div id="canvas-container">
-    <canvas 
-
-id="grid-canvas"></canvas>
+    <canvas id="grid-canvas"></canvas>
     <canvas id="animation-canvas"></canvas>
   </div>
 
@@ -40,9 +38,9 @@ id="grid-canvas"></canvas>
         <ul id="switcherGroupList"></ul>
         <button id="switcherCreateGroup">＋ 新規グループを作成</button>
       </div>
-  
 
-  </div>
+
+    </div>
     <div class="auth-controls">
       <div id="authStatus"></div>
       <button id="loginButton">Googleでログイン</button>
@@ -58,9 +56,9 @@ id="grid-canvas"></canvas>
     <h2>マイグループ一覧</h2>
 
     <div class="controls">
- 
 
-     <div class="input-group">
+
+      <div class="input-group">
         <input type="text" id="groupNameInput" placeholder="新しいグループ名" />
         <button id="createGroupButton">グループ作成</button>
       </div>
@@ -77,9 +75,9 @@ id="grid-canvas"></canvas>
       <h3>管理者申請一覧</h3>
       <ul id="pendingRequestsList" class="item-list"></ul>
     </div>
-  
 
-  <div class="controls">
+
+    <div class="controls">
       <h3>グループ管理者一覧</h3>
       <ul id="adminUserList" class="item-list"></ul>
     </div>
@@ -99,13 +97,13 @@ id="grid-canvas"></canvas>
 
   <div id="groupSettingsModal" class="modal" style="display: none">
     <div class="modal-content">
-      
-<span class="close-button">&times;</span>
+
+      <span class="close-button">&times;</span>
       <h3>グループ設定</h3>
       <input type="hidden" id="settingsGroupId" />
 
-  
-    <div class="input-group">
+
+      <div class="input-group">
         <label for="groupNameEditInput">グループ名:</label>
         <input type="text" id="groupNameEditInput" placeholder="グループ名" />
       </div>
@@ -115,13 +113,13 @@ id="grid-canvas"></canvas>
         <input type="text" id="customUrlInput" placeholder="例: my-event-2025" />
       </div>
       <p class="url-preview">
-        
-<code>/g/<span id="customUrlPreview"></span></code>
+
+        <code>/g/<span id="customUrlPreview"></span></code>
       </p>
 
       <div class="input-group">
-    
-    <label for="groupPasswordInput">合言葉:</label>
+
+        <label for="groupPasswordInput">合言葉:</label>
         <input type="password" id="groupPasswordInput" placeholder="新規設定・変更時のみ入力" />
         <button id="deletePasswordButton" class="delete-btn" style="display: none;">合言葉を削除</button>
       </div>
@@ -132,11 +130,10 @@ id="grid-canvas"></canvas>
       </div>
 
       <hr />
-      
-<h4>参加者リスト</h4>
+
+      <h4>参加者リスト</h4>
       <div class="input-group">
-        <input type="text" id="addParticipantNameInput" 
-placeholder="参加者名を追加" />
+        <input type="text" id="addParticipantNameInput" placeholder="参加者名を追加" />
         <button id="addParticipantButton">追加</button>
       </div>
       <ul id="participantManagementList"></ul>
@@ -147,12 +144,12 @@ placeholder="参加者名を追加" />
         <input type="text" id="addMasterPrizeNameInput" placeholder="新しい賞品名" />
         <input type="file" id="addMasterPrizeImageInput" accept="image/*" />
         <button id="addMasterPrizeButton">マスターに追加</button>
-      
-</div>
+
+      </div>
       <ul id="prizeMasterList" class="item-list prize-master-list"></ul>
       <hr />
-  
-    <h4>合言葉リセット依頼</h4>
+
+      <h4>合言葉リセット依頼</h4>
       <ul id="passwordResetRequestList" class="item-list"></ul>
 
       <button id="saveGroupSettingsButton" class="primary-action">設定を保存</button>
@@ -170,23 +167,23 @@ placeholder="参加者名を追加" />
   </div>
 
   <div id="eventEditView" class="view-container" style="display: none">
-  
-  <div class="event-header">
+
+    <div class="event-header">
       <button id="backToGroupsButton">← グループ一覧に戻る</button>
     </div>
-   
- <h3>イベント新規作成・編集</h3>
+
+    <h3>イベント新規作成・編集</h3>
     <div id="settings" class="controls">
       <div class="settings-column">
         <h4>1.
-イベント名</h4>
+          イベント名</h4>
         <div class="input-group">
           <label for="eventNameInput">イベント名:</label>
           <input type="text" id="eventNameInput" placeholder="（例: 忘年会2025）" />
         </div>
 
         <h4>2.
-参加人数と景品</h4>
+          参加人数と景品</h4>
         <div class="input-group">
           <label for="participantCountInput">参加人数:</label>
           <input type="number" id="participantCountInput" min="2" placeholder="グループの参加者数に応じて自動設定" />
@@ -196,16 +193,16 @@ placeholder="参加者名を追加" />
           <input type="text" id="prizeInput" placeholder="景品名を追加" />
           <button id="addPrizeButton">追加</button>
           <button id="selectFromMasterButton">マスターから選択</button>
- 
 
-       </div>
+
+        </div>
 
         <ul id="prizeList"></ul>
         <p>※参加人数と景品の数を一致させてください。</p>
       </div>
       <div class="settings-column">
         <h4>3.
-公開設定</h4>
+          公開設定</h4>
         <div class="input-group">
           <label for="displayModeSelect">景品表示:</label>
           <select id="displayModeSelect">
@@ -214,7 +211,7 @@ placeholder="参加者名を追加" />
           </select>
         </div>
         <h4>4.
-作成</h4>
+          作成</h4>
         <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
       </div>
     </div>
@@ -233,9 +230,9 @@ placeholder="参加者名を追加" />
   <div id="broadcastView" class="view-container" style="display: none">
     <div class="event-header">
       <button id="backToDashboardButton">← ダッシュボードに戻る</button>
-  
 
-  </div>
+
+    </div>
     <div id="adminControls">
       <button id="startEventButton" class="primary-action">🎉 イベントを開始する</button>
       <button id="startBroadcastButton">🎥 配信モードを開始</button>
@@ -267,17 +264,17 @@ none;">← イベント一覧に戻る</a>
         <div id="suggestionList" class="suggestion-list"></div>
       </div>
       <div id="participantControlPanel" class="controls participant-dashboard" style="display: none">
-   
 
-     <h3>ようこそ、<span id="welcomeName"></span> さん</h3>
+
+        <h3>ようこそ、<span id="welcomeName"></span> さん</h3>
         <div class="setting-group">
           <h4 class="setting-group-title">アカウント設定</h4>
           <div class="setting-group-buttons">
             <button id="editProfileButton" class="secondary-btn">プロフィール編集</button>
             <button id="setPasswordButton" class="secondary-btn">合言葉を設定</button>
-    
 
-      </div>
+
+          </div>
         </div>
         <div class="danger-zone">
           <button id="participantLogoutButton" class="secondary-btn">ログアウト</button>
@@ -290,9 +287,9 @@ none;">← イベント一覧に戻る</a>
         <ul id="otherEventsList" class="item-list"></ul>
       </div>
 
-    
 
-  <div id="joinSection" style="display: none">
+
+      <div id="joinSection" style="display: none">
         <button id="backToControlPanelButton">← メニューに戻る</button>
         <div id="prizeDisplay"></div>
         <div class="slot-selection-container">
@@ -304,9 +301,9 @@ none;">← イベント一覧に戻る</a>
         </div>
       </div>
 
-   
 
-   <div id="waitingMessage" style="display: none">
+
+      <div id="waitingMessage" style="display: none">
         <p>参加登録しました！結果発表をお待ちください...</p>
         <button id="deleteParticipantWaitingButton" class="delete-btn">参加を取り消す</button>
         <button id="backToDashboardFromWaitingButton">ダッシュボードに戻る</button>
@@ -320,9 +317,9 @@ none;">← イベント一覧に戻る</a>
       <div id="allResultsContainer"></div>
       <button id="shareButton" style="display: none">結果をシェアする</button>
       <button id="backToControlPanelFromResultButton" style="display: none">戻る</button>
- 
 
-   </div>
+
+    </div>
   </div>
 
   <div id="passwordSetModal" class="modal" style="display: none">
@@ -341,9 +338,9 @@ none;">← イベント一覧に戻る</a>
   </div>
 
   <div id="profileEditModal" class="modal" style="display: none">
- 
 
-   <div class="modal-content">
+
+    <div class="modal-content">
       <span class="close-button">&times;</span>
       <h3>プロフィール編集</h3>
       <div class="profile-icon-container">
@@ -355,9 +352,9 @@ none;">← イベント一覧に戻る</a>
         <input type="color" id="profileColorInput" />
       </div>
       <button id="saveProfileButton" class="primary-action">保存する</button>
-  
 
-  </div>
+
+    </div>
   </div>
 
   <div id="prizeMasterSelectModal" class="modal" style="display: none">
@@ -376,9 +373,9 @@ none;">← イベント一覧に戻る</a>
       <p>グループ「<strong id="verificationTargetGroupName"></strong>」へのアクセスには合言葉が必要です。</p>
       <input type="hidden" id="verificationTargetGroupId" />
       <div class="input-group">
-  
 
-      <label for="groupPasswordVerifyInput">合言葉:</label>
+
+        <label for="groupPasswordVerifyInput">合言葉:</label>
         <input type="password" id="groupPasswordVerifyInput" />
       </div>
       <button id="verifyPasswordButton" class="primary-action">認証</button>
@@ -387,16 +384,18 @@ none;">← イベント一覧に戻る</a>
 
 
   <script type="module" src="/js/main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
   <script>
     <% if (typeof groupData !== 'undefined' && groupData) { %>
     const initialGroupData = <%- groupData %>;
-<% } else { %>
+    <% } else { %>
     const initialGroupData = null;
-<% } %>
+    <% } %>
 
     <% if (typeof eventData !== 'undefined' && eventData) { %>
     const initialEventData = <%- eventData %>;
-<% } else { %>
+    <% } else { %>
     const initialEventData = null;
     <% } %>
   </script>
