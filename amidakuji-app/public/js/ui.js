@@ -452,15 +452,52 @@ export function renderPrizeList() {
     const li = document.createElement('li');
     li.className = 'prize-list-item';
     const prizeName = typeof p === 'object' ? p.name : p;
-    const prizeImageUrl = typeof p === 'object' ? p.imageUrl : null;
+    let prizeImageUrl = typeof p === 'object' ? p.imageUrl : null;
+
+    // --- ▼▼▼ここから修正▼▼▼ ---
+    const uniqueId = `prize-image-upload-${index}`;
+
+    // プレビュー画像
+    const imgPreview = document.createElement('img');
+    imgPreview.alt = prizeName;
+    imgPreview.className = 'prize-list-image-preview'; 
 
     if (prizeImageUrl) {
-      const img = document.createElement('img');
-      img.src = prizeImageUrl;
-      img.alt = prizeName;
-      img.className = 'prize-list-image';
-      li.appendChild(img);
+      imgPreview.src = prizeImageUrl;
+    } else {
+      imgPreview.classList.add('placeholder');
+      //  broken imageアイコンが表示されるのを防ぐため、透明な1px画像をセット
+      imgPreview.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     }
+
+    imgPreview.onclick = () => document.getElementById(uniqueId).click(); // 画像クリックでファイル選択
+
+    // ファイル選択input
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.id = uniqueId;
+    fileInput.style.display = 'none';
+    fileInput.dataset.index = index;
+
+    // ファイルが選択されたらプレビューを更新し、stateにも保持
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          imgPreview.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+        // stateに新しいファイル情報を一時的に保存
+        state.prizes[index].newImageFile = file;
+      }
+    });
+
+    li.appendChild(imgPreview);
+    li.appendChild(fileInput);
+    // --- ▲▲▲ここまで修正▲▲▲ ---
+
     const nameSpan = document.createElement('span');
     nameSpan.textContent = prizeName;
     li.appendChild(nameSpan);
@@ -598,8 +635,16 @@ export function renderAllResults(results) {
   if (!elements.allResultsContainer || !results) return;
   let html = '<h3>みんなの結果</h3><ul class="item-list">';
   for (const name in results) {
-    const prizeName = typeof results[name].prize === 'object' ? results[name].prize.name : results[name].prize;
-    html += `<li class="item-list-item">${name} → ${prizeName}</li>`;
+    const prize = results[name].prize;
+    const prizeName = typeof prize === 'object' ? prize.name : prize;
+    const prizeImageUrl = typeof prize === 'object' ? prize.imageUrl : null;
+
+    let imageHtml = '';
+    if (prizeImageUrl) {
+      imageHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image">`;
+    }
+
+    html += `<li class="item-list-item">${imageHtml}<span>${name} → ${prizeName}</span></li>`;
   }
   html += '</ul>';
   elements.allResultsContainer.innerHTML = html;
