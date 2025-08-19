@@ -110,8 +110,13 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
   try {
     const result = await api.loginOrRegisterToGroup(groupId, name);
     state.saveParticipantState(result.token, result.memberId, result.name);
-    ui.showControlPanelView({participants: [], status: 'pending'});
-    await handleRouting();
+    // ログイン後にダッシュボードのURLへ遷移させる
+    const groupData = await api.getGroup(groupId);
+    if (groupData && groupData.customUrl) {
+      navigateTo(`/g/${groupData.customUrl}/dashboard`);
+    } else {
+      navigateTo(`/groups/${groupId}`);
+    }
   } catch (error) {
     if (error.requiresPassword) {
       const password = prompt(`「${error.name}」さんの合言葉を入力してください:`);
