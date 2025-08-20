@@ -172,7 +172,8 @@ input[type='text'],
 input[type='number'],
 input[type='password'],
 select,
-button {
+button,
+textarea {
   padding: 10px 15px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -183,8 +184,13 @@ button {
 input[type='text'],
 input[type='number'],
 input[type='password'],
-select {
+select,
+textarea {
   flex-grow: 1;
+}
+textarea {
+    height: auto;
+    resize: vertical;
 }
 input[type='checkbox'] {
   height: auto;
@@ -234,7 +240,8 @@ button:disabled {
   input[type='text'],
   input[type='number'],
   input[type='password'],
-  select {
+  select,
+  textarea {
     background-color: #2a2a2a;
     color: var(--text-color);
     border-color: #555;
@@ -926,4 +933,55 @@ button:disabled {
 
 .member-list-item .label.user {
     background-color: #6c757d;
+}
+
+/* --- Bulk Register Modal Styles --- */
+#bulkNamesTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 15px;
+  font-family: monospace;
+}
+
+#bulk-step2-preview .tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 15px;
+}
+
+#bulk-step2-preview .tab-link {
+  padding: 10px 15px;
+  cursor: pointer;
+  border: none;
+  background-color: transparent;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+}
+
+#bulk-step2-preview .tab-link.active {
+  border-bottom-color: var(--primary-color);
+  font-weight: bold;
+}
+
+#bulk-step2-preview .tab-content {
+  display: none;
+}
+
+#bulk-step2-preview .tab-content.active {
+  display: block;
+}
+
+#potentialMatchTab li {
+  border: 1px solid var(--border-color);
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+#potentialMatchTab label {
+  display: block;
+  margin-top: 5px;
+}
+
+#finalizeBulkButton {
+    margin-top: 20px;
 }

@@ -45,6 +45,7 @@ export const elements = {
   addNewMemberButton: document.getElementById('addNewMemberButton'),
   memberSearchInput: document.getElementById('memberSearchInput'),
   memberList: document.getElementById('memberList'),
+  bulkRegisterButton: document.getElementById('bulkRegisterButton'),
 
   // Group Settings Modal
   groupSettingsModal: document.getElementById('groupSettingsModal'),
@@ -180,6 +181,15 @@ export const elements = {
   memberNameEditInput: document.getElementById('memberNameEditInput'),
   memberColorInput: document.getElementById('memberColorInput'),
   saveMemberButton: document.getElementById('saveMemberButton'),
+
+  // Bulk Register Modal
+  bulkRegisterModal: document.getElementById('bulkRegisterModal'),
+  closeBulkRegisterModalButton: document.querySelector('#bulkRegisterModal .close-button'),
+  bulkNamesTextarea: document.getElementById('bulkNamesTextarea'),
+  analyzeBulkButton: document.getElementById('analyzeBulkButton'),
+  bulkStep1Input: document.getElementById('bulk-step1-input'),
+  bulkStep2Preview: document.getElementById('bulk-step2-preview'),
+  finalizeBulkButton: document.getElementById('finalizeBulkButton'),
 
   // Group Event List View (public)
   groupEventListContainer: document.getElementById('groupEventList'),
@@ -840,4 +850,75 @@ export function renderOtherEvents(events, groupCustomUrl) {
     elements.otherEventsList.appendChild(li);
   });
   elements.otherEventsSection.style.display = 'block';
+}
+
+export function openBulkRegisterModal() {
+  if (!elements.bulkRegisterModal) return;
+  elements.bulkNamesTextarea.value = '';
+  elements.bulkStep1Input.style.display = 'block';
+  elements.bulkStep2Preview.style.display = 'none';
+  elements.analyzeBulkButton.disabled = false;
+  elements.analyzeBulkButton.textContent = '確認する';
+  elements.finalizeBulkButton.disabled = true;
+  elements.bulkRegisterModal.style.display = 'block';
+}
+
+export function closeBulkRegisterModal() {
+  if (elements.bulkRegisterModal) elements.bulkRegisterModal.style.display = 'none';
+}
+
+export function renderBulkAnalysisPreview(analysisResults) {
+  const newRegistrationTab = document.getElementById('newRegistrationTab');
+  const potentialMatchTab = document.getElementById('potentialMatchTab');
+  const exactMatchTab = document.getElementById('exactMatchTab');
+
+  newRegistrationTab.innerHTML =
+    '<ul>' +
+    analysisResults
+      .filter((r) => r.status === 'new_registration')
+      .map((r) => `<li>"${r.inputName}" を新規登録します。</li>`)
+      .join('') +
+    '</ul>';
+  exactMatchTab.innerHTML =
+    '<ul>' +
+    analysisResults
+      .filter((r) => r.status === 'exact_match')
+      .map((r) => `<li>"${r.inputName}" は登録済みのためスキップします。</li>`)
+      .join('') +
+    '</ul>';
+
+  potentialMatchTab.innerHTML =
+    '<ul>' +
+    analysisResults
+      .filter((r) => r.status === 'potential_match')
+      .map(
+        (r, i) => `
+        <li data-input-name="${r.inputName}">
+            <p><strong>"${r.inputName}"</strong> は、既存の <strong>"${r.suggestions[0].name}"</strong> と類似しています。</p>
+            <label><input type="radio" name="resolve_${i}" value="skip" checked> 同一人物として扱う (スキップ)</label>
+            <label><input type="radio" name="resolve_${i}" value="create"> 別人として新規登録する</label>
+        </li>
+    `
+      )
+      .join('') +
+    '</ul>';
+
+  // タブの件数を更新
+  document.querySelector('.tab-link[data-tab="newRegistrationTab"]').textContent = `新規登録 (${analysisResults.filter((r) => r.status === 'new_registration').length})`;
+  document.querySelector('.tab-link[data-tab="potentialMatchTab"]').textContent = `類似候補 (${analysisResults.filter((r) => r.status === 'potential_match').length})`;
+  document.querySelector('.tab-link[data-tab="exactMatchTab"]').textContent = `完全一致 (${analysisResults.filter((r) => r.status === 'exact_match').length})`;
+
+  // タブ切り替えロジック
+  document.querySelectorAll('#bulk-step2-preview .tab-link').forEach((button) => {
+    button.onclick = (e) => {
+      document.querySelectorAll('#bulk-step2-preview .tab-link, #bulk-step2-preview .tab-content').forEach((el) => el.classList.remove('active'));
+      const tabId = e.target.dataset.tab;
+      e.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    };
+  });
+
+  elements.bulkStep1Input.style.display = 'none';
+  elements.bulkStep2Preview.style.display = 'block';
+  elements.finalizeBulkButton.disabled = false;
 }
