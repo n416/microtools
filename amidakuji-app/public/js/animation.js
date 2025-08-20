@@ -1,4 +1,5 @@
-// js/animation.js
+// amidakuji-app/public/js/animation.js
+
 import * as state from './state.js';
 
 let animationFrameId;
@@ -8,7 +9,6 @@ const animator = {
   prizeImages: {}, // 景品画像をキャッシュするオブジェクトを追加
   particles: [],
   running: false,
-  speed: 4,
   onComplete: null,
   context: null,
 };
@@ -94,8 +94,15 @@ export function stopAnimation() {
   }
 }
 
+function getVirtualWidth(numParticipants) {
+  const minWidthPerParticipant = 80;
+  const defaultWidth = 800;
+  const calculatedWidth = numParticipants * minWidthPerParticipant;
+  return Math.max(defaultWidth, calculatedWidth);
+}
+
 function calculatePath(startIdx, lines, numParticipants) {
-  const VIRTUAL_WIDTH = 800;
+  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
   const VIRTUAL_HEIGHT = 400;
   const path = [];
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
@@ -161,13 +168,18 @@ async function preloadPrizeImages(prizes) {
 function drawLotteryBase(targetCtx, data, lineColor = '#ccc') {
   if (!targetCtx || !targetCtx.canvas || !data || !data.participants || data.participants.length === 0) return;
 
-  const rect = targetCtx.canvas.getBoundingClientRect();
-  const scaleX = rect.width / 800;
-  const scaleY = rect.height / 400;
-
   const {participants, prizes, lines} = data;
   const numParticipants = participants.length;
-  const participantSpacing = 800 / (numParticipants + 1);
+
+  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
+  targetCtx.canvas.width = VIRTUAL_WIDTH; // Set canvas drawing size
+  targetCtx.canvas.style.width = `${VIRTUAL_WIDTH}px`; // Set display size
+
+  const rect = targetCtx.canvas.getBoundingClientRect();
+  const scaleX = VIRTUAL_WIDTH / 800; // Recalculate scale based on new width
+  const scaleY = rect.height / 400;
+
+  const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
 
   targetCtx.font = '14px Arial';
   targetCtx.textAlign = 'center';
@@ -178,7 +190,7 @@ function drawLotteryBase(targetCtx, data, lineColor = '#ccc') {
   const prizeTextColor = isDarkMode ? '#dcdcdc' : '#333';
 
   participants.forEach((p, i) => {
-    const x = participantSpacing * (i + 1) * scaleX;
+    const x = participantSpacing * (i + 1); // Remove scaleX here as width is now dynamic
     const displayName = p.name || `（参加枠 ${p.slot + 1}）`;
     targetCtx.fillStyle = p.name ? mainTextColor : subTextColor;
     targetCtx.fillText(displayName, x, 20 * scaleY);
@@ -189,9 +201,9 @@ function drawLotteryBase(targetCtx, data, lineColor = '#ccc') {
       const prizeImage = typeof prize === 'object' && prize.imageUrl ? animator.prizeImages[prize.imageUrl] : null;
 
       if (prizeImage && prizeImage.complete) {
-        const imageSize = 30 * scaleX;
-        const imageY = (400 - 25 - imageSize) * scaleY;
-        targetCtx.drawImage(prizeImage, x - imageSize / 2, imageY, imageSize, imageSize);
+        const imageSize = 30; // Base image size
+        const imageY = 400 - 25 - imageSize;
+        targetCtx.drawImage(prizeImage, x - imageSize / 2, imageY * scaleY, imageSize, imageSize);
         targetCtx.fillStyle = prizeTextColor;
         targetCtx.fillText(prizeName, x, (400 - 10) * scaleY);
       } else {
@@ -205,7 +217,7 @@ function drawLotteryBase(targetCtx, data, lineColor = '#ccc') {
   targetCtx.lineWidth = 1.5;
 
   for (let i = 0; i < numParticipants; i++) {
-    const x = participantSpacing * (i + 1) * scaleX;
+    const x = participantSpacing * (i + 1);
     targetCtx.beginPath();
     targetCtx.moveTo(x, 30 * scaleY);
     targetCtx.lineTo(x, (400 - 30) * scaleY);
@@ -214,8 +226,8 @@ function drawLotteryBase(targetCtx, data, lineColor = '#ccc') {
 
   if (lines) {
     lines.forEach((line) => {
-      const startX = participantSpacing * (line.fromIndex + 1) * scaleX;
-      const endX = participantSpacing * (line.toIndex + 1) * scaleX;
+      const startX = participantSpacing * (line.fromIndex + 1);
+      const endX = participantSpacing * (line.toIndex + 1);
       targetCtx.beginPath();
       targetCtx.moveTo(startX, line.y * scaleY);
       targetCtx.lineTo(endX, line.y * scaleY);
@@ -231,10 +243,14 @@ function animationLoop() {
     stopAnimation();
     return;
   }
+  const numParticipants = state.currentLotteryData.participants.length;
+  const baseSpeed = 4;
+  const reductionFactor = Math.min(0.5, Math.floor(Math.max(0, numParticipants - 10) / 10) * 0.1);
+  const dynamicSpeed = baseSpeed * (1 - reductionFactor);
 
-  const rect = targetCtx.canvas.getBoundingClientRect();
-  const scaleX = rect.width / 800;
-  const scaleY = rect.height / 400;
+  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
+  const scaleX = targetCtx.canvas.width / VIRTUAL_WIDTH;
+  const scaleY = targetCtx.canvas.height / 400;
 
   targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
 
@@ -253,7 +269,7 @@ function animationLoop() {
     drawTracerPath(targetCtx, tracer);
     if (!tracer.isFinished) {
       allFinished = false;
-      updateTracerPosition(tracer);
+      updateTracerPosition(tracer, dynamicSpeed);
       if (Math.random() > 0.5) {
         animator.particles.push(new Particle(tracer.x, tracer.y, tracer.color));
       }
@@ -269,7 +285,7 @@ function animationLoop() {
   }
 }
 
-function updateTracerPosition(tracer) {
+function updateTracerPosition(tracer, speed) {
   if (tracer.stopY && tracer.y >= tracer.stopY) {
     const start = tracer.path[tracer.pathIndex];
     const end = tracer.path[tracer.pathIndex + 1];
@@ -288,8 +304,9 @@ function updateTracerPosition(tracer) {
   if (!start || !end) {
     tracer.isFinished = true;
     if (!tracer.celebrated) {
+      const VIRTUAL_WIDTH = getVirtualWidth(state.currentLotteryData.participants.length);
       const rect = animator.context.canvas.getBoundingClientRect();
-      const scaleX = rect.width / 800;
+      const scaleX = rect.width / VIRTUAL_WIDTH;
       celebrate((tracer.x * scaleX) / rect.width, tracer.color);
       tracer.celebrated = true;
     }
@@ -299,7 +316,7 @@ function updateTracerPosition(tracer) {
   const dx = end.x - start.x,
     dy = end.y - start.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
-  const steps = Math.max(1, distance / animator.speed);
+  const steps = Math.max(1, distance / speed);
 
   if (tracer.progress < steps) {
     tracer.progress++;
@@ -317,8 +334,9 @@ function updateTracerPosition(tracer) {
       tracer.x = finalPoint.x;
       tracer.y = finalPoint.y;
       if (!tracer.celebrated) {
+        const VIRTUAL_WIDTH = getVirtualWidth(state.currentLotteryData.participants.length);
         const rect = animator.context.canvas.getBoundingClientRect();
-        const scaleX = rect.width / 800;
+        const scaleX = rect.width / VIRTUAL_WIDTH;
         celebrate((tracer.x * scaleX) / rect.width, tracer.color);
         tracer.celebrated = true;
       }
@@ -327,9 +345,11 @@ function updateTracerPosition(tracer) {
 }
 
 function drawTracerPath(targetCtx, tracer) {
-  const rect = targetCtx.canvas.getBoundingClientRect();
-  const scaleX = rect.width / 800,
-    scaleY = rect.height / 400;
+  const numParticipants = state.currentLotteryData.participants.length;
+  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
+  const scaleX = targetCtx.canvas.width / VIRTUAL_WIDTH;
+  const scaleY = targetCtx.canvas.height / 400;
+
   targetCtx.strokeStyle = tracer.color;
   targetCtx.lineWidth = 4;
   targetCtx.lineCap = 'round';
@@ -350,13 +370,14 @@ function drawTracerPath(targetCtx, tracer) {
 // --- ▲▲▲ 修正はここまで ▲▲▲ ---
 
 function drawTracerIcon(targetCtx, tracer) {
-  const rect = targetCtx.canvas.getBoundingClientRect();
-  const scaleX = rect.width / 800,
-    scaleY = rect.height / 400;
+  const numParticipants = state.currentLotteryData.participants.length;
+  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
+  const scaleX = targetCtx.canvas.width / VIRTUAL_WIDTH;
+  const scaleY = targetCtx.canvas.height / 400;
   const iconSize = 24;
   const icon = animator.icons[tracer.name];
-  const drawX = tracer.x * scaleX,
-    drawY = tracer.y * scaleY;
+  const drawX = tracer.x * scaleX;
+  const drawY = tracer.y * scaleY;
 
   targetCtx.save();
   targetCtx.beginPath();
@@ -383,7 +404,9 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
   stopAnimation();
   if (!targetCtx || !state.currentLotteryData) return;
 
-  resizeCanvasToDisplaySize(targetCtx.canvas);
+  // The resize logic is now handled inside drawLotteryBase,
+  // so we might not need this specific call here anymore, but keeping it won't harm.
+  // resizeCanvasToDisplaySize(targetCtx.canvas);
 
   const participantsToAnimate = state.currentLotteryData.participants.filter((p) => p && p.name && userNames.includes(p.name));
   await preloadPrizeImages(state.currentLotteryData.prizes); // 景品画像を先に読み込む
@@ -437,7 +460,8 @@ export async function prepareStepAnimation(targetCtx) {
   animator.context = targetCtx;
   targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
 
-  resizeCanvasToDisplaySize(targetCtx.canvas);
+  // The resize logic is now handled inside drawLotteryBase
+  // resizeCanvasToDisplaySize(targetCtx.canvas);
 
   const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';

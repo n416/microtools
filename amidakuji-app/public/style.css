@@ -502,6 +502,7 @@ button:disabled {
   }
   .slot.selected {
     box-shadow: 0 0 8px rgba(13, 132, 255, 0.6); /* 影を光の輪に変更 */
+    color: var(--primary-color);
   }
   #waitingMessage {
     background-color: #1c2e23;
@@ -630,6 +631,7 @@ button:disabled {
   padding: 20px;
   border-radius: 8px;
   margin-top: 20px;
+  overflow-x: auto;
 }
 #broadcastMode h3 {
   color: #fff;
@@ -643,8 +645,11 @@ button:disabled {
   gap: 15px;
   margin-top: 15px;
 }
-#broadcastMode #lotteryCanvas {
+#broadcastMode #adminCanvas {
   background-color: #fff;
+}
+#resultSection {
+  overflow-x: auto;
 }
 /* --- Group Switcher Styles --- */
 #groupSwitcher {

@@ -1,3 +1,5 @@
+// amidakuji-app/controllers/authController.js
+
 exports.googleCallback = (req, res) => {
   res.redirect('/');
 };
@@ -10,7 +12,7 @@ exports.logout = (req, res, next) => {
     if (err) {
       return next(err);
     }
-    
+
     // ★ 核心部分(2): ログアウト後の新しいセッションに、退避させておいた認証情報を書き戻す
     req.session.verifiedGroups = verifiedGroups;
 
@@ -19,7 +21,10 @@ exports.logout = (req, res, next) => {
       if (err) {
         return next(err);
       }
-      res.status(200).json({ message: 'Logged out successfully' });
+      // ▼▼▼ 修正箇所 ▼▼▼
+      // JSONを返す代わりに、トップページへリダイレクトする
+      res.redirect('/');
+      // ▲▲▲ 修正ここまで ▲▲▲
     });
   });
 };
@@ -30,8 +35,8 @@ exports.clearGroupVerification = (req, res) => {
   }
   req.session.save((err) => {
     if (err) {
-      return res.status(500).json({ error: 'Session could not be updated.' });
+      return res.status(500).json({error: 'Session could not be updated.'});
     }
-    res.status(200).json({ message: 'Group verification cleared.' });
+    res.status(200).json({message: 'Group verification cleared.'});
   });
 };
