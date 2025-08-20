@@ -95,76 +95,29 @@
       <p><span id="passwordResetCount"></span>件の合言葉リセット依頼が承認を待っています。</p>
       <button id="showPasswordResetRequestsButton">詳細を表示</button>
     </div>
+
     <div class="controls">
       <button id="goToGroupSettingsButton">⚙️ グループ設定</button>
       <button id="goToPrizeMasterButton">🏆 賞品マスター管理</button>
+      <button id="goToMemberManagementButton">👥 メンバー管理</button>
       <button id="goToCreateEventViewButton" class="primary-action">イベント新規作成</button>
     </div>
     <h3>このグループのイベント一覧</h3>
     <ul id="eventList" class="item-list"></ul>
   </div>
 
-  <div id="groupSettingsModal" class="modal" style="display: none">
-    <div class="modal-content">
-      <span class="close-button">&times;</span>
-      <h3>グループ設定</h3>
-      <input type="hidden" id="settingsGroupId" />
-
-      <div class="input-group">
-        <label for="groupNameEditInput">グループ名:</label>
-        <input type="text" id="groupNameEditInput" placeholder="グループ名" />
-      </div>
-
-      <div class="input-group">
-        <label for="customUrlInput">カスタムURL:</label>
-        <input type="text" id="customUrlInput" placeholder="例: my-event-2025" />
-      </div>
-      <p class="url-preview">
-        <code>/g/<span id="customUrlPreview"></span></code>
-      </p>
-
-      <div class="input-group">
-        <label for="groupPasswordInput">合言葉:</label>
-        <input type="password" id="groupPasswordInput" placeholder="新規設定・変更時のみ入力" />
-        <button id="deletePasswordButton" class="delete-btn" style="display: none;">合言葉を削除</button>
-      </div>
-
-      <div class="input-group checkbox-group">
-        <input type="checkbox" id="noIndexCheckbox" />
-        <label for="noIndexCheckbox">検索エンジンに表示しない</label>
-      </div>
-
-      <hr />
-      <h4>参加者リスト</h4>
-      <div class="input-group">
-        <input type="text" id="addParticipantNameInput" placeholder="参加者名を追加" />
-        <button id="addParticipantButton">追加</button>
-      </div>
-      <ul id="participantManagementList"></ul>
-
-      <button id="saveGroupSettingsButton" class="primary-action">設定を保存</button>
+  <div id="memberManagementView" class="view-container" style="display: none">
+    <div class="event-header">
+      <button id="backToDashboardFromMembersButton">← ダッシュボードに戻る</button>
     </div>
-  </div>
-
-  <div id="prizeMasterModal" class="modal" style="display: none">
-    <div class="modal-content">
-      <span class="close-button">&times;</span>
-      <h3>賞品マスター管理</h3>
+    <h2><span id="memberManagementGroupName"></span> のメンバー管理</h2>
+    <div class="controls">
       <div class="input-group">
-        <input type="text" id="addMasterPrizeNameInput" placeholder="新しい賞品名" />
-        <input type="file" id="addMasterPrizeImageInput" accept="image/*" />
-        <button id="addMasterPrizeButton">マスターに追加</button>
+        <input type="text" id="memberSearchInput" placeholder="メンバー名で検索..." />
+        <button id="addNewMemberButton" class="primary-action">＋ メンバー追加</button>
       </div>
-      <ul id="prizeMasterList" class="item-list prize-master-list"></ul>
     </div>
-  </div>
-
-  <div id="passwordResetRequestModal" class="modal" style="display: none">
-    <div class="modal-content">
-      <span class="close-button">&times;</span>
-      <h3>合言葉リセット依頼</h3>
-      <ul id="passwordResetRequestList" class="item-list"></ul>
-    </div>
+    <ul id="memberList" class="item-list"></ul>
   </div>
 
   <div id="eventEditView" class="view-container" style="display: none">
@@ -284,6 +237,80 @@
       <div id="allResultsContainer"></div>
       <button id="shareButton" style="display: none">結果をシェアする</button>
       <button id="backToControlPanelFromResultButton" style="display: none">戻る</button>
+    </div>
+  </div>
+
+  <div id="groupSettingsModal" class="modal" style="display: none">
+    <div class="modal-content">
+      <span class="close-button">&times;</span>
+      <h3>グループ設定</h3>
+      <input type="hidden" id="settingsGroupId" />
+      <div class="input-group">
+        <label for="groupNameEditInput">グループ名:</label>
+        <input type="text" id="groupNameEditInput" placeholder="グループ名" />
+      </div>
+      <div class="input-group">
+        <label for="customUrlInput">カスタムURL:</label>
+        <input type="text" id="customUrlInput" placeholder="例: my-event-2025" />
+      </div>
+      <p class="url-preview">
+        <code>/g/<span id="customUrlPreview"></span></code>
+      </p>
+      <div class="input-group">
+        <label for="groupPasswordInput">合言葉:</label>
+        <input type="password" id="groupPasswordInput" placeholder="新規設定・変更時のみ入力" />
+        <button id="deletePasswordButton" class="delete-btn" style="display: none;">合言葉を削除</button>
+      </div>
+      <div class="input-group checkbox-group">
+        <input type="checkbox" id="noIndexCheckbox" />
+        <label for="noIndexCheckbox">検索エンジンに表示しない</label>
+      </div>
+      <hr />
+      <h4>参加者リスト</h4>
+      <div class="input-group">
+        <input type="text" id="addParticipantNameInput" placeholder="参加者名を追加" />
+        <button id="addParticipantButton">追加</button>
+      </div>
+      <ul id="participantManagementList"></ul>
+      <button id="saveGroupSettingsButton" class="primary-action">設定を保存</button>
+    </div>
+  </div>
+
+  <div id="prizeMasterModal" class="modal" style="display: none">
+    <div class="modal-content">
+      <span class="close-button">&times;</span>
+      <h3>賞品マスター管理</h3>
+      <div class="input-group">
+        <input type="text" id="addMasterPrizeNameInput" placeholder="新しい賞品名" />
+        <input type="file" id="addMasterPrizeImageInput" accept="image/*" />
+        <button id="addMasterPrizeButton">マスターに追加</button>
+      </div>
+      <ul id="prizeMasterList" class="item-list prize-master-list"></ul>
+    </div>
+  </div>
+
+  <div id="passwordResetRequestModal" class="modal" style="display: none">
+    <div class="modal-content">
+      <span class="close-button">&times;</span>
+      <h3>合言葉リセット依頼</h3>
+      <ul id="passwordResetRequestList" class="item-list"></ul>
+    </div>
+  </div>
+
+  <div id="memberEditModal" class="modal" style="display: none">
+    <div class="modal-content">
+      <span class="close-button">&times;</span>
+      <h3>メンバー編集</h3>
+      <input type="hidden" id="memberIdInput">
+      <div class="input-group">
+        <label for="memberNameEditInput">名前:</label>
+        <input type="text" id="memberNameEditInput">
+      </div>
+      <div class="input-group">
+        <label for="memberColorInput">カラー:</label>
+        <input type="color" id="memberColorInput">
+      </div>
+      <button id="saveMemberButton" class="primary-action">保存</button>
     </div>
   </div>
 

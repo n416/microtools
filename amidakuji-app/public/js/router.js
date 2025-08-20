@@ -4,8 +4,6 @@ import * as ui from './ui.js';
 import * as state from './state.js';
 import {startAnimation, stopAnimation, prepareStepAnimation} from './animation.js';
 
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
-
 async function loadAdminDashboard() {
   try {
     const [requests, groupAdmins, systemAdmins] = await Promise.all([api.getAdminRequests(), api.getGroupAdmins(), api.getSystemAdmins()]);
@@ -27,8 +25,6 @@ export async function navigateTo(path, pushState = true) {
     await loadAdminDashboard();
   }
 }
-
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 async function loadAndShowGroupEvents(groupId) {
   const groupData = await api.getGroup(groupId).catch(() => null);
@@ -56,6 +52,26 @@ async function loadAndShowGroupEvents(groupId) {
     console.error(`イベント一覧の読み込み失敗 (Group ID: ${groupId}):`, error);
     if (ui.elements.eventList) ui.elements.eventList.innerHTML = `<li class="error-message">${error.error || error.message}</li>`;
   }
+}
+
+async function loadAndShowMemberManagement(groupId) {
+    state.setCurrentGroupId(groupId);
+    ui.showView('memberManagementView');
+    try {
+        const [group, members] = await Promise.all([
+            api.getGroup(groupId),
+            api.getMembers(groupId)
+        ]);
+        if (ui.elements.memberManagementGroupName) {
+            ui.elements.memberManagementGroupName.textContent = group.name;
+        }
+        ui.renderMemberList(members);
+    } catch (error) {
+        console.error(`メンバー管理画面の読み込み失敗 (Group ID: ${groupId}):`, error);
+        if (ui.elements.memberList) {
+            ui.elements.memberList.innerHTML = `<li class="error-message">${error.error || error.message}</li>`;
+        }
+    }
 }
 
 export async function loadEventForEditing(eventId, viewToShow = 'eventEditView') {
@@ -142,7 +158,6 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
   try {
     const result = await api.loginOrRegisterToGroup(groupId, name);
     state.saveParticipantState(result.token, result.memberId, result.name);
-    // ログイン後にダッシュボードのURLへ遷移させる
     const groupData = await api.getGroup(groupId);
     if (groupData && groupData.customUrl) {
       navigateTo(`/g/${groupData.customUrl}/dashboard`);
@@ -424,6 +439,7 @@ export async function handleRouting(initialData) {
   if (user) {
     const adminMatch = path.match(/\/admin/);
     const adminGroupDashboardMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)$/);
+    const adminMemberManagementMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)\/members$/);
     const adminEventEditMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/edit$/);
     const adminNewEventMatch = path.match(/^\/admin\/group\/([a-zA-Z0-9]+)\/event\/new$/);
     const adminEventBroadcastMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/broadcast$/);
@@ -447,6 +463,12 @@ export async function handleRouting(initialData) {
       await loadAndShowGroupEvents(groupId);
       await api.updateLastGroup(groupId);
       return;
+    }
+    
+    if (adminMemberManagementMatch) {
+        const groupId = adminMemberManagementMatch[1];
+        await loadAndShowMemberManagement(groupId);
+        return;
     }
 
     if (groupDashboardMatch) {
