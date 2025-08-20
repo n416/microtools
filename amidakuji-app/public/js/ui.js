@@ -4,15 +4,7 @@ import {stopAnimation} from './animation.js';
 
 /* ==========================================================================
    DOM要素の参照
-   --------------------------------------------------------------------------
-   [重要] このプロジェクトでは、SPAのライフサイクルにおけるDOM生成の
-   タイミング問題を回避するため、全ての要素を起動時に一括で取得する
-   `init()` や `elementSelectors` のような方式を**禁止**しています。
-   
-   新しい要素への参照が必要になった場合は、この `elements` オブジェクトに
-   直接 `document.getElementById` や `document.querySelector` を
-   追記する方式で統一してください。
-   ========================================================================== */
+   -------------------------------------------------------------------------- */
 export const elements = {
   // Header & Auth
   mainHeader: document.querySelector('.main-header'),
@@ -27,6 +19,7 @@ export const elements = {
   // Views
   groupDashboard: document.getElementById('groupDashboard'),
   dashboardView: document.getElementById('dashboardView'),
+  memberManagementView: document.getElementById('memberManagementView'), // 新規追加
   eventEditView: document.getElementById('eventEditView'),
   broadcastView: document.getElementById('broadcastView'),
   participantView: document.getElementById('participantView'),
@@ -46,6 +39,13 @@ export const elements = {
   switcherGroupList: document.getElementById('switcherGroupList'),
   switcherCreateGroup: document.getElementById('switcherCreateGroup'),
 
+  // Member Management View (New)
+  memberManagementGroupName: document.getElementById('memberManagementGroupName'),
+  backToDashboardFromMembersButton: document.getElementById('backToDashboardFromMembersButton'),
+  addNewMemberButton: document.getElementById('addNewMemberButton'),
+  memberSearchInput: document.getElementById('memberSearchInput'),
+  memberList: document.getElementById('memberList'),
+
   // Group Settings Modal
   groupSettingsModal: document.getElementById('groupSettingsModal'),
   closeSettingsModalButton: document.querySelector('#groupSettingsModal .close-button'),
@@ -61,7 +61,7 @@ export const elements = {
   addParticipantButton: document.getElementById('addParticipantButton'),
   addParticipantNameInput: document.getElementById('addParticipantNameInput'),
 
-  // Prize Master Modal (New)
+  // Prize Master Modal
   prizeMasterModal: document.getElementById('prizeMasterModal'),
   closePrizeMasterModalButton: document.querySelector('#prizeMasterModal .close-button'),
   prizeMasterList: document.getElementById('prizeMasterList'),
@@ -69,7 +69,7 @@ export const elements = {
   addMasterPrizeImageInput: document.getElementById('addMasterPrizeImageInput'),
   addMasterPrizeButton: document.getElementById('addMasterPrizeButton'),
 
-  // Password Reset Notification & Modal (New)
+  // Password Reset Notification & Modal
   passwordResetNotification: document.getElementById('passwordResetNotification'),
   passwordResetCount: document.getElementById('passwordResetCount'),
   showPasswordResetRequestsButton: document.getElementById('showPasswordResetRequestsButton'),
@@ -81,6 +81,7 @@ export const elements = {
   eventGroupName: document.getElementById('eventGroupName'),
   goToGroupSettingsButton: document.getElementById('goToGroupSettingsButton'),
   goToPrizeMasterButton: document.getElementById('goToPrizeMasterButton'),
+  goToMemberManagementButton: document.getElementById('goToMemberManagementButton'), // 新規追加
   goToCreateEventViewButton: document.getElementById('goToCreateEventViewButton'),
   eventList: document.getElementById('eventList'),
 
@@ -173,13 +174,20 @@ export const elements = {
   prizeMasterSelectList: document.getElementById('prizeMasterSelectList'),
   addSelectedPrizesButton: document.getElementById('addSelectedPrizesButton'),
 
+  memberEditModal: document.getElementById('memberEditModal'),
+  closeMemberEditModalButton: document.querySelector('#memberEditModal .close-button'),
+  memberIdInput: document.getElementById('memberIdInput'),
+  memberNameEditInput: document.getElementById('memberNameEditInput'),
+  memberColorInput: document.getElementById('memberColorInput'),
+  saveMemberButton: document.getElementById('saveMemberButton'),
+
   // Group Event List View (public)
   groupEventListContainer: document.getElementById('groupEventList'),
   groupNameTitle: document.getElementById('groupEventListName'),
   backToDashboardFromEventListButton: document.getElementById('backToDashboardFromEventListButton'),
 };
 
-const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];
+const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];
 
 export function adjustBodyPadding() {
   let totalOffset = 0;
@@ -311,47 +319,60 @@ export function closeSettingsModal() {
 }
 
 export function openPrizeMasterModal(handlers) {
-    if (!elements.prizeMasterModal) return;
-    elements.addMasterPrizeButton.onclick = handlers.onAddMaster;
-    elements.prizeMasterList.onclick = (e) => {
-        const button = e.target.closest('button.delete-btn');
-        if (button) {
-            handlers.onDeleteMaster(button.dataset.masterId);
-        }
-    };
-    elements.prizeMasterModal.style.display = 'block';
+  if (!elements.prizeMasterModal) return;
+  elements.addMasterPrizeButton.onclick = handlers.onAddMaster;
+  elements.prizeMasterList.onclick = (e) => {
+    const button = e.target.closest('button.delete-btn');
+    if (button) {
+      handlers.onDeleteMaster(button.dataset.masterId);
+    }
+  };
+  elements.prizeMasterModal.style.display = 'block';
 }
 
 export function closePrizeMasterModal() {
-    if (elements.prizeMasterModal) elements.prizeMasterModal.style.display = 'none';
+  if (elements.prizeMasterModal) elements.prizeMasterModal.style.display = 'none';
 }
 
 export function openPasswordResetRequestModal(requests, handlers) {
-    if (!elements.passwordResetRequestModal) return;
-    renderPasswordRequests(requests);
-    elements.passwordResetRequestList.onclick = (e) => {
-        const button = e.target.closest('button.approve-btn');
-        if (button) {
-            const { groupId, memberId, requestId } = button.dataset;
-            handlers.onApproveReset(memberId, groupId, requestId);
-        }
-    };
-    elements.passwordResetRequestModal.style.display = 'block';
+  if (!elements.passwordResetRequestModal) return;
+  renderPasswordRequests(requests);
+  elements.passwordResetRequestList.onclick = (e) => {
+    const button = e.target.closest('button.approve-btn');
+    if (button) {
+      const {groupId, memberId, requestId} = button.dataset;
+      handlers.onApproveReset(memberId, groupId, requestId);
+    }
+  };
+  elements.passwordResetRequestModal.style.display = 'block';
 }
 
 export function closePasswordResetRequestModal() {
-    if (elements.passwordResetRequestModal) elements.passwordResetRequestModal.style.display = 'none';
+  if (elements.passwordResetRequestModal) elements.passwordResetRequestModal.style.display = 'none';
 }
 
 export function showPasswordResetNotification(requests) {
-    if (!elements.passwordResetNotification || !elements.passwordResetCount) return;
+  if (!elements.passwordResetNotification || !elements.passwordResetCount) return;
 
-    if (requests && requests.length > 0) {
-        elements.passwordResetCount.textContent = requests.length;
-        elements.passwordResetNotification.style.display = 'flex';
-    } else {
-        elements.passwordResetNotification.style.display = 'none';
-    }
+  if (requests && requests.length > 0) {
+    elements.passwordResetCount.textContent = requests.length;
+    elements.passwordResetNotification.style.display = 'flex';
+  } else {
+    elements.passwordResetNotification.style.display = 'none';
+  }
+}
+
+export function openMemberEditModal(member, handlers) {
+  if (!elements.memberEditModal) return;
+  elements.memberIdInput.value = member.id;
+  elements.memberNameEditInput.value = member.name;
+  elements.memberColorInput.value = member.color || '#cccccc';
+  elements.saveMemberButton.onclick = handlers.onSave;
+  elements.memberEditModal.style.display = 'block';
+}
+
+export function closeMemberEditModal() {
+  if (elements.memberEditModal) elements.memberEditModal.style.display = 'none';
 }
 
 export function openPasswordSetModal(handlers, showDeleteButton) {
@@ -457,6 +478,35 @@ export function renderEventList(events) {
   });
 }
 
+export function renderMemberList(members) {
+  if (!elements.memberList) return;
+  elements.memberList.innerHTML = '';
+  const searchTerm = elements.memberSearchInput.value.toLowerCase();
+
+  members
+    .filter((member) => member.name.toLowerCase().includes(searchTerm))
+    .forEach((member) => {
+      const li = document.createElement('li');
+      li.className = 'item-list-item member-list-item';
+      li.dataset.memberId = member.id;
+
+      const createdByLabel = member.createdBy === 'admin' ? '<span class="label admin">管理者登録</span>' : '<span class="label user">本人登録</span>';
+
+      li.innerHTML = `
+                <div class="member-info">
+                    <input type="color" value="${member.color || '#cccccc'}" disabled>
+                    <span>${member.name}</span>
+                    ${createdByLabel}
+                </div>
+                <div class="item-buttons">
+                    <button class="edit-member-btn">編集</button>
+                    <button class="delete-btn delete-member-btn">削除</button>
+                </div>
+            `;
+      elements.memberList.appendChild(li);
+    });
+}
+
 export function renderParticipantManagementList(handlers) {
   if (!elements.participantManagementList) return;
   elements.participantManagementList.innerHTML = '';
@@ -494,10 +544,8 @@ export function renderPrizeList() {
     const prizeName = typeof p === 'object' ? p.name : p;
     let prizeImageUrl = typeof p === 'object' ? p.imageUrl : null;
 
-    // --- ▼▼▼ここから修正▼▼▼ ---
     const uniqueId = `prize-image-upload-${index}`;
 
-    // プレビュー画像
     const imgPreview = document.createElement('img');
     imgPreview.alt = prizeName;
     imgPreview.className = 'prize-list-image-preview';
@@ -506,13 +554,11 @@ export function renderPrizeList() {
       imgPreview.src = prizeImageUrl;
     } else {
       imgPreview.classList.add('placeholder');
-      //  broken imageアイコンが表示されるのを防ぐため、透明な1px画像をセット
       imgPreview.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     }
 
-    imgPreview.onclick = () => document.getElementById(uniqueId).click(); // 画像クリックでファイル選択
+    imgPreview.onclick = () => document.getElementById(uniqueId).click();
 
-    // ファイル選択input
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/*';
@@ -520,7 +566,6 @@ export function renderPrizeList() {
     fileInput.style.display = 'none';
     fileInput.dataset.index = index;
 
-    // ファイルが選択されたらプレビューを更新し、stateにも保持
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -529,14 +574,12 @@ export function renderPrizeList() {
           imgPreview.src = event.target.result;
         };
         reader.readAsDataURL(file);
-        // stateに新しいファイル情報を一時的に保存
         state.prizes[index].newImageFile = file;
       }
     });
 
     li.appendChild(imgPreview);
     li.appendChild(fileInput);
-    // --- ▲▲▲ここまで修正▲▲▲ ---
 
     const nameSpan = document.createElement('span');
     nameSpan.textContent = prizeName;

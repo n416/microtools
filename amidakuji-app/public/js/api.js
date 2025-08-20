@@ -34,9 +34,7 @@ export const updateLastGroup = (groupId) => request('/api/user/me/last-group', '
 export const deleteUserAccount = () => request('/api/user/me', 'DELETE');
 export const getGroups = () => request('/api/groups');
 export const getGroup = (groupId) => request(`/api/groups/${groupId}`);
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 export const getGroupByCustomUrl = (customUrl) => request(`/api/groups/url/${customUrl}`);
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 export const createGroup = (groupName) => request('/api/groups', 'POST', {groupName, participants: []});
 export const deleteGroup = (groupId) => request(`/api/groups/${groupId}`, 'DELETE');
 export const updateGroupSettings = (groupId, settings) => request(`/api/groups/${groupId}/settings`, 'PUT', settings);
@@ -84,3 +82,11 @@ export const getPasswordRequests = (groupId) => request(`/api/admin/groups/${gro
 export const approvePasswordReset = (memberId, groupId, requestId) => request(`/api/admin/members/${memberId}/delete-password`, 'POST', {groupId, requestId});
 export const logout = () => request('/auth/logout', 'GET');
 export const clearGroupVerification = () => request('/auth/clear-group-verification', 'POST');
+
+// --- ▼▼▼ ここから新規追加 ▼▼▼ ---
+// Member Management
+export const getMembers = (groupId) => request(`/api/groups/${groupId}/members`);
+export const addMember = (groupId, name) => request(`/api/groups/${groupId}/members`, 'POST', {name});
+export const updateMember = (groupId, memberId, data) => request(`/api/groups/${groupId}/members/${memberId}`, 'PUT', data);
+export const deleteMember = (groupId, memberId) => request(`/api/groups/${groupId}/members/${memberId}`, 'DELETE');
+// --- ▲▲▲ ここまで新規追加 ▲▲▲ ---
