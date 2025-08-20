@@ -36,7 +36,6 @@
 
 body {
   font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-  /* ▼▼▼ bodyの背景色は削除 ▼▼▼ */
   color: var(--text-color);
   margin: 0;
   transition: background-color 0.5s ease;
@@ -313,7 +312,7 @@ button:disabled {
   align-items: center;
   margin-bottom: 15px;
 }
-#backToGroupsButton {
+#backToGroupsButton, #backToDashboardFromMembersButton {
   background: none;
   border: none;
   color: var(--primary-color);
@@ -578,14 +577,13 @@ button:disabled {
   gap: 10px;
 }
 
-/* ▼▼▼ 既存の .prize-list-image を .prize-list-image-preview に変更し、スタイルを調整 ▼▼▼ */
 .prize-list-image-preview {
   width: 40px;
   height: 40px;
   object-fit: cover;
   border-radius: 4px;
   border: 1px solid var(--border-color);
-  cursor: pointer; /* クリック可能であることを示す */
+  cursor: pointer;
   transition: opacity 0.2s;
 }
 
@@ -599,7 +597,6 @@ button:disabled {
 .prize-list-image-preview.placeholder {
   background-color: var(--light-bg-color);
   border: 1px dashed var(--border-color);
-  /* SVGアイコンを背景として表示 */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
@@ -631,7 +628,6 @@ button:disabled {
   margin-bottom: 20px;
 }
 
-/* ★★★ 配信モード用スタイル (追加) ★★★ */
 #broadcastMode {
   background-color: #2c2c2c;
   padding: 20px;
@@ -734,7 +730,7 @@ button:disabled {
 .event-header {
   margin-bottom: 20px;
 }
-/* #dashboardView .controls のスタイルを修正 */
+
 #dashboardView .controls {
   display: flex;
   gap: 10px;
@@ -758,10 +754,6 @@ button:disabled {
   }
 }
 
-/* ==========================================================================
-   Participant Dashboard Styles
-   ========================================================================== */
-
 .participant-dashboard {
   text-align: center;
 }
@@ -771,16 +763,16 @@ button:disabled {
 }
 
 .dashboard-main-action .primary-action.large {
-  padding: 15px 20px; /* 横パディングを調整 */
+  padding: 15px 20px;
   font-size: 1.2em;
   font-weight: bold;
   width: 80%;
   max-width: 300px;
-  box-shadow: none; /* 影を削除 */
-  height: auto; /* 高さを自動調整 */
-  line-height: 1.4; /* 行間を調整 */
-  white-space: normal; /* テキストの折り返しを許可 */
-  word-wrap: break-word; /* 単語の途中でも折り返す */
+  box-shadow: none;
+  height: auto;
+  line-height: 1.4;
+  white-space: normal;
+  word-wrap: break-word;
 }
 
 .dashboard-secondary-actions {
@@ -792,7 +784,7 @@ button:disabled {
 .secondary-btn {
   background-color: transparent;
   color: var(--primary-color);
-  border: 1.5px solid var(--primary-color); /* 枠線を少し太く */
+  border: 1.5px solid var(--primary-color);
   padding: 8px 16px;
   font-weight: bold;
 }
@@ -811,7 +803,6 @@ button:disabled {
   color: var(--danger-hover-color);
 }
 
-/* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
   .secondary-btn:hover {
     background-color: rgba(13, 132, 255, 0.1);
@@ -822,37 +813,34 @@ button:disabled {
 }
 
 .setting-group {
-  /* 枠線をなくし、余白でグルーピングを表現 */
   background-color: transparent;
   border: none;
   padding: 0;
-  margin-top: 40px; /* 上の要素との余白を増やす */
-  text-align: center; /* 中央寄せに変更 */
+  margin-top: 40px;
+  text-align: center;
 }
 
 .setting-group-title {
-  /* 見出しを太く、大きくして区切りを明確に */
   margin-top: 0;
   margin-bottom: 20px;
   font-size: 1.1em;
-  font-weight: 600; /* 太字にする */
+  font-weight: 600;
   color: #333;
   padding-bottom: 0;
-  border-bottom: none; /* ボーダーを削除 */
+  border-bottom: none;
   text-align: center;
 }
 
 .setting-group-buttons {
   display: flex;
   flex-direction: column;
-  align-items: center; /* ボタンを中央に配置 */
-  gap: 15px; /* ボタン間の余白 */
+  align-items: center;
+  gap: 15px;
 }
 
 .danger-zone {
-  margin-top: 40px; /* 上のグループとの余白を確保 */
+  margin-top: 40px;
   padding-top: 20px;
-  /* 破線を非常に細い実線に変更 */
   border-top: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
@@ -860,7 +848,6 @@ button:disabled {
   gap: 15px;
 }
 
-/* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
   .setting-group-title {
     color: #ccc;
@@ -868,8 +855,6 @@ button:disabled {
   .danger-zone {
     border-top-color: #444;
   }
-
-  /* ▼▼▼ リンク色のスタイルを修正 ▼▼▼ */
   a,
   a:link,
   #backToGroupEventListLink {
@@ -877,18 +862,14 @@ button:disabled {
   }
   a:visited,
   #backToGroupEventListLink:visited {
-    color: #bb86fc; /* A light, accessible purple for visited links */
+    color: #bb86fc;
   }
 }
 
 .secondary-btn {
   width: 100%;
-  max-width: 300px; /* 幅を他の要素と合わせる */
+  max-width: 300px;
 }
-
-/* ==========================================================================
-   Responsive (Smartphone) Styles
-   ========================================================================== */
 
 @media (max-width: 600px) {
   .dashboard-secondary-actions {
@@ -896,14 +877,12 @@ button:disabled {
     align-items: center;
     gap: 10px;
   }
-
   .secondary-btn {
-    width: 100%; /* スマホでは幅を最大にする */
+    width: 100%;
     max-width: 350px;
   }
 }
 
-/* ダークモードでは光と格子を調整 */
 @media (prefers-color-scheme: dark) {
   .light-path {
     filter: drop-shadow(0 0 6px var(--primary-color));
@@ -924,4 +903,27 @@ button:disabled {
 
 .notification-banner p {
   margin: 0;
+}
+
+.member-list-item .member-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-grow: 1;
+}
+
+.member-list-item .label {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+    color: white;
+}
+
+.member-list-item .label.admin {
+    background-color: var(--primary-color);
+}
+
+.member-list-item .label.user {
+    background-color: #6c757d;
 }

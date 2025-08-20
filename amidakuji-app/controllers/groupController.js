@@ -1,8 +1,9 @@
 const {firestore, bucket} = require('../utils/firestore');
-const {FieldValue} = require('@google-cloud/firestore'); // FieldValueを追加
+const {FieldValue} = require('@google-cloud/firestore');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const {getNextAvailableColor} = require('../utils/color');
+const {normalizeName} = require('../utils/text'); // 新規インポート
 const saltRounds = 10;
 
 exports.createGroup = async (req, res) => {
@@ -13,7 +14,7 @@ exports.createGroup = async (req, res) => {
     }
     const newParticipants = (participants || []).map((p) => ({
       id: p.id || crypto.randomBytes(16).toString('hex'),
-      name: p.name,
+      name: normalizeName(p.name), // 正規化を適用
       color: p.color || `#${Math.floor(Math.random() * 16777215).toString(16)}`,
     }));
 
@@ -41,31 +42,14 @@ exports.deleteGroup = async (req, res) => {
       return res.status(403).json({error: 'このグループを削除する権限がありません。'});
     }
 
-    // Firestoreのバッチ処理を開始
     const batch = firestore.batch();
-
-    // 関連するイベントを削除
     const eventsSnapshot = await firestore.collection('events').where('groupId', '==', groupId).get();
-    eventsSnapshot.docs.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-
-    // 関連するメンバーを削除 (サブコレクション)
+    eventsSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
     const membersSnapshot = await groupRef.collection('members').get();
-    membersSnapshot.docs.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-
-    // 関連する賞品マスターを削除 (サブコレクション)
+    membersSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
     const prizeMastersSnapshot = await groupRef.collection('prizeMasters').get();
-    prizeMastersSnapshot.docs.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-
-    // 最後にグループ自体を削除
+    prizeMastersSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
     batch.delete(groupRef);
-
-    // バッチ処理を実行
     await batch.commit();
 
     res.status(200).json({message: 'グループと関連データが正常に削除されました。'});
@@ -100,7 +84,6 @@ exports.getGroup = async (req, res) => {
   }
 };
 
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 exports.getGroupByCustomUrl = async (req, res) => {
   try {
     const {customUrl} = req.params;
@@ -114,36 +97,6 @@ exports.getGroupByCustomUrl = async (req, res) => {
   } catch (error) {
     console.error('Error fetching group by custom URL:', error);
     res.status(500).json({error: 'グループの読み込みに失敗しました。'});
-  }
-};
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
-
-exports.updateParticipantColor = async (req, res) => {
-  try {
-    const {groupId, participantId} = req.params;
-    const {color} = req.body;
-
-    const groupRef = firestore.collection('groups').doc(groupId);
-    const groupDoc = await groupRef.get();
-
-    if (!groupDoc.exists || groupDoc.data().ownerId !== req.user.id) {
-      return res.status(403).json({error: '権限がありません。'});
-    }
-
-    const participants = groupDoc.data().participants || [];
-    const participantIndex = participants.findIndex((p) => p.id === participantId);
-
-    if (participantIndex === -1) {
-      return res.status(404).json({error: '参加者が見つかりません。'});
-    }
-
-    participants[participantIndex].color = color;
-
-    await groupRef.update({participants: participants});
-    res.status(200).json({message: '色が更新されました。'});
-  } catch (error) {
-    console.error('Error updating participant color:', error);
-    res.status(500).json({error: '色の更新に失敗しました。'});
   }
 };
 
@@ -165,7 +118,7 @@ exports.updateParticipants = async (req, res) => {
 
     const updatedParticipants = participants.map((p) => ({
       id: p.id.startsWith('temp_') ? crypto.randomBytes(16).toString('hex') : p.id,
-      name: p.name,
+      name: normalizeName(p.name),
       color: p.color,
     }));
 
@@ -292,10 +245,11 @@ exports.getMemberSuggestions = async (req, res) => {
       return res.json([]);
     }
 
+    const normalizedQuery = normalizeName(q);
     const membersRef = firestore.collection('groups').doc(groupId).collection('members');
     const snapshot = await membersRef
-      .where('name', '>=', q)
-      .where('name', '<=', q + '\uf8ff')
+      .where('name', '>=', normalizedQuery)
+      .where('name', '<=', normalizedQuery + '\uf8ff')
       .limit(10)
       .get();
 
@@ -307,88 +261,28 @@ exports.getMemberSuggestions = async (req, res) => {
   }
 };
 
-exports.loginMember = async (req, res) => {
-  try {
-    const {groupId} = req.params;
-    const {memberId, password} = req.body;
-
-    if (!memberId || !password) {
-      return res.status(400).json({error: 'IDと合言葉は必須です。'});
-    }
-
-    const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
-    const memberDoc = await memberRef.get();
-
-    if (!memberDoc.exists) {
-      return res.status(404).json({error: 'ユーザーが見つかりません。'});
-    }
-
-    const memberData = memberDoc.data();
-
-    if (!memberData.password) {
-      const tempToken = crypto.randomBytes(16).toString('hex');
-      return res.status(200).json({
-        message: '新しい合言葉を設定してください。',
-        token: tempToken,
-        requiresPasswordReset: true,
-        memberId: memberDoc.id,
-        name: memberData.name,
-      });
-    }
-
-    const match = await bcrypt.compare(password, memberData.password);
-
-    if (match) {
-      res.status(200).json({
-        message: 'ログイン成功',
-        token: memberData.deleteToken,
-        memberId: memberDoc.id,
-        name: memberData.name,
-      });
-    } else {
-      res.status(401).json({error: '合言葉が違います。'});
-    }
-  } catch (error) {
-    console.error('Error logging in:', error);
-    res.status(500).json({error: 'ログイン処理中にエラーが発生しました。'});
-  }
-};
-
 exports.loginOrRegisterMember = async (req, res) => {
   try {
     const {groupId} = req.params;
     const {name} = req.body;
+    const normalized = normalizeName(name);
 
-    if (!name || name.trim() === '') {
+    if (!normalized) {
       return res.status(400).json({error: '名前は必須です。'});
     }
 
     const membersRef = firestore.collection('groups').doc(groupId).collection('members');
-    const memberQuery = await membersRef.where('name', '==', name.trim()).limit(1).get();
+    const memberQuery = await membersRef.where('name', '==', normalized).limit(1).get();
 
     if (!memberQuery.empty) {
-      // --- 既存ユーザーの場合 ---
       const memberDoc = memberQuery.docs[0];
       const memberData = memberDoc.data();
       if (memberData.password) {
-        // パスワードが設定されている場合は、必ず401エラーを返して処理を中断する
-        return res.status(401).json({
-          error: '合言葉が必要です。',
-          requiresPassword: true,
-          memberId: memberDoc.id,
-          name: memberData.name,
-        });
+        return res.status(401).json({error: '合言葉が必要です。', requiresPassword: true, memberId: memberDoc.id, name: memberData.name});
       } else {
-        // パスワードが設定されていない場合は、ここで正常なログイン情報を返して処理を完了する
-        return res.status(200).json({
-          message: 'ログインしました。',
-          token: memberData.deleteToken,
-          memberId: memberDoc.id,
-          name: memberData.name,
-        });
+        return res.status(200).json({message: 'ログインしました。', token: memberData.deleteToken, memberId: memberDoc.id, name: memberData.name});
       }
     } else {
-      // --- 新規ユーザーの場合 ---
       const finalMemberId = crypto.randomBytes(16).toString('hex');
       const token = crypto.randomBytes(16).toString('hex');
       const allMembersSnapshot = await membersRef.get();
@@ -396,27 +290,143 @@ exports.loginOrRegisterMember = async (req, res) => {
       const newColor = getNextAvailableColor(existingColors);
       const memberData = {
         id: finalMemberId,
-        name: name.trim(),
+        name: normalized,
         password: null,
         deleteToken: token,
         color: newColor,
-        iconUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim())}&background=random&color=fff`,
+        iconUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(normalized)}&background=random&color=fff`,
         createdAt: new Date(),
+        createdBy: 'user', // 出自を'user'として記録
       };
       await membersRef.doc(finalMemberId).set(memberData);
 
-      // 新規登録後、ここで正常なログイン情報を返して処理を完了する
-      return res.status(200).json({
-        message: 'ログインしました。',
-        token: token,
-        memberId: finalMemberId,
-        name: memberData.name,
-      });
+      return res.status(200).json({message: 'ログインしました。', token: token, memberId: finalMemberId, name: memberData.name});
     }
   } catch (error) {
     console.error('Error in loginOrRegisterMember:', error);
     res.status(500).json({error: 'ログイン処理中にエラーが発生しました。'});
   }
+};
+
+exports.getMembers = async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const groupRef = firestore.collection('groups').doc(groupId);
+        const groupDoc = await groupRef.get();
+
+        if (!groupDoc.exists || groupDoc.data().ownerId !== req.user.id) {
+            return res.status(403).json({ error: '権限がありません。' });
+        }
+        
+        const membersSnapshot = await groupRef.collection('members').orderBy('createdAt', 'asc').get();
+        const members = membersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.status(200).json(members);
+
+    } catch (error) {
+        console.error('Error getting members:', error);
+        res.status(500).json({ error: 'メンバーの取得に失敗しました。' });
+    }
+};
+
+exports.addMember = async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const { name } = req.body;
+        const normalized = normalizeName(name);
+
+        if (!normalized) {
+            return res.status(400).json({ error: 'メンバー名は必須です。' });
+        }
+
+        const groupRef = firestore.collection('groups').doc(groupId);
+        const groupDoc = await groupRef.get();
+        if (!groupDoc.exists || groupDoc.data().ownerId !== req.user.id) {
+            return res.status(403).json({ error: '権限がありません。' });
+        }
+
+        const membersRef = groupRef.collection('members');
+        const existingMember = await membersRef.where('name', '==', normalized).get();
+        if (!existingMember.empty) {
+            return res.status(409).json({ error: '同じ名前のメンバーが既に存在します。' });
+        }
+
+        const allMembersSnapshot = await membersRef.get();
+        const existingColors = allMembersSnapshot.docs.map((d) => d.data().color);
+        const newColor = getNextAvailableColor(existingColors);
+
+        const newMemberData = {
+            name: normalized,
+            color: newColor,
+            password: null,
+            deleteToken: crypto.randomBytes(16).toString('hex'),
+            iconUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(normalized)}&background=random&color=fff`,
+            createdAt: new Date(),
+            createdBy: 'admin' // 出自を'admin'として記録
+        };
+
+        const newMemberRef = await membersRef.add(newMemberData);
+        res.status(201).json({ id: newMemberRef.id, ...newMemberData });
+
+    } catch (error) {
+        console.error('Error adding member:', error);
+        res.status(500).json({ error: 'メンバーの追加に失敗しました。' });
+    }
+};
+
+exports.updateMember = async (req, res) => {
+    try {
+        const { groupId, memberId } = req.params;
+        const { name, color } = req.body;
+        const normalized = normalizeName(name);
+
+        if (!normalized) {
+            return res.status(400).json({ error: 'メンバー名は必須です。' });
+        }
+
+        const groupRef = firestore.collection('groups').doc(groupId);
+        const groupDoc = await groupRef.get();
+        if (!groupDoc.exists || groupDoc.data().ownerId !== req.user.id) {
+            return res.status(403).json({ error: '権限がありません。' });
+        }
+        
+        const memberRef = groupRef.collection('members').doc(memberId);
+        const memberDoc = await memberRef.get();
+        if (!memberDoc.exists) {
+            return res.status(404).json({ error: 'メンバーが見つかりません。' });
+        }
+        
+        const updateData = {
+            name: normalized,
+            color: color || memberDoc.data().color
+        };
+
+        await memberRef.update(updateData);
+        res.status(200).json({ message: 'メンバー情報を更新しました。' });
+
+    } catch (error) {
+        console.error('Error updating member:', error);
+        res.status(500).json({ error: 'メンバー情報の更新に失敗しました。' });
+    }
+};
+
+exports.deleteMember = async (req, res) => {
+    try {
+        const { groupId, memberId } = req.params;
+        const groupRef = firestore.collection('groups').doc(groupId);
+        const groupDoc = await groupRef.get();
+        if (!groupDoc.exists || groupDoc.data().ownerId !== req.user.id) {
+            return res.status(403).json({ error: '権限がありません。' });
+        }
+        
+        const memberRef = groupRef.collection('members').doc(memberId);
+        await memberRef.delete();
+        
+        res.status(200).json({ message: 'メンバーを削除しました。' });
+
+    } catch (error) {
+        console.error('Error deleting member:', error);
+        res.status(500).json({ error: 'メンバーの削除に失敗しました。' });
+    }
 };
 
 exports.getPrizeMasters = async (req, res) => {

@@ -568,8 +568,6 @@ function setupEventListeners() {
       if (e.target.id === 'goToGroupSettingsButton') {
         if (state.currentGroupId) {
           await openGroupSettingsFor(state.currentGroupId);
-        } else {
-          alert('現在のグループIDが見つかりません。');
         }
       }
       if (e.target.id === 'goToPrizeMasterButton') {
@@ -612,6 +610,11 @@ function setupEventListeners() {
           ui.renderPrizeMasterList(masters, false);
         }
       }
+      if (e.target.id === 'goToMemberManagementButton') {
+        if (state.currentGroupId) {
+          router.navigateTo(`/admin/groups/${state.currentGroupId}/members`);
+        }
+      }
       if (e.target.id === 'showPasswordResetRequestsButton') {
         if (state.currentGroupId) {
           const requests = await api.getPasswordRequests(state.currentGroupId);
@@ -638,9 +641,74 @@ function setupEventListeners() {
     });
   }
 
+  if (elements.memberManagementView) {
+    elements.backToDashboardFromMembersButton.addEventListener('click', () => {
+      if (state.currentGroupId) {
+        router.navigateTo(`/admin/groups/${state.currentGroupId}`);
+      }
+    });
+
+    elements.addNewMemberButton.addEventListener('click', async () => {
+      const name = prompt('追加するメンバーの名前を入力してください:');
+      if (name && name.trim()) {
+        try {
+          await api.addMember(state.currentGroupId, name.trim());
+          const members = await api.getMembers(state.currentGroupId);
+          ui.renderMemberList(members);
+        } catch (error) {
+          alert(error.error || 'メンバーの追加に失敗しました。');
+        }
+      }
+    });
+
+    elements.memberSearchInput.addEventListener('input', async () => {
+      const members = await api.getMembers(state.currentGroupId);
+      ui.renderMemberList(members);
+    });
+
+    elements.memberList.addEventListener('click', async (e) => {
+      const memberItem = e.target.closest('.member-list-item');
+      if (!memberItem) return;
+
+      const memberId = memberItem.dataset.memberId;
+      const members = await api.getMembers(state.currentGroupId);
+      const member = members.find((m) => m.id === memberId);
+
+      if (e.target.classList.contains('delete-member-btn')) {
+        if (confirm(`メンバー「${member.name}」を削除しますか？`)) {
+          try {
+            await api.deleteMember(state.currentGroupId, memberId);
+            const updatedMembers = await api.getMembers(state.currentGroupId);
+            ui.renderMemberList(updatedMembers);
+          } catch (error) {
+            alert(error.error || 'メンバーの削除に失敗しました。');
+          }
+        }
+      } else if (e.target.classList.contains('edit-member-btn')) {
+        ui.openMemberEditModal(member, {
+          onSave: async () => {
+            const newName = elements.memberNameEditInput.value.trim();
+            const newColor = elements.memberColorInput.value;
+            if (!newName) return alert('名前は必須です。');
+
+            try {
+              await api.updateMember(state.currentGroupId, memberId, {name: newName, color: newColor});
+              ui.closeMemberEditModal();
+              const updatedMembers = await api.getMembers(state.currentGroupId);
+              ui.renderMemberList(updatedMembers);
+            } catch (error) {
+              alert(error.error || '更新に失敗しました。');
+            }
+          },
+        });
+      }
+    });
+  }
+
   if (elements.closeSettingsModalButton) elements.closeSettingsModalButton.addEventListener('click', ui.closeSettingsModal);
   if (elements.closePrizeMasterModalButton) elements.closePrizeMasterModalButton.addEventListener('click', ui.closePrizeMasterModal);
   if (elements.closePasswordResetRequestModalButton) elements.closePasswordResetRequestModalButton.addEventListener('click', ui.closePasswordResetRequestModal);
+  if (elements.closeMemberEditModalButton) elements.closeMemberEditModalButton.addEventListener('click', ui.closeMemberEditModal);
 
   if (elements.closePasswordSetModal)
     elements.closePasswordSetModal.addEventListener('click', () => {
@@ -1107,6 +1175,7 @@ function setupEventListeners() {
     }
     if (elements.prizeMasterModal && event.target == elements.prizeMasterModal) ui.closePrizeMasterModal();
     if (elements.passwordResetRequestModal && event.target == elements.passwordResetRequestModal) ui.closePasswordResetRequestModal();
+    if (elements.memberEditModal && event.target == elements.memberEditModal) ui.closeMemberEditModal();
     const link = event.target.closest('a');
     if (link && link.href && link.target !== '_blank') {
       const url = new URL(link.href);
