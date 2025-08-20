@@ -276,53 +276,9 @@ async function openGroupSettingsFor(groupId) {
       const participant = state.groupParticipants.find((p) => p.id === participantId);
       if (participant) participant.color = newColor;
     },
-    onAddMaster: async () => {
-      const name = elements.addMasterPrizeNameInput.value.trim();
-      const file = elements.addMasterPrizeImageInput.files[0];
-      if (!name || !file) return alert('賞品名と画像を選択してください');
-      try {
-        elements.addMasterPrizeButton.disabled = true;
-        const {signedUrl, imageUrl} = await api.generatePrizeMasterUploadUrl(groupId, file.type);
-        await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
-        await api.addPrizeMaster(groupId, name, imageUrl);
-        alert('賞品マスターを追加しました。');
-        const masters = await api.getPrizeMasters(groupId);
-        ui.renderPrizeMasterList(masters, false);
-        elements.addMasterPrizeNameInput.value = '';
-        elements.addMasterPrizeImageInput.value = '';
-      } catch (error) {
-        alert(error.error);
-      } finally {
-        elements.addMasterPrizeButton.disabled = false;
-      }
-    },
-    onDeleteMaster: async (masterId) => {
-      if (!confirm('この賞品マスターを削除しますか？')) return;
-      try {
-        await api.deletePrizeMaster(masterId, groupId);
-        alert('削除しました');
-        const masters = await api.getPrizeMasters(groupId);
-        ui.renderPrizeMasterList(masters, false);
-      } catch (error) {
-        alert(error.error);
-      }
-    },
-    onApproveReset: async (memberId, groupId, requestId) => {
-      if (!confirm('このユーザーの合言葉を削除しますか？')) return;
-      try {
-        await api.approvePasswordReset(memberId, groupId, requestId);
-        alert('合言葉を削除しました。');
-        const requests = await api.getPasswordRequests(groupId);
-        ui.renderPasswordRequests(requests);
-      } catch (error) {
-        alert(error.error);
-      }
-    },
   };
 
   ui.openSettingsModal(groupData, handlers);
-  await api.getPasswordRequests(groupId).then(ui.renderPasswordRequests);
-  await api.getPrizeMasters(groupId).then((masters) => ui.renderPrizeMasterList(masters, false));
 }
 
 async function handleSaveSettings() {
@@ -616,10 +572,76 @@ function setupEventListeners() {
           alert('現在のグループIDが見つかりません。');
         }
       }
+      if (e.target.id === 'goToPrizeMasterButton') {
+        if (state.currentGroupId) {
+          const handlers = {
+            onAddMaster: async () => {
+              const name = elements.addMasterPrizeNameInput.value.trim();
+              const file = elements.addMasterPrizeImageInput.files[0];
+              if (!name || !file) return alert('賞品名と画像を選択してください');
+              try {
+                elements.addMasterPrizeButton.disabled = true;
+                const {signedUrl, imageUrl} = await api.generatePrizeMasterUploadUrl(state.currentGroupId, file.type);
+                await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
+                await api.addPrizeMaster(state.currentGroupId, name, imageUrl);
+                alert('賞品マスターを追加しました。');
+                const masters = await api.getPrizeMasters(state.currentGroupId);
+                ui.renderPrizeMasterList(masters, false);
+                elements.addMasterPrizeNameInput.value = '';
+                elements.addMasterPrizeImageInput.value = '';
+              } catch (error) {
+                alert(error.error);
+              } finally {
+                elements.addMasterPrizeButton.disabled = false;
+              }
+            },
+            onDeleteMaster: async (masterId) => {
+              if (!confirm('この賞品マスターを削除しますか？')) return;
+              try {
+                await api.deletePrizeMaster(masterId, state.currentGroupId);
+                alert('削除しました');
+                const masters = await api.getPrizeMasters(state.currentGroupId);
+                ui.renderPrizeMasterList(masters, false);
+              } catch (error) {
+                alert(error.error);
+              }
+            },
+          };
+          ui.openPrizeMasterModal(handlers);
+          const masters = await api.getPrizeMasters(state.currentGroupId);
+          ui.renderPrizeMasterList(masters, false);
+        }
+      }
+      if (e.target.id === 'showPasswordResetRequestsButton') {
+        if (state.currentGroupId) {
+          const requests = await api.getPasswordRequests(state.currentGroupId);
+          const handlers = {
+            onApproveReset: async (memberId, groupId, requestId) => {
+              if (!confirm('このユーザーの合言葉を削除しますか？')) return;
+              try {
+                await api.approvePasswordReset(memberId, groupId, requestId);
+                alert('合言葉を削除しました。');
+                const updatedRequests = await api.getPasswordRequests(groupId);
+                ui.renderPasswordRequests(updatedRequests);
+                ui.showPasswordResetNotification(updatedRequests);
+                if (updatedRequests.length === 0) {
+                  ui.closePasswordResetRequestModal();
+                }
+              } catch (error) {
+                alert(error.error);
+              }
+            },
+          };
+          ui.openPasswordResetRequestModal(requests, handlers);
+        }
+      }
     });
   }
 
   if (elements.closeSettingsModalButton) elements.closeSettingsModalButton.addEventListener('click', ui.closeSettingsModal);
+  if (elements.closePrizeMasterModalButton) elements.closePrizeMasterModalButton.addEventListener('click', ui.closePrizeMasterModal);
+  if (elements.closePasswordResetRequestModalButton) elements.closePasswordResetRequestModalButton.addEventListener('click', ui.closePasswordResetRequestModal);
+
   if (elements.closePasswordSetModal)
     elements.closePasswordSetModal.addEventListener('click', () => {
       if (elements.passwordSetModal) elements.passwordSetModal.style.display = 'none';
@@ -1083,6 +1105,8 @@ function setupEventListeners() {
     if (elements.groupDropdown && elements.groupDropdown.style.display === 'block' && !elements.groupSwitcher.contains(event.target)) {
       elements.groupDropdown.style.display = 'none';
     }
+    if (elements.prizeMasterModal && event.target == elements.prizeMasterModal) ui.closePrizeMasterModal();
+    if (elements.passwordResetRequestModal && event.target == elements.passwordResetRequestModal) ui.closePasswordResetRequestModal();
     const link = event.target.closest('a');
     if (link && link.href && link.target !== '_blank') {
       const url = new URL(link.href);

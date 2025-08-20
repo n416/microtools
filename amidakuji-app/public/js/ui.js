@@ -60,17 +60,27 @@ export const elements = {
   participantManagementList: document.getElementById('participantManagementList'),
   addParticipantButton: document.getElementById('addParticipantButton'),
   addParticipantNameInput: document.getElementById('addParticipantNameInput'),
-  passwordResetRequestList: document.getElementById('passwordResetRequestList'),
 
-  // Prize Master (in Settings Modal)
+  // Prize Master Modal (New)
+  prizeMasterModal: document.getElementById('prizeMasterModal'),
+  closePrizeMasterModalButton: document.querySelector('#prizeMasterModal .close-button'),
   prizeMasterList: document.getElementById('prizeMasterList'),
   addMasterPrizeNameInput: document.getElementById('addMasterPrizeNameInput'),
   addMasterPrizeImageInput: document.getElementById('addMasterPrizeImageInput'),
   addMasterPrizeButton: document.getElementById('addMasterPrizeButton'),
 
+  // Password Reset Notification & Modal (New)
+  passwordResetNotification: document.getElementById('passwordResetNotification'),
+  passwordResetCount: document.getElementById('passwordResetCount'),
+  showPasswordResetRequestsButton: document.getElementById('showPasswordResetRequestsButton'),
+  passwordResetRequestModal: document.getElementById('passwordResetRequestModal'),
+  closePasswordResetRequestModalButton: document.querySelector('#passwordResetRequestModal .close-button'),
+  passwordResetRequestList: document.getElementById('passwordResetRequestList'),
+
   // Event Dashboard (dashboardView)
   eventGroupName: document.getElementById('eventGroupName'),
   goToGroupSettingsButton: document.getElementById('goToGroupSettingsButton'),
+  goToPrizeMasterButton: document.getElementById('goToPrizeMasterButton'),
   goToCreateEventViewButton: document.getElementById('goToCreateEventViewButton'),
   eventList: document.getElementById('eventList'),
 
@@ -292,26 +302,56 @@ export function openSettingsModal(group, handlers) {
   elements.saveGroupSettingsButton.onclick = handlers.onSave;
   elements.addParticipantButton.onclick = handlers.onAddParticipant;
   elements.deletePasswordButton.onclick = handlers.onDeletePassword;
-  elements.addMasterPrizeButton.onclick = handlers.onAddMaster;
-  elements.prizeMasterList.onclick = (e) => {
-    const button = e.target.closest('button.delete-btn');
-    if (button) {
-      handlers.onDeleteMaster(button.dataset.masterId);
-    }
-  };
-  elements.passwordResetRequestList.onclick = (e) => {
-    const button = e.target.closest('button.approve-btn');
-    if (button) {
-      const {groupId, memberId, requestId} = button.dataset;
-      handlers.onApproveReset(memberId, groupId, requestId);
-    }
-  };
 
   elements.groupSettingsModal.style.display = 'block';
 }
 
 export function closeSettingsModal() {
   if (elements.groupSettingsModal) elements.groupSettingsModal.style.display = 'none';
+}
+
+export function openPrizeMasterModal(handlers) {
+    if (!elements.prizeMasterModal) return;
+    elements.addMasterPrizeButton.onclick = handlers.onAddMaster;
+    elements.prizeMasterList.onclick = (e) => {
+        const button = e.target.closest('button.delete-btn');
+        if (button) {
+            handlers.onDeleteMaster(button.dataset.masterId);
+        }
+    };
+    elements.prizeMasterModal.style.display = 'block';
+}
+
+export function closePrizeMasterModal() {
+    if (elements.prizeMasterModal) elements.prizeMasterModal.style.display = 'none';
+}
+
+export function openPasswordResetRequestModal(requests, handlers) {
+    if (!elements.passwordResetRequestModal) return;
+    renderPasswordRequests(requests);
+    elements.passwordResetRequestList.onclick = (e) => {
+        const button = e.target.closest('button.approve-btn');
+        if (button) {
+            const { groupId, memberId, requestId } = button.dataset;
+            handlers.onApproveReset(memberId, groupId, requestId);
+        }
+    };
+    elements.passwordResetRequestModal.style.display = 'block';
+}
+
+export function closePasswordResetRequestModal() {
+    if (elements.passwordResetRequestModal) elements.passwordResetRequestModal.style.display = 'none';
+}
+
+export function showPasswordResetNotification(requests) {
+    if (!elements.passwordResetNotification || !elements.passwordResetCount) return;
+
+    if (requests && requests.length > 0) {
+        elements.passwordResetCount.textContent = requests.length;
+        elements.passwordResetNotification.style.display = 'flex';
+    } else {
+        elements.passwordResetNotification.style.display = 'none';
+    }
 }
 
 export function openPasswordSetModal(handlers, showDeleteButton) {
@@ -460,7 +500,7 @@ export function renderPrizeList() {
     // プレビュー画像
     const imgPreview = document.createElement('img');
     imgPreview.alt = prizeName;
-    imgPreview.className = 'prize-list-image-preview'; 
+    imgPreview.className = 'prize-list-image-preview';
 
     if (prizeImageUrl) {
       imgPreview.src = prizeImageUrl;
