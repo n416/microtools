@@ -1,12 +1,9 @@
 // amidakuji-app/public/js/main.js
 
-// js/main.js
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 import * as router from './router.js';
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, stepAnimation} from './animation.js';
 
 function initTronAnimation() {
@@ -199,7 +196,6 @@ function initTronAnimation() {
 
 const {elements} = ui;
 
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 async function initializeApp() {
   setupEventListeners();
   initTronAnimation();
@@ -232,7 +228,102 @@ async function loadUserAndRedirect(lastUsedGroupId) {
     ui.showView('groupDashboard');
   }
 }
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
+
+async function openGroupSettingsFor(groupId) {
+  const groupData = state.allUserGroups.find((g) => g.id === groupId);
+  if (!groupData) {
+    alert('グループ情報が見つかりませんでした。');
+    return;
+  }
+
+  groupData.hasPassword = !!groupData.password;
+
+  const handlers = {
+    onSave: handleSaveSettings,
+    onDeletePassword: async () => {
+      if (!confirm('本当にこのグループの合言葉を削除しますか？')) return;
+      try {
+        await api.deleteGroupPassword(groupId);
+        alert('合言葉を削除しました。');
+        if (elements.deletePasswordButton) {
+          elements.deletePasswordButton.style.display = 'none';
+        }
+        const groupInState = state.allUserGroups.find((g) => g.id === groupId);
+        if (groupInState) delete groupInState.password;
+      } catch (error) {
+        alert(error.error);
+      }
+    },
+    onAddParticipant: () => {
+      const name = elements.addParticipantNameInput.value.trim();
+      if (!name) return;
+      const newParticipant = {
+        id: `temp_${Date.now()}`,
+        name,
+        color: `#${Math.floor(Math.random() * 16777215)
+          .toString(16)
+          .padStart(6, '0')}`,
+      };
+      state.groupParticipants.push(newParticipant);
+      ui.renderParticipantManagementList(handlers);
+      elements.addParticipantNameInput.value = '';
+    },
+    onDeleteParticipant: (participantId) => {
+      state.setGroupParticipants(state.groupParticipants.filter((p) => p.id !== participantId));
+      ui.renderParticipantManagementList(handlers);
+    },
+    onChangeColor: (participantId, newColor) => {
+      const participant = state.groupParticipants.find((p) => p.id === participantId);
+      if (participant) participant.color = newColor;
+    },
+    onAddMaster: async () => {
+      const name = elements.addMasterPrizeNameInput.value.trim();
+      const file = elements.addMasterPrizeImageInput.files[0];
+      if (!name || !file) return alert('賞品名と画像を選択してください');
+      try {
+        elements.addMasterPrizeButton.disabled = true;
+        const {signedUrl, imageUrl} = await api.generatePrizeMasterUploadUrl(groupId, file.type);
+        await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
+        await api.addPrizeMaster(groupId, name, imageUrl);
+        alert('賞品マスターを追加しました。');
+        const masters = await api.getPrizeMasters(groupId);
+        ui.renderPrizeMasterList(masters, false);
+        elements.addMasterPrizeNameInput.value = '';
+        elements.addMasterPrizeImageInput.value = '';
+      } catch (error) {
+        alert(error.error);
+      } finally {
+        elements.addMasterPrizeButton.disabled = false;
+      }
+    },
+    onDeleteMaster: async (masterId) => {
+      if (!confirm('この賞品マスターを削除しますか？')) return;
+      try {
+        await api.deletePrizeMaster(masterId, groupId);
+        alert('削除しました');
+        const masters = await api.getPrizeMasters(groupId);
+        ui.renderPrizeMasterList(masters, false);
+      } catch (error) {
+        alert(error.error);
+      }
+    },
+    onApproveReset: async (memberId, groupId, requestId) => {
+      if (!confirm('このユーザーの合言葉を削除しますか？')) return;
+      try {
+        await api.approvePasswordReset(memberId, groupId, requestId);
+        alert('合言葉を削除しました。');
+        const requests = await api.getPasswordRequests(groupId);
+        ui.renderPasswordRequests(requests);
+      } catch (error) {
+        alert(error.error);
+      }
+    },
+  };
+
+  ui.openSettingsModal(groupData, handlers);
+  await api.getPasswordRequests(groupId).then(ui.renderPasswordRequests);
+  await api.getPrizeMasters(groupId).then((masters) => ui.renderPrizeMasterList(masters, false));
+}
 
 async function handleSaveSettings() {
   const groupId = elements.settingsGroupId.value;
@@ -438,96 +529,7 @@ function setupEventListeners() {
           }
         } else {
           state.setCurrentGroupId(groupId);
-          const groupData = state.allUserGroups.find((g) => g.id === groupId);
-          if (groupData) {
-            groupData.hasPassword = !!groupData.password;
-
-            const handlers = {
-              onSave: handleSaveSettings,
-              onDeletePassword: async () => {
-                if (!confirm('本当にこのグループの合言葉を削除しますか？')) return;
-                try {
-                  await api.deleteGroupPassword(groupId);
-                  alert('合言葉を削除しました。');
-                  if (elements.deletePasswordButton) {
-                    elements.deletePasswordButton.style.display = 'none';
-                  }
-                  const groupInState = state.allUserGroups.find((g) => g.id === groupId);
-                  if (groupInState) delete groupInState.password;
-                } catch (error) {
-                  alert(error.error);
-                }
-              },
-              onAddParticipant: () => {
-                const name = elements.addParticipantNameInput.value.trim();
-                if (!name) return;
-                const newParticipant = {
-                  id: `temp_${Date.now()}`,
-                  name,
-                  color: `#${Math.floor(Math.random() * 16777215)
-                    .toString(16)
-                    .padStart(6, '0')}`,
-                };
-                state.groupParticipants.push(newParticipant);
-                ui.renderParticipantManagementList(handlers);
-                elements.addParticipantNameInput.value = '';
-              },
-              onDeleteParticipant: (participantId) => {
-                state.setGroupParticipants(state.groupParticipants.filter((p) => p.id !== participantId));
-                ui.renderParticipantManagementList(handlers);
-              },
-              onChangeColor: (participantId, newColor) => {
-                const participant = state.groupParticipants.find((p) => p.id === participantId);
-                if (participant) participant.color = newColor;
-              },
-              onAddMaster: async () => {
-                const name = elements.addMasterPrizeNameInput.value.trim();
-                const file = elements.addMasterPrizeImageInput.files[0];
-                if (!name || !file) return alert('賞品名と画像を選択してください');
-                try {
-                  elements.addMasterPrizeButton.disabled = true;
-                  const {signedUrl, imageUrl} = await api.generatePrizeMasterUploadUrl(groupId, file.type);
-                  await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
-                  await api.addPrizeMaster(groupId, name, imageUrl);
-                  alert('賞品マスターを追加しました。');
-                  const masters = await api.getPrizeMasters(groupId);
-                  ui.renderPrizeMasterList(masters, false);
-                  elements.addMasterPrizeNameInput.value = '';
-                  elements.addMasterPrizeImageInput.value = '';
-                } catch (error) {
-                  alert(error.error);
-                } finally {
-                  elements.addMasterPrizeButton.disabled = false;
-                }
-              },
-              onDeleteMaster: async (masterId) => {
-                if (!confirm('この賞品マスターを削除しますか？')) return;
-                try {
-                  await api.deletePrizeMaster(masterId, groupId);
-                  alert('削除しました');
-                  const masters = await api.getPrizeMasters(groupId);
-                  ui.renderPrizeMasterList(masters, false);
-                } catch (error) {
-                  alert(error.error);
-                }
-              },
-              onApproveReset: async (memberId, groupId, requestId) => {
-                if (!confirm('このユーザーの合言葉を削除しますか？')) return;
-                try {
-                  await api.approvePasswordReset(memberId, groupId, requestId);
-                  alert('合言葉を削除しました。');
-                  const requests = await api.getPasswordRequests(groupId);
-                  ui.renderPasswordRequests(requests);
-                } catch (error) {
-                  alert(error.error);
-                }
-              },
-            };
-
-            ui.openSettingsModal(groupData, handlers);
-            await api.getPasswordRequests(groupId).then(ui.renderPasswordRequests);
-            await api.getPrizeMasters(groupId).then((masters) => ui.renderPrizeMasterList(masters, false));
-          }
+          await openGroupSettingsFor(groupId);
         }
       } else {
         await router.navigateTo(`/admin/groups/${groupId}`);
@@ -605,15 +607,13 @@ function setupEventListeners() {
     });
   }
 
-  if (elements.goToGroupSettingsButton) {
-    elements.goToGroupSettingsButton.addEventListener('click', async () => {
-      if (state.currentGroupId) {
-        const currentGroup = state.allUserGroups.find((g) => g.id === state.currentGroupId);
-        if (currentGroup) {
-          const settingsButtonInList = document.querySelector(`.item-list-item[data-group-id="${state.currentGroupId}"] button`);
-          if (settingsButtonInList) settingsButtonInList.click();
+  if (elements.dashboardView) {
+    elements.dashboardView.addEventListener('click', async (e) => {
+      if (e.target.id === 'goToGroupSettingsButton') {
+        if (state.currentGroupId) {
+          await openGroupSettingsFor(state.currentGroupId);
         } else {
-          alert('グループ情報が見つかりませんでした。');
+          alert('現在のグループIDが見つかりません。');
         }
       }
     });
@@ -998,13 +998,7 @@ function setupEventListeners() {
       elements.joinButton.disabled = true;
       try {
         await api.joinSlot(state.currentEventId, state.currentParticipantId, state.currentParticipantToken, state.selectedSlot);
-
-        // --- ▼▼▼ 修正箇所 ▼▼▼ ---
-        // 変更前: await ui.showWaitingView();
-        // UIを直接変更するのではなく、ルーターに現在のURLを再評価させることで、
-        // 状態に応じた正しいビュー（待機画面）を表示させる。
         await router.navigateTo(window.location.pathname, false);
-        // --- ▲▲▲ 修正はここまで ▲▲▲ ---
       } catch (error) {
         alert(error.error);
       } finally {

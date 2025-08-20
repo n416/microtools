@@ -1,10 +1,15 @@
+// amidakuji-app/middleware/auth.js
+
 const {firestore} = require('../utils/firestore');
 
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
     return next();
   }
-  res.status(401).json({error: 'ログインが必要です。'});
+  // ▼▼▼ 修正箇所 ▼▼▼
+  // JSONを返す代わりに、トップページへリダイレクトする
+  res.redirect('/');
+  // ▲▲▲ 修正ここまで ▲▲▲
 }
 
 async function isSystemAdmin(req, res, next) {
