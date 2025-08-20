@@ -89,4 +89,8 @@ export const getMembers = (groupId) => request(`/api/groups/${groupId}/members`)
 export const addMember = (groupId, name) => request(`/api/groups/${groupId}/members`, 'POST', {name});
 export const updateMember = (groupId, memberId, data) => request(`/api/groups/${groupId}/members/${memberId}`, 'PUT', data);
 export const deleteMember = (groupId, memberId) => request(`/api/groups/${groupId}/members/${memberId}`, 'DELETE');
+
+// Bulk Member Registration
+export const analyzeBulkMembers = (groupId, namesText) => request(`/api/groups/${groupId}/members/analyze-bulk`, 'POST', {namesText});
+export const finalizeBulkMembers = (groupId, resolutions) => request(`/api/groups/${groupId}/members/finalize-bulk`, 'POST', {resolutions});
 // --- ▲▲▲ ここまで新規追加 ▲▲▲ ---

@@ -703,12 +703,70 @@ function setupEventListeners() {
         });
       }
     });
+
+    elements.memberManagementView.addEventListener('click', (e) => {
+      if (e.target.id === 'bulkRegisterButton') {
+        ui.openBulkRegisterModal();
+      }
+    });
   }
 
   if (elements.closeSettingsModalButton) elements.closeSettingsModalButton.addEventListener('click', ui.closeSettingsModal);
   if (elements.closePrizeMasterModalButton) elements.closePrizeMasterModalButton.addEventListener('click', ui.closePrizeMasterModal);
   if (elements.closePasswordResetRequestModalButton) elements.closePasswordResetRequestModalButton.addEventListener('click', ui.closePasswordResetRequestModal);
   if (elements.closeMemberEditModalButton) elements.closeMemberEditModalButton.addEventListener('click', ui.closeMemberEditModal);
+  if (elements.closeBulkRegisterModalButton) {
+    elements.closeBulkRegisterModalButton.addEventListener('click', ui.closeBulkRegisterModal);
+  }
+
+  if (elements.analyzeBulkButton) {
+    elements.analyzeBulkButton.addEventListener('click', async () => {
+      const namesText = elements.bulkNamesTextarea.value;
+      if (!namesText.trim()) return alert('名前を入力してください。');
+
+      elements.analyzeBulkButton.disabled = true;
+      elements.analyzeBulkButton.textContent = '分析中...';
+      try {
+        const result = await api.analyzeBulkMembers(state.currentGroupId, namesText);
+        ui.renderBulkAnalysisPreview(result.analysisResults);
+      } catch (error) {
+        alert(error.error || '分析に失敗しました。');
+        elements.analyzeBulkButton.disabled = false;
+        elements.analyzeBulkButton.textContent = '確認する';
+      }
+    });
+  }
+
+  if (elements.finalizeBulkButton) {
+    elements.finalizeBulkButton.addEventListener('click', async () => {
+      elements.finalizeBulkButton.disabled = true;
+      elements.finalizeBulkButton.textContent = '登録処理中...';
+
+      const resolutions = [];
+      document.querySelectorAll('#newRegistrationTab li').forEach((li) => {
+        resolutions.push({inputName: li.textContent.match(/"(.*?)"/)[1], action: 'create'});
+      });
+      document.querySelectorAll('#potentialMatchTab li').forEach((li) => {
+        const inputName = li.dataset.inputName;
+        const action = li.querySelector('input[type="radio"]:checked').value;
+        resolutions.push({inputName, action});
+      });
+
+      try {
+        const result = await api.finalizeBulkMembers(state.currentGroupId, resolutions);
+        alert(`${result.createdCount}名のメンバーを新しく登録しました。`);
+        ui.closeBulkRegisterModal();
+        // メンバーリストを再読み込み
+        const members = await api.getMembers(state.currentGroupId);
+        ui.renderMemberList(members);
+      } catch (error) {
+        alert(error.error || '登録に失敗しました。');
+      } finally {
+        elements.finalizeBulkButton.disabled = false;
+        elements.finalizeBulkButton.textContent = 'この内容で登録を実行する';
+      }
+    });
+  }
 
   if (elements.closePasswordSetModal)
     elements.closePasswordSetModal.addEventListener('click', () => {
@@ -1176,6 +1234,7 @@ function setupEventListeners() {
     if (elements.prizeMasterModal && event.target == elements.prizeMasterModal) ui.closePrizeMasterModal();
     if (elements.passwordResetRequestModal && event.target == elements.passwordResetRequestModal) ui.closePasswordResetRequestModal();
     if (elements.memberEditModal && event.target == elements.memberEditModal) ui.closeMemberEditModal();
+    if (elements.bulkRegisterModal && event.target == elements.bulkRegisterModal) ui.closeBulkRegisterModal();
     const link = event.target.closest('a');
     if (link && link.href && link.target !== '_blank') {
       const url = new URL(link.href);
