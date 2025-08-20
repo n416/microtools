@@ -39,8 +39,14 @@ async function loadAndShowGroupEvents(groupId) {
   if (ui.elements.eventGroupName) ui.elements.eventGroupName.textContent = `グループ: ${groupName}`;
 
   try {
-    const events = await api.getEventsForGroup(groupId);
+    const [events, passwordRequests] = await Promise.all([
+        api.getEventsForGroup(groupId),
+        api.getPasswordRequests(groupId)
+    ]);
+    
     ui.renderEventList(events);
+    ui.showPasswordResetNotification(passwordRequests);
+
     if (state.allUserGroups.length === 0) {
       const allGroups = await api.getGroups();
       state.setAllUserGroups(allGroups);
