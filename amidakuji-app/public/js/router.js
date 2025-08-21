@@ -101,7 +101,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
     if (viewToShow === 'eventEditView') {
       ui.elements.eventNameInput.value = data.eventName || '';
       state.setPrizes(data.prizes || []);
-      ui.elements.participantCountInput.value = data.participantCount;
+
       ui.elements.displayModeSelect.value = data.displayMode;
       ui.elements.createEventButton.textContent = 'この内容でイベントを保存';
       ui.renderPrizeList();

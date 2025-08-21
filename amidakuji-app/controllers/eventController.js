@@ -84,11 +84,11 @@ exports.getPublicEventsForGroup = async (req, res) => {
 
 exports.createEvent = async (req, res) => {
   try {
-    const {prizes, groupId, participantCount, displayMode, eventName} = req.body;
+    const {prizes, groupId, displayMode, eventName} = req.body;
+    const participantCount = prizes ? prizes.length : 0;
 
     if (!groupId) return res.status(400).json({error: 'グループIDは必須です。'});
-    if (!participantCount || participantCount < 2) return res.status(400).json({error: '参加人数は2人以上で設定してください。'});
-    if (!prizes || !Array.isArray(prizes) || prizes.length !== participantCount) return res.status(400).json({error: '参加人数と景品の数が一致していません。'});
+    if (participantCount < 2) return res.status(400).json({error: '景品は2つ以上で設定してください。'});
 
     const groupDoc = await firestore.collection('groups').doc(groupId).get();
     const groupParticipants = groupDoc.data().participants || [];
@@ -203,10 +203,10 @@ exports.getEvent = async (req, res) => {
 exports.updateEvent = async (req, res) => {
   try {
     const {id: eventId} = req.params;
-    const {prizes, participantCount, displayMode, eventName} = req.body;
+    const {prizes, displayMode, eventName} = req.body;
+    const participantCount = prizes ? prizes.length : 0;
 
-    if (!participantCount || participantCount < 2) return res.status(400).json({error: '参加人数は2人以上で設定してください。'});
-    if (!prizes || !Array.isArray(prizes) || prizes.length !== participantCount) return res.status(400).json({error: '参加人数と景品の数が一致していません。'});
+    if (participantCount < 2) return res.status(400).json({error: '景品は2つ以上で設定してください。'});
 
     const eventRef = firestore.collection('events').doc(eventId);
     const doc = await eventRef.get();
