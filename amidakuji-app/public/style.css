@@ -105,14 +105,17 @@ h4 {
   left: 0;
   z-index: 1000;
 }
+.main-header h1 {
+  font-size: 24px;
+  margin: 0;
+  white-space: nowrap;
+}
 .auth-controls {
   display: flex;
   align-items: center;
   gap: 15px;
 }
-#authStatus {
-  font-size: 14px;
-}
+
 #adminDashboardButton {
   background-color: var(--admin-color);
   color: #333;
@@ -120,8 +123,106 @@ h4 {
   border-radius: 4px;
   text-decoration: none;
   font-weight: bold;
+  border: none;
 }
 
+/* Hamburger Menu */
+#hamburger-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1010;
+  height: 2rem;
+  width: 2rem;
+  display: none;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+#hamburger-button span {
+  width: 2rem;
+  height: 0.25rem;
+  background: var(--text-color);
+  border-radius: 10px;
+  transition: all 0.3s linear;
+  position: relative;
+  transform-origin: 1px;
+}
+
+#hamburger-button.active span:nth-child(1) {
+  transform: rotate(45deg);
+}
+
+#hamburger-button.active span:nth-child(2) {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+#hamburger-button.active span:nth-child(3) {
+  transform: rotate(-45deg);
+}
+
+/* Nav Menu */
+#nav-menu {
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .main-header h1 {
+    font-size: 20px;
+  }
+
+  #hamburger-button {
+    display: flex;
+  }
+
+  #nav-menu {
+    display: none; /* Initially hidden */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--white-color);
+    z-index: 1005;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  #nav-menu > * {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  #nav-menu.active {
+    display: flex; /* Show menu when active */
+  }
+
+  .auth-controls {
+    flex-direction: column;
+    width: 100%;
+    margin-top: 20px;
+    align-items: center;
+  }
+
+  .auth-controls > * {
+    width: 80%;
+    max-width: 300px;
+    text-align: center;
+    justify-content: center;
+  }
+  #groupSwitcher {
+    width: 80%;
+    max-width: 300px;
+  }
+
+  #currentGroupName {
+    width: 100%;
+    justify-content: center;
+  }
+}
 .view-container {
   width: 100%;
   max-width: 900px;
@@ -623,7 +724,7 @@ button:disabled {
   text-align: center;
   margin-top: 0;
 }
-#broadcastMode .broadcast-controls {
+.broadcast-controls {
   display: flex;
   justify-content: center;
   align-items: center;

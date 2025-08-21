@@ -198,6 +198,7 @@ const {elements} = ui;
 
 async function initializeApp() {
   setupEventListeners();
+  setupHamburgerMenu();
   initTronAnimation();
   const initialData = {
     group: typeof initialGroupData !== 'undefined' ? initialGroupData : null,
@@ -430,7 +431,6 @@ function setupEventListeners() {
     });
   if (elements.adminDashboardButton) {
     elements.adminDashboardButton.addEventListener('click', (e) => {
-      e.preventDefault();
       router.navigateTo('/admin/dashboard');
     });
   }
@@ -993,7 +993,7 @@ function setupEventListeners() {
       redrawCanvas(false);
     });
   }
-  
+
   if (elements.highlightUserButton)
     elements.highlightUserButton.addEventListener('click', async () => {
       if (elements.highlightUserSelect.value) {
@@ -1351,6 +1351,25 @@ function setupEventListeners() {
       }
     }
   });
+}
+
+function setupHamburgerMenu() {
+  if (elements.hamburgerButton && elements.navMenu) {
+    elements.hamburgerButton.addEventListener('click', () => {
+      const isOpened = elements.hamburgerButton.classList.toggle('active');
+      elements.navMenu.classList.toggle('active');
+      elements.hamburgerButton.setAttribute('aria-expanded', isOpened);
+    });
+
+    elements.navMenu.addEventListener('click', (e) => {
+      const target = e.target.closest('button, a');
+      if (target) {
+        elements.hamburgerButton.classList.remove('active');
+        elements.navMenu.classList.remove('active');
+        elements.hamburgerButton.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp);
