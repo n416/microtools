@@ -91,16 +91,13 @@ exports.createEvent = async (req, res) => {
     if (participantCount < 2) return res.status(400).json({error: '景品は2つ以上で設定してください。'});
 
     const groupDoc = await firestore.collection('groups').doc(groupId).get();
-    const groupParticipants = groupDoc.data().participants || [];
 
     const participants = Array.from({length: participantCount}, (_, i) => {
-      const groupParticipant = groupParticipants[i];
       return {
         slot: i,
         name: null,
         deleteToken: null,
-        color: groupParticipant ? groupParticipant.color : `#${Math.floor(Math.random() * 16777215).toString(16)}`,
-        id: groupParticipant ? groupParticipant.id : crypto.randomBytes(16).toString('hex'),
+        color: getNextAvailableColor([]),
       };
     });
 
@@ -227,18 +224,11 @@ exports.updateEvent = async (req, res) => {
     if (participantCount !== eventData.participantCount) {
       const groupDoc = await firestore.collection('groups').doc(eventData.groupId).get();
       const groupParticipants = groupDoc.exists ? groupDoc.data().participants || [] : [];
-      const newParticipants = Array.from({length: participantCount}, (_, i) => {
-        const existingParticipant = eventData.participants[i];
-        const groupParticipant = groupParticipants[i];
-        if (existingParticipant) return existingParticipant;
-        return {
-          slot: i,
-          name: null,
-          deleteToken: null,
-          color: groupParticipant ? groupParticipant.color : `#${Math.floor(Math.random() * 16777215).toString(16)}`,
-          id: groupParticipant ? groupParticipant.id : crypto.randomBytes(16).toString('hex'),
-        };
-      });
+      const newParticipants = Array.from({length: participantCount}, (_, i) => ({
+        slot: i,
+        name: null,
+        deleteToken: null,
+      }));
       updateData.participants = newParticipants;
       updateData.lines = generateLines(participantCount);
     }
@@ -320,9 +310,7 @@ exports.getPublicEventData = async (req, res) => {
     const safeEventName = eventData.eventName || '無題のイベント';
     const eventName = groupData.name ? `${groupData.name} - ${safeEventName}` : safeEventName;
 
-    const publicPrizes = eventData.displayMode === 'private' && eventData.status !== 'started' 
-      ? eventData.prizes.map(() => ({ name: '？？？', imageUrl: null })) 
-      : eventData.prizes;
+    const publicPrizes = eventData.displayMode === 'private' && eventData.status !== 'started' ? eventData.prizes.map(() => ({name: '？？？', imageUrl: null})) : eventData.prizes;
 
     const otherEventsSnapshot = await firestore.collection('events').where('groupId', '==', eventData.groupId).where('status', '==', 'pending').get();
 

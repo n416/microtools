@@ -8,7 +8,6 @@ router.get('/groups/:groupId', groupController.getGroup);
 router.get('/groups/url/:customUrl', groupController.getGroupByCustomUrl);
 router.post('/groups', ensureAuthenticated, groupController.createGroup);
 router.delete('/groups/:groupId', ensureAuthenticated, groupController.deleteGroup);
-router.put('/groups/:groupId/participants', ensureAuthenticated, groupController.updateParticipants);
 router.put('/groups/:groupId/settings', ensureAuthenticated, groupController.updateGroupSettings);
 
 router.post('/groups/:groupId/verify-password', groupController.verifyPassword);

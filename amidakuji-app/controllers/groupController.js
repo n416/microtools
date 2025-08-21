@@ -264,36 +264,6 @@ exports.getGroupByCustomUrl = async (req, res) => {
   }
 };
 
-exports.updateParticipants = async (req, res) => {
-  try {
-    const {groupId} = req.params;
-    const participants = Array.isArray(req.body) ? req.body : req.body.participants;
-
-    if (!Array.isArray(participants)) {
-      return res.status(400).json({error: 'Invalid participants data format. Expected an array.'});
-    }
-
-    const groupRef = firestore.collection('groups').doc(groupId);
-    const groupDoc = await groupRef.get();
-
-    if (!groupDoc.exists || groupDoc.data().ownerId !== req.user.id) {
-      return res.status(403).json({error: '権限がありません。'});
-    }
-
-    const updatedParticipants = participants.map((p) => ({
-      id: p.id.startsWith('temp_') ? crypto.randomBytes(16).toString('hex') : p.id,
-      name: normalizeName(p.name),
-      color: p.color,
-    }));
-
-    await groupRef.update({participants: updatedParticipants});
-    res.status(200).json({message: '参加者リストが更新されました。'});
-  } catch (error) {
-    console.error('Error updating participants:', error);
-    res.status(500).json({error: '参加者リストの更新に失敗しました。'});
-  }
-};
-
 exports.updateGroupSettings = async (req, res) => {
   try {
     const {groupId} = req.params;
