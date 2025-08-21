@@ -12,9 +12,10 @@ export const elements = {
   loginButton: document.getElementById('loginButton'),
   logoutButton: document.getElementById('logoutButton'),
   deleteAccountButton: document.getElementById('deleteAccountButton'),
-  authStatus: document.getElementById('authStatus'),
   adminDashboardButton: document.getElementById('adminDashboardButton'),
   stopImpersonatingButton: document.getElementById('stopImpersonatingButton'),
+  hamburgerButton: document.getElementById('hamburger-button'),
+  navMenu: document.getElementById('nav-menu'),
 
   // Views
   groupDashboard: document.getElementById('groupDashboard'),
@@ -31,6 +32,7 @@ export const elements = {
   createGroupButton: document.getElementById('createGroupButton'),
   groupList: document.getElementById('groupList'),
   requestAdminButton: document.getElementById('requestAdminButton'),
+  requestAdminControls: document.getElementById('requestAdminControls'),
 
   // Group Switcher
   groupSwitcher: document.getElementById('groupSwitcher'),
@@ -279,7 +281,6 @@ export function updateAuthUI(user) {
       if (elements.impersonationBanner) elements.impersonationBanner.style.display = 'none';
     }
 
-    if (elements.authStatus) elements.authStatus.textContent = `ようこそ、${displayName}さん`;
     if (elements.loginButton) elements.loginButton.style.display = 'none';
     if (elements.logoutButton) elements.logoutButton.style.display = 'block';
     if (elements.deleteAccountButton) elements.deleteAccountButton.style.display = 'block';
@@ -287,8 +288,10 @@ export function updateAuthUI(user) {
     const isSystemAdmin = user.role === 'system_admin' && !user.isImpersonating;
     if (elements.adminDashboardButton) elements.adminDashboardButton.style.display = isSystemAdmin ? 'block' : 'none';
 
-    if (elements.requestAdminButton) {
+     if (elements.requestAdminControls) {
       if (user.role === 'user') {
+        elements.requestAdminControls.style.display = 'block';
+        elements.requestAdminButton.style.display = 'block';
         if (user.adminRequestStatus === 'pending') {
           elements.requestAdminButton.textContent = '申請中';
           elements.requestAdminButton.disabled = true;
@@ -296,13 +299,11 @@ export function updateAuthUI(user) {
           elements.requestAdminButton.textContent = '管理者権限を申請する';
           elements.requestAdminButton.disabled = false;
         }
-        elements.requestAdminButton.style.display = 'block';
       } else {
-        elements.requestAdminButton.style.display = 'none';
+        elements.requestAdminControls.style.display = 'none';
       }
     }
   } else {
-    if (elements.authStatus) elements.authStatus.textContent = 'イベント管理はログインが必要です。';
     if (elements.loginButton) elements.loginButton.style.display = 'block';
     if (elements.logoutButton) elements.logoutButton.style.display = 'none';
     if (elements.deleteAccountButton) elements.deleteAccountButton.style.display = 'none';
@@ -355,7 +356,6 @@ export function openSettingsModal(group, handlers) {
   if (elements.deletePasswordButton) elements.deletePasswordButton.style.display = group.hasPassword ? 'inline-block' : 'none';
   elements.noIndexCheckbox.checked = group.noIndex || false;
   state.setGroupParticipants(group.participants ? [...group.participants] : []);
-
 
   elements.saveGroupSettingsButton.onclick = handlers.onSave;
   elements.deletePasswordButton.onclick = handlers.onDeletePassword;
