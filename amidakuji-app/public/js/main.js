@@ -365,6 +365,35 @@ function handleShareResult() {
     });
 }
 
+async function buildNewPrizesWithDataPreservation(newNames) {
+  // データ収集
+  const oldPrizes = [...state.prizes];
+  const prizeMasters = await api.getPrizeMasters(state.currentGroupId).catch(() => []);
+
+  // 優先検索のため、更新前の景品情報を名前をキーとするMapに変換
+  // これにより重複名は自動的に後方の情報で上書きされる
+  const oldPrizesMap = new Map(oldPrizes.map((p) => [p.name, p]));
+  const prizeMastersMap = new Map(prizeMasters.map((p) => [p.name, p.imageUrl]));
+
+  // 新しい景品リストを生成
+  const newPrizes = newNames.map((name) => {
+    // 優先度1: 更新前のリストに完全一致するか
+    if (oldPrizesMap.has(name)) {
+      return {...oldPrizesMap.get(name)}; // 画像情報ごと完全に引き継ぐ
+    }
+
+    // 優先度2: 賞品マスターに一致するか
+    if (prizeMastersMap.has(name)) {
+      return {name, imageUrl: prizeMastersMap.get(name), newImageFile: null};
+    }
+
+    // 優先度3: 完全新規
+    return {name, imageUrl: null, newImageFile: null};
+  });
+
+  return newPrizes;
+}
+
 function setupEventListeners() {
   if (elements.loginButton)
     elements.loginButton.addEventListener('click', () => {
@@ -775,6 +804,8 @@ function setupEventListeners() {
   if (elements.closeProfileModalButton) elements.closeProfileModalButton.addEventListener('click', ui.closeProfileEditModal);
   if (elements.closePrizeMasterSelectModal) elements.closePrizeMasterSelectModal.addEventListener('click', ui.closePrizeMasterSelectModal);
   if (elements.closeGroupPasswordModalButton) elements.closeGroupPasswordModalButton.addEventListener('click', ui.closeGroupPasswordModal);
+  if (elements.closePrizeBulkAddModalButton) elements.closePrizeBulkAddModalButton.addEventListener('click', ui.closePrizeBulkAddModal);
+  if (elements.cancelBulkAddButton) elements.cancelBulkAddButton.addEventListener('click', ui.closePrizeBulkAddModal);
 
   if (elements.verifyPasswordButton)
     elements.verifyPasswordButton.addEventListener('click', async () => {
@@ -816,26 +847,6 @@ function setupEventListeners() {
     });
   }
 
-  if (elements.syncWithGroupButton) {
-    elements.syncWithGroupButton.addEventListener('click', () => {
-      const currentGroup = state.allUserGroups.find((g) => g.id === state.currentGroupId);
-      if (currentGroup && currentGroup.participants) {
-        elements.participantCountInput.value = currentGroup.participants.length;
-      }
-    });
-  }
-
-  if (elements.addPrizeButton) {
-    elements.addPrizeButton.addEventListener('click', () => {
-      const prizeName = elements.prizeInput.value.trim();
-      if (prizeName) {
-        state.prizes.push({name: prizeName, imageUrl: null});
-        ui.renderPrizeList();
-        elements.prizeInput.value = '';
-      }
-    });
-  }
-
   if (elements.prizeList) {
     elements.prizeList.addEventListener('click', (event) => {
       if (event.target.classList.contains('delete-btn')) {
@@ -846,34 +857,38 @@ function setupEventListeners() {
     });
   }
 
-  if (elements.selectFromMasterButton) {
-    elements.selectFromMasterButton.addEventListener('click', async () => {
-      try {
-        const masters = await api.getPrizeMasters(state.currentGroupId);
-        ui.openPrizeMasterSelectModal(masters, {
-          onAddSelected: () => {
-            elements.prizeMasterSelectList.querySelectorAll('li.selected').forEach((item) => {
-              state.prizes.push({
-                name: item.dataset.name,
-                imageUrl: item.dataset.imageUrl,
-              });
-            });
-            ui.renderPrizeList();
-            ui.closePrizeMasterSelectModal();
-          },
-        });
-      } catch (error) {
-        alert(error.error);
-      }
+  if (elements.bulkAddPrizesButton) {
+    elements.bulkAddPrizesButton.addEventListener('click', () => {
+      ui.openPrizeBulkAddModal();
+    });
+  }
+
+  if (elements.clearBulkPrizesButton) {
+    elements.clearBulkPrizesButton.addEventListener('click', () => {
+      elements.prizeBulkTextarea.value = '';
+    });
+  }
+
+  if (elements.updatePrizesFromTextButton) {
+    elements.updatePrizesFromTextButton.addEventListener('click', async () => {
+      const text = elements.prizeBulkTextarea.value;
+      const prizeNames = text
+        .split('\n')
+        .map((name) => name.trim())
+        .filter((name) => name);
+
+      const newPrizes = await buildNewPrizesWithDataPreservation(prizeNames);
+      state.setPrizes(newPrizes);
+      ui.renderPrizeList();
+      ui.closePrizeBulkAddModal();
     });
   }
 
   if (elements.createEventButton) {
     elements.createEventButton.addEventListener('click', async () => {
       const isUpdate = !!state.currentEventId;
-      const participantCount = parseInt(elements.participantCountInput.value, 10);
-      if (!participantCount || participantCount < 2) return alert('参加人数は2人以上で設定してください。');
-      if (state.prizes.length !== participantCount) return alert('参加人数と景品の数は同じにしてください。');
+      const participantCount = state.prizes.length;
+      if (participantCount < 2) return alert('景品は2つ以上設定してください。');
 
       elements.createEventButton.disabled = true;
       let originalButtonText = elements.createEventButton.textContent;
@@ -886,9 +901,8 @@ function setupEventListeners() {
           const initialEventData = {
             eventName: elements.eventNameInput.value.trim(),
             prizes: state.prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
-            participantCount,
-            displayMode: elements.displayModeSelect.value,
             groupId: state.currentGroupId,
+            displayMode: elements.displayModeSelect.value,
           };
           const newEvent = await api.createEvent(initialEventData);
           eventId = newEvent.id;
@@ -919,7 +933,7 @@ function setupEventListeners() {
         const finalEventData = {
           eventName: elements.eventNameInput.value.trim(),
           prizes: state.prizes,
-          participantCount,
+          participantCount: state.prizes.length,
           displayMode: elements.displayModeSelect.value,
         };
 
@@ -931,6 +945,12 @@ function setupEventListeners() {
         alert(error.error || 'イベントの保存に失敗しました。');
         elements.createEventButton.disabled = false;
         elements.createEventButton.textContent = originalButtonText;
+      } finally {
+        // ▼▼▼ ここから修正 ▼▼▼
+        // 成功・失敗にかかわらず、必ずボタンを元の状態に戻す
+        elements.createEventButton.disabled = false;
+        elements.createEventButton.textContent = originalButtonText;
+        // ▲▲▲ ここまで修正 ▲▲▲
       }
     });
   }
@@ -1219,6 +1239,72 @@ function setupEventListeners() {
       }
     });
 
+  if (elements.openAddPrizeModalButton) {
+    elements.openAddPrizeModalButton.addEventListener('click', ui.openAddPrizeModal);
+  }
+
+  if (elements.addPrizeModal) {
+    elements.addPrizeModal.querySelector('.close-button').addEventListener('click', ui.closeAddPrizeModal);
+  }
+
+  if (elements.addPrizeOkButton) {
+    elements.addPrizeOkButton.addEventListener('click', () => {
+      const name = elements.newPrizeNameInput.value.trim();
+      const file = elements.newPrizeImageInput.files[0];
+      if (!name) return alert('景品名を入力してください。');
+
+      const newPrize = {
+        name,
+        imageUrl: null,
+        newImageFile: file || null,
+      };
+
+      state.prizes.push(newPrize);
+      ui.renderPrizeList();
+      ui.closeAddPrizeModal();
+    });
+  }
+
+  if (elements.callMasterButton) {
+    elements.callMasterButton.addEventListener('click', async () => {
+      try {
+        const masters = await api.getPrizeMasters(state.currentGroupId);
+        ui.openPrizeMasterSelectModal(masters, {
+          onAddSelected: () => {
+            const selected = elements.prizeMasterSelectList.querySelector('li.selected');
+            if (selected) {
+              elements.newPrizeNameInput.value = selected.dataset.name;
+              elements.newPrizeImagePreview.src = selected.dataset.imageUrl;
+              elements.newPrizeImagePreview.style.display = 'block';
+            }
+            ui.closePrizeMasterSelectModal();
+          },
+        });
+      } catch (error) {
+        alert(error.error);
+      }
+    });
+  }
+
+  if (elements.showSummaryButton) {
+    elements.showSummaryButton.addEventListener('click', () => {
+      const breakdown = state.prizes.reduce((acc, prize) => {
+        const name = prize.name;
+        acc[name] = (acc[name] || 0) + 1;
+        return acc;
+      }, {});
+      const summary = {
+        total: state.prizes.length,
+        breakdown,
+      };
+      ui.openSummaryModal(summary);
+    });
+  }
+
+  if (elements.summaryModal) {
+    elements.summaryModal.querySelector('.close-button').addEventListener('click', ui.closeSummaryModal);
+  }
+
   window.addEventListener('popstate', (event) => {
     router.navigateTo(window.location.pathname, false);
   });
@@ -1235,6 +1321,9 @@ function setupEventListeners() {
     if (elements.passwordResetRequestModal && event.target == elements.passwordResetRequestModal) ui.closePasswordResetRequestModal();
     if (elements.memberEditModal && event.target == elements.memberEditModal) ui.closeMemberEditModal();
     if (elements.bulkRegisterModal && event.target == elements.bulkRegisterModal) ui.closeBulkRegisterModal();
+    if (elements.prizeBulkAddModal && event.target == elements.prizeBulkAddModal) ui.closePrizeBulkAddModal();
+    if (elements.addPrizeModal && event.target == elements.addPrizeModal) ui.closeAddPrizeModal();
+    if (elements.summaryModal && event.target == elements.summaryModal) ui.closeSummaryModal();
     const link = event.target.closest('a');
     if (link && link.href && link.target !== '_blank') {
       const url = new URL(link.href);

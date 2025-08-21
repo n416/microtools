@@ -19,7 +19,7 @@ export const elements = {
   // Views
   groupDashboard: document.getElementById('groupDashboard'),
   dashboardView: document.getElementById('dashboardView'),
-  memberManagementView: document.getElementById('memberManagementView'), // 新規追加
+  memberManagementView: document.getElementById('memberManagementView'),
   eventEditView: document.getElementById('eventEditView'),
   broadcastView: document.getElementById('broadcastView'),
   participantView: document.getElementById('participantView'),
@@ -39,7 +39,7 @@ export const elements = {
   switcherGroupList: document.getElementById('switcherGroupList'),
   switcherCreateGroup: document.getElementById('switcherCreateGroup'),
 
-  // Member Management View (New)
+  // Member Management View
   memberManagementGroupName: document.getElementById('memberManagementGroupName'),
   backToDashboardFromMembersButton: document.getElementById('backToDashboardFromMembersButton'),
   addNewMemberButton: document.getElementById('addNewMemberButton'),
@@ -82,24 +82,22 @@ export const elements = {
   eventGroupName: document.getElementById('eventGroupName'),
   goToGroupSettingsButton: document.getElementById('goToGroupSettingsButton'),
   goToPrizeMasterButton: document.getElementById('goToPrizeMasterButton'),
-  goToMemberManagementButton: document.getElementById('goToMemberManagementButton'), // 新規追加
+  goToMemberManagementButton: document.getElementById('goToMemberManagementButton'),
   goToCreateEventViewButton: document.getElementById('goToCreateEventViewButton'),
   eventList: document.getElementById('eventList'),
 
   // Event Edit View
   backToGroupsButton: document.getElementById('backToGroupsButton'),
   eventNameInput: document.getElementById('eventNameInput'),
-  participantCountInput: document.getElementById('participantCountInput'),
-  syncWithGroupButton: document.getElementById('syncWithGroupButton'),
-  prizeInput: document.getElementById('prizeInput'),
-  addPrizeButton: document.getElementById('addPrizeButton'),
-  selectFromMasterButton: document.getElementById('selectFromMasterButton'),
+  bulkAddPrizesButton: document.getElementById('bulkAddPrizesButton'),
   prizeList: document.getElementById('prizeList'),
   displayModeSelect: document.getElementById('displayModeSelect'),
   createEventButton: document.getElementById('createEventButton'),
   eventIdInput: document.getElementById('eventIdInput'),
   loadButton: document.getElementById('loadButton'),
   currentEventUrl: document.getElementById('currentEventUrl'),
+  openAddPrizeModalButton: document.getElementById('openAddPrizeModalButton'),
+  showSummaryButton: document.getElementById('showSummaryButton'),
 
   // Broadcast View
   backToDashboardButton: document.getElementById('backToDashboardButton'),
@@ -182,7 +180,6 @@ export const elements = {
   memberColorInput: document.getElementById('memberColorInput'),
   saveMemberButton: document.getElementById('saveMemberButton'),
 
-  // Bulk Register Modal
   bulkRegisterModal: document.getElementById('bulkRegisterModal'),
   closeBulkRegisterModalButton: document.querySelector('#bulkRegisterModal .close-button'),
   bulkNamesTextarea: document.getElementById('bulkNamesTextarea'),
@@ -191,10 +188,26 @@ export const elements = {
   bulkStep2Preview: document.getElementById('bulk-step2-preview'),
   finalizeBulkButton: document.getElementById('finalizeBulkButton'),
 
-  // Group Event List View (public)
+  prizeBulkAddModal: document.getElementById('prizeBulkAddModal'),
+  closePrizeBulkAddModalButton: document.querySelector('#prizeBulkAddModal .close-button'),
+  prizeBulkTextarea: document.getElementById('prizeBulkTextarea'),
+  updatePrizesFromTextButton: document.getElementById('updatePrizesFromTextButton'),
+  clearBulkPrizesButton: document.getElementById('clearBulkPrizesButton'),
+  cancelBulkAddButton: document.getElementById('cancelBulkAddButton'),
+
   groupEventListContainer: document.getElementById('groupEventList'),
   groupNameTitle: document.getElementById('groupEventListName'),
   backToDashboardFromEventListButton: document.getElementById('backToDashboardFromEventListButton'),
+
+  addPrizeModal: document.getElementById('addPrizeModal'),
+  newPrizeNameInput: document.getElementById('newPrizeNameInput'),
+  newPrizeImageInput: document.getElementById('newPrizeImageInput'),
+  newPrizeImagePreview: document.getElementById('newPrizeImagePreview'),
+  callMasterButton: document.getElementById('callMasterButton'),
+  addPrizeOkButton: document.getElementById('addPrizeOkButton'),
+  summaryModal: document.getElementById('summaryModal'),
+  totalPrizes: document.getElementById('totalPrizes'),
+  prizeSummaryList: document.getElementById('prizeSummaryList'),
 };
 
 const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];
@@ -208,6 +221,34 @@ export function adjustBodyPadding() {
     totalOffset += elements.impersonationBanner.offsetHeight;
   }
   document.body.style.paddingTop = `${totalOffset}px`;
+}
+export function openAddPrizeModal() {
+  if (!elements.addPrizeModal) return;
+  elements.newPrizeNameInput.value = '';
+  elements.newPrizeImageInput.value = '';
+  elements.newPrizeImagePreview.src = '';
+  elements.newPrizeImagePreview.style.display = 'none';
+  elements.addPrizeModal.style.display = 'block';
+}
+
+export function closeAddPrizeModal() {
+  if (elements.addPrizeModal) elements.addPrizeModal.style.display = 'none';
+}
+
+export function openSummaryModal(summary) {
+  if (!elements.summaryModal) return;
+  elements.totalPrizes.textContent = summary.total;
+  elements.prizeSummaryList.innerHTML = '';
+  for (const name in summary.breakdown) {
+    const li = document.createElement('li');
+    li.textContent = `${name}: ${summary.breakdown[name]}個`;
+    elements.prizeSummaryList.appendChild(li);
+  }
+  elements.summaryModal.style.display = 'block';
+}
+
+export function closeSummaryModal() {
+  if (elements.summaryModal) elements.summaryModal.style.display = 'none';
 }
 
 export function setMainHeaderVisibility(visible) {
@@ -415,6 +456,17 @@ export function closePrizeMasterSelectModal() {
   if (elements.prizeMasterSelectModal) elements.prizeMasterSelectModal.style.display = 'none';
 }
 
+export function openPrizeBulkAddModal() {
+  if (elements.prizeBulkAddModal) {
+    elements.prizeBulkTextarea.value = state.prizes.map((p) => p.name).join('\n');
+    elements.prizeBulkAddModal.style.display = 'block';
+  }
+}
+
+export function closePrizeBulkAddModal() {
+  if (elements.prizeBulkAddModal) elements.prizeBulkAddModal.style.display = 'none';
+}
+
 export function showGroupPasswordModal(groupId, groupName) {
   if (!elements.groupPasswordModal) return;
   elements.verificationTargetGroupId.value = groupId;
@@ -550,56 +602,112 @@ export function renderPrizeList() {
   elements.prizeList.innerHTML = '';
   state.prizes.forEach((p, index) => {
     const li = document.createElement('li');
-    li.className = 'prize-list-item';
+    li.className = 'prize-card';
+
     const prizeName = typeof p === 'object' ? p.name : p;
     let prizeImageUrl = typeof p === 'object' ? p.imageUrl : null;
-
     const uniqueId = `prize-image-upload-${index}`;
 
+    // カードの画像部分
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'prize-card-image';
     const imgPreview = document.createElement('img');
     imgPreview.alt = prizeName;
-    imgPreview.className = 'prize-list-image-preview';
 
+    // ▼▼▼ ここから修正 ▼▼▼
     if (prizeImageUrl) {
       imgPreview.src = prizeImageUrl;
+    } else if (p.newImageFile) {
+      // newImageFileが存在する場合、それを使ってプレビューを表示
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        imgPreview.src = event.target.result;
+      };
+      reader.readAsDataURL(p.newImageFile);
     } else {
       imgPreview.classList.add('placeholder');
       imgPreview.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     }
+    // ▲▲▲ ここまで修正 ▲▲▲
 
-    imgPreview.onclick = () => document.getElementById(uniqueId).click();
-
+    imageContainer.appendChild(imgPreview);
+    imageContainer.onclick = () => document.getElementById(uniqueId).click();
+    
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/*';
     fileInput.id = uniqueId;
     fileInput.style.display = 'none';
     fileInput.dataset.index = index;
-
+    
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
           imgPreview.src = event.target.result;
+          imgPreview.classList.remove('placeholder');
         };
         reader.readAsDataURL(file);
         state.prizes[index].newImageFile = file;
+        // 既存の画像URLがある場合はリセット
+        state.prizes[index].imageUrl = null;
       }
     });
+    imageContainer.appendChild(fileInput);
+    li.appendChild(imageContainer);
 
-    li.appendChild(imgPreview);
-    li.appendChild(fileInput);
+    // カードの情報部分（景品名とボタン）
+    const infoContainer = document.createElement('div');
+    infoContainer.className = 'prize-card-info';
 
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = prizeName;
-    li.appendChild(nameSpan);
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = prizeName;
+    nameInput.className = 'prize-card-name-input';
+    nameInput.dataset.index = index;
+    nameInput.addEventListener('change', (event) => {
+      const updatedIndex = parseInt(event.target.dataset.index, 10);
+      const newName = event.target.value.trim();
+      if (newName) {
+        state.prizes[updatedIndex].name = newName;
+      } else {
+        event.target.value = prizeName;
+      }
+    });
+    infoContainer.appendChild(nameInput);
 
-    const btn = document.createElement('button');
-    btn.textContent = '削除';
-    btn.className = 'delete-btn';
-    btn.dataset.index = index;
-    li.appendChild(btn);
+    const actionsContainer = document.createElement('div');
+    actionsContainer.className = 'prize-card-actions';
+
+    const duplicateBtn = document.createElement('button');
+    duplicateBtn.textContent = '複製';
+    duplicateBtn.className = 'duplicate-btn';
+    duplicateBtn.dataset.index = index;
+    duplicateBtn.type = 'button';
+
+    duplicateBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const sourceIndex = parseInt(e.target.dataset.index, 10);
+      const prizeToDuplicate = JSON.parse(JSON.stringify(state.prizes[sourceIndex]));
+      if (state.prizes[sourceIndex].newImageFile) {
+        prizeToDuplicate.newImageFile = state.prizes[sourceIndex].newImageFile;
+      }
+      state.prizes.splice(sourceIndex + 1, 0, prizeToDuplicate);
+      renderPrizeList();
+    });
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '削除';
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.dataset.index = index;
+    deleteBtn.type = 'button';
+
+    actionsContainer.appendChild(duplicateBtn);
+    actionsContainer.appendChild(deleteBtn);
+    infoContainer.appendChild(actionsContainer);
+
+    li.appendChild(infoContainer);
     elements.prizeList.appendChild(li);
   });
 }
