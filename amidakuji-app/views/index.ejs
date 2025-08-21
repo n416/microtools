@@ -169,8 +169,7 @@
       <button id="backToDashboardButton">← ダッシュボードに戻る</button>
     </div>
     <div id="adminControls">
-      <button id="startEventButton" class="primary-action">🎉 イベントを開始する</button>
-      <button id="startBroadcastButton">🎥 配信モードを開始</button>
+      <button id="startEventButton" class="primary-action">🎉 このあみだくじでイベントを開始する</button>
     </div>
     <div class="canvas-panzoom-container">
       <canvas id="adminCanvas" width="800" height="400"></canvas>
@@ -179,6 +178,7 @@
       <button id="animateAllButton">全結果をアニメーション再生</button>
       <button id="nextStepButton">ステップ実行</button>
       <button id="regenerateLinesButton">🔄 あみだくじ再生成</button>
+      <button id="glimpseButton">景品チラ見せ</button>
       <select id="highlightUserSelect"></select>
       <button id="highlightUserButton">この参加者をハイライト</button>
     </div>
@@ -237,7 +237,7 @@
     <div id="resultSection" style="display: none">
       <h3>🎉 結果発表 🎉</h3>
       <div class="canvas-panzoom-container">
-        <canvas id="participantCanvas" height="400"></canvas>
+         <canvas id="participantCanvas" height="400"></canvas>
       </div>
       <p id="myResult"></p>
       <div id="allResultsContainer"></div>
@@ -311,7 +311,7 @@
       <input type="hidden" id="memberIdInput">
       <div class="input-group">
         <label for="memberNameEditInput">名前:</label>
-        <input type="text" id="memberNameEditInput">
+         <input type="text" id="memberNameEditInput">
       </div>
       <div class="input-group">
         <label for="memberColorInput">カラー:</label>
@@ -327,7 +327,7 @@
       <h3>合言葉の設定</h3>
       <p>合言葉を設定すると、他の人があなたのアカウントを使うのを防げます。</p>
       <div class="input-group">
-        <label for="newPasswordInput">新しい合言葉:</label>
+         <label for="newPasswordInput">新しい合言葉:</label>
         <input type="password" id="newPasswordInput" placeholder="4文字以上" />
       </div>
       <button id="savePasswordButton" class="primary-action">設定する</button>
@@ -400,7 +400,7 @@
 
   <div id="prizeBulkAddModal" class="modal" style="display: none;">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+       <span class="close-button">&times;</span>
       <h3>景品の一括登録・編集</h3>
       <p>景品リストを編集し、「リストを更新」ボタンを押してください。</p>
       <textarea id="prizeBulkTextarea" rows="10"></textarea>
@@ -416,7 +416,7 @@
     <div class="modal-content">
       <span class="close-button">&times;</span>
       <h3>景品の追加</h3>
-      <div class="input-group">
+       <div class="input-group">
         <label>景品名:</label>
         <input type="text" id="newPrizeNameInput" placeholder="景品名を入力">
       </div>
@@ -454,8 +454,7 @@
     <% } %>
 
     <% if (typeof eventData !== 'undefined' && eventData) { %>
-    const initialEventData = <%- eventData %>;
-    <% } else { %>
+    const initialEventData = <%- eventData %>; <% } else { %>
     const initialEventData = null;
     <% } %>
   </script>
