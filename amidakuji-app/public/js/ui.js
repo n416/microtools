@@ -59,8 +59,6 @@ export const elements = {
   noIndexCheckbox: document.getElementById('noIndexCheckbox'),
   saveGroupSettingsButton: document.getElementById('saveGroupSettingsButton'),
   participantManagementList: document.getElementById('participantManagementList'),
-  addParticipantButton: document.getElementById('addParticipantButton'),
-  addParticipantNameInput: document.getElementById('addParticipantNameInput'),
 
   // Prize Master Modal
   prizeMasterModal: document.getElementById('prizeMasterModal'),
@@ -358,10 +356,8 @@ export function openSettingsModal(group, handlers) {
   elements.noIndexCheckbox.checked = group.noIndex || false;
   state.setGroupParticipants(group.participants ? [...group.participants] : []);
 
-  renderParticipantManagementList(handlers);
 
   elements.saveGroupSettingsButton.onclick = handlers.onSave;
-  elements.addParticipantButton.onclick = handlers.onAddParticipant;
   elements.deletePasswordButton.onclick = handlers.onDeletePassword;
 
   elements.groupSettingsModal.style.display = 'block';
@@ -569,34 +565,6 @@ export function renderMemberList(members) {
             `;
       elements.memberList.appendChild(li);
     });
-}
-
-export function renderParticipantManagementList(handlers) {
-  if (!elements.participantManagementList) return;
-  elements.participantManagementList.innerHTML = '';
-  state.groupParticipants.forEach((p) => {
-    const li = document.createElement('li');
-    const colorSwatch = document.createElement('input');
-    colorSwatch.type = 'color';
-    colorSwatch.value = p.color;
-    colorSwatch.dataset.participantId = p.id;
-
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = p.name;
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = '削除';
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.dataset.participantId = p.id;
-
-    deleteBtn.addEventListener('click', () => handlers.onDeleteParticipant(p.id));
-    colorSwatch.addEventListener('change', (e) => handlers.onChangeColor(p.id, e.target.value));
-
-    li.appendChild(colorSwatch);
-    li.appendChild(nameSpan);
-    li.appendChild(deleteBtn);
-    elements.participantManagementList.appendChild(li);
-  });
 }
 
 export function renderPrizeList() {
