@@ -12,7 +12,7 @@ export let currentParticipantToken = null;
 export let currentParticipantId = null;
 export let currentParticipantName = null;
 export let debounceTimer;
-export let lastFailedAction = null; // <<< この行を追加
+export let lastFailedAction = null;
 
 export function setAllUserGroups(groups) {
   allUserGroups = groups;
@@ -42,7 +42,6 @@ export function setDebounceTimer(timer) {
   debounceTimer = timer;
 }
 
-// ▼▼▼ この関数を追加 ▼▼▼
 export function setLastFailedAction(action) {
     lastFailedAction = action;
 }
