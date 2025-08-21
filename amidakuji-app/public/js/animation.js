@@ -3,6 +3,9 @@
 import * as state from './state.js';
 
 let animationFrameId;
+// --- ▼▼▼ 修正箇所 ▼▼▼ ---
+let adminPanzoom, participantPanzoom;
+// --- ▲▲▲ 修正ここまで ▲▲▲ ---
 const animator = {
   tracers: [],
   icons: {},
@@ -87,11 +90,40 @@ function resizeCanvasToDisplaySize(canvas) {
   return false;
 }
 
+// --- ▼▼▼ 修正箇所 ▼▼▼ ---
+function initializePanzoom(canvasElement) {
+  if (!canvasElement) return null;
+  const panzoom = Panzoom(canvasElement, {
+    maxScale: 5,
+    minScale: 0.5,
+    contain: 'outside',
+  });
+  // 親要素にイベントリスナーを追加して、デフォルトのスクロールを妨げないようにする
+  canvasElement.parentElement.addEventListener('wheel', (event) => {
+    // shiftキーが押されていない場合のみズームを有効にする
+    if (!event.shiftKey) {
+      panzoom.zoomWithWheel(event);
+    }
+  });
+  return panzoom;
+}
+// --- ▲▲▲ 修正ここまで ▲▲▲ ---
+
 export function stopAnimation() {
   animator.running = false;
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
   }
+  // --- ▼▼▼ 修正箇所 ▼▼▼ ---
+  if (adminPanzoom) {
+    adminPanzoom.destroy();
+    adminPanzoom = null;
+  }
+  if (participantPanzoom) {
+    participantPanzoom.destroy();
+    participantPanzoom = null;
+  }
+  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
 }
 
 function getVirtualWidth(numParticipants) {
@@ -404,9 +436,13 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
   stopAnimation();
   if (!targetCtx || !state.currentLotteryData) return;
 
-  // The resize logic is now handled inside drawLotteryBase,
-  // so we might not need this specific call here anymore, but keeping it won't harm.
-  // resizeCanvasToDisplaySize(targetCtx.canvas);
+  // --- ▼▼▼ 修正箇所 ▼▼▼ ---
+  if (targetCtx.canvas.id === 'adminCanvas' && !adminPanzoom) {
+    adminPanzoom = initializePanzoom(targetCtx.canvas);
+  } else if (targetCtx.canvas.id === 'participantCanvas' && !participantPanzoom) {
+    participantPanzoom = initializePanzoom(targetCtx.canvas);
+  }
+  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
 
   const participantsToAnimate = state.currentLotteryData.participants.filter((p) => p && p.name && userNames.includes(p.name));
   await preloadPrizeImages(state.currentLotteryData.prizes); // 景品画像を先に読み込む
@@ -438,6 +474,12 @@ export async function prepareStepAnimation(targetCtx) {
   stopAnimation();
   if (!targetCtx || !state.currentLotteryData) return;
 
+  // --- ▼▼▼ 修正箇所 ▼▼▼ ---
+  if (targetCtx.canvas.id === 'adminCanvas' && !adminPanzoom) {
+    adminPanzoom = initializePanzoom(targetCtx.canvas);
+  }
+  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
+
   const allParticipants = state.currentLotteryData.participants.filter((p) => p.name);
   await preloadPrizeImages(state.currentLotteryData.prizes); // 景品画像を先に読み込む
   await preloadIcons(allParticipants);
@@ -459,9 +501,6 @@ export async function prepareStepAnimation(targetCtx) {
 
   animator.context = targetCtx;
   targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
-
-  // The resize logic is now handled inside drawLotteryBase
-  // resizeCanvasToDisplaySize(targetCtx.canvas);
 
   const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';

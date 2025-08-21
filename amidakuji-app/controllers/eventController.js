@@ -692,3 +692,32 @@ exports.generatePrizeUploadUrl = async (req, res) => {
     res.status(500).json({error: 'URLの生成に失敗しました。'});
   }
 };
+
+// --- ▼▼▼ 新規追加 ▼▼▼ ---
+exports.regenerateLines = async (req, res) => {
+  try {
+    const {eventId} = req.params;
+    const eventRef = firestore.collection('events').doc(eventId);
+    const doc = await eventRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({error: 'イベントが見つかりません。'});
+    }
+    const eventData = doc.data();
+    if (eventData.ownerId !== req.user.id) {
+      return res.status(403).json({error: 'このイベントを操作する権限がありません。'});
+    }
+    if (eventData.status === 'started') {
+      return res.status(400).json({error: '開始済みのイベントのあみだくじは変更できません。'});
+    }
+
+    const newLines = generateLines(eventData.participantCount);
+    await eventRef.update({lines: newLines});
+
+    res.status(200).json({message: 'あみだくじが再生成されました。', lines: newLines});
+  } catch (error) {
+    console.error('Error regenerating Amidakuji lines:', error);
+    res.status(500).json({error: 'あみだくじの再生成に失敗しました。'});
+  }
+};
+// --- ▲▲▲ 追加ここまで ▲▲▲ ---
