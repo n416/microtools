@@ -216,8 +216,6 @@ button:hover {
   background-color: var(--primary-hover-color);
 }
 button.primary-action {
-  padding: 12px 20px;
-  font-size: 16px;
   font-weight: bold;
 }
 button:disabled {
@@ -720,6 +718,7 @@ button:disabled {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 @keyframes fadeIn {
@@ -1092,4 +1091,7 @@ button:disabled {
 #summaryModal li {
   padding: 5px 0;
   border-bottom: 1px solid var(--border-color);
+}
+#goToCreateEventViewButton {
+  margin-left: auto;
 }

@@ -254,20 +254,6 @@ async function openGroupSettingsFor(groupId) {
         alert(error.error);
       }
     },
-    onAddParticipant: () => {
-      const name = elements.addParticipantNameInput.value.trim();
-      if (!name) return;
-      const newParticipant = {
-        id: `temp_${Date.now()}`,
-        name,
-        color: `#${Math.floor(Math.random() * 16777215)
-          .toString(16)
-          .padStart(6, '0')}`,
-      };
-      state.groupParticipants.push(newParticipant);
-      ui.renderParticipantManagementList(handlers);
-      elements.addParticipantNameInput.value = '';
-    },
     onDeleteParticipant: (participantId) => {
       state.setGroupParticipants(state.groupParticipants.filter((p) => p.id !== participantId));
       ui.renderParticipantManagementList(handlers);
@@ -295,7 +281,6 @@ async function handleSaveSettings() {
   elements.saveGroupSettingsButton.disabled = true;
   try {
     await api.updateGroupSettings(groupId, settingsPayload);
-    await api.updateParticipants(groupId, state.groupParticipants);
     alert('設定を保存しました。');
     ui.closeSettingsModal();
     const groups = await api.getGroups();

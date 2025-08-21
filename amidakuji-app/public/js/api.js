@@ -38,7 +38,6 @@ export const getGroupByCustomUrl = (customUrl) => request(`/api/groups/url/${cus
 export const createGroup = (groupName) => request('/api/groups', 'POST', {groupName, participants: []});
 export const deleteGroup = (groupId) => request(`/api/groups/${groupId}`, 'DELETE');
 export const updateGroupSettings = (groupId, settings) => request(`/api/groups/${groupId}/settings`, 'PUT', settings);
-export const updateParticipants = (groupId, participants) => request(`/api/groups/${groupId}/participants`, 'PUT', {participants});
 export const verifyGroupPassword = (groupId, password) => request(`/api/groups/${groupId}/verify-password`, 'POST', {password});
 export const deleteGroupPassword = (groupId) => request(`/api/groups/${groupId}/password`, 'DELETE');
 export const getEventsForGroup = (groupId) => request(`/api/groups/${groupId}/events`);
