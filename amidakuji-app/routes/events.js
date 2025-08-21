@@ -37,4 +37,8 @@ router.post('/events/:eventId/join-slot', eventController.joinSlot);
 router.post('/events/:eventId/verify-password', eventController.verifyPasswordAndJoin);
 router.delete('/events/:eventId/participants', eventController.deleteParticipant);
 
+// --- ▼▼▼ 新規追加 ▼▼▼ ---
+router.post('/events/:eventId/regenerate-lines', ensureAuthenticated, eventController.regenerateLines);
+// --- ▲▲▲ 追加ここまで ▲▲▲ ---
+
 module.exports = router;

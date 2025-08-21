@@ -172,10 +172,13 @@
       <button id="startEventButton" class="primary-action">🎉 イベントを開始する</button>
       <button id="startBroadcastButton">🎥 配信モードを開始</button>
     </div>
-    <canvas id="adminCanvas" width="800" height="400"></canvas>
+    <div class="canvas-panzoom-container">
+      <canvas id="adminCanvas" width="800" height="400"></canvas>
+    </div>
     <div class="broadcast-controls">
       <button id="animateAllButton">全結果をアニメーション再生</button>
       <button id="nextStepButton">ステップ実行</button>
+      <button id="regenerateLinesButton">🔄 あみだくじ再生成</button>
       <select id="highlightUserSelect"></select>
       <button id="highlightUserButton">この参加者をハイライト</button>
     </div>
@@ -233,7 +236,9 @@
     </div>
     <div id="resultSection" style="display: none">
       <h3>🎉 結果発表 🎉</h3>
-      <canvas id="participantCanvas" height="400"></canvas>
+      <div class="canvas-panzoom-container">
+        <canvas id="participantCanvas" height="400"></canvas>
+      </div>
       <p id="myResult"></p>
       <div id="allResultsContainer"></div>
       <button id="shareButton" style="display: none">結果をシェアする</button>
@@ -439,6 +444,7 @@
 
   <script type="module" src="/js/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 
   <script>
     <% if (typeof groupData !== 'undefined' && groupData) { %>

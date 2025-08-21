@@ -391,16 +391,29 @@ button:disabled {
   color: var(--danger-color);
 }
 
-/* セレクタを、あみだくじ用のCanvas IDに限定 */
-#adminCanvas,
-#participantCanvas {
+/* --- ▼▼▼ ここから修正 ▼▼▼ --- */
+/* panzoom用のコンテナスタイル */
+.canvas-panzoom-container {
+  width: 100%;
+  height: 400px;
+  overflow: hidden; /* 必須：はみ出した部分を隠す */
   border: 1px solid var(--border-color);
   background-color: var(--white-color);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
   border-radius: 8px;
-  width: 100%;
-  height: auto;
+  margin-bottom: 15px;
 }
+
+/* canvas自体のスタイルをリセット */
+#adminCanvas,
+#participantCanvas {
+  border: none;
+  background-color: transparent;
+  box-shadow: none;
+  width: auto;
+  height: 400px;
+}
+/* --- ▲▲▲ 修正ここまで ▲▲▲ --- */
 
 .error-message {
   color: var(--danger-color);

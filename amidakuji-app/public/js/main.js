@@ -976,6 +976,24 @@ function setupEventListeners() {
     });
   if (elements.animateAllButton) elements.animateAllButton.addEventListener('click', resetAnimation);
   if (elements.nextStepButton) elements.nextStepButton.addEventListener('click', stepAnimation);
+  // --- ▼▼▼ 新規追加 ▼▼▼ ---
+  if (elements.broadcastView) {
+    elements.broadcastView.addEventListener('click', async (e) => {
+      if (e.target.id === 'regenerateLinesButton') {
+        if (!confirm('あみだくじのパターンを再生成しますか？')) return;
+        try {
+          const result = await api.regenerateLines(state.currentEventId);
+          state.currentLotteryData.lines = result.lines;
+          const ctx = elements.adminCanvas.getContext('2d');
+          await prepareStepAnimation(ctx);
+          alert('あみだくじを再生成しました。');
+        } catch (error) {
+          alert(`エラー: ${error.error || '再生成に失敗しました。'}`);
+        }
+      }
+    });
+  }
+  // --- ▲▲▲ 追加ここまで ▲▲▲ ---
   if (elements.highlightUserButton)
     elements.highlightUserButton.addEventListener('click', async () => {
       if (elements.highlightUserSelect.value) {

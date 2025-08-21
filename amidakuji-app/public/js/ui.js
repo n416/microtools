@@ -108,6 +108,7 @@ export const elements = {
   broadcastControls: document.querySelector('.broadcast-controls'),
   animateAllButton: document.getElementById('animateAllButton'),
   nextStepButton: document.getElementById('nextStepButton'),
+  regenerateLinesButton: document.getElementById('regenerateLinesButton'), // --- ▼▼▼ 新規追加 ▼▼▼
   highlightUserSelect: document.getElementById('highlightUserSelect'),
   highlightUserButton: document.getElementById('highlightUserButton'),
 
@@ -632,14 +633,14 @@ export function renderPrizeList() {
 
     imageContainer.appendChild(imgPreview);
     imageContainer.onclick = () => document.getElementById(uniqueId).click();
-    
+
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/*';
     fileInput.id = uniqueId;
     fileInput.style.display = 'none';
     fileInput.dataset.index = index;
-    
+
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
