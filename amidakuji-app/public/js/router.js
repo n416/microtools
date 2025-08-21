@@ -106,23 +106,46 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       ui.elements.createEventButton.textContent = 'この内容でイベントを保存';
       ui.renderPrizeList();
     } else if (viewToShow === 'broadcastView') {
+      const { adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, nextStepButton, highlightUserSelect, highlightUserButton, regenerateLinesButton, glimpseButton } = ui.elements;
+      const hidePrizes = data.displayMode === 'private';
+
       if (data.status === 'pending') {
-        if (ui.elements.adminControls) ui.elements.adminControls.style.display = 'block';
-        if (ui.elements.startEventButton) ui.elements.startEventButton.style.display = 'inline-block';
-        if (ui.elements.broadcastControls) ui.elements.broadcastControls.style.display = 'none';
-        if (ui.elements.adminCanvas) ui.elements.adminCanvas.style.display = 'none';
+        if (adminControls) adminControls.style.display = 'block';
+        if (startEventButton) startEventButton.style.display = 'inline-block';
+        if (broadcastControls) broadcastControls.style.display = 'flex';
+        if (adminCanvas) adminCanvas.style.display = 'block';
+        
+        if (animateAllButton) animateAllButton.style.display = 'none';
+        if (nextStepButton) nextStepButton.style.display = 'none';
+        if (highlightUserSelect) highlightUserSelect.style.display = 'none';
+        if (highlightUserButton) highlightUserButton.style.display = 'none';
+        
+        if (regenerateLinesButton) regenerateLinesButton.style.display = 'inline-block';
+        if (glimpseButton) glimpseButton.style.display = hidePrizes ? 'inline-block' : 'none';
+
+        const ctx = adminCanvas.getContext('2d');
+        await prepareStepAnimation(ctx, hidePrizes);
+
       } else if (data.status === 'started') {
-        if (ui.elements.adminControls) ui.elements.adminControls.style.display = 'none';
-        if (ui.elements.broadcastControls) ui.elements.broadcastControls.style.display = 'flex';
-        if (ui.elements.adminCanvas) ui.elements.adminCanvas.style.display = 'block';
+        if (adminControls) adminControls.style.display = 'none';
+        if (broadcastControls) broadcastControls.style.display = 'flex';
+        if (adminCanvas) adminCanvas.style.display = 'block';
+
+        if (animateAllButton) animateAllButton.style.display = 'inline-block';
+        if (nextStepButton) nextStepButton.style.display = 'inline-block';
+        if (highlightUserSelect) highlightUserSelect.style.display = 'inline-block';
+        if (highlightUserButton) highlightUserButton.style.display = 'inline-block';
+
+        if (regenerateLinesButton) regenerateLinesButton.style.display = 'none';
+        if (glimpseButton) glimpseButton.style.display = 'none';
 
         const allParticipants = data.participants.filter((p) => p.name);
-        if (ui.elements.highlightUserSelect) {
-          ui.elements.highlightUserSelect.innerHTML = allParticipants.map((p) => `<option value="${p.name}">${p.name}</option>`).join('');
+        if (highlightUserSelect) {
+          highlightUserSelect.innerHTML = allParticipants.map((p) => `<option value="${p.name}">${p.name}</option>`).join('');
         }
-
-        const ctx = ui.elements.adminCanvas.getContext('2d');
-        await prepareStepAnimation(ctx);
+        
+        const ctx = adminCanvas.getContext('2d');
+        await prepareStepAnimation(ctx, false); // Results are always shown
       }
     }
   } catch (error) {

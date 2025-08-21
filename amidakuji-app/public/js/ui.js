@@ -108,7 +108,8 @@ export const elements = {
   broadcastControls: document.querySelector('.broadcast-controls'),
   animateAllButton: document.getElementById('animateAllButton'),
   nextStepButton: document.getElementById('nextStepButton'),
-  regenerateLinesButton: document.getElementById('regenerateLinesButton'), // --- ▼▼▼ 新規追加 ▼▼▼
+  regenerateLinesButton: document.getElementById('regenerateLinesButton'),
+  glimpseButton: document.getElementById('glimpseButton'),
   highlightUserSelect: document.getElementById('highlightUserSelect'),
   highlightUserButton: document.getElementById('highlightUserButton'),
 
@@ -812,7 +813,7 @@ export function renderPrizesForParticipant(prizes, displayMode) {
   prizes.forEach((prize) => {
     const li = document.createElement('li');
     const prizeName = typeof prize === 'object' ? prize.name : prize;
-    li.textContent = displayMode === 'private' ? '???' : prizeName;
+    li.textContent = prizeName;
     ul.appendChild(li);
   });
   elements.prizeDisplay.appendChild(ul);

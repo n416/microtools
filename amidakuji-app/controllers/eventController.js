@@ -320,7 +320,9 @@ exports.getPublicEventData = async (req, res) => {
     const safeEventName = eventData.eventName || '無題のイベント';
     const eventName = groupData.name ? `${groupData.name} - ${safeEventName}` : safeEventName;
 
-    const publicPrizes = eventData.displayMode === 'private' ? eventData.prizes.map(() => '？？？') : eventData.prizes;
+    const publicPrizes = eventData.displayMode === 'private' && eventData.status !== 'started' 
+      ? eventData.prizes.map(() => ({ name: '？？？', imageUrl: null })) 
+      : eventData.prizes;
 
     const otherEventsSnapshot = await firestore.collection('events').where('groupId', '==', eventData.groupId).where('status', '==', 'pending').get();
 
