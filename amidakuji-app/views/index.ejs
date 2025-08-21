@@ -32,21 +32,28 @@
 
   <header class="main-header">
     <h1>ダイナミックあみだくじ</h1>
-    <div id="groupSwitcher" style="display: none">
-      <button id="currentGroupName"></button>
-      <div id="groupDropdown" class="dropdown-content">
-        <ul id="switcherGroupList"></ul>
-        <button id="switcherCreateGroup">＋ 新規グループを作成</button>
+
+    <button id="hamburger-button" aria-label="メニューを開く" aria-controls="nav-menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div id="nav-menu">
+      <div id="groupSwitcher" style="display: none">
+        <button id="currentGroupName"></button>
+        <div id="groupDropdown" class="dropdown-content">
+          <ul id="switcherGroupList"></ul>
+          <button id="switcherCreateGroup">＋ 新規グループを作成</button>
+        </div>
       </div>
-    </div>
-    <div class="auth-controls">
-      <div id="authStatus"></div>
-      <button id="loginButton">Googleでログイン</button>
-      <button id="logoutButton" style="display: none">ログアウト</button>
-      <button id="deleteAccountButton" style="display: none" class="delete-btn">アカウント削除</button>
-      <% if (typeof user !== 'undefined' && user && user.role === 'system_admin' && !user.isImpersonating) { %>
-      <a id="adminDashboardButton" style="cursor: pointer;">システム管理</a>
-      <% } %>
+      <div class="auth-controls">
+        <button id="loginButton">Googleでログイン</button>
+        <button id="logoutButton" style="display: none">ログアウト</button>
+        <button id="deleteAccountButton" style="display: none" class="delete-btn">アカウント削除</button>
+        <% if (typeof user !== 'undefined' && user && user.role === 'system_admin' && !user.isImpersonating) { %>
+        <button id="adminDashboardButton">システム管理</button>
+        <% } %>
+      </div>
     </div>
   </header>
 
@@ -59,7 +66,7 @@
       </div>
     </div>
     <ul id="groupList" class="item-list"></ul>
-    <div class="controls" style="margin-top: 20px">
+    <div class="controls" style="margin-top: 20px" id="requestAdminControls">
       <button id="requestAdminButton" style="display: none">管理者権限を申請する</button>
     </div>
   </div>
@@ -237,7 +244,7 @@
     <div id="resultSection" style="display: none">
       <h3>🎉 結果発表 🎉</h3>
       <div class="canvas-panzoom-container">
-         <canvas id="participantCanvas" height="400"></canvas>
+        <canvas id="participantCanvas" height="400"></canvas>
       </div>
       <p id="myResult"></p>
       <div id="allResultsContainer"></div>
@@ -304,7 +311,7 @@
       <input type="hidden" id="memberIdInput">
       <div class="input-group">
         <label for="memberNameEditInput">名前:</label>
-         <input type="text" id="memberNameEditInput">
+        <input type="text" id="memberNameEditInput">
       </div>
       <div class="input-group">
         <label for="memberColorInput">カラー:</label>
@@ -320,7 +327,7 @@
       <h3>合言葉の設定</h3>
       <p>合言葉を設定すると、他の人があなたのアカウントを使うのを防げます。</p>
       <div class="input-group">
-         <label for="newPasswordInput">新しい合言葉:</label>
+        <label for="newPasswordInput">新しい合言葉:</label>
         <input type="password" id="newPasswordInput" placeholder="4文字以上" />
       </div>
       <button id="savePasswordButton" class="primary-action">設定する</button>
@@ -393,7 +400,7 @@
 
   <div id="prizeBulkAddModal" class="modal" style="display: none;">
     <div class="modal-content">
-       <span class="close-button">&times;</span>
+      <span class="close-button">&times;</span>
       <h3>景品の一括登録・編集</h3>
       <p>景品リストを編集し、「リストを更新」ボタンを押してください。</p>
       <textarea id="prizeBulkTextarea" rows="10"></textarea>
@@ -409,7 +416,7 @@
     <div class="modal-content">
       <span class="close-button">&times;</span>
       <h3>景品の追加</h3>
-       <div class="input-group">
+      <div class="input-group">
         <label>景品名:</label>
         <input type="text" id="newPrizeNameInput" placeholder="景品名を入力">
       </div>
@@ -447,7 +454,8 @@
     <% } %>
 
     <% if (typeof eventData !== 'undefined' && eventData) { %>
-    const initialEventData = <%- eventData %>; <% } else { %>
+    const initialEventData = <%- eventData %>;
+    <% } else { %>
     const initialEventData = null;
     <% } %>
   </script>
