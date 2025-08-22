@@ -834,9 +834,20 @@ function setupEventListeners() {
 
   if (elements.prizeList) {
     elements.prizeList.addEventListener('click', (event) => {
-      if (event.target.classList.contains('delete-btn')) {
-        const index = parseInt(event.target.dataset.index, 10);
+      const target = event.target;
+      if (target.classList.contains('delete-btn')) {
+        const index = parseInt(target.dataset.index, 10);
         state.prizes.splice(index, 1);
+        ui.renderPrizeList();
+      }
+      if (target.classList.contains('duplicate-btn')) {
+        event.preventDefault();
+        const sourceIndex = parseInt(target.dataset.index, 10);
+        const prizeToDuplicate = JSON.parse(JSON.stringify(state.prizes[sourceIndex]));
+        if (state.prizes[sourceIndex].newImageFile) {
+          prizeToDuplicate.newImageFile = state.prizes[sourceIndex].newImageFile;
+        }
+        state.prizes.splice(sourceIndex + 1, 0, prizeToDuplicate);
         ui.renderPrizeList();
       }
     });
