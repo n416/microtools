@@ -4,7 +4,7 @@ import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
 import * as router from './router.js';
-import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, stepAnimation} from './animation.js';
+import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning} from './animation.js';
 
 function initTronAnimation() {
   const gridCanvas = document.getElementById('grid-canvas');
@@ -254,14 +254,6 @@ async function openGroupSettingsFor(groupId) {
       } catch (error) {
         alert(error.error);
       }
-    },
-    onDeleteParticipant: (participantId) => {
-      state.setGroupParticipants(state.groupParticipants.filter((p) => p.id !== participantId));
-      ui.renderParticipantManagementList(handlers);
-    },
-    onChangeColor: (participantId, newColor) => {
-      const participant = state.groupParticipants.find((p) => p.id === participantId);
-      if (participant) participant.color = newColor;
     },
   };
 
@@ -968,7 +960,24 @@ function setupEventListeners() {
       }
     });
   if (elements.animateAllButton) elements.animateAllButton.addEventListener('click', resetAnimation);
-  if (elements.nextStepButton) elements.nextStepButton.addEventListener('click', stepAnimation);
+  if (elements.advanceLineByLineButton) {
+    elements.advanceLineByLineButton.addEventListener('click', advanceLineByLine);
+  }
+  if (elements.revealRandomButton) {
+    elements.revealRandomButton.addEventListener('click', async () => {
+      if (isAnimationRunning()) return;
+      const allParticipants = state.currentLotteryData.participants.filter((p) => p.name);
+      const revealedNames = new Set(state.revealedPrizes.map((p) => p.participantName));
+      const remainingParticipants = allParticipants.filter((p) => !revealedNames.has(p.name));
+
+      if (remainingParticipants.length === 0) return;
+
+      const randomParticipant = remainingParticipants[Math.floor(Math.random() * remainingParticipants.length)];
+      const ctx = elements.adminCanvas.getContext('2d');
+      elements.highlightUserSelect.value = randomParticipant.name;
+      await startAnimation(ctx, [randomParticipant.name], null, randomParticipant.name);
+    });
+  }
   if (elements.broadcastView) {
     elements.broadcastView.addEventListener('click', async (e) => {
       if (e.target.id === 'regenerateLinesButton') {
@@ -977,6 +986,13 @@ function setupEventListeners() {
           const result = await api.regenerateLines(state.currentEventId);
           state.currentLotteryData.lines = result.lines;
           const ctx = elements.adminCanvas.getContext('2d');
+
+          // ボタンの状態をリセット
+          if (elements.advanceLineByLineButton) elements.advanceLineByLineButton.disabled = false;
+          if (elements.revealRandomButton) elements.revealRandomButton.disabled = false;
+          if (elements.highlightUserButton) elements.highlightUserButton.disabled = false;
+          if (elements.animateAllButton) elements.animateAllButton.disabled = false;
+
           const hide = state.currentLotteryData.displayMode === 'private';
           await prepareStepAnimation(ctx, hide);
           alert('あみだくじを再生成しました。');
@@ -1007,9 +1023,10 @@ function setupEventListeners() {
 
   if (elements.highlightUserButton)
     elements.highlightUserButton.addEventListener('click', async () => {
+      if (isAnimationRunning()) return;
       if (elements.highlightUserSelect.value) {
         const ctx = elements.adminCanvas.getContext('2d');
-        await startAnimation(ctx, [elements.highlightUserSelect.value]);
+        await startAnimation(ctx, [elements.highlightUserSelect.value], null, elements.highlightUserSelect.value);
       }
     });
 
