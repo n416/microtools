@@ -483,7 +483,7 @@ export function renderGroupList(groups) {
   elements.groupList.innerHTML = '';
   groups.forEach((group) => {
     const li = document.createElement('li');
-    li.className = 'item-list-item list-item-link';
+    li.className = 'item-list-item list-item-link'; // クリック可能であることを示すクラスを追加
     li.dataset.groupId = group.id;
     li.dataset.groupName = group.name;
 
@@ -518,6 +518,8 @@ export function renderEventList(events) {
     const displayDate = !isNaN(date) ? date.toLocaleString() : '日付不明';
     const eventName = event.eventName || '無題のイベント';
     const filledSlots = event.participants.filter((p) => p.name).length;
+
+    // ★★★ ここからが修正箇所 ★★★
     // currentUserが存在する場合（＝管理者が見ている場合）のみ、クリック可能にするクラスを付与
     const itemClass = state.currentUser ? 'item-list-item list-item-link' : 'item-list-item';
     li.className = itemClass;
@@ -657,17 +659,6 @@ export function renderPrizeList() {
     duplicateBtn.className = 'duplicate-btn';
     duplicateBtn.dataset.index = index;
     duplicateBtn.type = 'button';
-
-    duplicateBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const sourceIndex = parseInt(e.target.dataset.index, 10);
-      const prizeToDuplicate = JSON.parse(JSON.stringify(state.prizes[sourceIndex]));
-      if (state.prizes[sourceIndex].newImageFile) {
-        prizeToDuplicate.newImageFile = state.prizes[sourceIndex].newImageFile;
-      }
-      state.prizes.splice(sourceIndex + 1, 0, prizeToDuplicate);
-      renderPrizeList();
-    });
 
     const deleteBtn = document.createElement('button');
     deleteBtn.textContent = '削除';
