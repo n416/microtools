@@ -20,6 +20,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --primary-color: #0d84ff;
+    --primary-color-rgb: 13, 132, 255;
     --primary-hover-color: #3b9aff;
     --danger-color: #e5484d;
     --danger-hover-color: #ff5c5c;
@@ -115,15 +116,14 @@ h4 {
   align-items: center;
   gap: 15px;
 }
-
 #adminDashboardButton {
   background-color: var(--admin-color);
   color: #333;
   padding: 8px 12px;
   border-radius: 4px;
   text-decoration: none;
-  font-weight: bold;
   border: none;
+  font-weight: bold;
 }
 
 /* Hamburger Menu */
@@ -191,11 +191,13 @@ h4 {
     justify-content: center;
     align-items: center;
   }
+
   #nav-menu > * {
     width: 100%;
     display: flex;
     justify-content: center;
   }
+
   #nav-menu.active {
     display: flex; /* Show menu when active */
   }
@@ -213,6 +215,7 @@ h4 {
     text-align: center;
     justify-content: center;
   }
+
   #groupSwitcher {
     width: 80%;
     max-width: 300px;
@@ -223,6 +226,7 @@ h4 {
     justify-content: center;
   }
 }
+
 .view-container {
   width: 100%;
   max-width: 900px;
@@ -382,6 +386,8 @@ button:disabled {
   border-color: var(--primary-color);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+
+/* クリック可能なリスト項目に適用するスタイル */
 .list-item-link > span {
   flex-grow: 1; /* テキスト部分が幅を埋めるように */
   cursor: pointer;
@@ -505,7 +511,6 @@ button:disabled {
   color: var(--danger-color);
 }
 
-/* --- ▼▼▼ ここから修正 ▼▼▼ --- */
 /* panzoom用のコンテナスタイル */
 .canvas-panzoom-container {
   width: 100%;
@@ -527,7 +532,16 @@ button:disabled {
   width: auto;
   height: 400px;
 }
-/* --- ▲▲▲ 修正ここまで ▲▲▲ --- */
+
+/* ★★★ broadcast-controlsのスタイルをここに集約 ★★★ */
+.broadcast-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 15px;
+  flex-wrap: wrap; /* 画面幅が狭い場合に折り返す */
+}
 
 .error-message {
   color: var(--danger-color);
@@ -669,6 +683,14 @@ button:disabled {
   animation: slideIn 0.3s;
 }
 
+/* スマホ表示ではモーダルを画面にフィットさせる */
+@media (max-width: 768px) {
+  .modal-content {
+    margin: 10px;
+    width: auto;
+    max-height: calc(100vh - 20px);
+  }
+}
 .close-button {
   color: #aaa;
   float: right;
@@ -715,6 +737,13 @@ button:disabled {
   background-color: #e6f2ff;
   border-color: var(--primary-color);
 }
+
+/* ダークモード時の選択色 */
+@media (prefers-color-scheme: dark) {
+  .prize-master-item.selectable.selected {
+    background-color: rgba(var(--primary-color-rgb, 13, 132, 255), 0.2); /* 変数がなければデフォルト値を使用 */
+  }
+}
 #prizeMasterSelectModal .modal-content {
   max-width: 700px;
 }
@@ -727,28 +756,6 @@ button:disabled {
   margin-bottom: 20px;
 }
 
-#broadcastMode {
-  background-color: #2c2c2c;
-  padding: 20px;
-  border-radius: 8px;
-  margin-top: 20px;
-  overflow-x: auto;
-}
-#broadcastMode h3 {
-  color: #fff;
-  text-align: center;
-  margin-top: 0;
-}
-.broadcast-controls {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  margin-top: 15px;
-}
-#broadcastMode #adminCanvas {
-  background-color: #fff;
-}
 #resultSection {
   overflow-x: auto;
 }
@@ -874,6 +881,26 @@ button:disabled {
   white-space: normal;
   word-wrap: break-word;
 }
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+/* 左寄せにしたいボタンに適用 */
+.modal-actions .action-left {
+  margin-right: auto;
+}
+.modal-actions .secondary-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+}
+.modal-actions .secondary-btn:hover {
+  background-color: #5a6268;
+}
 
 .dashboard-secondary-actions {
   border-top: none;
@@ -890,7 +917,7 @@ button:disabled {
 }
 
 .secondary-btn:hover {
-  background-color: #e6f2ff;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .secondary-btn.danger {
@@ -906,7 +933,10 @@ button:disabled {
 
 @media (prefers-color-scheme: dark) {
   .secondary-btn:hover {
-    background-color: rgba(13, 132, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  .modal-actions .secondary-btn:hover {
+    background-color: #5a6268;
   }
   .secondary-btn.danger:hover {
     background-color: rgba(229, 72, 77, 0.1);
