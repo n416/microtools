@@ -60,7 +60,6 @@ export const elements = {
   deletePasswordButton: document.getElementById('deletePasswordButton'),
   noIndexCheckbox: document.getElementById('noIndexCheckbox'),
   saveGroupSettingsButton: document.getElementById('saveGroupSettingsButton'),
-  participantManagementList: document.getElementById('participantManagementList'),
 
   // Prize Master Modal
   prizeMasterModal: document.getElementById('prizeMasterModal'),
@@ -107,11 +106,12 @@ export const elements = {
   adminCanvas: document.getElementById('adminCanvas'),
   broadcastControls: document.querySelector('.broadcast-controls'),
   animateAllButton: document.getElementById('animateAllButton'),
-  nextStepButton: document.getElementById('nextStepButton'),
+  advanceLineByLineButton: document.getElementById('advanceLineByLineButton'),
   regenerateLinesButton: document.getElementById('regenerateLinesButton'),
   glimpseButton: document.getElementById('glimpseButton'),
   highlightUserSelect: document.getElementById('highlightUserSelect'),
   highlightUserButton: document.getElementById('highlightUserButton'),
+  revealRandomButton: document.getElementById('revealRandomButton'),
 
   // Participant View
   participantEventName: document.getElementById('participantEventName'),
@@ -659,7 +659,6 @@ export function renderPrizeList() {
     duplicateBtn.className = 'duplicate-btn';
     duplicateBtn.dataset.index = index;
     duplicateBtn.type = 'button';
-
     const deleteBtn = document.createElement('button');
     deleteBtn.textContent = '削除';
     deleteBtn.className = 'delete-btn';

@@ -1,9 +1,12 @@
-// amidakuji-app/public/js/animation.js
+// amidakuji-app/public/js/animation.js (この内容でファイルを置き換えてください)
 
 import * as state from './state.js';
 
 let animationFrameId;
-let adminPanzoom, participantPanzoom;
+// 各キャンバスに対応するPanzoomインスタンスを保持するグローバル変数
+let adminPanzoom = null;
+let participantPanzoom = null;
+
 const animator = {
   tracers: [],
   icons: {},
@@ -14,6 +17,7 @@ const animator = {
   context: null,
 };
 
+// --- Particleクラス（変更なし） ---
 class Particle {
   constructor(x, y, color, type = 'trail') {
     this.x = x;
@@ -45,16 +49,17 @@ class Particle {
     }
   }
 
-  draw(ctx, scaleX, scaleY) {
+  draw(ctx) {
     ctx.globalAlpha = this.alpha;
     ctx.fillStyle = this.color;
     ctx.beginPath();
-    ctx.arc(this.x * scaleX, this.y * scaleY, this.size, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
   }
 }
 
+// --- その他のヘルパー関数（変更なし） ---
 function createSparks(x, y, color) {
   for (let i = 0; i < 20; i++) {
     animator.particles.push(new Particle(x, y, color, 'spark'));
@@ -62,26 +67,52 @@ function createSparks(x, y, color) {
 }
 
 function celebrate(originX, color) {
+  const container = animator.context.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
+  const rect = container.getBoundingClientRect();
+  const x = (rect.left + originX) / window.innerWidth;
+
   confetti({
     particleCount: 100,
     spread: 70,
-    origin: {x: originX, y: 0.8},
+    origin: {x: x, y: 0.8},
     colors: [color, '#ffffff'],
   });
 }
 
+export function isAnimationRunning() {
+  return animator.running;
+}
+
+// ★★★ Panzoomライブラリを再度利用する形に修正 ★★★
 function initializePanzoom(canvasElement) {
   if (!canvasElement) return null;
-  const panzoom = Panzoom(canvasElement, {
-    maxScale: 5,
-    minScale: 0.5,
+  const panzoomElement = canvasElement.parentElement;
+
+  if (canvasElement.id === 'adminCanvas' && adminPanzoom) {
+    adminPanzoom.destroy();
+    adminPanzoom = null;
+  }
+  if (canvasElement.id === 'participantCanvas' && participantPanzoom) {
+    participantPanzoom.destroy();
+    participantPanzoom = null;
+  }
+
+  const panzoom = Panzoom(panzoomElement, {
+    maxScale: 10,
+    minScale: 0.1,
     contain: 'outside',
   });
-  canvasElement.parentElement.addEventListener('wheel', (event) => {
-    if (!event.shiftKey) {
-      panzoom.zoomWithWheel(event);
-    }
-  });
+
+  const container = canvasElement.closest('.canvas-panzoom-container');
+  if (container) {
+    container.addEventListener('wheel', (event) => {
+      if (!event.shiftKey) {
+        panzoom.zoomWithWheel(event);
+      }
+    });
+  }
+
   return panzoom;
 }
 
@@ -90,14 +121,7 @@ export function stopAnimation() {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
   }
-  if (adminPanzoom) {
-    adminPanzoom.destroy();
-    adminPanzoom = null;
-  }
-  if (participantPanzoom) {
-    participantPanzoom.destroy();
-    participantPanzoom = null;
-  }
+  // Panzoomインスタンスは手動操作のために破棄しない
 }
 
 function getVirtualWidth(numParticipants) {
@@ -170,20 +194,40 @@ async function preloadPrizeImages(prizes) {
   await Promise.all(promises);
 }
 
+function drawRevealedPrizes(targetCtx) {
+  const VIRTUAL_WIDTH = getVirtualWidth(state.currentLotteryData.participants.length);
+  const participantSpacing = VIRTUAL_WIDTH / (state.currentLotteryData.participants.length + 1);
+
+  state.revealedPrizes.forEach((result) => {
+    const prize = result.prize;
+    const prizeName = typeof prize === 'object' ? prize.name : prize;
+    const prizeImage = typeof prize === 'object' && prize.imageUrl ? animator.prizeImages[prize.imageUrl] : null;
+    const x = participantSpacing * (result.prizeIndex + 1);
+
+    if (prizeImage && prizeImage.complete) {
+      targetCtx.drawImage(prizeImage, x - 15, 370 - 15, 30, 30);
+    }
+    targetCtx.fillText(prizeName, x, 395);
+  });
+}
+
 function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes = false) {
   if (!targetCtx || !targetCtx.canvas || !data || !data.participants || data.participants.length === 0) return;
-
+  const panzoomElement = targetCtx.canvas.parentElement;
   const {participants, prizes, lines} = data;
   const numParticipants = participants.length;
-
   const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
+  const VIRTUAL_HEIGHT = 400;
+
   targetCtx.canvas.width = VIRTUAL_WIDTH;
-  targetCtx.canvas.style.width = `${VIRTUAL_WIDTH}px`;
+  targetCtx.canvas.height = VIRTUAL_HEIGHT;
 
-  const rect = targetCtx.canvas.getBoundingClientRect();
-  const scaleY = rect.height / 400;
+  if (panzoomElement) {
+    panzoomElement.style.width = `${VIRTUAL_WIDTH}px`;
+    panzoomElement.style.height = `${VIRTUAL_HEIGHT}px`;
+  }
+
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
-
   targetCtx.font = '14px Arial';
   targetCtx.textAlign = 'center';
 
@@ -196,43 +240,35 @@ function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes = false
     const x = participantSpacing * (i + 1);
     const displayName = p.name || `（参加枠 ${p.slot + 1}）`;
     targetCtx.fillStyle = p.name ? mainTextColor : subTextColor;
-    targetCtx.fillText(displayName, x, 30 * scaleY);
-
+    targetCtx.fillText(displayName, x, 30);
     if (prizes && prizes[i]) {
       const prize = prizes[i];
-      const prizeName = hidePrizes ? '？？？' : (typeof prize === 'object' ? prize.name : prize);
+      const prizeName = hidePrizes ? '？？？' : typeof prize === 'object' ? prize.name : prize;
       const prizeImage = !hidePrizes && typeof prize === 'object' && prize.imageUrl ? animator.prizeImages[prize.imageUrl] : null;
-
-      const prizeTextY = 395;
-      const prizeImageCenterY = 370;
-      const imageSize = 30;
-
       if (prizeImage && prizeImage.complete) {
-        targetCtx.drawImage(prizeImage, x - imageSize / 2, (prizeImageCenterY - imageSize / 2) * scaleY, imageSize, imageSize);
+        targetCtx.drawImage(prizeImage, x - 15, 370 - 15, 30, 30);
       }
       targetCtx.fillStyle = prizeTextColor;
-      targetCtx.fillText(prizeName, x, prizeTextY * scaleY);
+      targetCtx.fillText(prizeName, x, 395);
     }
   });
 
   targetCtx.strokeStyle = lineColor;
   targetCtx.lineWidth = 1.5;
-
   for (let i = 0; i < numParticipants; i++) {
     const x = participantSpacing * (i + 1);
     targetCtx.beginPath();
-    targetCtx.moveTo(x, 50 * scaleY);
-    targetCtx.lineTo(x, (400 - 50) * scaleY);
+    targetCtx.moveTo(x, 50);
+    targetCtx.lineTo(x, VIRTUAL_HEIGHT - 50);
     targetCtx.stroke();
   }
-
   if (lines) {
     lines.forEach((line) => {
       const startX = participantSpacing * (line.fromIndex + 1);
       const endX = participantSpacing * (line.toIndex + 1);
       targetCtx.beginPath();
-      targetCtx.moveTo(startX, line.y * scaleY);
-      targetCtx.lineTo(endX, line.y * scaleY);
+      targetCtx.moveTo(startX, line.y);
+      targetCtx.lineTo(endX, line.y);
       targetCtx.stroke();
     });
   }
@@ -250,20 +286,18 @@ function animationLoop() {
   const reductionFactor = Math.min(0.5, Math.floor(Math.max(0, numParticipants - 10) / 10) * 0.1);
   const dynamicSpeed = baseSpeed * (1 - reductionFactor);
 
-  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
-  const scaleX = targetCtx.canvas.width / VIRTUAL_WIDTH;
-  const scaleY = targetCtx.canvas.height / 400;
-
   targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
 
   const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const baseLineColor = isDarkMode ? '#444' : '#e0e0e0';
-  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor);
+  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, true);
+
+  drawRevealedPrizes(targetCtx);
 
   animator.particles = animator.particles.filter((p) => p.life > 0);
   animator.particles.forEach((p) => {
     p.update();
-    p.draw(targetCtx, scaleX, scaleY);
+    p.draw(targetCtx);
   });
 
   let allFinished = true;
@@ -281,6 +315,15 @@ function animationLoop() {
 
   if (allFinished) {
     animator.running = false;
+    animator.tracers.forEach((tracer) => {
+      const resultExists = state.revealedPrizes.some((r) => r.participantName === tracer.name);
+      if (!resultExists) {
+        const result = state.currentLotteryData.results[tracer.name];
+        const prizeIndex = state.currentLotteryData.prizes.findIndex((p) => p.name === result.prize.name);
+        state.revealedPrizes.push({participantName: tracer.name, prize: result.prize, prizeIndex});
+      }
+    });
+
     if (animator.onComplete) animator.onComplete();
   } else {
     animationFrameId = requestAnimationFrame(animationLoop);
@@ -306,10 +349,7 @@ function updateTracerPosition(tracer, speed) {
   if (!start || !end) {
     tracer.isFinished = true;
     if (!tracer.celebrated) {
-      const VIRTUAL_WIDTH = getVirtualWidth(state.currentLotteryData.participants.length);
-      const rect = animator.context.canvas.getBoundingClientRect();
-      const scaleX = rect.width / VIRTUAL_WIDTH;
-      celebrate((tracer.x * scaleX) / rect.width, tracer.color);
+      celebrate(tracer.x, tracer.color);
       tracer.celebrated = true;
     }
     return;
@@ -336,10 +376,7 @@ function updateTracerPosition(tracer, speed) {
       tracer.x = finalPoint.x;
       tracer.y = finalPoint.y;
       if (!tracer.celebrated) {
-        const VIRTUAL_WIDTH = getVirtualWidth(state.currentLotteryData.participants.length);
-        const rect = animator.context.canvas.getBoundingClientRect();
-        const scaleX = rect.width / VIRTUAL_WIDTH;
-        celebrate((tracer.x * scaleX) / rect.width, tracer.color);
+        celebrate(tracer.x, tracer.color);
         tracer.celebrated = true;
       }
     }
@@ -347,11 +384,6 @@ function updateTracerPosition(tracer, speed) {
 }
 
 function drawTracerPath(targetCtx, tracer) {
-  const numParticipants = state.currentLotteryData.participants.length;
-  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
-  const scaleX = targetCtx.canvas.width / VIRTUAL_WIDTH;
-  const scaleY = targetCtx.canvas.height / 400;
-
   targetCtx.strokeStyle = tracer.color;
   targetCtx.lineWidth = 4;
   targetCtx.lineCap = 'round';
@@ -359,11 +391,11 @@ function drawTracerPath(targetCtx, tracer) {
   targetCtx.shadowBlur = 15;
 
   targetCtx.beginPath();
-  targetCtx.moveTo(tracer.path[0].x * scaleX, tracer.path[0].y * scaleY);
+  targetCtx.moveTo(tracer.path[0].x, tracer.path[0].y);
   for (let i = 1; i <= tracer.pathIndex; i++) {
-    targetCtx.lineTo(tracer.path[i].x * scaleX, tracer.path[i].y * scaleY);
+    targetCtx.lineTo(tracer.path[i].x, tracer.path[i].y);
   }
-  targetCtx.lineTo(tracer.x * scaleX, tracer.y * scaleY);
+  targetCtx.lineTo(tracer.x, tracer.y);
   targetCtx.stroke();
 
   targetCtx.shadowColor = 'transparent';
@@ -371,18 +403,12 @@ function drawTracerPath(targetCtx, tracer) {
 }
 
 function drawTracerIcon(targetCtx, tracer) {
-  const numParticipants = state.currentLotteryData.participants.length;
-  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
-  const scaleX = targetCtx.canvas.width / VIRTUAL_WIDTH;
-  const scaleY = targetCtx.canvas.height / 400;
   const iconSize = 24;
   const icon = animator.icons[tracer.name];
-  const drawX = tracer.x * scaleX;
-  const drawY = tracer.y * scaleY;
 
   targetCtx.save();
   targetCtx.beginPath();
-  targetCtx.arc(drawX, drawY, iconSize / 2 + 2, 0, Math.PI * 2, true);
+  targetCtx.arc(tracer.x, tracer.y, iconSize / 2 + 2, 0, Math.PI * 2, true);
   targetCtx.fillStyle = 'white';
   targetCtx.fill();
   targetCtx.lineWidth = 2;
@@ -391,25 +417,28 @@ function drawTracerIcon(targetCtx, tracer) {
   targetCtx.clip();
 
   if (icon) {
-    targetCtx.drawImage(icon, drawX - iconSize / 2, drawY - iconSize / 2, iconSize, iconSize);
+    targetCtx.drawImage(icon, tracer.x - iconSize / 2, tracer.y - iconSize / 2, iconSize, iconSize);
   } else {
     targetCtx.beginPath();
-    targetCtx.arc(drawX, drawY, iconSize / 2, 0, Math.PI * 2, true);
+    targetCtx.arc(tracer.x, tracer.y, iconSize / 2, 0, Math.PI * 2, true);
     targetCtx.fillStyle = tracer.color;
     targetCtx.fill();
   }
   targetCtx.restore();
 }
 
-export async function startAnimation(targetCtx, userNames = [], onComplete = null) {
-  stopAnimation();
+export async function startAnimation(targetCtx, userNames = [], onComplete = null, panToName = null) {
   if (!targetCtx || !state.currentLotteryData) return;
 
-  if (targetCtx.canvas.id === 'adminCanvas' && !adminPanzoom) {
+  let currentPanzoom;
+  if (targetCtx.canvas.id === 'adminCanvas') {
     adminPanzoom = initializePanzoom(targetCtx.canvas);
-  } else if (targetCtx.canvas.id === 'participantCanvas' && !participantPanzoom) {
+    currentPanzoom = adminPanzoom;
+  } else {
     participantPanzoom = initializePanzoom(targetCtx.canvas);
+    currentPanzoom = participantPanzoom;
   }
+  if (!currentPanzoom) return;
 
   const participantsToAnimate = state.currentLotteryData.participants.filter((p) => p && p.name && userNames.includes(p.name));
   await preloadPrizeImages(state.currentLotteryData.prizes);
@@ -430,20 +459,59 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
     };
   });
   animator.particles = [];
-
   animator.context = targetCtx;
   animator.onComplete = onComplete;
+
+  setTimeout(() => {
+    const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+    if (!container) return;
+    const panzoomElement = targetCtx.canvas.parentElement;
+    const canvasWidth = panzoomElement.offsetWidth;
+    const containerWidth = container.clientWidth;
+    const scale = currentPanzoom.getScale();
+    const currentPan = currentPanzoom.getPan();
+    let finalX = currentPan.x;
+
+    if (panToName) {
+      const participant = state.currentLotteryData.participants.find((p) => p.name === panToName);
+      if (participant) {
+        const VIRTUAL_WIDTH = getVirtualWidth(state.currentLotteryData.participants.length);
+        const participantSpacing = VIRTUAL_WIDTH / (state.currentLotteryData.participants.length + 1);
+        const targetXOnCanvas = participantSpacing * (participant.slot + 1);
+        let desiredX = containerWidth / 2 - targetXOnCanvas * scale;
+        const scaledCanvasWidth = canvasWidth * scale;
+        if (scaledCanvasWidth > containerWidth) {
+          const minX = containerWidth - scaledCanvasWidth;
+          const maxX = 0;
+          finalX = Math.max(minX, Math.min(maxX, desiredX));
+        } else {
+          finalX = (containerWidth - scaledCanvasWidth) / 2;
+        }
+      }
+    }
+    currentPanzoom.pan(finalX, currentPan.y, {animate: true, duration: 600});
+  }, 100);
+
   animator.running = true;
   animationLoop();
 }
 
 export async function prepareStepAnimation(targetCtx, hidePrizes = false) {
-  stopAnimation();
   if (!targetCtx || !state.currentLotteryData) return;
 
-  if (targetCtx.canvas.id === 'adminCanvas' && !adminPanzoom) {
+  let currentPanzoom;
+  if (targetCtx.canvas.id === 'adminCanvas') {
     adminPanzoom = initializePanzoom(targetCtx.canvas);
+    currentPanzoom = adminPanzoom;
+  } else {
+    participantPanzoom = initializePanzoom(targetCtx.canvas);
+    currentPanzoom = participantPanzoom;
   }
+  if (!currentPanzoom) return;
+
+  state.setRevealedPrizes([]);
+  const mask = document.getElementById(targetCtx.canvas.id === 'adminCanvas' ? 'admin-loading-mask' : 'participant-loading-mask');
+  if (mask) mask.style.display = 'flex';
 
   const allParticipants = state.currentLotteryData.participants.filter((p) => p.name);
   await preloadPrizeImages(state.currentLotteryData.prizes);
@@ -451,30 +519,66 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false) {
 
   animator.tracers = allParticipants.map((p) => {
     const path = calculatePath(p.slot, state.currentLotteryData.lines, state.currentLotteryData.participants.length);
-    return {
-      name: p.name,
-      color: p.color || '#333',
-      path,
-      pathIndex: 0,
-      progress: 0,
-      x: path[0].x,
-      y: path[0].y,
-      isFinished: true,
-      celebrated: false,
-    };
+    return {name: p.name, color: p.color || '#333', path, pathIndex: 0, progress: 0, x: path[0].x, y: path[0].y, isFinished: true, celebrated: false};
   });
-
   animator.context = targetCtx;
-  targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
 
+  targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
   const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';
   drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
   animator.tracers.forEach((tracer) => drawTracerIcon(targetCtx, tracer));
+
+  setTimeout(() => {
+    const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+    if (container) {
+      const panzoomElement = targetCtx.canvas.parentElement;
+      const canvasWidth = panzoomElement.offsetWidth;
+      const containerWidth = container.clientWidth;
+      const scale = Math.min(containerWidth / canvasWidth, 1);
+      currentPanzoom.zoom(scale, {animate: false});
+      const scaledCanvasWidth = canvasWidth * scale;
+      const initialX = (containerWidth - scaledCanvasWidth) / 2;
+      currentPanzoom.pan(initialX > 0 ? initialX : 0, 0, {animate: false});
+    }
+
+    if (mask) {
+      mask.style.display = 'none';
+    }
+  }, 50);
+}
+
+export function advanceLineByLine() {
+  if (animator.tracers.length === 0 || animator.running) return;
+
+  animator.tracers.forEach((tracer) => {
+    if (tracer.pathIndex < tracer.path.length - 1) {
+      tracer.isFinished = false;
+    }
+  });
+
+  let nextY = Infinity;
+  animator.tracers.forEach((tracer) => {
+    if (tracer.isFinished) return;
+    for (let i = 0; i < tracer.path.length; i++) {
+      if (tracer.path[i].y > tracer.y + 0.1 && tracer.path[i].y < nextY) {
+        nextY = tracer.path[i].y;
+      }
+    }
+  });
+
+  if (nextY !== Infinity) {
+    animator.tracers.forEach((tracer) => {
+      if (!tracer.isFinished) tracer.stopY = nextY;
+    });
+    animator.running = true;
+    animationLoop();
+  }
 }
 
 export function resetAnimation() {
   if (animator.tracers.length === 0 || animator.running) return;
+  state.setRevealedPrizes([]);
 
   animator.tracers.forEach((tracer) => {
     tracer.isFinished = false;
@@ -490,33 +594,4 @@ export function resetAnimation() {
   animator.particles = [];
   animator.running = true;
   animationLoop();
-}
-
-export function stepAnimation() {
-  if (animator.tracers.length === 0 || animator.running) return;
-
-  let isAnyTracerMoving = false;
-  animator.tracers.forEach((tracer) => {
-    if (tracer.pathIndex >= tracer.path.length - 1) {
-      tracer.isFinished = true;
-      return;
-    }
-    tracer.isFinished = false;
-    delete tracer.stopY;
-    for (let i = tracer.pathIndex; i < tracer.path.length - 1; i++) {
-      const p1 = tracer.path[i];
-      const p2 = tracer.path[i + 1];
-      if (p1.y === p2.y && p1.x !== p2.x) {
-        if (p1.y > tracer.y + 0.1) {
-          tracer.stopY = p1.y;
-          break;
-        }
-      }
-    }
-    isAnyTracerMoving = true;
-  });
-  if (isAnyTracerMoving) {
-    animator.running = true;
-    animationLoop();
-  }
 }

@@ -178,15 +178,23 @@
       <button id="startEventButton" class="primary-action">🎉 このあみだくじでイベントを開始する</button>
     </div>
     <div class="canvas-panzoom-container">
-      <canvas id="adminCanvas" width="800" height="400"></canvas>
+      <div class="loading-mask" id="admin-loading-mask">あみだくじを生成中...</div>
+      <div class="panzoom-wrapper" id="admin-panzoom-wrapper">
+        <canvas id="adminCanvas" width="800" height="400"></canvas>
+      </div>
     </div>
     <div class="broadcast-controls">
-      <button id="animateAllButton">全結果をアニメーション再生</button>
-      <button id="nextStepButton">ステップ実行</button>
-      <button id="regenerateLinesButton">🔄 あみだくじ再生成</button>
-      <button id="glimpseButton">景品チラ見せ</button>
-      <select id="highlightUserSelect"></select>
-      <button id="highlightUserButton">この参加者をハイライト</button>
+      <div class="control-group">
+        <button id="animateAllButton">全結果を再生</button>
+        <button id="advanceLineByLineButton">一段ずつ進む</button>
+        <button id="regenerateLinesButton">🔄 再生成</button>
+        <button id="glimpseButton">景品チラ見せ</button>
+      </div>
+      <div class="control-group">
+        <select id="highlightUserSelect"></select>
+        <button id="highlightUserButton">選択した人を表示</button>
+        <button id="revealRandomButton">ランダムに一人表示</button>
+      </div>
     </div>
   </div>
 
@@ -243,7 +251,10 @@
     <div id="resultSection" style="display: none">
       <h3>🎉 結果発表 🎉</h3>
       <div class="canvas-panzoom-container">
-        <canvas id="participantCanvas" height="400"></canvas>
+        <div class="loading-mask" id="participant-loading-mask">あみだくじを生成中...</div>
+        <div class="panzoom-wrapper" id="participant-panzoom-wrapper">
+          <canvas id="participantCanvas" height="400"></canvas>
+        </div>
       </div>
       <p id="myResult"></p>
       <div id="allResultsContainer"></div>
@@ -438,8 +449,7 @@
         <label>画像:</label>
         <input type="file" id="newPrizeImageInput" accept="image/*">
       </div>
-      <img id="newPrizeImagePreview" src="" alt="Image Preview" style="max-width: 100px;
-max-height: 100px; display: none;">
+      <img id="newPrizeImagePreview" src="" alt="Image Preview" style="max-width: 100px; max-height: 100px; display: none;">
       <div class="modal-actions">
         <button id="callMasterButton" class="secondary-btn action-left">マスターから呼び出し</button>
         <button id="addPrizeOkButton" class="primary-action">追加</button>
