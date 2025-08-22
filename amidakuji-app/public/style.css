@@ -382,10 +382,25 @@ button:disabled {
   border-color: var(--primary-color);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-.item-list-item > span {
-  flex-grow: 1;
+.list-item-link > span {
+  flex-grow: 1; /* テキスト部分が幅を埋めるように */
   cursor: pointer;
 }
+
+/* シェブロンアイコン(>)をCSSで追加 */
+.list-item-link::after {
+  content: '>';
+  font-weight: bold;
+  color: #ccc;
+  margin-left: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .list-item-link::after {
+    color: #666;
+  }
+}
+
 .item-list-item .item-buttons {
   display: flex;
   gap: 10px;

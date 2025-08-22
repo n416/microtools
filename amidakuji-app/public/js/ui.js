@@ -288,7 +288,7 @@ export function updateAuthUI(user) {
     const isSystemAdmin = user.role === 'system_admin' && !user.isImpersonating;
     if (elements.adminDashboardButton) elements.adminDashboardButton.style.display = isSystemAdmin ? 'block' : 'none';
 
-     if (elements.requestAdminControls) {
+    if (elements.requestAdminControls) {
       if (user.role === 'user') {
         elements.requestAdminControls.style.display = 'block';
         elements.requestAdminButton.style.display = 'block';
@@ -483,7 +483,7 @@ export function renderGroupList(groups) {
   elements.groupList.innerHTML = '';
   groups.forEach((group) => {
     const li = document.createElement('li');
-    li.className = 'item-list-item';
+    li.className = 'item-list-item list-item-link';
     li.dataset.groupId = group.id;
     li.dataset.groupName = group.name;
 
@@ -518,6 +518,9 @@ export function renderEventList(events) {
     const displayDate = !isNaN(date) ? date.toLocaleString() : '日付不明';
     const eventName = event.eventName || '無題のイベント';
     const filledSlots = event.participants.filter((p) => p.name).length;
+    // currentUserが存在する場合（＝管理者が見ている場合）のみ、クリック可能にするクラスを付与
+    const itemClass = state.currentUser ? 'item-list-item list-item-link' : 'item-list-item';
+    li.className = itemClass;
 
     li.innerHTML = `
         <span class="event-info">
@@ -532,7 +535,6 @@ export function renderEventList(events) {
             <button class="copy-event-btn" data-event-id="${event.id}">コピー</button>
             <button class="delete-btn delete-event-btn" data-event-id="${event.id}">削除</button>
         </div>`;
-    li.className = 'item-list-item';
 
     elements.eventList.appendChild(li);
   });
