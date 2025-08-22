@@ -106,8 +106,9 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       ui.elements.createEventButton.textContent = 'この内容でイベントを保存';
       ui.renderPrizeList();
     } else if (viewToShow === 'broadcastView') {
-      const { adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, nextStepButton, highlightUserSelect, highlightUserButton, regenerateLinesButton, glimpseButton } = ui.elements;
-      const hidePrizes = data.displayMode === 'private';
+      const { adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, regenerateLinesButton, glimpseButton } = ui.elements;
+      // ★★★ 修正箇所 ★★★: 開始前は常に displayMode を尊重する
+      const hidePrizes = data.displayMode === 'private' && data.status !== 'started';
 
       if (data.status === 'pending') {
         if (adminControls) adminControls.style.display = 'block';
@@ -116,7 +117,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
         if (adminCanvas) adminCanvas.style.display = 'block';
         
         if (animateAllButton) animateAllButton.style.display = 'none';
-        if (nextStepButton) nextStepButton.style.display = 'none';
+        if (advanceLineByLineButton) advanceLineByLineButton.style.display = 'none';
         if (highlightUserSelect) highlightUserSelect.style.display = 'none';
         if (highlightUserButton) highlightUserButton.style.display = 'none';
         
@@ -132,7 +133,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
         if (adminCanvas) adminCanvas.style.display = 'block';
 
         if (animateAllButton) animateAllButton.style.display = 'inline-block';
-        if (nextStepButton) nextStepButton.style.display = 'inline-block';
+        if (advanceLineByLineButton) advanceLineByLineButton.style.display = 'inline-block';
         if (highlightUserSelect) highlightUserSelect.style.display = 'inline-block';
         if (highlightUserButton) highlightUserButton.style.display = 'inline-block';
 
