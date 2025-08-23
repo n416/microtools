@@ -35,11 +35,8 @@ async function loadAndShowGroupEvents(groupId) {
   if (ui.elements.eventGroupName) ui.elements.eventGroupName.textContent = `グループ: ${groupName}`;
 
   try {
-    const [events, passwordRequests] = await Promise.all([
-        api.getEventsForGroup(groupId),
-        api.getPasswordRequests(groupId)
-    ]);
-    
+    const [events, passwordRequests] = await Promise.all([api.getEventsForGroup(groupId), api.getPasswordRequests(groupId)]);
+
     ui.renderEventList(events);
     ui.showPasswordResetNotification(passwordRequests);
 
@@ -55,23 +52,20 @@ async function loadAndShowGroupEvents(groupId) {
 }
 
 async function loadAndShowMemberManagement(groupId) {
-    state.setCurrentGroupId(groupId);
-    ui.showView('memberManagementView');
-    try {
-        const [group, members] = await Promise.all([
-            api.getGroup(groupId),
-            api.getMembers(groupId)
-        ]);
-        if (ui.elements.memberManagementGroupName) {
-            ui.elements.memberManagementGroupName.textContent = group.name;
-        }
-        ui.renderMemberList(members);
-    } catch (error) {
-        console.error(`メンバー管理画面の読み込み失敗 (Group ID: ${groupId}):`, error);
-        if (ui.elements.memberList) {
-            ui.elements.memberList.innerHTML = `<li class="error-message">${error.error || error.message}</li>`;
-        }
+  state.setCurrentGroupId(groupId);
+  ui.showView('memberManagementView');
+  try {
+    const [group, members] = await Promise.all([api.getGroup(groupId), api.getMembers(groupId)]);
+    if (ui.elements.memberManagementGroupName) {
+      ui.elements.memberManagementGroupName.textContent = group.name;
     }
+    ui.renderMemberList(members);
+  } catch (error) {
+    console.error(`メンバー管理画面の読み込み失敗 (Group ID: ${groupId}):`, error);
+    if (ui.elements.memberList) {
+      ui.elements.memberList.innerHTML = `<li class="error-message">${error.error || error.message}</li>`;
+    }
+  }
 }
 
 export async function loadEventForEditing(eventId, viewToShow = 'eventEditView') {
@@ -106,27 +100,28 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       ui.elements.createEventButton.textContent = 'この内容でイベントを保存';
       ui.renderPrizeList();
     } else if (viewToShow === 'broadcastView') {
-      const { adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, regenerateLinesButton, glimpseButton } = ui.elements;
-      // ★★★ 修正箇所 ★★★: 開始前は常に displayMode を尊重する
-      const hidePrizes = data.displayMode === 'private' && data.status !== 'started';
+      const {adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, regenerateLinesButton, glimpseButton} = ui.elements;
+      // ▼▼▼ 修正箇所 ▼▼▼
+      // イベントのステータスに関わらず、displayModeがprivateなら景品を隠す
+      const hidePrizes = data.displayMode === 'private';
+      // ▲▲▲ 修正ここまで ▲▲▲
 
       if (data.status === 'pending') {
         if (adminControls) adminControls.style.display = 'block';
         if (startEventButton) startEventButton.style.display = 'inline-block';
         if (broadcastControls) broadcastControls.style.display = 'flex';
         if (adminCanvas) adminCanvas.style.display = 'block';
-        
+
         if (animateAllButton) animateAllButton.style.display = 'none';
         if (advanceLineByLineButton) advanceLineByLineButton.style.display = 'none';
         if (highlightUserSelect) highlightUserSelect.style.display = 'none';
         if (highlightUserButton) highlightUserButton.style.display = 'none';
-        
+
         if (regenerateLinesButton) regenerateLinesButton.style.display = 'inline-block';
         if (glimpseButton) glimpseButton.style.display = hidePrizes ? 'inline-block' : 'none';
 
         const ctx = adminCanvas.getContext('2d');
         await prepareStepAnimation(ctx, hidePrizes);
-
       } else if (data.status === 'started') {
         if (adminControls) adminControls.style.display = 'none';
         if (broadcastControls) broadcastControls.style.display = 'flex';
@@ -144,9 +139,12 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
         if (highlightUserSelect) {
           highlightUserSelect.innerHTML = allParticipants.map((p) => `<option value="${p.name}">${p.name}</option>`).join('');
         }
-        
+
         const ctx = adminCanvas.getContext('2d');
-        await prepareStepAnimation(ctx, false); // Results are always shown
+        // ▼▼▼ 修正箇所 ▼▼▼
+        // ハードコードされていた `false` を `hidePrizes` に変更
+        await prepareStepAnimation(ctx, hidePrizes);
+        // ▲▲▲ 修正ここまで ▲▲▲
       }
     }
   } catch (error) {
@@ -488,11 +486,11 @@ export async function handleRouting(initialData) {
       await api.updateLastGroup(groupId);
       return;
     }
-    
+
     if (adminMemberManagementMatch) {
-        const groupId = adminMemberManagementMatch[1];
-        await loadAndShowMemberManagement(groupId);
-        return;
+      const groupId = adminMemberManagementMatch[1];
+      await loadAndShowMemberManagement(groupId);
+      return;
     }
 
     if (groupDashboardMatch) {
