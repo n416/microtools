@@ -246,15 +246,32 @@ function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes = false
   const panzoomElement = targetCtx.canvas.parentElement;
   const {participants, prizes, lines} = data;
   const numParticipants = participants.length;
+
   const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
   const VIRTUAL_HEIGHT = 400;
-  targetCtx.canvas.width = VIRTUAL_WIDTH;
-  targetCtx.canvas.height = VIRTUAL_HEIGHT;
+
+  // ▼▼▼ ここから修正 ▼▼▼
+  const canvas = targetCtx.canvas;
+  const dpr = window.devicePixelRatio || 1; // 1. DPRを取得
+
+  // 2. キャンバスの内部解像度をDPR倍にする
+  canvas.width = VIRTUAL_WIDTH * dpr;
+  canvas.height = VIRTUAL_HEIGHT * dpr;
+
+  // 3. キャンバスの見た目のサイズは元のままにする
+  canvas.style.width = `${VIRTUAL_WIDTH}px`;
+  canvas.style.height = `${VIRTUAL_HEIGHT}px`;
+
+  // 4. 以降の描画処理をすべてDPR倍に拡大する
+  targetCtx.scale(dpr, dpr);
+  // ▲▲▲ 修正ここまで ▲▲▲
+
   if (panzoomElement) {
     panzoomElement.style.width = `${VIRTUAL_WIDTH}px`;
     panzoomElement.style.height = `${VIRTUAL_HEIGHT}px`;
   }
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
+  
   targetCtx.font = '14px Arial';
   targetCtx.textAlign = 'center';
   const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
