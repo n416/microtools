@@ -1,10 +1,11 @@
-// amidakuji-app/public/js/main.js
+// amidakuji-app/public/js/main.js (この内容でファイルを置き換えてください)
 
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
 import * as router from './router.js';
-import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning} from './animation.js';
+// ▼▼▼ redrawPrizes をインポートに追加 ▼▼▼
+import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, redrawPrizes} from './animation.js';
 
 function initTronAnimation() {
   const gridCanvas = document.getElementById('grid-canvas');
@@ -987,7 +988,6 @@ function setupEventListeners() {
           state.currentLotteryData.lines = result.lines;
           const ctx = elements.adminCanvas.getContext('2d');
 
-          // ボタンの状態をリセット
           if (elements.advanceLineByLineButton) elements.advanceLineByLineButton.disabled = false;
           if (elements.revealRandomButton) elements.revealRandomButton.disabled = false;
           if (elements.highlightUserButton) elements.highlightUserButton.disabled = false;
@@ -1003,21 +1003,47 @@ function setupEventListeners() {
     });
   }
 
+  // ▼▼▼ チラ見せ機能のロジックを、Panzoomに影響しない安全な方式に全面的に書き換え ▼▼▼
   if (elements.glimpseButton) {
-    const redrawCanvas = async (showPrizes) => {
-      const ctx = elements.adminCanvas.getContext('2d');
-      await prepareStepAnimation(ctx, !showPrizes);
+    const canvas = elements.adminCanvas;
+    const ctx = canvas.getContext('2d');
+    const transitionDuration = 150; // フェードアニメーションの時間（ミリ秒）
+    let isGlimpsing = false;
+
+    // 景品を表示する処理
+    const showPrizes = async () => {
+      if (isGlimpsing) return;
+      isGlimpsing = true;
+      canvas.style.transition = `opacity ${transitionDuration}ms`;
+      canvas.style.opacity = '0';
+      await new Promise(r => setTimeout(r, transitionDuration));
+      redrawPrizes(ctx, false); // 新しい軽量な関数を呼び出す
+      canvas.style.opacity = '1';
     };
-    elements.glimpseButton.addEventListener('mousedown', () => redrawCanvas(true));
-    elements.glimpseButton.addEventListener('mouseup', () => redrawCanvas(false));
-    elements.glimpseButton.addEventListener('mouseleave', () => redrawCanvas(false));
+
+    // 景品を隠す処理
+    const hidePrizes = async () => {
+      if (!isGlimpsing) return;
+      isGlimpsing = false;
+      canvas.style.opacity = '0';
+      await new Promise(r => setTimeout(r, transitionDuration));
+      redrawPrizes(ctx, true); // 新しい軽量な関数を呼び出す
+      canvas.style.opacity = '1';
+    };
+
+    // マウス操作のイベント
+    elements.glimpseButton.addEventListener('mousedown', showPrizes);
+    elements.glimpseButton.addEventListener('mouseup', hidePrizes);
+    elements.glimpseButton.addEventListener('mouseleave', hidePrizes);
+
+    // スマートフォンなどのタッチ操作のイベント
     elements.glimpseButton.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      redrawCanvas(true);
+      showPrizes();
     });
     elements.glimpseButton.addEventListener('touchend', (e) => {
       e.preventDefault();
-      redrawCanvas(false);
+      hidePrizes();
     });
   }
 
