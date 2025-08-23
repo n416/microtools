@@ -520,6 +520,7 @@ button:disabled {
   background-color: var(--white-color);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
   position: relative; /* マスク表示のため */
+  box-sizing: border-box;
 }
 
 .loading-mask {
@@ -551,6 +552,7 @@ button:disabled {
   box-shadow: none;
   width: auto;
   height: 400px;
+  transition: opacity 0.3s ease-in-out; /* 透明度を0.3秒かけて滑らかに変化させる */
 }
 
 /* ★★★ broadcast-controlsのスタイルをここに集約 ★★★ */
