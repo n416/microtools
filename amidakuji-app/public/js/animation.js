@@ -313,8 +313,13 @@ function animationLoop() {
   targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
   const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const baseLineColor = isDarkMode ? '#444' : '#e0e0e0';
-  const isPrivateMode = state.currentLotteryData.displayMode === 'private' || state.currentLotteryData.status === 'pending';
-  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, isPrivateMode);
+
+  // ▼▼▼ 修正箇所 ▼▼▼
+  // 景品を隠す条件を明確化: イベントが未開始、または景品非公開設定の場合
+  const hidePrizes = state.currentLotteryData.status === 'pending' || state.currentLotteryData.displayMode === 'private';
+  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
+  // ▲▲▲ 修正ここまで ▲▲▲
+
   drawRevealedPrizes(targetCtx);
   animator.particles = animator.particles.filter((p) => p.life > 0);
   animator.particles.forEach((p) => {
@@ -343,13 +348,22 @@ function animationLoop() {
 
 function updateTracerPosition(tracer, speed) {
   const revealPrize = () => {
+    console.log('到達');
     const resultExists = state.revealedPrizes.some((r) => r.participantName === tracer.name);
     if (!resultExists) {
       const result = state.currentLotteryData.results[tracer.name];
+      console.log('Result object from state:', result);
+
       if (result) {
         const prizeIndex = result.prizeIndex;
-        if (typeof prizeIndex !== 'undefined' && prizeIndex > -1) {
-          state.revealedPrizes.push({participantName: tracer.name, prize: result.prize, prizeIndex, revealProgress: 0});
+        // ▼▼▼ 修正箇所 ▼▼▼
+        console.log('書き換える景品index:', prizeIndex); // どのインデックスを書き換えようとしているかログ出力
+        // ▲▲▲ 修正ここまで ▲▲▲
+        const realPrize = state.currentLotteryData.prizes[prizeIndex];
+
+        if (typeof prizeIndex !== 'undefined' && prizeIndex > -1 && realPrize) {
+          console.log('Revealing prize:', realPrize);
+          state.revealedPrizes.push({participantName: tracer.name, prize: realPrize, prizeIndex, revealProgress: 0});
         }
       }
     }
@@ -447,10 +461,20 @@ function drawTracerIcon(targetCtx, tracer) {
 
 export async function startAnimation(targetCtx, userNames = [], onComplete = null, panToName = null) {
   if (!targetCtx || !state.currentLotteryData) return;
-  if (!state.currentLotteryData.results) {
+
+  // ▼▼▼ 修正箇所 ▼▼▼
+  // 結果データが存在するか、または存在してもprizeIndexが含まれていない古い形式でないかを確認
+  const results = state.currentLotteryData.results;
+  const isOutdated = results && Object.values(results).length > 0 && typeof Object.values(results)[0].prizeIndex === 'undefined';
+
+  if (!results || isOutdated) {
+    console.log('結果データが存在しないか古い形式のため、クライアントサイドで再計算します。');
     const {participants, lines, prizes} = state.currentLotteryData;
+    // クライアントサイドで結果を再計算して、最新の形式（prizeIndexを含む）にする
     state.currentLotteryData.results = calculateClientSideResults(participants, lines, prizes);
   }
+  // ▲▲▲ 修正ここまで ▲▲▲
+
   let currentPanzoom;
   if (targetCtx.canvas.id === 'adminCanvas') {
     adminPanzoom = initializePanzoom(targetCtx.canvas);
