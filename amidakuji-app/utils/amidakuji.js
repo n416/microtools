@@ -1,7 +1,8 @@
+// amidakuji-app/utils/amidakuji.js (この内容でファイルを置き換えてください)
 function generateLines(numParticipants) {
   const lines = [];
   const horizontalLines = Math.floor(numParticipants * 2.5);
-  
+
   for (let i = 0; i < horizontalLines; i++) {
     const startNode = Math.floor(Math.random() * (numParticipants - 1));
     const endNode = startNode + 1;
@@ -31,7 +32,12 @@ function calculateResults(participants, lines, prizes) {
     });
     const participant = participants.find((p) => p.slot === i);
     if (participant && participant.name) {
-      results[participant.name] = {prize: prizes[currentPath], color: participant.color};
+      // ★★★ 修正箇所: prizeIndex を結果に含める ★★★
+      results[participant.name] = {
+        prize: prizes[currentPath],
+        prizeIndex: currentPath, // ゴールした賞品スロットのインデックス
+        color: participant.color,
+      };
     }
   }
   return results;
