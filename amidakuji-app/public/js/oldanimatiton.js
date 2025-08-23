@@ -98,7 +98,6 @@ export function isAnimationRunning() {
   return animator.running;
 }
 
-// ▼▼▼ Panzoom初期化処理を、正常に動作していた oldanimation.js のものに戻します ▼▼▼
 function initializePanzoom(canvasElement) {
   if (!canvasElement) return null;
   const panzoomElement = canvasElement.parentElement;
@@ -136,6 +135,7 @@ function getVirtualWidth(numParticipants) {
   return Math.max(defaultWidth, calculatedWidth);
 }
 
+// ★★★ 根本原因だったバグを修正した、正しい経路計算ロジック ★★★
 function calculatePath(startIdx, lines, numParticipants) {
   const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
   const VIRTUAL_HEIGHT = 400;
@@ -314,8 +314,11 @@ function animationLoop() {
   const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const baseLineColor = isDarkMode ? '#444' : '#e0e0e0';
 
+  // ▼▼▼ 修正箇所 ▼▼▼
+  // 景品を隠す条件を明確化: イベントが未開始、または景品非公開設定の場合
   const hidePrizes = state.currentLotteryData.status === 'pending' || state.currentLotteryData.displayMode === 'private';
   drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
+  // ▲▲▲ 修正ここまで ▲▲▲
 
   drawRevealedPrizes(targetCtx);
   animator.particles = animator.particles.filter((p) => p.life > 0);
@@ -344,59 +347,27 @@ function animationLoop() {
 }
 
 function updateTracerPosition(tracer, speed) {
-  // ▼▼▼ この内部関数 revealPrize の中身を変更します ▼▼▼
   const revealPrize = () => {
-    // 現在のキャンバスが管理者用かユーザー用かを取得
-    const targetCanvasId = animator.context.canvas.id;
+    console.log('到達');
+    const resultExists = state.revealedPrizes.some((r) => r.participantName === tracer.name);
+    if (!resultExists) {
+      const result = state.currentLotteryData.results[tracer.name];
+      console.log('Result object from state:', result);
 
-    // 管理者画面の場合：これまで通り、一人ずつ結果を表示
-    if (targetCanvasId === 'adminCanvas') {
-      const resultExists = state.revealedPrizes.some((r) => r.participantName === tracer.name);
-      if (!resultExists) {
-        const result = state.currentLotteryData.results[tracer.name];
-        if (result) {
-          const prizeIndex = result.prizeIndex;
-          const realPrize = state.currentLotteryData.prizes[prizeIndex];
-          if (typeof prizeIndex !== 'undefined' && prizeIndex > -1 && realPrize) {
-            state.revealedPrizes.push({participantName: tracer.name, prize: realPrize, prizeIndex, revealProgress: 0});
-          }
-        }
-      }
-    }
-    // ユーザー画面の場合：全員分の結果を一斉に表示
-    else if (targetCanvasId === 'participantCanvas') {
-      // すでに表示済みであれば何もしない（アニメーションの重複実行対策）
-      if (state.revealedPrizes.length > 0) {
-        return;
-      }
-
-      const allResults = state.currentLotteryData.results;
-      const allPrizes = state.currentLotteryData.prizes;
-      const newRevealedPrizes = [];
-
-      // 全ての参加者の結果をループで生成
-      for (const participantName in allResults) {
-        const result = allResults[participantName];
+      if (result) {
         const prizeIndex = result.prizeIndex;
-        const realPrize = allPrizes[prizeIndex];
+        // ▼▼▼ 修正箇所 ▼▼▼
+        console.log('書き換える景品index:', prizeIndex); // どのインデックスを書き換えようとしているかログ出力
+        // ▲▲▲ 修正ここまで ▲▲▲
+        const realPrize = state.currentLotteryData.prizes[prizeIndex];
 
         if (typeof prizeIndex !== 'undefined' && prizeIndex > -1 && realPrize) {
-          newRevealedPrizes.push({
-            participantName: participantName,
-            prize: realPrize,
-            prizeIndex: prizeIndex,
-            revealProgress: 0, // 表示アニメーションのため
-          });
+          console.log('Revealing prize:', realPrize);
+          state.revealedPrizes.push({participantName: tracer.name, prize: realPrize, prizeIndex, revealProgress: 0});
         }
-      }
-
-      // 生成した全員分の結果で、表示用stateを更新
-      if (newRevealedPrizes.length > 0) {
-        state.setRevealedPrizes(newRevealedPrizes);
       }
     }
   };
-  // ▲▲▲ 変更はここまで ▲▲▲
   if (tracer.stopY && tracer.y >= tracer.stopY) {
     const start = tracer.path[tracer.pathIndex];
     const end = tracer.path[tracer.pathIndex + 1];
@@ -491,21 +462,27 @@ function drawTracerIcon(targetCtx, tracer) {
 export async function startAnimation(targetCtx, userNames = [], onComplete = null, panToName = null) {
   if (!targetCtx || !state.currentLotteryData) return;
 
+  // ▼▼▼ 修正箇所 ▼▼▼
+  // 結果データが存在するか、または存在してもprizeIndexが含まれていない古い形式でないかを確認
   const results = state.currentLotteryData.results;
   const isOutdated = results && Object.values(results).length > 0 && typeof Object.values(results)[0].prizeIndex === 'undefined';
 
   if (!results || isOutdated) {
+    console.log('結果データが存在しないか古い形式のため、クライアントサイドで再計算します。');
     const {participants, lines, prizes} = state.currentLotteryData;
+    // クライアントサイドで結果を再計算して、最新の形式（prizeIndexを含む）にする
     state.currentLotteryData.results = calculateClientSideResults(participants, lines, prizes);
   }
+  // ▲▲▲ 修正ここまで ▲▲▲
 
-  let currentPanzoom = initializePanzoom(targetCtx.canvas);
+  let currentPanzoom;
   if (targetCtx.canvas.id === 'adminCanvas') {
-    adminPanzoom = currentPanzoom;
+    adminPanzoom = initializePanzoom(targetCtx.canvas);
+    currentPanzoom = adminPanzoom;
   } else {
-    participantPanzoom = currentPanzoom;
+    participantPanzoom = initializePanzoom(targetCtx.canvas);
+    currentPanzoom = participantPanzoom;
   }
-
   if (!currentPanzoom) return;
   const participantsToAnimate = state.currentLotteryData.participants.filter((p) => p && p.name && userNames.includes(p.name));
   await preloadPrizeImages(state.currentLotteryData.prizes);
@@ -549,22 +526,20 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
   animationLoop();
 }
 
-export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMask = true) {
+export async function prepareStepAnimation(targetCtx, hidePrizes = false) {
   if (!targetCtx || !state.currentLotteryData) return;
-
-  let currentPanzoom = initializePanzoom(targetCtx.canvas);
+  let currentPanzoom;
   if (targetCtx.canvas.id === 'adminCanvas') {
-    adminPanzoom = currentPanzoom;
+    adminPanzoom = initializePanzoom(targetCtx.canvas);
+    currentPanzoom = adminPanzoom;
   } else {
-    participantPanzoom = currentPanzoom;
+    participantPanzoom = initializePanzoom(targetCtx.canvas);
+    currentPanzoom = participantPanzoom;
   }
   if (!currentPanzoom) return;
-
   state.setRevealedPrizes([]);
   const mask = document.getElementById(targetCtx.canvas.id === 'adminCanvas' ? 'admin-loading-mask' : 'participant-loading-mask');
-
-  if (mask && showMask) mask.style.display = 'flex';
-
+  if (mask) mask.style.display = 'flex';
   const allParticipants = state.currentLotteryData.participants.filter((p) => p.name);
   await preloadPrizeImages(state.currentLotteryData.prizes);
   await preloadIcons(allParticipants);
@@ -590,8 +565,7 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMa
       const initialX = (containerWidth - scaledCanvasWidth) / 2;
       currentPanzoom.pan(initialX > 0 ? initialX : 0, 0, {animate: false});
     }
-
-    if (mask && showMask) {
+    if (mask) {
       mask.style.display = 'none';
     }
   }, 50);
@@ -643,27 +617,15 @@ export function resetAnimation() {
 
 export function redrawPrizes(targetCtx, hidePrizes) {
   if (!targetCtx || !state.currentLotteryData) return;
-  const {participants, prizes} = state.currentLotteryData;
+  const { participants, prizes } = state.currentLotteryData;
   if (!participants || participants.length === 0) return;
-
-  // ▼▼▼ 描画エリアの計算 ▼▼▼
-  // 各要素のY座標やサイズを定数として定義
-  const PRIZE_Y_CENTER = 370;
-  const PRIZE_MAX_IMAGE_HEIGHT = 45; // 通常30px、表示アニメーションで最大1.5倍の45px
-  const PRIZE_TEXT_Y = 395;
-  const PADDING = 5; // 上下の余白
-
-  // 定数からクリアすべきY座標の開始位置と高さを計算
-  const clearY = PRIZE_Y_CENTER - PRIZE_MAX_IMAGE_HEIGHT / 2 - PADDING; // 370 - 22.5 - 5 = 342.5
-  const clearHeight = PRIZE_TEXT_Y + PADDING - clearY; // (395 + 5) - 342.5 = 57.5
-  // ▲▲▲ 計算ここまで ▲▲▲
 
   const numParticipants = participants.length;
   const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
 
-  // 計算結果を使ってエリアをクリア
-  targetCtx.clearRect(0, clearY, VIRTUAL_WIDTH, clearHeight);
+  // 景品が描画されているエリアのみをクリアする
+  targetCtx.clearRect(0, 360, VIRTUAL_WIDTH, 40);
 
   // 以下はdrawLotteryBaseから持ってきた景品描画専用のロジック
   targetCtx.font = '14px Arial';
