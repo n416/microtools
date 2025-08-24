@@ -1,11 +1,12 @@
-// amidakuji-app/public/js/main.js (この内容でファイルを置き換えてください)
+// amidakuji-app/public/js/main.js
 
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
 import * as router from './router.js';
-// ▼▼▼ redrawPrizes をインポートに追加 ▼▼▼
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, redrawPrizes} from './animation.js';
+
+document.addEventListener('DOMContentLoaded', initializeApp);
 
 function initTronAnimation() {
   const gridCanvas = document.getElementById('grid-canvas');
@@ -201,6 +202,7 @@ async function initializeApp() {
   setupEventListeners();
   setupHamburgerMenu();
   initTronAnimation();
+  setupDraggableControls();
   const initialData = {
     group: typeof initialGroupData !== 'undefined' ? initialGroupData : null,
     event: typeof initialEventData !== 'undefined' ? initialEventData : null,
@@ -345,37 +347,34 @@ function handleShareResult() {
 }
 
 async function buildNewPrizesWithDataPreservation(newNames) {
-  // データ収集
   const oldPrizes = [...state.prizes];
   const prizeMasters = await api.getPrizeMasters(state.currentGroupId).catch(() => []);
-
-  // 優先検索のため、更新前の景品情報を名前をキーとするMapに変換
-  // これにより重複名は自動的に後方の情報で上書きされる
   const oldPrizesMap = new Map(oldPrizes.map((p) => [p.name, p]));
   const prizeMastersMap = new Map(prizeMasters.map((p) => [p.name, p.imageUrl]));
 
-  // 新しい景品リストを生成
   const newPrizes = newNames.map((name) => {
-    // 優先度1: 更新前のリストに完全一致するか
     if (oldPrizesMap.has(name)) {
-      return {...oldPrizesMap.get(name)}; // 画像情報ごと完全に引き継ぐ
+      return {...oldPrizesMap.get(name)};
     }
-
-    // 優先度2: 賞品マスターに一致するか
     if (prizeMastersMap.has(name)) {
       return {name, imageUrl: prizeMastersMap.get(name), newImageFile: null};
     }
-
-    // 優先度3: 完全新規
     return {name, imageUrl: null, newImageFile: null};
   });
-
   return newPrizes;
 }
 
 function setupEventListeners() {
+  window.addEventListener('popstate', (e) => {
+    router.navigateTo(window.location.pathname, false);
+  });
+  
   if (elements.loginButton)
     elements.loginButton.addEventListener('click', () => {
+      window.location.href = '/auth/google';
+    });
+  if (elements.landingLoginButton)
+    elements.landingLoginButton.addEventListener('click', () => {
       window.location.href = '/auth/google';
     });
   if (elements.logoutButton)
@@ -763,7 +762,6 @@ function setupEventListeners() {
         const result = await api.finalizeBulkMembers(state.currentGroupId, resolutions);
         alert(`${result.createdCount}名のメンバーを新しく登録しました。`);
         ui.closeBulkRegisterModal();
-        // メンバーリストを再読み込み
         const members = await api.getMembers(state.currentGroupId);
         ui.renderMemberList(members);
       } catch (error) {
@@ -986,6 +984,8 @@ function setupEventListeners() {
         try {
           const result = await api.regenerateLines(state.currentEventId);
           state.currentLotteryData.lines = result.lines;
+          state.currentLotteryData.results = result.results; 
+          
           const ctx = elements.adminCanvas.getContext('2d');
 
           if (elements.advanceLineByLineButton) elements.advanceLineByLineButton.disabled = false;
@@ -1001,42 +1001,51 @@ function setupEventListeners() {
         }
       }
     });
+
+    if (elements.toggleFullscreenButton) {
+      elements.toggleFullscreenButton.addEventListener('click', () => {
+        const container = elements.adminCanvas.closest('.canvas-panzoom-container');
+        if (container) {
+          const isFullscreen = container.classList.toggle('fullscreen-mode');
+          elements.toggleFullscreenButton.textContent = isFullscreen ? '元のサイズに戻す' : '表示エリアを最大化';
+          setTimeout(() => {
+            const hidePrizes = state.currentLotteryData?.displayMode === 'private';
+            prepareStepAnimation(elements.adminCanvas.getContext('2d'), hidePrizes, false, true);
+          }, 300);
+        }
+      });
+    }
   }
 
-  // ▼▼▼ チラ見せ機能のロジックを、Panzoomに影響しない安全な方式に全面的に書き換え ▼▼▼
   if (elements.glimpseButton) {
     const canvas = elements.adminCanvas;
     const ctx = canvas.getContext('2d');
-    const transitionDuration = 150; // フェードアニメーションの時間（ミリ秒）
+    const transitionDuration = 150;
     let isGlimpsing = false;
 
-    // 景品を表示する処理
     const showPrizes = async () => {
       if (isGlimpsing) return;
       isGlimpsing = true;
       canvas.style.transition = `opacity ${transitionDuration}ms`;
       canvas.style.opacity = '0';
-      await new Promise(r => setTimeout(r, transitionDuration));
-      redrawPrizes(ctx, false); // 新しい軽量な関数を呼び出す
+      await new Promise((r) => setTimeout(r, transitionDuration));
+      redrawPrizes(ctx, false);
       canvas.style.opacity = '1';
     };
 
-    // 景品を隠す処理
     const hidePrizes = async () => {
       if (!isGlimpsing) return;
       isGlimpsing = false;
       canvas.style.opacity = '0';
-      await new Promise(r => setTimeout(r, transitionDuration));
-      redrawPrizes(ctx, true); // 新しい軽量な関数を呼び出す
+      await new Promise((r) => setTimeout(r, transitionDuration));
+      redrawPrizes(ctx, true);
       canvas.style.opacity = '1';
     };
 
-    // マウス操作のイベント
     elements.glimpseButton.addEventListener('mousedown', showPrizes);
     elements.glimpseButton.addEventListener('mouseup', hidePrizes);
     elements.glimpseButton.addEventListener('mouseleave', hidePrizes);
 
-    // スマートフォンなどのタッチ操作のイベント
     elements.glimpseButton.addEventListener('touchstart', (e) => {
       e.preventDefault();
       showPrizes();
@@ -1377,9 +1386,6 @@ function setupEventListeners() {
     elements.summaryModal.querySelector('.close-button').addEventListener('click', ui.closeSummaryModal);
   }
 
-  window.addEventListener('popstate', (event) => {
-    router.navigateTo(window.location.pathname, false);
-  });
   window.addEventListener('resize', ui.adjustBodyPadding);
   window.addEventListener('click', (event) => {
     if (elements.groupSettingsModal && event.target == elements.groupSettingsModal) ui.closeSettingsModal();
@@ -1426,4 +1432,80 @@ function setupHamburgerMenu() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', initializeApp);
+// ▼▼▼ ここから修正 ▼▼▼
+function setupDraggableControls() {
+  const wrapper = document.getElementById('controls-draggable-wrapper');
+  const header = wrapper.querySelector('.controls-header');
+  const toggleBtn = document.getElementById('toggleControlsButton');
+
+  if (!wrapper || !header || !toggleBtn) return;
+
+  let pos = { top: 0, left: 0, x: 0, y: 0 };
+
+  const savedPos = localStorage.getItem('controlsPosition');
+  if (savedPos) {
+    const { x, y } = JSON.parse(savedPos);
+    if (x > window.innerWidth || y > window.innerHeight || x < -wrapper.offsetWidth || y < -wrapper.offsetHeight) {
+      localStorage.removeItem('controlsPosition');
+    } else {
+      wrapper.style.left = `${x}px`;
+      wrapper.style.top = `${y}px`;
+      wrapper.style.bottom = 'auto';
+      wrapper.style.transform = 'none';
+    }
+  }
+
+  const isMinimized = localStorage.getItem('controlsMinimized') === 'true';
+  if (isMinimized) {
+    wrapper.classList.add('minimized');
+    toggleBtn.textContent = '+';
+  }
+
+  toggleBtn.addEventListener('click', () => {
+    const minimized = wrapper.classList.toggle('minimized');
+    toggleBtn.textContent = minimized ? '+' : '-';
+    localStorage.setItem('controlsMinimized', minimized);
+  });
+
+  const mouseDownHandler = (e) => {
+    if (e.target === toggleBtn) return;
+
+    const rect = wrapper.getBoundingClientRect();
+    wrapper.style.left = `${rect.left}px`;
+    wrapper.style.top = `${rect.top}px`;
+    wrapper.style.bottom = 'auto';
+    wrapper.style.transform = 'none';
+
+    pos = {
+      left: wrapper.offsetLeft,
+      top: wrapper.offsetTop,
+      x: e.clientX,
+      y: e.clientY,
+    };
+    
+    wrapper.classList.add('dragging');
+
+    document.addEventListener('mousemove', mouseMoveHandler);
+    document.addEventListener('mouseup', mouseUpHandler);
+  };
+
+  const mouseMoveHandler = (e) => {
+    const dx = e.clientX - pos.x;
+    const dy = e.clientY - pos.y;
+
+    wrapper.style.top = `${pos.top + dy}px`;
+    wrapper.style.left = `${pos.left + dx}px`;
+  };
+
+  const mouseUpHandler = () => {
+    wrapper.classList.remove('dragging');
+    document.removeEventListener('mousemove', mouseMoveHandler);
+    document.removeEventListener('mouseup', mouseUpHandler);
+
+    const rect = wrapper.getBoundingClientRect();
+    localStorage.setItem('controlsPosition', JSON.stringify({ x: rect.left, y: rect.top }));
+  };
+
+  header.addEventListener('mousedown', mouseDownHandler);
+}
+// ▲▲▲ 修正ここまで ▲▲▲

@@ -683,7 +683,7 @@ exports.generatePrizeUploadUrl = async (req, res) => {
   }
 };
 
-// --- ▼▼▼ 新規追加 ▼▼▼ ---
+// --- ▼▼▼ 修正箇所 ▼▼▼ ---
 exports.regenerateLines = async (req, res) => {
   try {
     const {eventId} = req.params;
@@ -701,13 +701,26 @@ exports.regenerateLines = async (req, res) => {
       return res.status(400).json({error: '開始済みのイベントのあみだくじは変更できません。'});
     }
 
+    // 新しい線を生成
     const newLines = generateLines(eventData.participantCount);
-    await eventRef.update({lines: newLines});
+    // 新しい線に基づいて結果を再計算
+    const newResults = calculateResults(eventData.participants, newLines, eventData.prizes);
 
-    res.status(200).json({message: 'あみだくじが再生成されました。', lines: newLines});
+    // 線と結果の両方を更新
+    await eventRef.update({
+      lines: newLines,
+      results: newResults, // 結果も更新する
+    });
+
+    // クライアントにも両方の情報を返す
+    res.status(200).json({
+      message: 'あみだくじが再生成されました。',
+      lines: newLines,
+      results: newResults,
+    });
   } catch (error) {
     console.error('Error regenerating Amidakuji lines:', error);
     res.status(500).json({error: 'あみだくじの再生成に失敗しました。'});
   }
 };
-// --- ▲▲▲ 追加ここまで ▲▲▲ ---
+// --- ▲▲▲ 修正ここまで ▲▲▲ ---

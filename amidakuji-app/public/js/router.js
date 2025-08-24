@@ -1,4 +1,5 @@
-// js/router.js
+// amidakuji-app/public/js/router.js
+
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
@@ -100,52 +101,45 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       ui.elements.createEventButton.textContent = 'この内容でイベントを保存';
       ui.renderPrizeList();
     } else if (viewToShow === 'broadcastView') {
-      const {adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, regenerateLinesButton, glimpseButton} = ui.elements;
-      // ▼▼▼ 修正箇所 ▼▼▼
-      // イベントのステータスに関わらず、displayModeがprivateなら景品を隠す
+      const {adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, revealRandomButton, regenerateLinesButton, glimpseButton} = ui.elements;
       const hidePrizes = data.displayMode === 'private';
-      // ▲▲▲ 修正ここまで ▲▲▲
 
+      // --- ▼▼▼ ここから修正 ▼▼▼ ---
+      // 常に表示・更新するUI要素
+      if (broadcastControls) broadcastControls.style.display = 'flex';
+      if (adminCanvas) adminCanvas.style.display = 'block';
+
+      const allParticipants = data.participants.filter((p) => p.name);
+      if (highlightUserSelect) {
+        highlightUserSelect.innerHTML = allParticipants.map((p) => `<option value="${p.name}">${p.name}</option>`).join('');
+        highlightUserSelect.style.display = 'inline-block';
+      }
+      if (highlightUserButton) highlightUserButton.style.display = 'inline-block';
+      if (revealRandomButton) revealRandomButton.style.display = 'inline-block';
+
+      // イベントのステータスに応じて表示を切り替えるUI要素
       if (data.status === 'pending') {
         if (adminControls) adminControls.style.display = 'block';
         if (startEventButton) startEventButton.style.display = 'inline-block';
-        if (broadcastControls) broadcastControls.style.display = 'flex';
-        if (adminCanvas) adminCanvas.style.display = 'block';
 
         if (animateAllButton) animateAllButton.style.display = 'none';
         if (advanceLineByLineButton) advanceLineByLineButton.style.display = 'none';
-        if (highlightUserSelect) highlightUserSelect.style.display = 'none';
-        if (highlightUserButton) highlightUserButton.style.display = 'none';
 
         if (regenerateLinesButton) regenerateLinesButton.style.display = 'inline-block';
         if (glimpseButton) glimpseButton.style.display = hidePrizes ? 'inline-block' : 'none';
-
-        const ctx = adminCanvas.getContext('2d');
-        await prepareStepAnimation(ctx, hidePrizes);
       } else if (data.status === 'started') {
         if (adminControls) adminControls.style.display = 'none';
-        if (broadcastControls) broadcastControls.style.display = 'flex';
-        if (adminCanvas) adminCanvas.style.display = 'block';
 
         if (animateAllButton) animateAllButton.style.display = 'inline-block';
         if (advanceLineByLineButton) advanceLineByLineButton.style.display = 'inline-block';
-        if (highlightUserSelect) highlightUserSelect.style.display = 'inline-block';
-        if (highlightUserButton) highlightUserButton.style.display = 'inline-block';
 
         if (regenerateLinesButton) regenerateLinesButton.style.display = 'none';
         if (glimpseButton) glimpseButton.style.display = 'none';
-
-        const allParticipants = data.participants.filter((p) => p.name);
-        if (highlightUserSelect) {
-          highlightUserSelect.innerHTML = allParticipants.map((p) => `<option value="${p.name}">${p.name}</option>`).join('');
-        }
-
-        const ctx = adminCanvas.getContext('2d');
-        // ▼▼▼ 修正箇所 ▼▼▼
-        // ハードコードされていた `false` を `hidePrizes` に変更
-        await prepareStepAnimation(ctx, hidePrizes);
-        // ▲▲▲ 修正ここまで ▲▲▲
       }
+
+      const ctx = adminCanvas.getContext('2d');
+      await prepareStepAnimation(ctx, hidePrizes);
+      // --- ▲▲▲ 修正ここまで ▲▲▲ ---
     }
   } catch (error) {
     alert(error.error || 'イベントの読み込みに失敗しました。');
@@ -440,7 +434,6 @@ async function showResultsView(eventData, targetName, isShareView) {
 }
 
 export async function handleRouting(initialData) {
-  stopAnimation();
   const path = window.location.pathname;
 
   const user = await api.checkGoogleAuthState().catch(() => null);
@@ -588,7 +581,7 @@ export async function handleRouting(initialData) {
   if (user && path !== '/') {
     ui.showView('groupDashboard');
   } else if (!user && path === '/') {
-    ui.showView(null);
+    ui.showView('landingView');
   }
 
   ui.adjustBodyPadding();
