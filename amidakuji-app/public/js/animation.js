@@ -1,10 +1,11 @@
-// amidakuji-app/public/js/animation.js (この内容でファイルを置き換えてください)
+// amidakuji-app/public/js/animation.js
 
 import * as state from './state.js';
 
 let animationFrameId;
 let adminPanzoom = null;
 let participantPanzoom = null;
+let resizeDebounceTimer;
 
 const animator = {
   tracers: [],
@@ -14,13 +15,68 @@ const animator = {
   running: false,
   onComplete: null,
   context: null,
+  lastContainerWidth: 0,
+  lastContainerHeight: 0,
 };
 
-// ブラウザ側でプレビュー用の結果を計算する関数
+// --- ▼▼▼ 修正箇所 ▼▼▼ ---
+// クライアントサイドで結果を再計算/補完するロジック
+function ensureResultsFormat(data) {
+  if (!data.results || Object.keys(data.results).length === 0) {
+    console.log('[Animation] No results found, calculating on client-side.');
+    return calculateClientSideResults(data.participants, data.lines, data.prizes);
+  }
+
+  const firstResult = Object.values(data.results)[0];
+  if (typeof firstResult.prizeIndex !== 'undefined') {
+    console.log('[Animation] Results format is up-to-date.');
+    return data.results; // 既に新しい形式ならそのまま返す
+  }
+
+  console.warn('[Animation] Outdated results format detected. Recalculating on client-side to add prizeIndex.');
+  // 古い形式の場合、クライアントサイドで再計算して補完する
+  return calculateClientSideResults(data.participants, data.lines, data.prizes);
+}
+
+function handleResize() {
+  console.log('[Animation] Resize event detected.');
+  if (isAnimationRunning()) {
+    console.log('[Animation] Animation is running, resize will be handled by animationLoop.');
+    return;
+  }
+
+  console.log('[Animation] Animation is NOT running, redrawing static canvas.');
+  const adminCanvas = document.getElementById('adminCanvas');
+  const participantCanvas = document.getElementById('participantCanvas');
+
+  if (adminCanvas && adminCanvas.offsetParent !== null) {
+    console.log('[Animation] Redrawing admin canvas for resize.');
+    const hidePrizes = state.currentLotteryData?.displayMode === 'private';
+    prepareStepAnimation(adminCanvas.getContext('2d'), hidePrizes, false, true);
+  } else if (participantCanvas && participantCanvas.offsetParent !== null) {
+    console.log('[Animation] Redrawing participant canvas for resize.');
+    const hidePrizes = state.currentLotteryData?.displayMode === 'private' && state.currentLotteryData?.status !== 'started';
+    prepareStepAnimation(participantCanvas.getContext('2d'), hidePrizes, false, true);
+  }
+}
+
+window.addEventListener('resize', () => {
+  clearTimeout(resizeDebounceTimer);
+  resizeDebounceTimer = setTimeout(handleResize, 350);
+});
+
+function getTargetHeight(container) {
+  if (container && container.classList.contains('fullscreen-mode')) {
+    return window.innerHeight;
+  }
+  return 400;
+}
+
 function calculateClientSideResults(participants, lines, prizes) {
   const results = {};
   if (!participants || !lines || !prizes) return results;
-  for (let i = 0; i < participants.length; i++) {
+  const numParticipants = participants.length;
+  for (let i = 0; i < numParticipants; i++) {
     let currentPath = i;
     const sortedLines = [...lines].sort((a, b) => a.y - b.y);
     sortedLines.forEach((line) => {
@@ -91,14 +147,13 @@ function celebrate(originX, color) {
   if (!container) return;
   const rect = container.getBoundingClientRect();
   const x = (rect.left + originX) / window.innerWidth;
-  confetti({particleCount: 100, spread: 70, origin: {x: x, y: 0.8}, colors: [color, '#ffffff']});
+  // confetti({particleCount: 100, spread: 70, origin: {x: x, y: 0.8}, colors: [color, '#ffffff']}); // CSPエラーのためコメントアウト
 }
 
 export function isAnimationRunning() {
   return animator.running;
 }
 
-// ▼▼▼ Panzoom初期化処理を、正常に動作していた oldanimation.js のものに戻します ▼▼▼
 function initializePanzoom(canvasElement) {
   if (!canvasElement) return null;
   const panzoomElement = canvasElement.parentElement;
@@ -123,58 +178,54 @@ function initializePanzoom(canvasElement) {
 }
 
 export function stopAnimation() {
+  console.trace('%c[Animation] Stop requested.', 'color: red');
   animator.running = false;
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
   }
 }
 
-function getVirtualWidth(numParticipants) {
+function getVirtualWidth(numParticipants, containerWidth) {
   const minWidthPerParticipant = 80;
-  const defaultWidth = 800;
   const calculatedWidth = numParticipants * minWidthPerParticipant;
-  return Math.max(defaultWidth, calculatedWidth);
+  return Math.max(containerWidth, calculatedWidth);
 }
 
-function calculatePath(startIdx, lines, numParticipants) {
-  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
-  const VIRTUAL_HEIGHT = 400;
+function calculatePath(startIdx, lines, numParticipants, containerWidth, containerHeight) {
+  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, containerWidth);
   const path = [];
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
   const sortedLines = [...lines].sort((a, b) => a.y - b.y);
-
   let currentX = participantSpacing * (startIdx + 1);
-  let currentY = 50;
+  let currentY = containerHeight * 0.125;
   let currentPathIdx = startIdx;
-
   path.push({x: currentX, y: currentY});
-
   sortedLines.forEach((line) => {
-    if (line.y > currentY) {
+    const lineY = containerHeight * (line.y / 400);
+    if (lineY > currentY) {
       if (line.fromIndex === currentPathIdx) {
-        path.push({x: currentX, y: line.y});
+        path.push({x: currentX, y: lineY});
         currentPathIdx = line.toIndex;
         currentX = participantSpacing * (currentPathIdx + 1);
-        path.push({x: currentX, y: line.y});
-        currentY = line.y;
+        path.push({x: currentX, y: lineY});
+        currentY = lineY;
       } else if (line.toIndex === currentPathIdx) {
-        path.push({x: currentX, y: line.y});
+        path.push({x: currentX, y: lineY});
         currentPathIdx = line.fromIndex;
         currentX = participantSpacing * (currentPathIdx + 1);
-        path.push({x: currentX, y: line.y});
-        currentY = line.y;
+        path.push({x: currentX, y: lineY});
+        currentY = lineY;
       }
     }
   });
-
-  path.push({x: currentX, y: VIRTUAL_HEIGHT - 50});
+  path.push({x: currentX, y: containerHeight * 0.875});
   return path;
 }
 
 async function preloadIcons(participants) {
-  animator.icons = {};
-  const promises = participants.map((p) => {
-    if (!p || !p.name) return Promise.resolve();
+  const newIcons = participants.filter((p) => p && p.name && !animator.icons[p.name]);
+  if (newIcons.length === 0) return;
+  const promises = newIcons.map((p) => {
     return new Promise((resolve) => {
       const iconUrl = p.iconUrl || `/api/avatar-proxy?name=${encodeURIComponent(p.name)}`;
       const img = new Image();
@@ -193,11 +244,10 @@ async function preloadIcons(participants) {
 }
 
 async function preloadPrizeImages(prizes) {
-  animator.prizeImages = {};
   if (!prizes) return Promise.resolve();
-  const promises = prizes.map((p) => {
-    if (!p || typeof p !== 'object' || !p.imageUrl) return Promise.resolve();
-    if (animator.prizeImages[p.imageUrl]) return Promise.resolve();
+  const newImages = prizes.filter((p) => p && typeof p === 'object' && p.imageUrl && !animator.prizeImages[p.imageUrl]);
+  if (newImages.length === 0) return;
+  const promises = newImages.map((p) => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -215,11 +265,16 @@ async function preloadPrizeImages(prizes) {
 }
 
 function drawRevealedPrizes(targetCtx) {
-  const VIRTUAL_WIDTH = getVirtualWidth(state.currentLotteryData.participants.length);
-  const participantSpacing = VIRTUAL_WIDTH / (state.currentLotteryData.participants.length + 1);
+  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
+  const numParticipants = state.currentLotteryData.participants.length;
+  const VIRTUAL_HEIGHT = getTargetHeight(container);
+  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, container.clientWidth);
+  const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
   const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const prizeTextColor = isDarkMode ? '#dcdcdc' : '#333';
-  targetCtx.fillStyle = prizeTextColor;
+  targetCtx.fillStyle = isDarkMode ? '#dcdcdc' : '#333';
+  const prizeImageY = VIRTUAL_HEIGHT * 0.925;
+  const prizeTextY = VIRTUAL_HEIGHT * 0.98;
 
   state.revealedPrizes.forEach((result) => {
     const prize = result.prize;
@@ -233,95 +288,121 @@ function drawRevealedPrizes(targetCtx) {
       const t = result.revealProgress / REVEAL_DURATION;
       scale = 1.0 + 0.5 * Math.sin(t * Math.PI);
     }
-    const imageSize = 30 * scale;
+    const imageSize = VIRTUAL_HEIGHT * 0.075 * scale;
     if (prizeImage && prizeImage.complete) {
-      targetCtx.drawImage(prizeImage, x - imageSize / 2, 370 - imageSize / 2, imageSize, imageSize);
+      targetCtx.drawImage(prizeImage, x - imageSize / 2, prizeImageY - imageSize / 2, imageSize, imageSize);
     }
-    targetCtx.fillText(prizeName, x, 395);
+    targetCtx.fillText(prizeName, x, prizeTextY);
   });
 }
 
 function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes = false) {
   if (!targetCtx || !targetCtx.canvas || !data || !data.participants || data.participants.length === 0) return;
+  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
   const panzoomElement = targetCtx.canvas.parentElement;
   const {participants, prizes, lines} = data;
   const numParticipants = participants.length;
-
-  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
-  const VIRTUAL_HEIGHT = 400;
-
-  // ▼▼▼ ここから修正 ▼▼▼
+  const containerWidth = container.clientWidth || 800;
+  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, containerWidth);
+  const VIRTUAL_HEIGHT = getTargetHeight(container);
   const canvas = targetCtx.canvas;
-  const dpr = window.devicePixelRatio || 1; // 1. DPRを取得
-
-  // 2. キャンバスの内部解像度をDPR倍にする
+  const dpr = window.devicePixelRatio || 1;
   canvas.width = VIRTUAL_WIDTH * dpr;
   canvas.height = VIRTUAL_HEIGHT * dpr;
-
-  // 3. キャンバスの見た目のサイズは元のままにする
   canvas.style.width = `${VIRTUAL_WIDTH}px`;
   canvas.style.height = `${VIRTUAL_HEIGHT}px`;
-
-  // 4. 以降の描画処理をすべてDPR倍に拡大する
   targetCtx.scale(dpr, dpr);
-  // ▲▲▲ 修正ここまで ▲▲▲
-
   if (panzoomElement) {
     panzoomElement.style.width = `${VIRTUAL_WIDTH}px`;
     panzoomElement.style.height = `${VIRTUAL_HEIGHT}px`;
   }
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
-  
   targetCtx.font = '14px Arial';
   targetCtx.textAlign = 'center';
   const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const mainTextColor = isDarkMode ? '#e0e0e0' : '#000';
   const subTextColor = isDarkMode ? '#888' : '#888';
   const prizeTextColor = isDarkMode ? '#dcdcdc' : '#333';
+  const nameY = VIRTUAL_HEIGHT * 0.075;
+  const prizeImageY = VIRTUAL_HEIGHT * 0.925;
+  const prizeTextY = VIRTUAL_HEIGHT * 0.98;
+  const lineTopY = VIRTUAL_HEIGHT * 0.125;
+  const lineBottomY = VIRTUAL_HEIGHT * 0.875;
+  const prizeImageSize = VIRTUAL_HEIGHT * 0.075;
+
   participants.forEach((p, i) => {
     const x = participantSpacing * (i + 1);
     const displayName = p.name || `（参加枠 ${p.slot + 1}）`;
     targetCtx.fillStyle = p.name ? mainTextColor : subTextColor;
-    targetCtx.fillText(displayName, x, 30);
+    targetCtx.fillText(displayName, x, nameY);
     const isRevealed = state.revealedPrizes.some((r) => r.prizeIndex === i);
     if (prizes && prizes[i] && !isRevealed) {
       const prize = prizes[i];
       const prizeName = hidePrizes ? '？？？' : typeof prize === 'object' ? prize.name : prize;
       const prizeImage = !hidePrizes && typeof prize === 'object' && prize.imageUrl ? animator.prizeImages[prize.imageUrl] : null;
       if (prizeImage && prizeImage.complete) {
-        targetCtx.drawImage(prizeImage, x - 15, 370 - 15, 30, 30);
+        targetCtx.drawImage(prizeImage, x - prizeImageSize / 2, prizeImageY - prizeImageSize / 2, prizeImageSize, prizeImageSize);
       }
       targetCtx.fillStyle = prizeTextColor;
-      targetCtx.fillText(prizeName, x, 395);
+      targetCtx.fillText(prizeName, x, prizeTextY);
     }
   });
+
   targetCtx.strokeStyle = lineColor;
   targetCtx.lineWidth = 1.5;
   for (let i = 0; i < numParticipants; i++) {
     const x = participantSpacing * (i + 1);
     targetCtx.beginPath();
-    targetCtx.moveTo(x, 50);
-    targetCtx.lineTo(x, VIRTUAL_HEIGHT - 50);
+    targetCtx.moveTo(x, lineTopY);
+    targetCtx.lineTo(x, lineBottomY);
     targetCtx.stroke();
   }
   if (lines) {
     lines.forEach((line) => {
       const startX = participantSpacing * (line.fromIndex + 1);
       const endX = participantSpacing * (line.toIndex + 1);
+      const lineY = VIRTUAL_HEIGHT * (line.y / 400);
       targetCtx.beginPath();
-      targetCtx.moveTo(startX, line.y);
-      targetCtx.lineTo(endX, line.y);
+      targetCtx.moveTo(startX, lineY);
+      targetCtx.lineTo(endX, lineY);
       targetCtx.stroke();
     });
   }
 }
 
 function animationLoop() {
-  if (!animator.running) return;
+  if (!animator.running) {
+    return;
+  }
   const targetCtx = animator.context;
   if (!targetCtx || !targetCtx.canvas) {
     stopAnimation();
     return;
+  }
+  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+  if (!container) {
+    stopAnimation();
+    return;
+  }
+  const currentContainerWidth = container.clientWidth;
+  const currentContainerHeight = getTargetHeight(container);
+  if (currentContainerWidth !== animator.lastContainerWidth || currentContainerHeight !== animator.lastContainerHeight) {
+    console.log(`[Animation] Container resized. Recalculating paths.`);
+    const numParticipants = state.currentLotteryData.participants.length;
+    animator.tracers.forEach((tracer) => {
+      const participant = state.currentLotteryData.participants.find((p) => p.name === tracer.name);
+      if (!participant) return;
+      const newPath = calculatePath(participant.slot, state.currentLotteryData.lines, numParticipants, currentContainerWidth, currentContainerHeight);
+      tracer.path = newPath;
+      if (tracer.isFinished) {
+        const finalPoint = newPath[newPath.length - 1];
+        tracer.x = finalPoint.x;
+        tracer.y = finalPoint.y;
+      }
+    });
+    animator.lastContainerWidth = currentContainerWidth;
+    animator.lastContainerHeight = currentContainerHeight;
   }
   const numParticipants = state.currentLotteryData.participants.length;
   const baseSpeed = 4;
@@ -331,9 +412,9 @@ function animationLoop() {
   const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const baseLineColor = isDarkMode ? '#444' : '#e0e0e0';
 
-  const hidePrizes = state.currentLotteryData.status === 'pending' || state.currentLotteryData.displayMode === 'private';
-  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
+  const hidePrizes = state.currentLotteryData.displayMode === 'private';
 
+  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
   drawRevealedPrizes(targetCtx);
   animator.particles = animator.particles.filter((p) => p.life > 0);
   animator.particles.forEach((p) => {
@@ -342,10 +423,12 @@ function animationLoop() {
   });
   let allFinished = true;
   animator.tracers.forEach((tracer) => {
-    drawTracerPath(targetCtx, tracer);
-    if (!tracer.isFinished) {
+    if (tracer.isFinished) {
+      drawTracerPath(targetCtx, tracer);
+    } else {
       allFinished = false;
       updateTracerPosition(tracer, dynamicSpeed);
+      drawTracerPath(targetCtx, tracer);
       if (Math.random() > 0.5) {
         animator.particles.push(new Particle(tracer.x, tracer.y, tracer.color));
       }
@@ -361,12 +444,8 @@ function animationLoop() {
 }
 
 function updateTracerPosition(tracer, speed) {
-  // ▼▼▼ この内部関数 revealPrize の中身を変更します ▼▼▼
   const revealPrize = () => {
-    // 現在のキャンバスが管理者用かユーザー用かを取得
     const targetCanvasId = animator.context.canvas.id;
-
-    // 管理者画面の場合：これまで通り、一人ずつ結果を表示
     if (targetCanvasId === 'adminCanvas') {
       const resultExists = state.revealedPrizes.some((r) => r.participantName === tracer.name);
       if (!resultExists) {
@@ -375,45 +454,30 @@ function updateTracerPosition(tracer, speed) {
           const prizeIndex = result.prizeIndex;
           const realPrize = state.currentLotteryData.prizes[prizeIndex];
           if (typeof prizeIndex !== 'undefined' && prizeIndex > -1 && realPrize) {
+            console.log(`[Animation] Revealing prize for ${tracer.name}:`, realPrize);
             state.revealedPrizes.push({participantName: tracer.name, prize: realPrize, prizeIndex, revealProgress: 0});
           }
         }
       }
-    }
-    // ユーザー画面の場合：全員分の結果を一斉に表示
-    else if (targetCanvasId === 'participantCanvas') {
-      // すでに表示済みであれば何もしない（アニメーションの重複実行対策）
-      if (state.revealedPrizes.length > 0) {
-        return;
-      }
-
+    } else if (targetCanvasId === 'participantCanvas' && state.revealedPrizes.length === 0) {
       const allResults = state.currentLotteryData.results;
       const allPrizes = state.currentLotteryData.prizes;
-      const newRevealedPrizes = [];
-
-      // 全ての参加者の結果をループで生成
-      for (const participantName in allResults) {
-        const result = allResults[participantName];
-        const prizeIndex = result.prizeIndex;
-        const realPrize = allPrizes[prizeIndex];
-
-        if (typeof prizeIndex !== 'undefined' && prizeIndex > -1 && realPrize) {
-          newRevealedPrizes.push({
-            participantName: participantName,
-            prize: realPrize,
-            prizeIndex: prizeIndex,
-            revealProgress: 0, // 表示アニメーションのため
-          });
-        }
-      }
-
-      // 生成した全員分の結果で、表示用stateを更新
+      const newRevealedPrizes = Object.keys(allResults)
+        .map((participantName) => {
+          const result = allResults[participantName];
+          const prizeIndex = result.prizeIndex;
+          const realPrize = allPrizes[prizeIndex];
+          if (typeof prizeIndex !== 'undefined' && prizeIndex > -1 && realPrize) {
+            return {participantName, prize: realPrize, prizeIndex, revealProgress: 0};
+          }
+          return null;
+        })
+        .filter(Boolean);
       if (newRevealedPrizes.length > 0) {
         state.setRevealedPrizes(newRevealedPrizes);
       }
     }
   };
-  // ▲▲▲ 変更はここまで ▲▲▲
   if (tracer.stopY && tracer.y >= tracer.stopY) {
     const start = tracer.path[tracer.pathIndex];
     const end = tracer.path[tracer.pathIndex + 1];
@@ -483,7 +547,10 @@ function drawTracerPath(targetCtx, tracer) {
 }
 
 function drawTracerIcon(targetCtx, tracer) {
-  const iconSize = 24;
+  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
+  const VIRTUAL_HEIGHT = getTargetHeight(container);
+  const iconSize = VIRTUAL_HEIGHT * 0.06;
   const icon = animator.icons[tracer.name];
   targetCtx.save();
   targetCtx.beginPath();
@@ -506,37 +573,44 @@ function drawTracerIcon(targetCtx, tracer) {
 }
 
 export async function startAnimation(targetCtx, userNames = [], onComplete = null, panToName = null) {
-  if (!targetCtx || !state.currentLotteryData) return;
-
-  const results = state.currentLotteryData.results;
-  const isOutdated = results && Object.values(results).length > 0 && typeof Object.values(results)[0].prizeIndex === 'undefined';
-
-  if (!results || isOutdated) {
-    const {participants, lines, prizes} = state.currentLotteryData;
-    state.currentLotteryData.results = calculateClientSideResults(participants, lines, prizes);
+  if (!targetCtx || !state.currentLotteryData) {
+    console.error('[Animation] Start failed: No context or lottery data.');
+    return;
   }
+
+  state.currentLotteryData.results = ensureResultsFormat(state.currentLotteryData);
 
   let currentPanzoom = initializePanzoom(targetCtx.canvas);
-  if (targetCtx.canvas.id === 'adminCanvas') {
-    adminPanzoom = currentPanzoom;
-  } else {
-    participantPanzoom = currentPanzoom;
+  if (targetCtx.canvas.id === 'adminCanvas') adminPanzoom = currentPanzoom;
+  else participantPanzoom = currentPanzoom;
+  if (!currentPanzoom) {
+    console.error('[Animation] Panzoom initialization failed.');
+    return;
   }
 
-  if (!currentPanzoom) return;
   const participantsToAnimate = state.currentLotteryData.participants.filter((p) => p && p.name && userNames.includes(p.name));
   await preloadPrizeImages(state.currentLotteryData.prizes);
   await preloadIcons(participantsToAnimate);
-  animator.tracers = participantsToAnimate.map((p) => {
-    const path = calculatePath(p.slot, state.currentLotteryData.lines, state.currentLotteryData.participants.length);
+  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
+  const VIRTUAL_HEIGHT = getTargetHeight(container);
+  const numParticipants = state.currentLotteryData.participants.length;
+
+  const finishedTracers = animator.tracers.filter((t) => t.isFinished);
+  const newTracers = participantsToAnimate.map((p) => {
+    const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT);
     return {name: p.name, color: p.color || '#333', path, pathIndex: 0, progress: 0, x: path[0].x, y: path[0].y, isFinished: false, celebrated: false};
   });
+  const namesToAnimate = new Set(userNames);
+  const uniqueFinishedTracers = finishedTracers.filter((t) => !namesToAnimate.has(t.name));
+  animator.tracers = [...uniqueFinishedTracers, ...newTracers];
+
   animator.particles = [];
   animator.context = targetCtx;
   animator.onComplete = onComplete;
+  animator.lastContainerWidth = container.clientWidth;
+  animator.lastContainerHeight = VIRTUAL_HEIGHT;
   setTimeout(() => {
-    const container = targetCtx.canvas.closest('.canvas-panzoom-container');
-    if (!container) return;
     const panzoomElement = targetCtx.canvas.parentElement;
     const canvasWidth = panzoomElement.offsetWidth;
     const containerWidth = container.clientWidth;
@@ -546,15 +620,14 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
     if (panToName) {
       const participant = state.currentLotteryData.participants.find((p) => p.name === panToName);
       if (participant) {
-        const VIRTUAL_WIDTH = getVirtualWidth(state.currentLotteryData.participants.length);
-        const participantSpacing = VIRTUAL_WIDTH / (state.currentLotteryData.participants.length + 1);
+        const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, containerWidth);
+        const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
         const targetXOnCanvas = participantSpacing * (participant.slot + 1);
         let desiredX = containerWidth / 2 - targetXOnCanvas * scale;
         const scaledCanvasWidth = canvasWidth * scale;
         if (scaledCanvasWidth > containerWidth) {
           const minX = containerWidth - scaledCanvasWidth;
-          const maxX = 0;
-          finalX = Math.max(minX, Math.min(maxX, desiredX));
+          finalX = Math.max(minX, Math.min(0, desiredX));
         } else {
           finalX = (containerWidth - scaledCanvasWidth) / 2;
         }
@@ -566,48 +639,75 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
   animationLoop();
 }
 
-export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMask = true) {
-  if (!targetCtx || !state.currentLotteryData) return;
-
-  let currentPanzoom = initializePanzoom(targetCtx.canvas);
-  if (targetCtx.canvas.id === 'adminCanvas') {
-    adminPanzoom = currentPanzoom;
-  } else {
-    participantPanzoom = currentPanzoom;
+export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMask = true, isResize = false) {
+  if (!targetCtx || !state.currentLotteryData) {
+    console.error('[Animation] Prepare failed: No context or lottery data.');
+    return;
   }
-  if (!currentPanzoom) return;
-
-  state.setRevealedPrizes([]);
+  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
   const mask = document.getElementById(targetCtx.canvas.id === 'adminCanvas' ? 'admin-loading-mask' : 'participant-loading-mask');
-
   if (mask && showMask) mask.style.display = 'flex';
-
-  const allParticipants = state.currentLotteryData.participants.filter((p) => p.name);
+  if (!isResize) {
+    state.setRevealedPrizes([]);
+    animator.tracers = [];
+    animator.icons = {};
+    animator.prizeImages = {};
+  }
+  const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
+  const totalParticipants = state.currentLotteryData.participants.length;
   await preloadPrizeImages(state.currentLotteryData.prizes);
-  await preloadIcons(allParticipants);
-  animator.tracers = allParticipants.map((p) => {
-    const path = calculatePath(p.slot, state.currentLotteryData.lines, state.currentLotteryData.participants.length);
-    return {name: p.name, color: p.color || '#333', path, pathIndex: 0, progress: 0, x: path[0].x, y: path[0].y, isFinished: true, celebrated: false};
+  await preloadIcons(allParticipantsWithNames);
+  const VIRTUAL_HEIGHT = getTargetHeight(container);
+
+  animator.tracers = allParticipantsWithNames.map((p) => {
+    const path = calculatePath(p.slot, state.currentLotteryData.lines, totalParticipants, container.clientWidth, VIRTUAL_HEIGHT);
+    const isFinished = state.revealedPrizes.some((r) => r.participantName === p.name);
+    const finalPoint = isFinished ? path[path.length - 1] : path[0];
+    return {
+      name: p.name,
+      color: p.color || '#333',
+      path,
+      pathIndex: isFinished ? path.length - 1 : 0,
+      progress: 0,
+      x: finalPoint.x,
+      y: finalPoint.y,
+      isFinished,
+      celebrated: isFinished,
+    };
   });
+
   animator.context = targetCtx;
   targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
   const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';
   drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
-  animator.tracers.forEach((tracer) => drawTracerIcon(targetCtx, tracer));
+
+  animator.tracers.forEach((tracer) => {
+    if (tracer.isFinished) {
+      drawTracerPath(targetCtx, tracer);
+    }
+    drawTracerIcon(targetCtx, tracer);
+  });
+  if (state.revealedPrizes.length > 0) {
+    drawRevealedPrizes(targetCtx);
+  }
+  let currentPanzoom = initializePanzoom(targetCtx.canvas);
+  if (targetCtx.canvas.id === 'adminCanvas') adminPanzoom = currentPanzoom;
+  else participantPanzoom = currentPanzoom;
+
   setTimeout(() => {
-    const container = targetCtx.canvas.closest('.canvas-panzoom-container');
-    if (container) {
+    if (container && currentPanzoom) {
       const panzoomElement = targetCtx.canvas.parentElement;
       const canvasWidth = panzoomElement.offsetWidth;
       const containerWidth = container.clientWidth;
       const scale = Math.min(containerWidth / canvasWidth, 1);
+      console.log(`[Panzoom] Resetting zoom to ${scale}`);
       currentPanzoom.zoom(scale, {animate: false});
       const scaledCanvasWidth = canvasWidth * scale;
       const initialX = (containerWidth - scaledCanvasWidth) / 2;
       currentPanzoom.pan(initialX > 0 ? initialX : 0, 0, {animate: false});
     }
-
     if (mask && showMask) {
       mask.style.display = 'none';
     }
@@ -639,71 +739,53 @@ export function advanceLineByLine() {
   }
 }
 
+// --- ▼▼▼ ここから修正 ▼▼▼ ---
 export function resetAnimation() {
-  if (animator.tracers.length === 0 || animator.running) return;
+  if (isAnimationRunning()) return;
   state.setRevealedPrizes([]);
-  animator.tracers.forEach((tracer) => {
-    tracer.isFinished = false;
-    tracer.pathIndex = 0;
-    tracer.progress = 0;
-    if (tracer.path && tracer.path.length > 0) {
-      tracer.x = tracer.path[0].x;
-      tracer.y = tracer.path[0].y;
-    }
-    delete tracer.stopY;
-    tracer.celebrated = false;
+  const container = animator.context.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
+
+  const VIRTUAL_HEIGHT = getTargetHeight(container);
+  const numParticipants = state.currentLotteryData.participants.length;
+  const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
+
+  // 全員のトレーサーをゼロから作り直す
+  animator.tracers = allParticipantsWithNames.map((p) => {
+    const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT);
+    return {
+      name: p.name,
+      color: p.color || '#333',
+      path,
+      pathIndex: 0,
+      progress: 0,
+      x: path[0].x,
+      y: path[0].y,
+      isFinished: false,
+      celebrated: false,
+    };
   });
+
   animator.particles = [];
   animator.running = true;
   animationLoop();
 }
+// --- ▲▲▲ 修正ここまで ▲▲▲ ---
 
 export function redrawPrizes(targetCtx, hidePrizes) {
   if (!targetCtx || !state.currentLotteryData) return;
-  const {participants, prizes} = state.currentLotteryData;
-  if (!participants || participants.length === 0) return;
-
-  // ▼▼▼ 描画エリアの計算 ▼▼▼
-  // 各要素のY座標やサイズを定数として定義
-  const PRIZE_Y_CENTER = 370;
-  const PRIZE_MAX_IMAGE_HEIGHT = 45; // 通常30px、表示アニメーションで最大1.5倍の45px
-  const PRIZE_TEXT_Y = 395;
-  const PADDING = 5; // 上下の余白
-
-  // 定数からクリアすべきY座標の開始位置と高さを計算
-  const clearY = PRIZE_Y_CENTER - PRIZE_MAX_IMAGE_HEIGHT / 2 - PADDING; // 370 - 22.5 - 5 = 342.5
-  const clearHeight = PRIZE_TEXT_Y + PADDING - clearY; // (395 + 5) - 342.5 = 57.5
-  // ▲▲▲ 計算ここまで ▲▲▲
-
-  const numParticipants = participants.length;
-  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants);
-  const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
-
-  // 計算結果を使ってエリアをクリア
-  targetCtx.clearRect(0, clearY, VIRTUAL_WIDTH, clearHeight);
-
-  // 以下はdrawLotteryBaseから持ってきた景品描画専用のロジック
-  targetCtx.font = '14px Arial';
-  targetCtx.textAlign = 'center';
+  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
   const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const prizeTextColor = isDarkMode ? '#dcdcdc' : '#333';
+  const baseLineColor = isDarkMode ? '#444' : '#e0e0e0';
 
-  participants.forEach((p, i) => {
-    const isRevealed = state.revealedPrizes.some((r) => r.prizeIndex === i);
-    if (prizes && prizes[i] && !isRevealed) {
-      const x = participantSpacing * (i + 1);
-      const prize = prizes[i];
-      const prizeName = hidePrizes ? '？？？' : typeof prize === 'object' ? prize.name : prize;
-      const prizeImage = !hidePrizes && typeof prize === 'object' && prize.imageUrl ? animator.prizeImages[prize.imageUrl] : null;
+  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
 
-      if (prizeImage && prizeImage.complete) {
-        targetCtx.drawImage(prizeImage, x - 15, 370 - 15, 30, 30);
-      }
-      targetCtx.fillStyle = prizeTextColor;
-      targetCtx.fillText(prizeName, x, 395);
+  animator.tracers.forEach((tracer) => {
+    if (tracer.isFinished) {
+      drawTracerPath(targetCtx, tracer);
     }
+    drawTracerIcon(targetCtx, tracer);
   });
-
-  // すでに結果が明らかになっている景品も再描画する
   drawRevealedPrizes(targetCtx);
 }

@@ -113,6 +113,8 @@ export const elements = {
   highlightUserButton: document.getElementById('highlightUserButton'),
   revealRandomButton: document.getElementById('revealRandomButton'),
 
+  toggleFullscreenButton: document.getElementById('toggleFullscreenButton'),
+
   // Participant View
   participantEventName: document.getElementById('participantEventName'),
   backToGroupEventListLink: document.getElementById('backToGroupEventListLink'),
