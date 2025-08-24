@@ -19,8 +19,6 @@ const animator = {
   lastContainerHeight: 0,
 };
 
-// --- ▼▼▼ 修正箇所 ▼▼▼ ---
-// クライアントサイドで結果を再計算/補完するロジック
 function ensureResultsFormat(data) {
   if (!data.results || Object.keys(data.results).length === 0) {
     console.log('[Animation] No results found, calculating on client-side.');
@@ -30,11 +28,10 @@ function ensureResultsFormat(data) {
   const firstResult = Object.values(data.results)[0];
   if (typeof firstResult.prizeIndex !== 'undefined') {
     console.log('[Animation] Results format is up-to-date.');
-    return data.results; // 既に新しい形式ならそのまま返す
+    return data.results;
   }
 
   console.warn('[Animation] Outdated results format detected. Recalculating on client-side to add prizeIndex.');
-  // 古い形式の場合、クライアントサイドで再計算して補完する
   return calculateClientSideResults(data.participants, data.lines, data.prizes);
 }
 
@@ -147,7 +144,7 @@ function celebrate(originX, color) {
   if (!container) return;
   const rect = container.getBoundingClientRect();
   const x = (rect.left + originX) / window.innerWidth;
-  // confetti({particleCount: 100, spread: 70, origin: {x: x, y: 0.8}, colors: [color, '#ffffff']}); // CSPエラーのためコメントアウト
+  // confetti({particleCount: 100, spread: 70, origin: {x: x, y: 0.8}, colors: [color, '#ffffff']});
 }
 
 export function isAnimationRunning() {
@@ -421,12 +418,13 @@ function animationLoop() {
     p.update();
     p.draw(targetCtx);
   });
-  let allFinished = true;
+
+  let allTracersFinished = true;
   animator.tracers.forEach((tracer) => {
     if (tracer.isFinished) {
       drawTracerPath(targetCtx, tracer);
     } else {
-      allFinished = false;
+      allTracersFinished = false;
       updateTracerPosition(tracer, dynamicSpeed);
       drawTracerPath(targetCtx, tracer);
       if (Math.random() > 0.5) {
@@ -435,12 +433,19 @@ function animationLoop() {
     }
     drawTracerIcon(targetCtx, tracer);
   });
-  if (allFinished) {
+
+  // --- ▼▼▼ 修正箇所 ▼▼▼ ---
+  const isRevealingPrizes = state.revealedPrizes.some((p) => p.revealProgress < 15);
+  const particlesRemaining = animator.particles.length > 0;
+
+  // 全トレーサー終了 & 全景品アニメーション終了 & 全パーティクル消滅でループ停止
+  if (allTracersFinished && !isRevealingPrizes && !particlesRemaining) {
     animator.running = false;
     if (animator.onComplete) animator.onComplete();
   } else {
     animationFrameId = requestAnimationFrame(animationLoop);
   }
+  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
 }
 
 function updateTracerPosition(tracer, speed) {
@@ -739,7 +744,6 @@ export function advanceLineByLine() {
   }
 }
 
-// --- ▼▼▼ ここから修正 ▼▼▼ ---
 export function resetAnimation() {
   if (isAnimationRunning()) return;
   state.setRevealedPrizes([]);
@@ -750,7 +754,6 @@ export function resetAnimation() {
   const numParticipants = state.currentLotteryData.participants.length;
   const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
 
-  // 全員のトレーサーをゼロから作り直す
   animator.tracers = allParticipantsWithNames.map((p) => {
     const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT);
     return {
@@ -770,7 +773,6 @@ export function resetAnimation() {
   animator.running = true;
   animationLoop();
 }
-// --- ▲▲▲ 修正ここまで ▲▲▲ ---
 
 export function redrawPrizes(targetCtx, hidePrizes) {
   if (!targetCtx || !state.currentLotteryData) return;
