@@ -1337,11 +1337,12 @@ button:disabled {
   transform: translateX(-50%);
   width: auto;
   max-width: 90%;
-  background-color: rgba(30, 30, 30, 0.85);
+  background-color: rgb(34 34 34 / 90%);
   border-radius: 12px;
   z-index: 2001;
   color: white;
   transition: all 0.3s ease-in-out;
+  border: 1px solid #ffffff44;
 }
 
 .controls-header {
@@ -1403,4 +1404,8 @@ button:disabled {
 
 #controls-draggable-wrapper.dragging {
   transition: none;
+}
+
+#adminControls {
+  margin-bottom: 10px;
 }

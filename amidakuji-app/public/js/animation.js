@@ -215,7 +215,10 @@ function calculatePath(startIdx, lines, numParticipants, containerWidth, contain
       }
     }
   });
-  path.push({x: currentX, y: containerHeight * 0.875});
+  // --- ▼▼▼ 修正箇所 ▼▼▼ ---
+  // トレーサーの最終到達点をさらに上に調整して、アイコンと景品画像の重なりを防ぐ
+  path.push({x: currentX, y: containerHeight * 0.82});
+  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
   return path;
 }
 
@@ -270,8 +273,9 @@ function drawRevealedPrizes(targetCtx) {
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
   const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
   targetCtx.fillStyle = isDarkMode ? '#dcdcdc' : '#333';
-  const prizeImageY = VIRTUAL_HEIGHT * 0.925;
-  const prizeTextY = VIRTUAL_HEIGHT * 0.98;
+
+  const prizeImageY = VIRTUAL_HEIGHT * 0.91;
+  const prizeTextY = VIRTUAL_HEIGHT * 0.99;
 
   state.revealedPrizes.forEach((result) => {
     const prize = result.prize;
@@ -322,10 +326,12 @@ function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes = false
   const subTextColor = isDarkMode ? '#888' : '#888';
   const prizeTextColor = isDarkMode ? '#dcdcdc' : '#333';
   const nameY = VIRTUAL_HEIGHT * 0.075;
-  const prizeImageY = VIRTUAL_HEIGHT * 0.925;
-  const prizeTextY = VIRTUAL_HEIGHT * 0.98;
+  const prizeImageY = VIRTUAL_HEIGHT * 0.91;
+  const prizeTextY = VIRTUAL_HEIGHT * 0.99;
   const lineTopY = VIRTUAL_HEIGHT * 0.125;
-  const lineBottomY = VIRTUAL_HEIGHT * 0.875;
+  // --- ▼▼▼ 修正箇所 ▼▼▼ ---
+  const lineBottomY = VIRTUAL_HEIGHT * 0.82; // 縦線の終点をトレーサーの最終到達点と合わせる
+  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
   const prizeImageSize = VIRTUAL_HEIGHT * 0.075;
 
   participants.forEach((p, i) => {
@@ -434,18 +440,15 @@ function animationLoop() {
     drawTracerIcon(targetCtx, tracer);
   });
 
-  // --- ▼▼▼ 修正箇所 ▼▼▼ ---
   const isRevealingPrizes = state.revealedPrizes.some((p) => p.revealProgress < 15);
   const particlesRemaining = animator.particles.length > 0;
 
-  // 全トレーサー終了 & 全景品アニメーション終了 & 全パーティクル消滅でループ停止
   if (allTracersFinished && !isRevealingPrizes && !particlesRemaining) {
     animator.running = false;
     if (animator.onComplete) animator.onComplete();
   } else {
     animationFrameId = requestAnimationFrame(animationLoop);
   }
-  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
 }
 
 function updateTracerPosition(tracer, speed) {
