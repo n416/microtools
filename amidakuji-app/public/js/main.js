@@ -368,7 +368,7 @@ function setupEventListeners() {
   window.addEventListener('popstate', (e) => {
     router.navigateTo(window.location.pathname, false);
   });
-  
+
   if (elements.loginButton)
     elements.loginButton.addEventListener('click', () => {
       window.location.href = '/auth/google';
@@ -984,8 +984,8 @@ function setupEventListeners() {
         try {
           const result = await api.regenerateLines(state.currentEventId);
           state.currentLotteryData.lines = result.lines;
-          state.currentLotteryData.results = result.results; 
-          
+          state.currentLotteryData.results = result.results;
+
           const ctx = elements.adminCanvas.getContext('2d');
 
           if (elements.advanceLineByLineButton) elements.advanceLineByLineButton.disabled = false;
@@ -1432,7 +1432,6 @@ function setupHamburgerMenu() {
   }
 }
 
-// ▼▼▼ ここから修正 ▼▼▼
 function setupDraggableControls() {
   const wrapper = document.getElementById('controls-draggable-wrapper');
   const header = wrapper.querySelector('.controls-header');
@@ -1440,11 +1439,11 @@ function setupDraggableControls() {
 
   if (!wrapper || !header || !toggleBtn) return;
 
-  let pos = { top: 0, left: 0, x: 0, y: 0 };
+  let pos = {top: 0, left: 0, x: 0, y: 0};
 
   const savedPos = localStorage.getItem('controlsPosition');
   if (savedPos) {
-    const { x, y } = JSON.parse(savedPos);
+    const {x, y} = JSON.parse(savedPos);
     if (x > window.innerWidth || y > window.innerHeight || x < -wrapper.offsetWidth || y < -wrapper.offsetHeight) {
       localStorage.removeItem('controlsPosition');
     } else {
@@ -1482,7 +1481,7 @@ function setupDraggableControls() {
       x: e.clientX,
       y: e.clientY,
     };
-    
+
     wrapper.classList.add('dragging');
 
     document.addEventListener('mousemove', mouseMoveHandler);
@@ -1493,8 +1492,21 @@ function setupDraggableControls() {
     const dx = e.clientX - pos.x;
     const dy = e.clientY - pos.y;
 
-    wrapper.style.top = `${pos.top + dy}px`;
-    wrapper.style.left = `${pos.left + dx}px`;
+    let newX = pos.left + dx;
+    let newY = pos.top + dy;
+
+    // --- ▼▼▼ ここから修正 ▼▼▼ ---
+    const rect = wrapper.getBoundingClientRect();
+    const maxX = window.innerWidth - rect.width;
+    const maxY = window.innerHeight - rect.height;
+
+    // 画面外にはみ出ないように座標を制限
+    newX = Math.max(0, Math.min(newX, maxX));
+    newY = Math.max(0, Math.min(newY, maxY));
+    // --- ▲▲▲ 修正ここまで ▲▲▲ ---
+
+    wrapper.style.top = `${newY}px`;
+    wrapper.style.left = `${newX}px`;
   };
 
   const mouseUpHandler = () => {
@@ -1503,9 +1515,8 @@ function setupDraggableControls() {
     document.removeEventListener('mouseup', mouseUpHandler);
 
     const rect = wrapper.getBoundingClientRect();
-    localStorage.setItem('controlsPosition', JSON.stringify({ x: rect.left, y: rect.top }));
+    localStorage.setItem('controlsPosition', JSON.stringify({x: rect.left, y: rect.top}));
   };
 
   header.addEventListener('mousedown', mouseDownHandler);
 }
-// ▲▲▲ 修正ここまで ▲▲▲
