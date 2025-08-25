@@ -523,7 +523,25 @@
   </script>
   <% } %>
   <%# --- ▲▲▲ 修正ここまで ▲▲▲ --- %>
-
+  <div class="settings-fab" id="settingsFab" title="設定">⚙️</div>
+  <div class="settings-panel" id="settingsPanel">
+    <h4>設定</h4>
+    <div class="setting-item">
+      <label for="animationToggle">背景アニメーション</label>
+      <input type="checkbox" id="animationToggle" class="toggle-switch">
+    </div>
+    <div class="setting-item">
+      <label>テーマ</label>
+      <div class="radio-group">
+        <input type="radio" id="theme-auto" name="theme" value="auto">
+        <label for="theme-auto">自動</label>
+        <input type="radio" id="theme-light" name="theme" value="light">
+        <label for="theme-light">ライト</label>
+        <input type="radio" id="theme-dark" name="theme" value="dark">
+        <label for="theme-dark">ダーク</label>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>
