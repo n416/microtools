@@ -523,14 +523,22 @@
   </script>
   <% } %>
   <%# --- ▲▲▲ 修正ここまで ▲▲▲ --- %>
-  <div class="settings-fab" id="settingsFab" title="設定">⚙️</div>
+  <div class="settings-fab" id="settingsFab" title="設定">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.82l-.15-.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1 0-2.82l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  </div>
   <div class="settings-panel" id="settingsPanel">
-    <h4>設定</h4>
+    <h4>表示設定</h4>
     <div class="setting-item">
       <label for="animationToggle">背景アニメーション</label>
-      <input type="checkbox" id="animationToggle" class="toggle-switch">
+      <label class="switch">
+        <input type="checkbox" id="animationToggle">
+        <span class="slider round"></span>
+      </label>
     </div>
-    <div class="setting-item">
+    <div class="setting-item theme-switcher">
       <label>テーマ</label>
       <div class="radio-group">
         <input type="radio" id="theme-auto" name="theme" value="auto">
