@@ -1,0 +1,17 @@
+# このファイルは、gcloud app deploy時にアップロードしないファイルを指定します。
+
+.gcloudignore
+.git
+.gitignore
+
+# node.jsの依存関係は、デプロイ先で`npm install`されるため不要です。
+node_modules/
+
+# ローカル開発用の環境変数ファイルはアップロードしません。
+.env
+
+# サービスアカウントキーは絶対にアップロードしてはいけません。
+serviceAccountKey.json
+
+# その他
+server copy.js
