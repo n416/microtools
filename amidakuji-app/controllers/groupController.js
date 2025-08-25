@@ -50,10 +50,8 @@ exports.analyzeBulkMembers = async (req, res) => {
       return res.status(400).json({error: '登録する名前のテキストが必要です。'});
     }
 
-    // --- ▼▼▼ ここを修正しました ▼▼▼ ---
     // スペースでは区切らず、改行とカンマのみで区切るように修正
     const inputNames = [...new Set(namesText.split(/\n|,/).map(normalizeName).filter(Boolean))];
-    // --- ▲▲▲ 修正はここまで ▲▲▲ ---
 
     const membersRef = firestore.collection('groups').doc(groupId).collection('members');
     const membersSnapshot = await membersRef.get();
