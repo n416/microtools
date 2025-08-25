@@ -1407,6 +1407,150 @@ button:disabled {
   transition: none;
 }
 
+/* --- ▼▼▼ ここから追加 ▼▼▼ --- */
+
+/* --- 設定ボタンとパネル --- */
+.settings-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 1070; /* モーダルより手前、フルスクリーンより奥 */
+  transition: transform 0.2s ease-in-out;
+}
+.settings-fab:hover {
+  transform: scale(1.1);
+}
+
+.settings-panel {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 250px;
+  background-color: var(--white-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  z-index: 1071;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.settings-panel.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.settings-panel h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+.setting-item label {
+  font-size: 14px;
+}
+
+.radio-group {
+  display: flex;
+  gap: 10px;
+}
+.radio-group label {
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* --- テーマ強制切り替え用クラス --- */
+body.light-mode {
+  --primary-color: #007bff;
+  --primary-hover-color: #0056b3;
+  --danger-color: #dc3545;
+  --danger-hover-color: #c82333;
+  --light-bg-color: #f4f7f6;
+  --white-color: #fff;
+  --text-color: #333;
+  --border-color: #ddd;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --notification-bg-color: #fffbe6;
+  --notification-border-color: #ffe58f;
+  --notification-text-color: #8a6d3b;
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: #4a4a4a;
+  }
+  .url-preview code {
+    background-color: #e9ecef;
+    color: #212529;
+  }
+  input,
+  select,
+  textarea {
+    background-color: #fff;
+    color: #333;
+    border-color: #ddd;
+  }
+}
+
+body.dark-mode {
+  --primary-color: #0d84ff;
+  --primary-color-rgb: 13, 132, 255;
+  --primary-hover-color: #3b9aff;
+  --danger-color: #e5484d;
+  --danger-hover-color: #ff5c5c;
+  --light-bg-color: #121212;
+  --white-color: #1e1e1e;
+  --text-color: #dcdcdc;
+  --border-color: #444;
+  --shadow-color: rgba(255, 255, 255, 0.08);
+  --notification-bg-color: #332b00;
+  --notification-border-color: #665600;
+  --notification-text-color: #f0e68c;
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: #e0e0e0;
+  }
+  .url-preview code {
+    background-color: #333;
+    color: #e0e0e0;
+  }
+  input,
+  select,
+  textarea {
+    background-color: #2a2a2a;
+    color: #dcdcdc;
+    border-color: #555;
+  }
+}
+/* --- ▲▲▲ 追加ここまで ▲▲▲ --- */
+
 #adminControls {
   margin-bottom: 10px;
 }

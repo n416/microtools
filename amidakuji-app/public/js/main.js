@@ -6,9 +6,19 @@ import * as state from './state.js';
 import * as router from './router.js';
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, redrawPrizes} from './animation.js';
 
+const settings = {
+  animation: true,
+  theme: 'auto', // 'auto', 'light', 'dark'
+};
+
+const darkModeMatcher = window.matchMedia('(prefers-color-scheme: dark)');
+let tronAnimationAPI = null; // Tron AnimationのAPIを保持する変数
+
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 function initTronAnimation() {
+  if (tronAnimationAPI) return tronAnimationAPI;
+
   const gridCanvas = document.getElementById('grid-canvas');
   const gridCtx = gridCanvas.getContext('2d');
   const animationCanvas = document.getElementById('animation-canvas');
@@ -30,15 +40,29 @@ function initTronAnimation() {
   let cycles = [];
   let scrollX = 0;
   let scrollY = 0;
+  let animationInitialized = false;
+
+  function setupTheme(isDarkMode) {
+    currentTheme = isDarkMode ? themes.dark : themes.light;
+    if (cycles.length > 0) {
+      cycles.forEach((c) => (c.colorRGB = currentTheme.cycleColorRGB));
+    }
+    drawGrid();
+  }
 
   function resizeCanvases() {
     const width = window.innerWidth;
     const height = window.innerHeight;
     gridCanvas.width = animationCanvas.width = width;
     gridCanvas.height = animationCanvas.height = height;
+    drawGrid();
   }
 
   function drawGrid() {
+    if (!currentTheme) return;
+    gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+    gridCtx.save();
+    gridCtx.translate(scrollX % GRID_SIZE, scrollY % GRID_SIZE);
     gridCtx.strokeStyle = currentTheme.gridColor;
     gridCtx.lineWidth = 1;
     gridCtx.beginPath();
@@ -51,6 +75,7 @@ function initTronAnimation() {
       gridCtx.lineTo(gridCanvas.width + GRID_SIZE, y);
     }
     gridCtx.stroke();
+    gridCtx.restore();
   }
 
   class LightCycle {
@@ -157,11 +182,7 @@ function initTronAnimation() {
     scrollX -= SCROLL_SPEED;
     scrollY -= SCROLL_SPEED;
 
-    gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-    gridCtx.save();
-    gridCtx.translate(scrollX % GRID_SIZE, scrollY % GRID_SIZE);
     drawGrid();
-    gridCtx.restore();
 
     animationCtx.clearRect(0, 0, animationCanvas.width, animationCanvas.height);
 
@@ -173,35 +194,46 @@ function initTronAnimation() {
     requestAnimationFrame(animate);
   }
 
-  function setupTheme(isDarkMode) {
-    currentTheme = isDarkMode ? themes.dark : themes.light;
-    document.body.style.backgroundColor = currentTheme.background;
-    if (cycles.length > 0) {
-      cycles.forEach((c) => (c.colorRGB = currentTheme.cycleColorRGB));
+  if (!animationInitialized) {
+    animationInitialized = true;
+    setupTheme(settings.theme === 'dark' || (settings.theme === 'auto' && darkModeMatcher.matches));
+    resizeCanvases();
+    for (let i = 0; i < CYCLE_COUNT; i++) {
+      cycles.push(new LightCycle());
     }
+    animate();
+    window.addEventListener('resize', resizeCanvases);
   }
 
-  const darkModeMatcher = window.matchMedia('(prefers-color-scheme: dark)');
-  darkModeMatcher.addEventListener('change', (e) => {
-    setupTheme(e.matches);
-  });
+  tronAnimationAPI = {
+    setTheme: (theme) => {
+      if (theme === 'dark') {
+        setupTheme(true);
+      } else if (theme === 'light') {
+        setupTheme(false);
+      } else {
+        // auto
+        setupTheme(darkModeMatcher.matches);
+      }
+    },
+  };
 
-  window.addEventListener('resize', resizeCanvases);
-
-  setupTheme(darkModeMatcher.matches);
-  resizeCanvases();
-  for (let i = 0; i < CYCLE_COUNT; i++) {
-    cycles.push(new LightCycle());
-  }
-  animate();
+  return tronAnimationAPI;
 }
 
 const {elements} = ui;
 
 async function initializeApp() {
+  loadSettings();
+  applySettings();
+  setupSettingsControls();
+
   setupEventListeners();
   setupHamburgerMenu();
-  initTronAnimation();
+  if (settings.animation) {
+    tronAnimationAPI = initTronAnimation();
+  }
+
   setupDraggableControls();
   const initialData = {
     group: typeof initialGroupData !== 'undefined' ? initialGroupData : null,
@@ -379,19 +411,14 @@ function setupEventListeners() {
     });
   if (elements.logoutButton)
     elements.logoutButton.addEventListener('click', async () => {
-      // --- ▼▼▼ ここから修正 ▼▼▼ ---
-      // 管理者ページは /admin で始まるか、ログイン時の / (グループ一覧)
       const isAdminPage = window.location.pathname.startsWith('/admin') || window.location.pathname === '/';
 
       if (isAdminPage) {
-        // 管理者画面の場合、ログアウトしてトップに戻る
         window.location.href = '/auth/logout';
       } else {
-        // 参加者画面の場合、ログアウト後も同じURLを維持する
         const currentPath = window.location.pathname;
         window.location.href = `/auth/logout?redirect_to=${encodeURIComponent(currentPath)}`;
       }
-      // --- ▲▲▲ 修正ここまで ▲▲▲ ---
     });
   if (elements.deleteAccountButton)
     elements.deleteAccountButton.addEventListener('click', async () => {
@@ -1500,15 +1527,12 @@ function setupDraggableControls() {
     let newX = pos.left + dx;
     let newY = pos.top + dy;
 
-    // --- ▼▼▼ ここから修正 ▼▼▼ ---
     const rect = wrapper.getBoundingClientRect();
     const maxX = window.innerWidth - rect.width;
     const maxY = window.innerHeight - rect.height;
 
-    // 画面外にはみ出ないように座標を制限
     newX = Math.max(0, Math.min(newX, maxX));
     newY = Math.max(0, Math.min(newY, maxY));
-    // --- ▲▲▲ 修正ここまで ▲▲▲ ---
 
     wrapper.style.top = `${newY}px`;
     wrapper.style.left = `${newX}px`;
@@ -1524,4 +1548,103 @@ function setupDraggableControls() {
   };
 
   header.addEventListener('mousedown', mouseDownHandler);
+}
+function loadSettings() {
+  const savedSettings = JSON.parse(localStorage.getItem('userSettings'));
+  if (savedSettings) {
+    settings.animation = typeof savedSettings.animation !== 'undefined' ? savedSettings.animation : true;
+    settings.theme = savedSettings.theme || 'auto';
+  }
+}
+
+function saveSettings() {
+  localStorage.setItem('userSettings', JSON.stringify(settings));
+}
+
+function applyTheme(theme) {
+  document.body.classList.remove('light-mode', 'dark-mode');
+  if (theme === 'light') {
+    document.body.classList.add('light-mode');
+  } else if (theme === 'dark') {
+    document.body.classList.add('dark-mode');
+  } else {
+    if (darkModeMatcher.matches) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.add('light-mode');
+    }
+  }
+  if (settings.animation && tronAnimationAPI) {
+    tronAnimationAPI.setTheme(theme);
+  }
+}
+
+function handleSystemThemeChange(e) {
+  if (settings.theme === 'auto') {
+    applyTheme('auto');
+  }
+}
+
+function applySettings() {
+  const canvasContainer = document.getElementById('canvas-container');
+  if (canvasContainer) {
+    canvasContainer.style.display = settings.animation ? 'block' : 'none';
+  }
+
+  applyTheme(settings.theme);
+  darkModeMatcher.removeEventListener('change', handleSystemThemeChange);
+  if (settings.theme === 'auto') {
+    darkModeMatcher.addEventListener('change', handleSystemThemeChange);
+  }
+
+  const animationToggle = document.getElementById('animationToggle');
+  if (animationToggle) {
+    animationToggle.checked = settings.animation;
+  }
+  const themeRadio = document.querySelector(`input[name="theme"][value="${settings.theme}"]`);
+  if (themeRadio) {
+    themeRadio.checked = true;
+  }
+}
+
+function setupSettingsControls() {
+  const fab = document.getElementById('settingsFab');
+  const panel = document.getElementById('settingsPanel');
+  const animationToggle = document.getElementById('animationToggle');
+  const themeRadios = document.querySelectorAll('input[name="theme"]');
+
+  if (!fab || !panel) return;
+
+  fab.addEventListener('click', () => {
+    panel.classList.toggle('visible');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!panel.contains(e.target) && !fab.contains(e.target)) {
+      panel.classList.remove('visible');
+    }
+  });
+
+  if (animationToggle) {
+    animationToggle.addEventListener('change', () => {
+      settings.animation = animationToggle.checked;
+      saveSettings();
+      const canvasContainer = document.getElementById('canvas-container');
+      if (settings.animation) {
+        canvasContainer.style.display = 'block';
+        tronAnimationAPI = initTronAnimation();
+        tronAnimationAPI.setTheme(settings.theme);
+      } else {
+        canvasContainer.style.display = 'none';
+      }
+    });
+  }
+
+  themeRadios.forEach((radio) => {
+    radio.addEventListener('change', () => {
+      settings.theme = radio.value;
+      saveSettings();
+      applySettings();
+    });
+  });
 }
