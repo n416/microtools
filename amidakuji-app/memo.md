@@ -1,0 +1,2 @@
+デプロイ
+gcloud app deploy

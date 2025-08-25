@@ -1,14 +1,19 @@
 const {Firestore} = require('@google-cloud/firestore');
 const {Storage} = require('@google-cloud/storage');
 
-const firestore = new Firestore({
-  keyFilename: './serviceAccountKey.json',
+const firestoreOptions = {
   databaseId: 'amida',
-});
+};
+const storageOptions = {};
 
-const storage = new Storage({
-  keyFilename: './serviceAccountKey.json',
-});
+// ローカル環境の場合のみ、サービスアカウントキーのファイルパスを指定する
+if (process.env.NODE_ENV !== 'production') {
+  firestoreOptions.keyFilename = './serviceAccountKey.json';
+  storageOptions.keyFilename = './serviceAccountKey.json';
+}
+
+const firestore = new Firestore(firestoreOptions);
+const storage = new Storage(storageOptions);
 
 const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 
