@@ -1617,11 +1617,13 @@ function setupSettingsControls() {
 
   fab.addEventListener('click', () => {
     panel.classList.toggle('visible');
+    fab.classList.toggle('active'); // activeクラスを切り替えてアイコンを回転
   });
 
   document.addEventListener('click', (e) => {
     if (!panel.contains(e.target) && !fab.contains(e.target)) {
       panel.classList.remove('visible');
+      fab.classList.remove('active'); // パネル外クリックで回転を戻す
     }
   });
 
