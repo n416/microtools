@@ -379,14 +379,19 @@ function setupEventListeners() {
     });
   if (elements.logoutButton)
     elements.logoutButton.addEventListener('click', async () => {
-      try {
-        await api.logout();
-        window.location.reload();
-      } catch (error) {
-        console.error('Logout failed:', error);
-        alert('ログアウトに失敗しました。');
-        window.location.reload();
+      // --- ▼▼▼ ここから修正 ▼▼▼ ---
+      // 管理者ページは /admin で始まるか、ログイン時の / (グループ一覧)
+      const isAdminPage = window.location.pathname.startsWith('/admin') || window.location.pathname === '/';
+
+      if (isAdminPage) {
+        // 管理者画面の場合、ログアウトしてトップに戻る
+        window.location.href = '/auth/logout';
+      } else {
+        // 参加者画面の場合、ログアウト後も同じURLを維持する
+        const currentPath = window.location.pathname;
+        window.location.href = `/auth/logout?redirect_to=${encodeURIComponent(currentPath)}`;
       }
+      // --- ▲▲▲ 修正ここまで ▲▲▲ ---
     });
   if (elements.deleteAccountButton)
     elements.deleteAccountButton.addEventListener('click', async () => {
