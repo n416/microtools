@@ -44,7 +44,6 @@ router.get('/g/:customUrl', async (req, res) => {
   }
 });
 
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 router.get('/g/:customUrl/dashboard', async (req, res) => {
   try {
     const {customUrl} = req.params;
@@ -64,7 +63,6 @@ router.get('/g/:customUrl/dashboard', async (req, res) => {
     res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null, eventData: null});
   }
 });
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 router.get('/admin/groups/:groupId', ensureAuthenticated, async (req, res) => {
   try {

@@ -3,7 +3,6 @@ const adminController = require('../controllers/adminController');
 const {isSystemAdmin, ensureAuthenticated} = require('../middleware/auth');
 const router = express.Router();
 
-// ★修正: 元のURL '/api/admin/...' に合わせる
 router.post('/admin/request', ensureAuthenticated, adminController.requestAdminAccess);
 router.get('/admin/requests', isSystemAdmin, adminController.getAdminRequests);
 router.post('/admin/approve', isSystemAdmin, adminController.approveAdminRequest);

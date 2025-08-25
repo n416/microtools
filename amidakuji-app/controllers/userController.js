@@ -277,7 +277,6 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 exports.setPassword = async (req, res) => {
   try {
     const {memberId} = req.params;
@@ -316,4 +315,3 @@ exports.setPassword = async (req, res) => {
     res.status(500).json({error: '合言葉の処理に失敗しました。'});
   }
 };
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲

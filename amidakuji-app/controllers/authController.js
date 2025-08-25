@@ -21,10 +21,8 @@ exports.logout = (req, res, next) => {
       if (err) {
         return next(err);
       }
-      // ▼▼▼ 修正箇所 ▼▼▼
       // JSONを返す代わりに、トップページへリダイレクトする
       res.redirect('/');
-      // ▲▲▲ 修正ここまで ▲▲▲
     });
   });
 };

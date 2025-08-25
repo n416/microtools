@@ -466,7 +466,6 @@ exports.joinSlot = async (req, res) => {
 
     const eventData = eventDoc.data();
 
-    // ★★★ 修正箇所 ★★★
     if (eventData.status === 'started') {
       return res.status(403).json({error: 'このイベントは既に開始されているため、参加できません。'});
     }
@@ -499,7 +498,6 @@ exports.joinSlot = async (req, res) => {
   }
 };
 
-// ▼▼▼▼▼ ここからが今回の修正箇所です ▼▼▼▼▼
 exports.verifyPasswordAndJoin = async (req, res) => {
   try {
     const {eventId} = req.params;
@@ -558,7 +556,6 @@ exports.verifyPasswordAndJoin = async (req, res) => {
     res.status(500).json({error: '認証中にエラーが発生しました。'});
   }
 };
-// ▲▲▲▲▲ 修正はここまで ▲▲▲▲▲
 
 exports.deleteParticipant = async (req, res) => {
   try {
@@ -683,7 +680,6 @@ exports.generatePrizeUploadUrl = async (req, res) => {
   }
 };
 
-// --- ▼▼▼ 修正箇所 ▼▼▼ ---
 exports.regenerateLines = async (req, res) => {
   try {
     const {eventId} = req.params;
@@ -723,4 +719,3 @@ exports.regenerateLines = async (req, res) => {
     res.status(500).json({error: 'あみだくじの再生成に失敗しました。'});
   }
 };
-// --- ▲▲▲ 修正ここまで ▲▲▲ ---
