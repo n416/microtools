@@ -1,0 +1,14 @@
+runtime: nodejs20
+
+handlers:
+  # 静的ファイル（CSS, JavaScriptなど）の配信設定
+  - url: /(.*\.(css|js|png|gif|svg))$
+    static_files: public/\1
+    upload: public/.*\.(css|js|png|gif|svg)$
+
+  # その他のすべてのリクエストは、アプリケーション本体（server.js）に転送
+  - url: /.*
+    script: auto
+    secure: always
+
+# env_variables: のセクションをまるごと削除する
