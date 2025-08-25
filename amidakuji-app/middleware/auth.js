@@ -6,10 +6,24 @@ function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
     return next();
   }
-  // ▼▼▼ 修正箇所 ▼▼▼
-  // JSONを返す代わりに、トップページへリダイレクトする
-  res.redirect('/');
-  // ▲▲▲ 修正ここまで ▲▲▲
+
+  // APIルートか、それ以外（ページ表示）かを判定
+  const isApiRequest = req.originalUrl.startsWith('/api/');
+
+  // APIリクエスト、または明確にJSONのみを要求している場合
+  if (isApiRequest || (req.accepts('json') && !req.accepts('html'))) {
+    return res.status(401).json({error: 'ログインが必要です。'});
+  } else {
+    // ページ表示リクエストの場合
+    res.status(401).render('index', {
+      user: null,
+      ogpData: {},
+      noIndex: true,
+      groupData: null,
+      eventData: null,
+      error: {message: 'このページにアクセスするにはログインが必要です。'},
+    });
+  }
 }
 
 async function isSystemAdmin(req, res, next) {

@@ -18,6 +18,19 @@
 </head>
 
 <body>
+  <% if (typeof error !== 'undefined' && error) { %>
+  <div class="error-overlay">
+    <div class="error-content">
+      <h2>認証エラー</h2>
+      <p><%= error.message %></p>
+      <div class="error-actions">
+        <a href="/auth/google" class="button primary-action">Googleでログイン</a>
+        <a href="/" class="button">トップページへ戻る</a>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
   <div id="canvas-container">
     <canvas id="grid-canvas"></canvas>
     <canvas id="animation-canvas"></canvas>
@@ -489,7 +502,8 @@
       <ul id="prizeSummaryList"></ul>
     </div>
   </div>
-
+  <%# --- ▼▼▼ ここから修正 ▼▼▼ --- %>
+  <% if (typeof error === 'undefined' || !error) { %>
   <script type="module" src="/js/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
@@ -507,6 +521,9 @@
     const initialEventData = null;
     <% } %>
   </script>
+  <% } %>
+  <%# --- ▲▲▲ 修正ここまで ▲▲▲ --- %>
+
 </body>
 
 </html>

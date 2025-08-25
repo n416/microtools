@@ -7,6 +7,7 @@ exports.googleCallback = (req, res) => {
 exports.logout = (req, res, next) => {
   // ★ 核心部分(1): ログアウト処理の前に、現在のセッションから合言葉の認証情報を退避させる
   const verifiedGroups = req.session.verifiedGroups || [];
+  const redirectTo = req.query.redirect_to || '/'; // --- ▼▼▼ この行を変更 ▼▼▼ ---
 
   req.logout(function (err) {
     if (err) {
@@ -21,8 +22,8 @@ exports.logout = (req, res, next) => {
       if (err) {
         return next(err);
       }
-      // JSONを返す代わりに、トップページへリダイレクトする
-      res.redirect('/');
+      // JSONを返す代わりに、指定されたURLまたはトップページへリダイレクトする
+      res.redirect(redirectTo); // --- ▼▼▼ この行を変更 ▼▼▼ ---
     });
   });
 };
