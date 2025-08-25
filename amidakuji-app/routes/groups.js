@@ -22,11 +22,9 @@ router.post('/groups/:groupId/members', ensureAuthenticated, groupController.add
 router.put('/groups/:groupId/members/:memberId', ensureAuthenticated, groupController.updateMember);
 router.delete('/groups/:groupId/members/:memberId', ensureAuthenticated, groupController.deleteMember);
 
-// --- ▼▼▼ ここから新規追加 ▼▼▼ ---
 // Bulk Member Registration Routes
 router.post('/groups/:groupId/members/analyze-bulk', ensureAuthenticated, groupController.analyzeBulkMembers);
 router.post('/groups/:groupId/members/finalize-bulk', ensureAuthenticated, groupController.finalizeBulkMembers);
-// --- ▲▲▲ ここまで新規追加 ▲▲▲ ---
 
 // Prize Master Routes
 router.get('/groups/:groupId/prize-masters', ensureAuthenticated, groupController.getPrizeMasters);

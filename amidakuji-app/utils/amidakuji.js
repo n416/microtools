@@ -16,7 +16,6 @@ function generateLines(numParticipants) {
     const endNode = startNode + 1;
     const y = Math.floor(Math.random() * drawableHeight) + topMargin;
 
-    // --- ▼▼▼ 核心の修正箇所 ▼▼▼ ---
     // 新しい線が、既存の線と「垂直方向」または「水平方向」に近すぎないかをチェック
     const isTooClose = lines.some((line) => {
       // 1. 垂直方向のチェック：同じ区間、または隣接する区間に近すぎる線がないか
@@ -29,7 +28,6 @@ function generateLines(numParticipants) {
 
       return false;
     });
-    // --- ▲▲▲ 修正ここまで ▲▲▲ ---
 
     if (!isTooClose) {
       lines.push({fromIndex: startNode, toIndex: endNode, y: y});
