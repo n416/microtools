@@ -424,6 +424,7 @@ exports.joinEvent = async (req, res) => {
         deleteToken: token,
         color: newColor,
         iconUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim())}&background=random&color=fff`,
+        isActive: true, // ★ この行を追加
         createdAt: new Date(),
       };
       await membersRef.doc(finalMemberId).set(memberData);

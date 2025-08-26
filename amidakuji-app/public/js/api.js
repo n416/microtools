@@ -95,4 +95,5 @@ export const acknowledgeResult = (eventId, memberId, token) => request(`/api/eve
 // Bulk Member Registration
 export const analyzeBulkMembers = (groupId, namesText) => request(`/api/groups/${groupId}/members/analyze-bulk`, 'POST', {namesText});
 export const finalizeBulkMembers = (groupId, resolutions) => request(`/api/groups/${groupId}/members/finalize-bulk`, 'POST', {resolutions});
-// --- ▲▲▲ ここまで新規追加 ▲▲▲ ---
+
+export const updateMemberStatus = (groupId, memberId, isActive) => request(`/api/groups/${groupId}/members/${memberId}/status`, 'PUT', {isActive});
