@@ -712,3 +712,39 @@ exports.updateMemberStatus = async (req, res) => {
     res.status(500).json({error: 'メンバー状態の更新に失敗しました。'});
   }
 };
+
+exports.getUnjoinedMembers = async (req, res) => {
+  try {
+    const {groupId} = req.params;
+    const {eventId} = req.query;
+
+    if (!eventId) {
+      return res.status(400).json({error: 'イベントIDが必要です。'});
+    }
+
+    // イベントの参加者IDリストを取得
+    const eventDoc = await firestore.collection('events').doc(eventId).get();
+    if (!eventDoc.exists) {
+      return res.status(404).json({error: 'イベントが見つかりません。'});
+    }
+    const joinedMemberIds = new Set(eventDoc.data().participants.map((p) => p.memberId));
+
+    // ▼▼▼ ここからが修正点 ▼▼▼
+    // グループの全メンバーを取得（isActiveでの絞り込みを一旦解除）
+    const membersSnapshot = await firestore.collection('groups').doc(groupId).collection('members').get();
+
+    // イベントに未参加で、かつアクティブな（isActive:true または isActive:undefined）メンバーのみを抽出
+    const unjoinedMembers = membersSnapshot.docs
+      .map((doc) => ({id: doc.id, ...doc.data()}))
+      .filter((member) => {
+        const isActive = typeof member.isActive === 'boolean' ? member.isActive : true;
+        return isActive && !joinedMemberIds.has(member.id);
+      });
+    // ▲▲▲ 修正点ここまで ▲▲▲
+
+    res.status(200).json(unjoinedMembers);
+  } catch (error) {
+    console.error('Error getting unjoined members:', error);
+    res.status(500).json({error: '未参加メンバーの取得に失敗しました。'});
+  }
+};

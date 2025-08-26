@@ -155,7 +155,13 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       const {adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, revealRandomButton, regenerateLinesButton, glimpseButton} = ui.elements;
       const hidePrizes = data.displayMode === 'private';
 
-      // --- ▼▼▼ ここから修正 ▼▼▼ ---
+      const emptySlots = data.participants.filter((p) => p.name === null).length;
+      if (showFillSlotsModalButton && emptySlots > 0) {
+        showFillSlotsModalButton.style.display = 'inline-block';
+      } else if (showFillSlotsModalButton) {
+        showFillSlotsModalButton.style.display = 'none';
+      }
+
       // 常に表示・更新するUI要素
       if (broadcastControls) broadcastControls.style.display = 'flex';
       if (adminCanvas) adminCanvas.style.display = 'block';

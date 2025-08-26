@@ -35,4 +35,6 @@ router.post('/events/:eventId/regenerate-lines', ensureAuthenticated, eventContr
 router.post('/events/:eventId/shuffle-prizes', ensureAuthenticated, eventController.shufflePrizes);
 router.post('/events/:eventId/acknowledge-result', eventController.acknowledgeResult);
 
+router.post('/events/:eventId/fill-slots', ensureAuthenticated, eventController.fillSlots);
+
 module.exports = router;
