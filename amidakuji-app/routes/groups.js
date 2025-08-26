@@ -35,4 +35,6 @@ router.delete('/prize-masters/:masterId', ensureAuthenticated, groupController.d
 // Member Status Route
 router.put('/groups/:groupId/members/:memberId/status', ensureAuthenticated, groupController.updateMemberStatus);
 
+router.get('/groups/:groupId/unjoined-members', ensureAuthenticated, groupController.getUnjoinedMembers);
+
 module.exports = router;

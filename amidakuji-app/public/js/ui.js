@@ -215,6 +215,14 @@ export const elements = {
   summaryModal: document.getElementById('summaryModal'),
   totalPrizes: document.getElementById('totalPrizes'),
   prizeSummaryList: document.getElementById('prizeSummaryList'),
+
+  fillSlotsModal: document.getElementById('fillSlotsModal'),
+  unjoinedMemberList: document.getElementById('unjoinedMemberList'),
+  emptySlotCount: document.getElementById('emptySlotCount'),
+  selectMembersButton: document.getElementById('selectMembersButton'),
+  selectedMemberList: document.getElementById('selectedMemberList'),
+  confirmFillSlotsButton: document.getElementById('confirmFillSlotsButton'),
+  showFillSlotsModalButton: document.getElementById('showFillSlotsModalButton'),
 };
 
 const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];

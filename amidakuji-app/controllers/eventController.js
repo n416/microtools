@@ -832,3 +832,60 @@ exports.acknowledgeResult = async (req, res) => {
     res.status(500).json({error: '結果の確認処理に失敗しました。'});
   }
 };
+
+exports.fillSlots = async (req, res) => {
+  try {
+    const {eventId} = req.params;
+    const {assignments} = req.body;
+
+    if (!assignments || !Array.isArray(assignments)) {
+      return res.status(400).json({error: '割り当てるメンバーのリストが必要です。'});
+    }
+
+    const eventRef = firestore.collection('events').doc(eventId);
+    const eventDoc = await eventRef.get();
+
+    if (!eventDoc.exists) {
+      return res.status(404).json({error: 'イベントが見つかりません。'});
+    }
+    const eventData = eventDoc.data();
+    const updatedParticipants = [...eventData.participants];
+
+    // ▼▼▼ ここからが修正点 ▼▼▼
+
+    // 1. 空いている参加枠のインデックス（位置）をすべて取得します
+    const emptySlotIndices = updatedParticipants.map((participant, index) => (participant.name === null ? index : -1)).filter((index) => index !== -1);
+
+    // 2. 取得した空き枠のインデックスをシャッフル（ランダムに並び替え）します
+    for (let i = emptySlotIndices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [emptySlotIndices[i], emptySlotIndices[j]] = [emptySlotIndices[j], emptySlotIndices[i]];
+    }
+
+    // 3. 割り当てるメンバーを、シャッフルされた空き枠の位置にセットしていきます
+    for (let i = 0; i < assignments.length && i < emptySlotIndices.length; i++) {
+      const memberToAssign = assignments[i];
+      const slotIndex = emptySlotIndices[i];
+
+      const memberDoc = await firestore.collection('groups').doc(eventData.groupId).collection('members').doc(memberToAssign.id).get();
+      if (memberDoc.exists) {
+        const memberData = memberDoc.data();
+        updatedParticipants[slotIndex] = {
+          ...updatedParticipants[slotIndex],
+          memberId: memberToAssign.id,
+          name: memberData.name,
+          color: memberData.color,
+          iconUrl: memberData.iconUrl,
+        };
+      }
+    }
+    // ▲▲▲ 修正点ここまで ▲▲▲
+
+    await eventRef.update({participants: updatedParticipants});
+
+    res.status(200).json({message: '参加枠を更新しました。', participants: updatedParticipants});
+  } catch (error) {
+    console.error('Error filling slots:', error);
+    res.status(500).json({error: '参加枠の更新に失敗しました。'});
+  }
+};
