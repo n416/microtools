@@ -131,7 +131,13 @@
       <button id="goToMemberManagementButton">👥 メンバー管理</button>
       <button id="goToCreateEventViewButton">イベント新規作成</button>
     </div>
-    <h3>このグループのイベント一覧</h3>
+    <div class="list-header">
+      <h3>このグループのイベント一覧</h3>
+      <div class="input-group checkbox-group">
+        <input type="checkbox" id="showStartedEvents" />
+        <label for="showStartedEvents">終了済みを表示する</label>
+      </div>
+    </div>
     <ul id="eventList" class="item-list"></ul>
   </div>
 
@@ -196,6 +202,7 @@
   <div id="broadcastView" class="view-container" style="display: none">
     <div class="event-header">
       <button id="backToDashboardButton">← ダッシュボードに戻る</button>
+      <p class="event-url-display">イベントURL: <a id="broadcastEventUrl" href="#" target="_blank">読み込み中...</a></p>
     </div>
     <div id="adminControls">
       <button id="startEventButton" class="primary-action">🎉 このあみだくじでイベントを開始する</button>

@@ -101,6 +101,7 @@ export const elements = {
   // Broadcast View
   backToDashboardButton: document.getElementById('backToDashboardButton'),
   adminControls: document.getElementById('adminControls'),
+  broadcastEventUrl: document.getElementById('broadcastEventUrl'),
   startEventButton: document.getElementById('startEventButton'),
   startBroadcastButton: document.getElementById('startBroadcastButton'),
   adminCanvas: document.getElementById('adminCanvas'),
@@ -511,18 +512,29 @@ export function renderGroupList(groups) {
   });
 }
 
-export function renderEventList(events) {
+export function renderEventList(allEvents) {
   if (!elements.eventList) return;
+
+  const showStartedCheckbox = document.getElementById('showStartedEvents');
+  const shouldShowStarted = showStartedCheckbox ? showStartedCheckbox.checked : false;
+
+  const eventsToRender = shouldShowStarted ? allEvents : allEvents.filter((event) => event.status !== 'started');
+
   elements.eventList.innerHTML = '';
-  events.forEach((event) => {
+  eventsToRender.forEach((event) => {
     const li = document.createElement('li');
     const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
     const displayDate = !isNaN(date) ? date.toLocaleString() : '日付不明';
     const eventName = event.eventName || '無題のイベント';
     const filledSlots = event.participants.filter((p) => p.name).length;
 
-    // ★★★ ここからが修正箇所 ★★★
-    // currentUserが存在する場合（＝管理者が見ている場合）のみ、クリック可能にするクラスを付与
+    let statusBadge;
+    if (event.status === 'started') {
+      statusBadge = '<span>実施済み</span>';
+    } else {
+      statusBadge = '<span class="badge ongoing">開催中</span>';
+    }
+
     const itemClass = state.currentUser ? 'item-list-item list-item-link' : 'item-list-item';
     li.className = itemClass;
 
@@ -530,7 +542,7 @@ export function renderEventList(events) {
         <span class="event-info">
           <strong>${eventName}</strong>
           <span class="event-date">（${displayDate}作成）</span>
-          <span>${event.status === 'started' ? '実施済み' : '受付中'}</span>
+          ${statusBadge}
           <span class="event-status">${filledSlots} / ${event.participantCount} 名参加</span>
         </span>
         <div class="item-buttons">
@@ -543,7 +555,6 @@ export function renderEventList(events) {
     elements.eventList.appendChild(li);
   });
 }
-
 export function renderMemberList(members) {
   if (!elements.memberList) return;
   elements.memberList.innerHTML = '';
