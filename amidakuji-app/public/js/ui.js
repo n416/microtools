@@ -910,21 +910,53 @@ export function resetEventCreationForm() {
 export function renderOtherEvents(events, groupCustomUrl) {
   if (!elements.otherEventsList || !elements.otherEventsSection) return;
 
-  if (!events || events.length === 0) {
+  const showAcknowledgedCheckbox = document.getElementById('showAcknowledgedEvents');
+  const shouldShowAcknowledged = showAcknowledgedCheckbox ? showAcknowledgedCheckbox.checked : false;
+  const myMemberId = state.currentParticipantId;
+
+  const eventsToRender = events.filter((event) => {
+    // 修正点：myMemberIdが存在する場合のみ、myParticipationを評価する
+    const myParticipation = myMemberId ? event.participants.find((p) => p.memberId === myMemberId) : null;
+    const isStarted = event.status === 'started';
+
+    if (isStarted && myParticipation && !myParticipation.acknowledgedResult) {
+      return true;
+    }
+    if (shouldShowAcknowledged) {
+      return true;
+    }
+    return !isStarted;
+  });
+
+  if (eventsToRender.length === 0) {
     elements.otherEventsSection.style.display = 'none';
     return;
   }
 
   elements.otherEventsList.innerHTML = '';
-  events.forEach((event) => {
+  eventsToRender.forEach((event) => {
     const li = document.createElement('li');
     li.className = 'item-list-item';
     const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
     const eventUrl = groupCustomUrl ? `/g/${groupCustomUrl}/${event.id}` : `/events/${event.id}`;
 
+    // 修正点：ここでも同様に、myMemberIdが存在する場合のみ、myParticipationを評価する
+    const myParticipation = myMemberId ? event.participants.find((p) => p.memberId === myMemberId) : null;
+    let badge = '';
+
+    if (event.status === 'started' && myParticipation && !myParticipation.acknowledgedResult) {
+      badge = '<span class="badge result-ready">🎉結果発表！</span>';
+    } else if (event.status === 'pending') {
+      if (myParticipation) {
+        badge = '<span class="badge joined">参加登録済</span>';
+      } else {
+        badge = '<span class="badge ongoing">開催中</span>';
+      }
+    }
+
     li.innerHTML = `
-            <span><strong>${event.eventName || '無題のイベント'}</strong>（${date.toLocaleDateString()} 作成）</span>
-            <a href="${eventUrl}" class="button">参加する</a>
+            <span><strong>${event.eventName || '無題のイベント'}</strong> ${badge}</span>
+            <a href="${eventUrl}" class="button">${event.status === 'started' ? '結果を見る' : '参加する'}</a>
         `;
     elements.otherEventsList.appendChild(li);
   });
@@ -1001,30 +1033,38 @@ export function renderBulkAnalysisPreview(analysisResults) {
   elements.bulkStep2Preview.style.display = 'block';
   elements.finalizeBulkButton.disabled = false;
 }
-export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
+
+export function renderPrizeListMode(sortConfig = { key: 'name', order: 'asc' }) {
   if (!elements.prizeListModeContainer) return;
 
-  // 1. 景品データを集計
+  // 1. 景品データを集計し、画像のバリエーションもチェック
   const prizeSummary = state.prizes.reduce((acc, prize) => {
-    if (acc[prize.name]) {
-      acc[prize.name].quantity++;
+    const key = prize.name || '(名称未設定)';
+    if (acc[key]) {
+      acc[key].quantity++;
+      // ハッシュとURLで画像の同一性を判定
+      if (acc[key].imageUrl !== prize.imageUrl || acc[key].newImageFileHash !== prize.newImageFileHash) {
+        acc[key].hasMultipleImages = true;
+      }
     } else {
-      acc[prize.name] = {
-        name: prize.name,
+      acc[key] = {
+        name: key,
         quantity: 1,
         imageUrl: prize.imageUrl,
+        newImageFile: prize.newImageFile, // プレビュー用にFileオブジェクトを保持
+        newImageFileHash: prize.newImageFileHash, // 同一性チェック用にハッシュを保持
+        hasMultipleImages: false,
       };
     }
     return acc;
   }, {});
 
   let prizeArray = Object.values(prizeSummary);
-
+  
   // 2. ソート処理
   prizeArray.sort((a, b) => {
     const valA = a[sortConfig.key];
     const valB = b[sortConfig.key];
-
     if (valA < valB) return sortConfig.order === 'asc' ? -1 : 1;
     if (valA > valB) return sortConfig.order === 'asc' ? 1 : -1;
     return 0;
@@ -1038,6 +1078,7 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
     <table class="prize-list-table">
       <thead>
         <tr>
+          <th style="width: 80px;">画像</th>
           <th data-sort-key="name" style="cursor: pointer;">${nameHeader}</th>
           <th data-sort-key="quantity" style="cursor: pointer;">${quantityHeader}</th>
           <th>操作</th>
@@ -1046,20 +1087,36 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
       <tbody>
   `;
 
-  prizeArray.forEach((item) => {
+  prizeArray.forEach(item => {
+    let imageContent = '';
+    const uniqueId = `prize-list-image-upload-${item.name.replace(/\s/g, '-')}`;
+    
+    // 修正：newImageFileからのプレビュー表示に対応
+    if (item.hasMultipleImages) {
+        imageContent = '<div class="prize-image-cell multi-image" title="複数の画像が設定されています">🖼️</div>';
+    } else if (item.newImageFile) {
+        const tempUrl = URL.createObjectURL(item.newImageFile);
+        // メモリリークを防ぐため、画像の読み込み後にオブジェクトURLを破棄する
+        imageContent = `<img src="${tempUrl}" alt="${item.name}" class="prize-image-cell" onload="URL.revokeObjectURL(this.src)">`;
+    } else if (item.imageUrl) {
+        imageContent = `<img src="${item.imageUrl}" alt="${item.name}" class="prize-image-cell">`;
+    } else {
+        imageContent = '<div class="prize-image-cell no-image" title="画像が設定されていません">?</div>';
+    }
+
     tableHTML += `
       <tr>
-        <td><input type="text" class="prize-name-input-list" value="${item.name}" data-original-name="${item.name}" disabled></td>
+        <td>
+          <label for="${uniqueId}" class="prize-image-label">${imageContent}</label>
+          <input type="file" id="${uniqueId}" data-name="${item.name}" class="prize-image-input-list" accept="image/*" style="display: none;">
+        </td>
+        <td><input type="text" class="prize-name-input-list" value="${item.name}" data-original-name="${item.name}"></td>
         <td><input type="number" class="prize-quantity-input" value="${item.quantity}" min="0" data-name="${item.name}"></td>
         <td><button class="delete-btn delete-prize-list" data-name="${item.name}">削除</button></td>
       </tr>
     `;
   });
 
-  tableHTML += `
-      </tbody>
-    </table>
-  `;
-
+  tableHTML += `</tbody></table>`;
   elements.prizeListModeContainer.innerHTML = tableHTML;
 }

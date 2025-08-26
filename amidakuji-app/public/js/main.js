@@ -430,10 +430,10 @@ function setupEventListeners() {
     // 初期表示時に遅延させることで、state.prizesの読み込みを待つ
     setTimeout(() => switchViewMode(savedMode), 0);
   }
-
-  // ▼▼▼ パート2：「リストモード」の機能実装 ▼▼▼
+  // ▼▼▼ リストモードのイベント処理 ▼▼▼
   if (prizeListContainer) {
     prizeListContainer.addEventListener('change', (e) => {
+      // 数量が変更された時の処理
       if (e.target.classList.contains('prize-quantity-input')) {
         const name = e.target.dataset.name;
         const newQuantity = parseInt(e.target.value, 10);
@@ -460,12 +460,77 @@ function setupEventListeners() {
             }
           }
         }
-        ui.renderPrizeCardList();
+
+        // フォーカスを維持するための処理
+        const focusedElement = document.activeElement;
+        const focusedName = focusedElement.dataset.name;
+        const selectionStart = focusedElement.selectionStart;
+
+        ui.renderPrizeList();
         ui.renderPrizeListMode(sortConfig);
+
+        if (focusedName) {
+          const newFocusedElement = prizeListContainer.querySelector(`.prize-quantity-input[data-name="${focusedName}"]`);
+          if (newFocusedElement) {
+            newFocusedElement.focus();
+            newFocusedElement.selectionStart = selectionStart;
+            newFocusedElement.selectionEnd = selectionStart;
+          }
+        }
+      }
+
+      // 名称が変更された時の処理
+      if (e.target.classList.contains('prize-name-input-list')) {
+        const originalName = e.target.dataset.originalName;
+        const newName = e.target.value.trim();
+        if (!newName || newName === originalName) {
+          e.target.value = originalName; // 元に戻す
+          return;
+        }
+        if (confirm(`景品「${originalName}」の名称を「${newName}」に一括変更しますか？`)) {
+          state.prizes.forEach((p) => {
+            if (p.name === originalName) {
+              p.name = newName;
+            }
+          });
+          ui.renderPrizeCardList();
+          ui.renderPrizeListMode(sortConfig);
+        } else {
+          e.target.value = originalName; // 元に戻す
+        }
+      }
+
+      // 画像が変更された時の処理
+      if (e.target.classList.contains('prize-image-input-list')) {
+        const name = e.target.dataset.name;
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+            const buffer = event.target.result;
+            // SHA-256ハッシュを計算
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
+            // 同じ名前の景品すべてに、新しいファイルとハッシュをセット
+            state.prizes.forEach((p) => {
+              if (p.name === name) {
+                p.newImageFile = file;
+                p.newImageFileHash = hashHex; // ハッシュを保存
+                p.imageUrl = null; // 既存のURLはリセット
+              }
+            });
+            ui.renderPrizeCardList();
+            ui.renderPrizeListMode(sortConfig);
+          };
+          reader.readAsArrayBuffer(file);
+        }
       }
     });
 
     prizeListContainer.addEventListener('click', (e) => {
+      // ... (削除とソートのロジックは変更なし) ...
       if (e.target.classList.contains('delete-prize-list')) {
         const name = e.target.dataset.name;
         if (confirm(`景品「${name}」をすべて削除しますか？`)) {
@@ -486,9 +551,6 @@ function setupEventListeners() {
       }
     });
   }
-
-  // --- ここから下は、元のsetupEventListenersにあった他のイベントリスナーです ---
-
   window.addEventListener('popstate', (e) => {
     router.navigateTo(window.location.pathname, false);
   });
@@ -1572,6 +1634,37 @@ function setupEventListeners() {
       }
     }
   });
+
+  const showAcknowledgedEventsCheckbox = document.getElementById('showAcknowledgedEvents');
+  if (showAcknowledgedEventsCheckbox) {
+    showAcknowledgedEventsCheckbox.addEventListener('change', () => {
+      // 状態をローカルストレージに保存
+      localStorage.setItem('showAcknowledgedEvents', showAcknowledgedEventsCheckbox.checked);
+
+      // Stateのデータを使ってUIのリスト部分だけを再描画
+      if (state.participantEventList && state.currentGroupData) {
+        ui.renderOtherEvents(state.participantEventList, state.currentGroupData.customUrl);
+      }
+    });
+  }
+
+  const acknowledgeButton = document.getElementById('acknowledgeButton');
+  if (acknowledgeButton) {
+    acknowledgeButton.addEventListener('click', async () => {
+      try {
+        await api.acknowledgeResult(state.currentEventId, state.currentParticipantId, state.currentParticipantToken);
+        acknowledgeButton.style.display = 'none'; // ボタンを非表示に
+        // stateを更新
+        const participant = state.currentLotteryData.participants.find((p) => p.memberId === state.currentParticipantId);
+        if (participant) {
+          participant.acknowledgedResult = true;
+        }
+        alert('結果を受け取りました！');
+      } catch (error) {
+        alert(`エラー: ${error.error || '処理に失敗しました。'}`);
+      }
+    });
+  }
 }
 
 function setupHamburgerMenu() {
