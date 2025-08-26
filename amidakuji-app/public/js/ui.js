@@ -1096,8 +1096,7 @@ export function renderPrizeListMode(sortConfig = { key: 'name', order: 'asc' }) 
         imageContent = '<div class="prize-image-cell multi-image" title="複数の画像が設定されています">🖼️</div>';
     } else if (item.newImageFile) {
         const tempUrl = URL.createObjectURL(item.newImageFile);
-        // メモリリークを防ぐため、画像の読み込み後にオブジェクトURLを破棄する
-        imageContent = `<img src="${tempUrl}" alt="${item.name}" class="prize-image-cell" onload="URL.revokeObjectURL(this.src)">`;
+        imageContent = `<img src="${tempUrl}" alt="${item.name}" class="prize-image-cell">`;
     } else if (item.imageUrl) {
         imageContent = `<img src="${item.imageUrl}" alt="${item.name}" class="prize-image-cell">`;
     } else {

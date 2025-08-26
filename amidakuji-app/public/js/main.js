@@ -427,8 +427,6 @@ function setupEventListeners() {
     viewModeCardBtn.addEventListener('click', () => switchViewMode('card'));
     viewModeListBtn.addEventListener('click', () => switchViewMode('list'));
     const savedMode = localStorage.getItem('prizeViewMode') || 'card';
-    // 初期表示時に遅延させることで、state.prizesの読み込みを待つ
-    setTimeout(() => switchViewMode(savedMode), 0);
   }
   // ▼▼▼ リストモードのイベント処理 ▼▼▼
   if (prizeListContainer) {
@@ -437,13 +435,21 @@ function setupEventListeners() {
       if (e.target.classList.contains('prize-quantity-input')) {
         const name = e.target.dataset.name;
         const newQuantity = parseInt(e.target.value, 10);
+        const currentPrizes = state.prizes.filter((p) => p.name === name);
+        const currentQuantity = currentPrizes.length;
+
         if (isNaN(newQuantity) || newQuantity < 0) {
-          ui.renderPrizeListMode(sortConfig);
+          e.target.value = currentQuantity; // 無効な値は元に戻す
           return;
         }
 
-        const currentPrizes = state.prizes.filter((p) => p.name === name);
-        const currentQuantity = currentPrizes.length;
+        if (newQuantity === 0) {
+          if (!confirm(`景品「${name}」の数量を0にしますか？\nリストからすべての「${name}」が削除されます。よろしいですか？`)) {
+            e.target.value = currentQuantity; // 操作をキャンセルし、数量を元に戻す
+            return;
+          }
+        }
+
         const prizeMaster = currentPrizes[0] || {name, imageUrl: null};
 
         if (newQuantity > currentQuantity) {
@@ -461,20 +467,17 @@ function setupEventListeners() {
           }
         }
 
-        // フォーカスを維持するための処理
         const focusedElement = document.activeElement;
         const focusedName = focusedElement.dataset.name;
-        const selectionStart = focusedElement.selectionStart;
 
-        ui.renderPrizeList();
+        ui.renderPrizeCardList();
         ui.renderPrizeListMode(sortConfig);
 
+        // input type="number" は selectionStart をサポートしないため、focus() のみを実行
         if (focusedName) {
           const newFocusedElement = prizeListContainer.querySelector(`.prize-quantity-input[data-name="${focusedName}"]`);
           if (newFocusedElement) {
             newFocusedElement.focus();
-            newFocusedElement.selectionStart = selectionStart;
-            newFocusedElement.selectionEnd = selectionStart;
           }
         }
       }
@@ -484,7 +487,7 @@ function setupEventListeners() {
         const originalName = e.target.dataset.originalName;
         const newName = e.target.value.trim();
         if (!newName || newName === originalName) {
-          e.target.value = originalName; // 元に戻す
+          e.target.value = originalName;
           return;
         }
         if (confirm(`景品「${originalName}」の名称を「${newName}」に一括変更しますか？`)) {
@@ -496,7 +499,7 @@ function setupEventListeners() {
           ui.renderPrizeCardList();
           ui.renderPrizeListMode(sortConfig);
         } else {
-          e.target.value = originalName; // 元に戻す
+          e.target.value = originalName;
         }
       }
 
@@ -508,17 +511,15 @@ function setupEventListeners() {
           const reader = new FileReader();
           reader.onload = async (event) => {
             const buffer = event.target.result;
-            // SHA-256ハッシュを計算
             const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 
-            // 同じ名前の景品すべてに、新しいファイルとハッシュをセット
             state.prizes.forEach((p) => {
               if (p.name === name) {
                 p.newImageFile = file;
-                p.newImageFileHash = hashHex; // ハッシュを保存
-                p.imageUrl = null; // 既存のURLはリセット
+                p.newImageFileHash = hashHex;
+                p.imageUrl = null;
               }
             });
             ui.renderPrizeCardList();
@@ -530,7 +531,6 @@ function setupEventListeners() {
     });
 
     prizeListContainer.addEventListener('click', (e) => {
-      // ... (削除とソートのロジックは変更なし) ...
       if (e.target.classList.contains('delete-prize-list')) {
         const name = e.target.dataset.name;
         if (confirm(`景品「${name}」をすべて削除しますか？`)) {
@@ -551,6 +551,7 @@ function setupEventListeners() {
       }
     });
   }
+  // ▲▲▲ リストモードのイベント処理ここまで ▲▲▲
   window.addEventListener('popstate', (e) => {
     router.navigateTo(window.location.pathname, false);
   });
@@ -1065,7 +1066,10 @@ function setupEventListeners() {
 
       const newPrizes = await buildNewPrizesWithDataPreservation(prizeNames);
       state.setPrizes(newPrizes);
+      // ▼▼▼ 修正点 ▼▼▼
       ui.renderPrizeCardList();
+      ui.renderPrizeListMode(); // リスト表示も更新
+      // ▲▲▲ 修正点ここまで ▲▲▲
       ui.closePrizeBulkAddModal();
     });
   }
@@ -1095,31 +1099,50 @@ function setupEventListeners() {
           state.setCurrentEventId(eventId);
         }
 
-        const prizesWithNewImages = state.prizes.filter((p) => p.newImageFile);
-        if (prizesWithNewImages.length > 0) {
-          elements.createEventButton.textContent = '画像をアップロード中...';
+        elements.createEventButton.textContent = '画像を準備中...';
+        const uniqueFilesToUpload = [];
+        const fileHashes = {};
 
-          const uploadPromises = state.prizes.map(async (prize) => {
-            if (prize.newImageFile) {
-              const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, prize.newImageFile.type);
-              await fetch(signedUrl, {
-                method: 'PUT',
-                headers: {'Content-Type': prize.newImageFile.type},
-                body: prize.newImageFile,
-              });
-              prize.imageUrl = imageUrl;
-              delete prize.newImageFile;
+        // 直列処理でハッシュを計算
+        for (const prize of state.prizes) {
+          if (prize.newImageFile && !Object.values(fileHashes).includes(prize.newImageFile.name)) {
+            const buffer = await prize.newImageFile.arrayBuffer();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+            if (!uniqueFilesToUpload.some((f) => f.hash === hashHex)) {
+              uniqueFilesToUpload.push({file: prize.newImageFile, hash: hashHex});
             }
-            return prize;
-          });
-          await Promise.all(uploadPromises);
+            fileHashes[prize.newImageFile.name] = hashHex;
+          }
         }
+
+        elements.createEventButton.textContent = '画像をアップロード中...';
+        const uploadedImageUrls = {};
+
+        for (const {file, hash} of uniqueFilesToUpload) {
+          const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, file.type, hash);
+          await fetch(signedUrl, {
+            method: 'PUT',
+            headers: {'Content-Type': file.type},
+            body: file,
+          });
+          uploadedImageUrls[hash] = imageUrl;
+        }
+
+        const finalPrizes = state.prizes.map((prize) => {
+          if (prize.newImageFile) {
+            const hash = fileHashes[prize.newImageFile.name];
+            return {name: prize.name, imageUrl: uploadedImageUrls[hash]};
+          }
+          return {name: prize.name, imageUrl: prize.imageUrl};
+        });
 
         elements.createEventButton.textContent = '最終保存中...';
         const finalEventData = {
           eventName: elements.eventNameInput.value.trim(),
-          prizes: state.prizes,
-          participantCount: state.prizes.length,
+          prizes: finalPrizes,
+          participantCount: finalPrizes.length,
           displayMode: elements.displayModeSelect.value,
         };
 
@@ -1137,7 +1160,6 @@ function setupEventListeners() {
       }
     });
   }
-
   if (elements.backToDashboardButton)
     elements.backToDashboardButton.addEventListener('click', async () => {
       if (state.currentGroupId) {
@@ -1563,8 +1585,20 @@ function setupEventListeners() {
         newImageFile: file || null,
       };
 
+      // ▼▼▼ ここからが修正点 ▼▼▼
+      // もし画像が選択されておらず、同じ名前の景品が既にある場合、その画像情報を引き継ぐ
+      if (!file) {
+        const existingPrize = state.prizes.find((p) => p.name === name);
+        if (existingPrize) {
+          newPrize.imageUrl = existingPrize.imageUrl;
+          newPrize.newImageFile = existingPrize.newImageFile;
+          newPrize.newImageFileHash = existingPrize.newImageFileHash;
+        }
+      }
+
       state.prizes.push(newPrize);
       ui.renderPrizeCardList();
+      ui.renderPrizeListMode();
       ui.closeAddPrizeModal();
     });
   }
