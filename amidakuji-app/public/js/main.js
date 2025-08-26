@@ -233,7 +233,6 @@ async function initializeApp() {
     tronAnimationAPI = initTronAnimation();
   }
 
-  setupDraggableControls();
   const initialData = {
     group: typeof initialGroupData !== 'undefined' ? initialGroupData : null,
     event: typeof initialEventData !== 'undefined' ? initialEventData : null,
@@ -1196,10 +1195,24 @@ function setupEventListeners() {
         alert(`エラー: ${error.error}`);
       }
     });
-  if (elements.animateAllButton) elements.animateAllButton.addEventListener('click', resetAnimation);
-  if (elements.advanceLineByLineButton) {
-    elements.advanceLineByLineButton.addEventListener('click', advanceLineByLine);
+  if (elements.animateAllButton) {
+    elements.animateAllButton.addEventListener('click', () => {
+      ui.setBroadcastControlsDisabled(true);
+      resetAnimation(() => {
+        ui.setBroadcastControlsDisabled(false);
+      });
+    });
   }
+
+  if (elements.advanceLineByLineButton) {
+    elements.advanceLineByLineButton.addEventListener('click', () => {
+      ui.setBroadcastControlsDisabled(true);
+      advanceLineByLine(() => {
+        ui.setBroadcastControlsDisabled(false);
+      });
+    });
+  }
+
   if (elements.revealRandomButton) {
     elements.revealRandomButton.addEventListener('click', async () => {
       if (isAnimationRunning()) return;
@@ -1212,9 +1225,18 @@ function setupEventListeners() {
       const randomParticipant = remainingParticipants[Math.floor(Math.random() * remainingParticipants.length)];
       const ctx = elements.adminCanvas.getContext('2d');
       elements.highlightUserSelect.value = randomParticipant.name;
-      await startAnimation(ctx, [randomParticipant.name], null, randomParticipant.name);
+      ui.setBroadcastControlsDisabled(true);
+      await startAnimation(
+        ctx,
+        [randomParticipant.name],
+        () => {
+          ui.setBroadcastControlsDisabled(false);
+        },
+        randomParticipant.name
+      );
     });
   }
+
   if (elements.broadcastView) {
     elements.broadcastView.addEventListener('click', async (e) => {
       if (e.target.id === 'regenerateLinesButton') {
@@ -1263,20 +1285,6 @@ function setupEventListeners() {
         }
       }
     });
-
-    if (elements.toggleFullscreenButton) {
-      elements.toggleFullscreenButton.addEventListener('click', () => {
-        const container = elements.adminCanvas.closest('.canvas-panzoom-container');
-        if (container) {
-          const isFullscreen = container.classList.toggle('fullscreen-mode');
-          elements.toggleFullscreenButton.textContent = isFullscreen ? '元のサイズに戻す' : '表示エリアを最大化';
-          setTimeout(() => {
-            const hidePrizes = state.currentLotteryData?.displayMode === 'private';
-            prepareStepAnimation(elements.adminCanvas.getContext('2d'), hidePrizes, false, true);
-          }, 300);
-        }
-      });
-    }
   }
 
   if (elements.glimpseButton) {
@@ -1323,7 +1331,15 @@ function setupEventListeners() {
       if (isAnimationRunning()) return;
       if (elements.highlightUserSelect.value) {
         const ctx = elements.adminCanvas.getContext('2d');
-        await startAnimation(ctx, [elements.highlightUserSelect.value], null, elements.highlightUserSelect.value);
+        ui.setBroadcastControlsDisabled(true);
+        await startAnimation(
+          ctx,
+          [elements.highlightUserSelect.value],
+          () => {
+            ui.setBroadcastControlsDisabled(false);
+          },
+          elements.highlightUserSelect.value
+        );
       }
     });
 
@@ -1798,6 +1814,45 @@ function setupEventListeners() {
       }
     });
   }
+
+  // --- サイドバー開閉ロジック ---
+  if (elements.openSidebarButton && elements.broadcastSidebar) {
+    const overlay = document.createElement('div');
+    overlay.className = 'broadcast-sidebar-overlay';
+    document.body.appendChild(overlay);
+
+    const closeSidebar = () => {
+      elements.broadcastSidebar.classList.remove('is-open');
+      overlay.classList.remove('is-visible');
+    };
+    const openSidebar = () => {
+      elements.broadcastSidebar.classList.add('is-open');
+      overlay.classList.add('is-visible');
+    };
+
+    elements.openSidebarButton.addEventListener('click', openSidebar);
+    elements.closeSidebarButton.addEventListener('click', closeSidebar);
+    overlay.addEventListener('click', closeSidebar);
+  }
+
+  // --- 表示エリア最大化ボタンのロジック (★ここが修正箇所) ---
+  if (elements.toggleFullscreenButton) {
+    elements.toggleFullscreenButton.addEventListener('click', () => {
+      const container = elements.adminCanvas.closest('.canvas-panzoom-container');
+      if (container) {
+        const isMaximized = container.classList.toggle('fullscreen-mode');
+        broadcastView.classList.toggle('fullscreen-active', isMaximized); // 親ビューにもクラスを付与
+
+        elements.toggleFullscreenButton.textContent = isMaximized ? '元のサイズに戻す' : '表示エリアを最大化';
+
+        // 300ミリ秒待ってから再描画することで、CSSアニメーション完了後に実行
+        setTimeout(() => {
+          const hidePrizes = state.currentLotteryData?.displayMode === 'private';
+          prepareStepAnimation(elements.adminCanvas.getContext('2d'), hidePrizes, false, true);
+        }, 300);
+      }
+    });
+  }
 }
 
 function setupHamburgerMenu() {
@@ -1819,91 +1874,6 @@ function setupHamburgerMenu() {
   }
 }
 
-function setupDraggableControls() {
-  const wrapper = document.getElementById('controls-draggable-wrapper');
-  const header = wrapper.querySelector('.controls-header');
-  const toggleBtn = document.getElementById('toggleControlsButton');
-
-  if (!wrapper || !header || !toggleBtn) return;
-
-  let pos = {top: 0, left: 0, x: 0, y: 0};
-
-  const savedPos = localStorage.getItem('controlsPosition');
-  if (savedPos) {
-    const {x, y} = JSON.parse(savedPos);
-    if (x > window.innerWidth || y > window.innerHeight || x < -wrapper.offsetWidth || y < -wrapper.offsetHeight) {
-      localStorage.removeItem('controlsPosition');
-    } else {
-      wrapper.style.left = `${x}px`;
-      wrapper.style.top = `${y}px`;
-      wrapper.style.bottom = 'auto';
-      wrapper.style.transform = 'none';
-    }
-  }
-
-  const isMinimized = localStorage.getItem('controlsMinimized') === 'true';
-  if (isMinimized) {
-    wrapper.classList.add('minimized');
-    toggleBtn.textContent = '+';
-  }
-
-  toggleBtn.addEventListener('click', () => {
-    const minimized = wrapper.classList.toggle('minimized');
-    toggleBtn.textContent = minimized ? '+' : '-';
-    localStorage.setItem('controlsMinimized', minimized);
-  });
-
-  const mouseDownHandler = (e) => {
-    if (e.target === toggleBtn) return;
-
-    const rect = wrapper.getBoundingClientRect();
-    wrapper.style.left = `${rect.left}px`;
-    wrapper.style.top = `${rect.top}px`;
-    wrapper.style.bottom = 'auto';
-    wrapper.style.transform = 'none';
-
-    pos = {
-      left: wrapper.offsetLeft,
-      top: wrapper.offsetTop,
-      x: e.clientX,
-      y: e.clientY,
-    };
-
-    wrapper.classList.add('dragging');
-
-    document.addEventListener('mousemove', mouseMoveHandler);
-    document.addEventListener('mouseup', mouseUpHandler);
-  };
-
-  const mouseMoveHandler = (e) => {
-    const dx = e.clientX - pos.x;
-    const dy = e.clientY - pos.y;
-
-    let newX = pos.left + dx;
-    let newY = pos.top + dy;
-
-    const rect = wrapper.getBoundingClientRect();
-    const maxX = window.innerWidth - rect.width;
-    const maxY = window.innerHeight - rect.height;
-
-    newX = Math.max(0, Math.min(newX, maxX));
-    newY = Math.max(0, Math.min(newY, maxY));
-
-    wrapper.style.top = `${newY}px`;
-    wrapper.style.left = `${newX}px`;
-  };
-
-  const mouseUpHandler = () => {
-    wrapper.classList.remove('dragging');
-    document.removeEventListener('mousemove', mouseMoveHandler);
-    document.removeEventListener('mouseup', mouseUpHandler);
-
-    const rect = wrapper.getBoundingClientRect();
-    localStorage.setItem('controlsPosition', JSON.stringify({x: rect.left, y: rect.top}));
-  };
-
-  header.addEventListener('mousedown', mouseDownHandler);
-}
 function loadSettings() {
   const savedSettings = JSON.parse(localStorage.getItem('userSettings'));
   if (savedSettings) {
@@ -1947,8 +1917,8 @@ async function applyTheme(theme, storedState) {
 
   // 記憶した状態(storedState)を、そのまま再描画関数に渡す
   if (targetCanvas && state.currentLotteryData) {
-      const hidePrizes = state.currentLotteryData.displayMode === 'private' && state.currentLotteryData.status !== 'started';
-      await prepareStepAnimation(targetCanvas.getContext('2d'), hidePrizes, false, true, storedState);
+    const hidePrizes = state.currentLotteryData.displayMode === 'private' && state.currentLotteryData.status !== 'started';
+    await prepareStepAnimation(targetCanvas.getContext('2d'), hidePrizes, false, true, storedState);
   }
 }
 
@@ -2028,13 +1998,13 @@ function setupSettingsControls() {
       } else if (participantCanvas && participantCanvas.offsetParent !== null) {
         panzoomInstance = participantPanzoom;
       }
-      
+
       if (panzoomInstance) {
-          storedState = {
-              pan: panzoomInstance.getPan(),
-              scale: panzoomInstance.getScale()
-          };
-          console.log(`%c[main.js] テーマ変更前。カメラ状態を記憶します:`, 'color: blue; font-weight: bold;', storedState);
+        storedState = {
+          pan: panzoomInstance.getPan(),
+          scale: panzoomInstance.getScale(),
+        };
+        console.log(`%c[main.js] テーマ変更前。カメラ状態を記憶します:`, 'color: blue; font-weight: bold;', storedState);
       }
 
       // 2. 記憶した状態を渡しながら、テーマ変更処理を呼び出す

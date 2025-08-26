@@ -207,45 +207,65 @@
       </div>
     </div>
   </div>
+
   <div id="broadcastView" class="view-container" style="display: none">
-    <div class="event-header">
+    <div class="broadcast-header">
       <button id="backToDashboardButton">← ダッシュボードに戻る</button>
-      <p class="event-url-display">イベントURL: <a id="broadcastEventUrl" href="#" target="_blank">読み込み中...</a></p>
-    </div>
-    <div id="adminControls">
-      <button id="startEventButton" class="primary-action">🎉 このあみだくじでイベントを開始する</button>
-      <button id="showFillSlotsModalButton" style="display: none;">👥 参加枠を埋める</button>
-    </div>
-    <div class="canvas-panzoom-container">
-      <div class="loading-mask" id="admin-loading-mask">あみだくじを生成中...</div>
-      <div class="panzoom-wrapper" id="admin-panzoom-wrapper">
-        <canvas id="adminCanvas" width="800" height="400"></canvas>
-      </div>
+      <button id="toggleFullscreenButton">表示エリアを最大化</button>
     </div>
 
-    <div id="controls-draggable-wrapper">
-      <div class="controls-header">
-        <div class="drag-handle"></div>
-        <button id="toggleControlsButton" aria-label="コントロールを最小化/最大化">-</button>
-      </div>
-      <div class="broadcast-controls">
-        <div class="control-group">
-          <button id="animateAllButton">全結果を再生</button>
-          <button id="advanceLineByLineButton">一段ずつ進む</button>
-          <button id="regenerateLinesButton">🔄 再生成</button>
-          <button id="shufflePrizesBroadcastButton">🎁 景品シャッフル</button>
-          <button id="glimpseButton">景品チラ見せ</button>
-          <button id="toggleFullscreenButton">表示エリアを最大化</button>
+    <div class="broadcast-layout">
+      <p class="event-url-display">イベントURL: <a id="broadcastEventUrl" href="#" target="_blank">読み込み中...</a></p>
+      <div class="canvas-panzoom-container">
+        <div id="adminControls" class="floating-controls">
+          <button id="startEventButton" class="primary-action">🎉 イベント開始</button>
+          <button id="showFillSlotsModalButton" style="display: none;">👥 参加枠を埋める</button>
         </div>
-        <div class="control-group">
-          <label for="highlightUserSelect">特定ユーザー:</label>
-          <select id="highlightUserSelect"></select>
-          <button id="highlightUserButton">選択した人を表示</button>
-          <button id="revealRandomButton">ランダムに一人表示</button>
+        <div class="loading-mask" id="admin-loading-mask">あみだくじを生成中...</div>
+        <div class="panzoom-wrapper" id="admin-panzoom-wrapper">
+          <canvas id="adminCanvas" width="800" height="400"></canvas>
         </div>
       </div>
+
+      <aside id="broadcastSidebar" class="broadcast-sidebar">
+        <button id="closeSidebarButton" class="close-sidebar-btn" aria-label="閉じる">&times;</button>
+        <h4>コントロールパネル</h4>
+        <div class="broadcast-controls">
+          <div class="control-group">
+            <h5>再生・進行</h5>
+            <button id="animateAllButton">全結果を再生</button>
+            <button id="advanceLineByLineButton">一段ずつ進む</button>
+          </div>
+          <div class="control-group">
+            <h5>あみだくじ操作</h5>
+            <button id="regenerateLinesButton">🔄 線を再生成</button>
+            <button id="shufflePrizesBroadcastButton">🎁 景品シャッフル</button>
+            <button id="glimpseButton">景品チラ見せ</button>
+          </div>
+          <div class="control-group">
+            <h5>個別表示</h5>
+            <label for="highlightUserSelect">特定ユーザー:</label>
+            <select id="highlightUserSelect"></select>
+            <button id="highlightUserButton">選択した人を表示</button>
+            <button id="revealRandomButton">ランダムに一人表示</button>
+          </div>
+        </div>
+      </aside>
     </div>
-  </div>
+
+    <button id="openSidebarButton" class="floating-fab" aria-label="コントロールパネルを開く">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="4" y1="21" x2="4" y2="14"></line>
+        <line x1="4" y1="10" x2="4" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12" y2="3"></line>
+        <line x1="20" y1="21" x2="20" y2="16"></line>
+        <line x1="20" y1="12" x2="20" y2="3"></line>
+        <line x1="1" y1="14" x2="7" y2="14"></line>
+        <line x1="9" y1="8" x2="15" y2="8"></line>
+        <line x1="17" y1="16" x2="23" y2="16"></line>
+      </svg>
+    </button>
   </div>
 
   <div id="participantView" class="view-container" style="display: none">
@@ -525,7 +545,6 @@
       <ul id="prizeSummaryList"></ul>
     </div>
   </div>
-  <%# --- ▼▼▼ ここから修正 ▼▼▼ --- %>
   <% if (typeof error === 'undefined' || !error) { %>
   <script type="module" src="/js/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
@@ -545,7 +564,6 @@
     <% } %>
   </script>
   <% } %>
-  <%# --- ▲▲▲ 修正ここまで ▲▲▲ --- %>
   <div class="settings-fab" id="settingsFab" title="設定">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.82l-.15-.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1 0-2.82l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>

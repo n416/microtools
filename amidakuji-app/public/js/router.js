@@ -129,8 +129,6 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       ui.elements.displayModeSelect.value = data.displayMode;
       ui.elements.createEventButton.textContent = 'この内容でイベントを保存';
 
-      // ▼▼▼ ここからが修正点 ▼▼▼
-      // データ読み込み後に、保存された表示モードを復元する
       const savedMode = localStorage.getItem('prizeViewMode') || 'card';
       const prizeCardContainer = document.getElementById('prizeCardListContainer');
       const prizeListContainer = document.getElementById('prizeListModeContainer');
@@ -150,53 +148,43 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
         prizeListContainer.style.display = 'none';
         ui.renderPrizeCardList();
       }
-      // ▲▲▲ 修正点ここまで ▲▲▲
     } else if (viewToShow === 'broadcastView') {
-      const {adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, revealRandomButton, regenerateLinesButton, glimpseButton} = ui.elements;
+      const {adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, revealRandomButton, regenerateLinesButton, glimpseButton, shufflePrizesBroadcastButton} = ui.elements;
       const hidePrizes = data.displayMode === 'private';
 
-      const emptySlots = data.participants.filter((p) => p.name === null).length;
-      if (showFillSlotsModalButton && emptySlots > 0) {
-        showFillSlotsModalButton.style.display = 'inline-block';
-      } else if (showFillSlotsModalButton) {
-        showFillSlotsModalButton.style.display = 'none';
-      }
-
-      // 常に表示・更新するUI要素
       if (broadcastControls) broadcastControls.style.display = 'flex';
       if (adminCanvas) adminCanvas.style.display = 'block';
 
       const allParticipants = data.participants.filter((p) => p.name);
       if (highlightUserSelect) {
         highlightUserSelect.innerHTML = allParticipants.map((p) => `<option value="${p.name}">${p.name}</option>`).join('');
-        highlightUserSelect.style.display = 'inline-block';
       }
-      if (highlightUserButton) highlightUserButton.style.display = 'inline-block';
-      if (revealRandomButton) revealRandomButton.style.display = 'inline-block';
 
-      // イベントのステータスに応じて表示を切り替えるUI要素
+      // ▼▼▼ ここからが修正点 ▼▼▼
       if (data.status === 'pending') {
         if (adminControls) adminControls.style.display = 'block';
         if (startEventButton) startEventButton.style.display = 'inline-block';
 
-        if (animateAllButton) animateAllButton.style.display = 'none';
-        if (advanceLineByLineButton) advanceLineByLineButton.style.display = 'none';
+        // 実施前は「再生・進行」「個別表示」グループを非表示
+        if (animateAllButton) animateAllButton.closest('.control-group').style.display = 'none';
+        if (highlightUserButton) highlightUserButton.closest('.control-group').style.display = 'none';
 
-        if (regenerateLinesButton) regenerateLinesButton.style.display = 'inline-block';
-        if (glimpseButton) glimpseButton.style.display = hidePrizes ? 'inline-block' : 'none';
+        // 実施前は「あみだくじ操作」グループを表示
+        if (regenerateLinesButton) regenerateLinesButton.closest('.control-group').style.display = 'flex';
       } else if (data.status === 'started') {
         if (adminControls) adminControls.style.display = 'none';
 
-        if (animateAllButton) animateAllButton.style.display = 'inline-block';
-        if (advanceLineByLineButton) advanceLineByLineButton.style.display = 'inline-block';
+        // 実施後は「再生・進行」「個別表示」グループを表示
+        if (animateAllButton) animateAllButton.closest('.control-group').style.display = 'flex';
+        if (highlightUserButton) highlightUserButton.closest('.control-group').style.display = 'flex';
 
-        if (regenerateLinesButton) regenerateLinesButton.style.display = 'none';
-        if (glimpseButton) glimpseButton.style.display = 'none';
+        // 実施後は「あみだくじ操作」グループを非表示
+        if (regenerateLinesButton) regenerateLinesButton.closest('.control-group').style.display = 'none';
       }
+      // ▲▲▲ 修正点ここまで ▲▲▲
 
       const ctx = adminCanvas.getContext('2d');
       await prepareStepAnimation(ctx, hidePrizes);
-      // --- ▲▲▲ 修正ここまで ▲▲▲ ---
     }
   } catch (error) {
     alert(error.error || 'イベントの読み込みに失敗しました。');
