@@ -207,7 +207,6 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMa
       color: p.color || '#333',
       path,
       pathIndex: isFinished ? path.length - 1 : 0,
-      progress: 0,
       x: finalPoint.x,
       y: finalPoint.y,
       isFinished,
@@ -358,8 +357,8 @@ function drawRevealedPrizes(targetCtx) {
   const VIRTUAL_HEIGHT = getTargetHeight(container);
   const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, container.clientWidth);
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
-  const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  targetCtx.fillStyle = isDarkMode ? '#dcdcdc' : '#333';
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';
 
   const prizeImageY = VIRTUAL_HEIGHT * 0.91;
   const prizeTextY = VIRTUAL_HEIGHT * 0.99;
@@ -578,21 +577,34 @@ function updateTracerPosition(tracer, speed) {
       }
     }
   };
+
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  // 「一段ずつ進む」で停止位置に到達した場合の処理
   if (tracer.stopY && tracer.y >= tracer.stopY) {
-    const start = tracer.path[tracer.pathIndex];
-    const end = tracer.path[tracer.pathIndex + 1];
-    if (end && start.y < tracer.stopY && end.y >= tracer.stopY) {
-      const ratio = (tracer.stopY - start.y) / (end.y - start.y);
-      tracer.x = start.x + (end.x - start.x) * ratio;
-    }
     tracer.y = tracer.stopY;
-    tracer.isFinished = true;
+    tracer.isFinished = true; // 一旦停止させる
+
+    const finalY = tracer.path[tracer.path.length - 1].y;
+    // もし、この停止位置が最終ゴール地点だった場合、ゴール処理を実行する
+    if (tracer.stopY >= finalY) {
+      if (!tracer.celebrated) {
+        tracer.x = tracer.path[tracer.path.length - 1].x; // 最終X座標にスナップ
+        tracer.y = tracer.path[tracer.path.length - 1].y; // 最終Y座標にスナップ
+        celebrate(tracer.x, tracer.color);
+        tracer.celebrated = true;
+        revealPrize(); // 賞品を表示！
+      }
+    }
+
     delete tracer.stopY;
     return;
   }
-  const start = tracer.path[tracer.pathIndex];
-  const end = tracer.path[tracer.pathIndex + 1];
-  if (!start || !end) {
+  // ▲▲▲ 修正点ここまで ▲▲▲
+
+  const target = tracer.path[tracer.pathIndex + 1];
+
+  // パスの終点に到達した場合
+  if (!target) {
     tracer.isFinished = true;
     if (!tracer.celebrated) {
       celebrate(tracer.x, tracer.color);
@@ -601,31 +613,23 @@ function updateTracerPosition(tracer, speed) {
     }
     return;
   }
-  const dx = end.x - start.x,
-    dy = end.y - start.y;
+
+  const dx = target.x - tracer.x;
+  const dy = target.y - tracer.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
-  const steps = Math.max(1, distance / speed);
-  if (tracer.progress < steps) {
-    tracer.progress++;
-    tracer.x = start.x + (dx * tracer.progress) / steps;
-    tracer.y = start.y + (dy * tracer.progress) / steps;
-  } else {
-    if (dy === 0 && dx !== 0) {
+
+  // 次の点に到達した場合
+  if (distance < speed) {
+    tracer.x = target.x;
+    tracer.y = target.y;
+    tracer.pathIndex++;
+    if (tracer.path[tracer.pathIndex] && tracer.path[tracer.pathIndex - 1] && tracer.path[tracer.pathIndex].y === tracer.path[tracer.pathIndex - 1].y) {
       createSparks(tracer.x, tracer.y, tracer.color);
     }
-    tracer.progress = 0;
-    tracer.pathIndex++;
-    if (tracer.pathIndex >= tracer.path.length - 1) {
-      tracer.isFinished = true;
-      const finalPoint = tracer.path[tracer.path.length - 1];
-      tracer.x = finalPoint.x;
-      tracer.y = finalPoint.y;
-      if (!tracer.celebrated) {
-        celebrate(tracer.x, tracer.color);
-        tracer.celebrated = true;
-        revealPrize();
-      }
-    }
+  } else {
+    // 次の点に向かって移動
+    tracer.x += (dx / distance) * speed;
+    tracer.y += (dy / distance) * speed;
   }
 }
 
@@ -738,34 +742,68 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
   animator.running = true;
   animationLoop();
 }
-
-export function advanceLineByLine() {
+export function advanceLineByLine(onComplete = null) {
   if (animator.tracers.length === 0 || animator.running) return;
-  animator.tracers.forEach((tracer) => {
-    if (tracer.pathIndex < tracer.path.length - 1) {
+
+  // Check if ALL tracers have completed their ENTIRE path.
+  const allAtTheEnd = animator.tracers.every((t) => t.pathIndex >= t.path.length - 1);
+
+  if (allAtTheEnd) {
+    // If so, a click means "reset and do the first step".
+    state.setRevealedPrizes([]);
+    animator.tracers.forEach((tracer) => {
+      tracer.pathIndex = 0;
+      tracer.x = tracer.path[0].x;
+      tracer.y = tracer.path[0].y;
       tracer.isFinished = false;
-    }
-  });
-  let nextY = Infinity;
+      tracer.celebrated = false;
+      delete tracer.stopY;
+    });
+  }
+
+  animator.onComplete = onComplete;
+
+  let animationShouldStart = false;
+
   animator.tracers.forEach((tracer) => {
-    if (tracer.isFinished) return;
-    for (let i = 0; i < tracer.path.length; i++) {
-      if (tracer.path[i].y > tracer.y + 0.1 && tracer.path[i].y < nextY) {
-        nextY = tracer.path[i].y;
+    // If a tracer has already completed its full path, skip it.
+    if (tracer.pathIndex >= tracer.path.length - 1) {
+      tracer.isFinished = true;
+      return;
+    }
+
+    // This tracer is not at the end, so it needs to animate.
+    tracer.isFinished = false;
+    animationShouldStart = true;
+
+    let nextYForThisTracer = Infinity;
+    for (let i = tracer.pathIndex + 1; i < tracer.path.length; i++) {
+      if (tracer.path[i].y > tracer.y + 0.1) {
+        nextYForThisTracer = tracer.path[i].y;
+        break;
       }
     }
+
+    if (nextYForThisTracer !== Infinity) {
+      tracer.stopY = nextYForThisTracer;
+    } else {
+      delete tracer.stopY;
+    }
   });
-  if (nextY !== Infinity) {
-    animator.tracers.forEach((tracer) => {
-      if (!tracer.isFinished) tracer.stopY = nextY;
-    });
+
+  if (animationShouldStart) {
     animator.running = true;
     animationLoop();
   }
 }
 
-export async function resetAnimation() {
+export async function resetAnimation(onComplete = null) {
   if (isAnimationRunning()) return;
+
+  // ▼▼▼ 修正点 ▼▼▼
+  animator.onComplete = onComplete;
+  // ▲▲▲ 修正点ここまで ▲▲▲
+
   state.setRevealedPrizes([]);
   const container = animator.context.canvas.closest('.canvas-panzoom-container');
   if (!container) return;
@@ -774,10 +812,7 @@ export async function resetAnimation() {
   const numParticipants = state.currentLotteryData.participants.length;
   const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
 
-  // ▼▼▼ ここからが修正点 ▼▼▼
-  // アニメーションを開始する前に、全参加者のアイコンをプリロードする
   await preloadIcons(allParticipantsWithNames);
-  // ▲▲▲ 修正点ここまで ▲▲▲
 
   animator.tracers = allParticipantsWithNames.map((p) => {
     const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT);
@@ -786,7 +821,6 @@ export async function resetAnimation() {
       color: p.color || '#333',
       path,
       pathIndex: 0,
-      progress: 0,
       x: path[0].x,
       y: path[0].y,
       isFinished: false,
@@ -803,8 +837,8 @@ export function redrawPrizes(targetCtx, hidePrizes) {
   if (!targetCtx || !state.currentLotteryData) return;
   const container = targetCtx.canvas.closest('.canvas-panzoom-container');
   if (!container) return;
-  const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const baseLineColor = isDarkMode ? '#444' : '#e0e0e0';
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  targetCtx.fillStyle = isDarkMode ? '#e0e0e0' : '#333';
 
   drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
 
