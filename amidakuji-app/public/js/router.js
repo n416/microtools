@@ -35,10 +35,34 @@ async function loadAndShowGroupEvents(groupId) {
   ui.showView('dashboardView');
   if (ui.elements.eventGroupName) ui.elements.eventGroupName.textContent = `グループ: ${groupName}`;
 
+  const showStartedCheckbox = document.getElementById('showStartedEvents');
+  let originalEvents = [];
+
+  // ローカルストレージから設定を読み込み、チェックボックスに反映
+  const savedPreference = localStorage.getItem('showStartedEvents');
+  if (showStartedCheckbox) {
+    showStartedCheckbox.checked = savedPreference === 'true';
+  }
+
+  const rerenderEvents = () => {
+    ui.renderEventList(originalEvents);
+  };
+
+  if (showStartedCheckbox) {
+    showStartedCheckbox.removeEventListener('change', rerenderEvents);
+    showStartedCheckbox.addEventListener('change', () => {
+      // 変更時にローカルストレージに設定を保存
+      localStorage.setItem('showStartedEvents', showStartedCheckbox.checked);
+      rerenderEvents();
+    });
+  }
+
   try {
     const [events, passwordRequests] = await Promise.all([api.getEventsForGroup(groupId), api.getPasswordRequests(groupId)]);
 
-    ui.renderEventList(events);
+    originalEvents = events;
+    rerenderEvents(); // 初回レンダリング
+
     ui.showPasswordResetNotification(passwordRequests);
 
     if (state.allUserGroups.length === 0) {
@@ -91,6 +115,12 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       ui.elements.currentEventUrl.textContent = url;
       ui.elements.currentEventUrl.href = url;
     }
+    // パート2：配信画面のURL表示ロジック
+    if (ui.elements.broadcastEventUrl) {
+      ui.elements.broadcastEventUrl.textContent = url;
+      ui.elements.broadcastEventUrl.href = url;
+    }
+
     if (ui.elements.eventIdInput) ui.elements.eventIdInput.value = eventId;
 
     if (viewToShow === 'eventEditView') {
