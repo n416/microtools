@@ -397,6 +397,98 @@ async function buildNewPrizesWithDataPreservation(newNames) {
 }
 
 function setupEventListeners() {
+  const {elements} = ui;
+
+  // ▼▼▼ パート1：表示モード切替UIのロジック ▼▼▼
+  const viewModeCardBtn = document.getElementById('viewModeCard');
+  const viewModeListBtn = document.getElementById('viewModeList');
+  const prizeCardContainer = document.getElementById('prizeCardListContainer');
+  const prizeListContainer = document.getElementById('prizeListModeContainer');
+  let sortConfig = {key: 'name', order: 'asc'};
+
+  const switchViewMode = (mode) => {
+    if (mode === 'list') {
+      viewModeCardBtn.classList.remove('active');
+      viewModeListBtn.classList.add('active');
+      prizeCardContainer.style.display = 'none';
+      prizeListContainer.style.display = 'block';
+      ui.renderPrizeListMode(sortConfig);
+    } else {
+      viewModeListBtn.classList.remove('active');
+      viewModeCardBtn.classList.add('active');
+      prizeListContainer.style.display = 'none';
+      prizeCardContainer.style.display = 'grid';
+      ui.renderPrizeCardList();
+    }
+    localStorage.setItem('prizeViewMode', mode);
+  };
+
+  if (viewModeCardBtn && viewModeListBtn) {
+    viewModeCardBtn.addEventListener('click', () => switchViewMode('card'));
+    viewModeListBtn.addEventListener('click', () => switchViewMode('list'));
+    const savedMode = localStorage.getItem('prizeViewMode') || 'card';
+    // 初期表示時に遅延させることで、state.prizesの読み込みを待つ
+    setTimeout(() => switchViewMode(savedMode), 0);
+  }
+
+  // ▼▼▼ パート2：「リストモード」の機能実装 ▼▼▼
+  if (prizeListContainer) {
+    prizeListContainer.addEventListener('change', (e) => {
+      if (e.target.classList.contains('prize-quantity-input')) {
+        const name = e.target.dataset.name;
+        const newQuantity = parseInt(e.target.value, 10);
+        if (isNaN(newQuantity) || newQuantity < 0) {
+          ui.renderPrizeListMode(sortConfig);
+          return;
+        }
+
+        const currentPrizes = state.prizes.filter((p) => p.name === name);
+        const currentQuantity = currentPrizes.length;
+        const prizeMaster = currentPrizes[0] || {name, imageUrl: null};
+
+        if (newQuantity > currentQuantity) {
+          const diff = newQuantity - currentQuantity;
+          for (let i = 0; i < diff; i++) {
+            state.prizes.push({...prizeMaster});
+          }
+        } else if (newQuantity < currentQuantity) {
+          const diff = currentQuantity - newQuantity;
+          for (let i = 0; i < diff; i++) {
+            const indexToRemove = state.prizes.findIndex((p) => p.name === name);
+            if (indexToRemove > -1) {
+              state.prizes.splice(indexToRemove, 1);
+            }
+          }
+        }
+        ui.renderPrizeCardList();
+        ui.renderPrizeListMode(sortConfig);
+      }
+    });
+
+    prizeListContainer.addEventListener('click', (e) => {
+      if (e.target.classList.contains('delete-prize-list')) {
+        const name = e.target.dataset.name;
+        if (confirm(`景品「${name}」をすべて削除しますか？`)) {
+          state.setPrizes(state.prizes.filter((p) => p.name !== name));
+          ui.renderPrizeCardList();
+          ui.renderPrizeListMode(sortConfig);
+        }
+      }
+      if (e.target.tagName === 'TH' && e.target.dataset.sortKey) {
+        const newKey = e.target.dataset.sortKey;
+        if (sortConfig.key === newKey) {
+          sortConfig.order = sortConfig.order === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortConfig.key = newKey;
+          sortConfig.order = 'asc';
+        }
+        ui.renderPrizeListMode(sortConfig);
+      }
+    });
+  }
+
+  // --- ここから下は、元のsetupEventListenersにあった他のイベントリスナーです ---
+
   window.addEventListener('popstate', (e) => {
     router.navigateTo(window.location.pathname, false);
   });
@@ -855,13 +947,13 @@ function setupEventListeners() {
     });
   }
 
-  if (elements.prizeList) {
-    elements.prizeList.addEventListener('click', (event) => {
+  if (elements.prizeCardListContainer) {
+    elements.prizeCardListContainer.addEventListener('click', (event) => {
       const target = event.target;
       if (target.classList.contains('delete-btn')) {
         const index = parseInt(target.dataset.index, 10);
         state.prizes.splice(index, 1);
-        ui.renderPrizeList();
+        ui.renderPrizeCardList();
       }
       if (target.classList.contains('duplicate-btn')) {
         event.preventDefault();
@@ -871,8 +963,21 @@ function setupEventListeners() {
           prizeToDuplicate.newImageFile = state.prizes[sourceIndex].newImageFile;
         }
         state.prizes.splice(sourceIndex + 1, 0, prizeToDuplicate);
-        ui.renderPrizeList();
+        ui.renderPrizeCardList();
       }
+    });
+  }
+
+  const shufflePrizesButton = document.getElementById('shufflePrizesButton');
+  if (shufflePrizesButton) {
+    shufflePrizesButton.addEventListener('click', () => {
+      const prizes = state.prizes;
+      for (let i = prizes.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [prizes[i], prizes[j]] = [prizes[j], prizes[i]];
+      }
+      ui.renderPrizeCardList();
+      ui.renderPrizeListMode(sortConfig);
     });
   }
 
@@ -898,7 +1003,7 @@ function setupEventListeners() {
 
       const newPrizes = await buildNewPrizesWithDataPreservation(prizeNames);
       state.setPrizes(newPrizes);
-      ui.renderPrizeList();
+      ui.renderPrizeCardList();
       ui.closePrizeBulkAddModal();
     });
   }
@@ -1030,6 +1135,30 @@ function setupEventListeners() {
           alert('あみだくじを再生成しました。');
         } catch (error) {
           alert(`エラー: ${error.error || '再生成に失敗しました。'}`);
+        }
+      }
+      if (e.target.id === 'shufflePrizesBroadcastButton') {
+        if (!confirm('景品の並び順をランダムに入れ替えますか？\nこの操作はデータベースに保存され、元に戻せません。')) return;
+
+        try {
+          const shuffledPrizes = [...state.currentLotteryData.prizes];
+          for (let i = shuffledPrizes.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledPrizes[i], shuffledPrizes[j]] = [shuffledPrizes[j], shuffledPrizes[i]];
+          }
+
+          const result = await api.shufflePrizes(state.currentEventId, shuffledPrizes);
+
+          state.currentLotteryData.prizes = result.prizes;
+          state.currentLotteryData.results = result.results;
+
+          const ctx = elements.adminCanvas.getContext('2d');
+          const hide = state.currentLotteryData.displayMode === 'private';
+          await prepareStepAnimation(ctx, hide);
+
+          alert('景品をシャッフルし、結果を保存しました。');
+        } catch (error) {
+          alert(`エラー: ${error.error || '景品のシャッフルに失敗しました。'}`);
         }
       }
     });
@@ -1373,7 +1502,7 @@ function setupEventListeners() {
       };
 
       state.prizes.push(newPrize);
-      ui.renderPrizeList();
+      ui.renderPrizeCardList();
       ui.closeAddPrizeModal();
     });
   }
