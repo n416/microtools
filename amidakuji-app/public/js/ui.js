@@ -926,7 +926,8 @@ export function showUserDashboardView(groupData, events) {
 
 export function resetEventCreationForm() {
   state.setPrizes([]);
-  renderPrizeList();
+  renderPrizeCardList();
+  renderPrizeListMode();
   if (elements.participantCountInput) elements.participantCountInput.value = '';
   if (elements.displayModeSelect) elements.displayModeSelect.value = 'public';
   if (elements.eventNameInput) elements.eventNameInput.value = '';
