@@ -391,7 +391,7 @@ async function showResultsView(eventData, targetName, isShareView) {
       if (ui.elements.myResult) ui.elements.myResult.textContent = 'まだ結果は発表されていません。';
     }
     if (!isShareView) {
-      if (ui.elements.shareButton) ui.elements.shareButton.style.display = 'block';
+      if (ui.elements.shareButton) ui.elements.shareButton.style.display = 'inline-block';
       if (ui.elements.backToControlPanelFromResultButton) ui.elements.backToControlPanelFromResultButton.style.display = 'block';
     }
     if (eventData.results) {
