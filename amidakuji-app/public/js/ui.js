@@ -89,7 +89,9 @@ export const elements = {
   backToGroupsButton: document.getElementById('backToGroupsButton'),
   eventNameInput: document.getElementById('eventNameInput'),
   bulkAddPrizesButton: document.getElementById('bulkAddPrizesButton'),
-  prizeList: document.getElementById('prizeList'),
+  prizeCardListContainer: document.getElementById('prizeCardListContainer'),
+  prizeListModeContainer: document.getElementById('prizeListModeContainer'),
+
   displayModeSelect: document.getElementById('displayModeSelect'),
   createEventButton: document.getElementById('createEventButton'),
   eventIdInput: document.getElementById('eventIdInput'),
@@ -584,9 +586,9 @@ export function renderMemberList(members) {
     });
 }
 
-export function renderPrizeList() {
-  if (!elements.prizeList) return;
-  elements.prizeList.innerHTML = '';
+export function renderPrizeCardList() {
+  if (!elements.prizeCardListContainer) return;
+  elements.prizeCardListContainer.innerHTML = '';
   state.prizes.forEach((p, index) => {
     const li = document.createElement('li');
     li.className = 'prize-card';
@@ -595,17 +597,14 @@ export function renderPrizeList() {
     let prizeImageUrl = typeof p === 'object' ? p.imageUrl : null;
     const uniqueId = `prize-image-upload-${index}`;
 
-    // カードの画像部分
     const imageContainer = document.createElement('div');
     imageContainer.className = 'prize-card-image';
     const imgPreview = document.createElement('img');
     imgPreview.alt = prizeName;
 
-    // ▼▼▼ ここから修正 ▼▼▼
     if (prizeImageUrl) {
       imgPreview.src = prizeImageUrl;
     } else if (p.newImageFile) {
-      // newImageFileが存在する場合、それを使ってプレビューを表示
       const reader = new FileReader();
       reader.onload = (event) => {
         imgPreview.src = event.target.result;
@@ -615,7 +614,6 @@ export function renderPrizeList() {
       imgPreview.classList.add('placeholder');
       imgPreview.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     }
-    // ▲▲▲ ここまで修正 ▲▲▲
 
     imageContainer.appendChild(imgPreview);
     imageContainer.onclick = () => document.getElementById(uniqueId).click();
@@ -637,14 +635,12 @@ export function renderPrizeList() {
         };
         reader.readAsDataURL(file);
         state.prizes[index].newImageFile = file;
-        // 既存の画像URLがある場合はリセット
         state.prizes[index].imageUrl = null;
       }
     });
     imageContainer.appendChild(fileInput);
     li.appendChild(imageContainer);
 
-    // カードの情報部分（景品名とボタン）
     const infoContainer = document.createElement('div');
     infoContainer.className = 'prize-card-info';
 
@@ -683,7 +679,7 @@ export function renderPrizeList() {
     infoContainer.appendChild(actionsContainer);
 
     li.appendChild(infoContainer);
-    elements.prizeList.appendChild(li);
+    elements.prizeCardListContainer.appendChild(li);
   });
 }
 
@@ -1004,4 +1000,66 @@ export function renderBulkAnalysisPreview(analysisResults) {
   elements.bulkStep1Input.style.display = 'none';
   elements.bulkStep2Preview.style.display = 'block';
   elements.finalizeBulkButton.disabled = false;
+}
+export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
+  if (!elements.prizeListModeContainer) return;
+
+  // 1. 景品データを集計
+  const prizeSummary = state.prizes.reduce((acc, prize) => {
+    if (acc[prize.name]) {
+      acc[prize.name].quantity++;
+    } else {
+      acc[prize.name] = {
+        name: prize.name,
+        quantity: 1,
+        imageUrl: prize.imageUrl,
+      };
+    }
+    return acc;
+  }, {});
+
+  let prizeArray = Object.values(prizeSummary);
+
+  // 2. ソート処理
+  prizeArray.sort((a, b) => {
+    const valA = a[sortConfig.key];
+    const valB = b[sortConfig.key];
+
+    if (valA < valB) return sortConfig.order === 'asc' ? -1 : 1;
+    if (valA > valB) return sortConfig.order === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // 3. テーブルHTMLを生成
+  const nameHeader = `景品名 ${sortConfig.key === 'name' ? (sortConfig.order === 'asc' ? '▲' : '▼') : ''}`;
+  const quantityHeader = `数量 ${sortConfig.key === 'quantity' ? (sortConfig.order === 'asc' ? '▲' : '▼') : ''}`;
+
+  let tableHTML = `
+    <table class="prize-list-table">
+      <thead>
+        <tr>
+          <th data-sort-key="name" style="cursor: pointer;">${nameHeader}</th>
+          <th data-sort-key="quantity" style="cursor: pointer;">${quantityHeader}</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  prizeArray.forEach((item) => {
+    tableHTML += `
+      <tr>
+        <td><input type="text" class="prize-name-input-list" value="${item.name}" data-original-name="${item.name}" disabled></td>
+        <td><input type="number" class="prize-quantity-input" value="${item.quantity}" min="0" data-name="${item.name}"></td>
+        <td><button class="delete-btn delete-prize-list" data-name="${item.name}">削除</button></td>
+      </tr>
+    `;
+  });
+
+  tableHTML += `
+      </tbody>
+    </table>
+  `;
+
+  elements.prizeListModeContainer.innerHTML = tableHTML;
 }

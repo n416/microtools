@@ -174,12 +174,20 @@
 
       <div class="settings-section">
         <h4>2. 景品</h4>
-        <div class="input-group prize-main-controls">
-          <button id="openAddPrizeModalButton" class="primary-action">＋ 追加</button>
-          <button id="bulkAddPrizesButton">テキスト流し込み</button>
-          <button id="showSummaryButton">集計</button>
+        <div class="prize-controls-header">
+          <div class="input-group prize-main-controls">
+            <button id="openAddPrizeModalButton" class="primary-action">＋ 追加</button>
+            <button id="bulkAddPrizesButton">テキスト流し込み</button>
+            <button id="shufflePrizesButton" type="button">🔄 ランダム並び替え</button>
+            <button id="showSummaryButton">集計</button>
+          </div>
+          <div class="view-mode-switcher">
+            <button id="viewModeCard" class="view-mode-btn active" data-mode="card">カード表示</button>
+            <button id="viewModeList" class="view-mode-btn" data-mode="list">リスト表示</button>
+          </div>
         </div>
-        <ul id="prizeList" class="prize-card-list"></ul>
+        <ul id="prizeCardListContainer" class="prize-card-list"></ul>
+        <div id="prizeListModeContainer" style="display: none;"></div>
       </div>
 
       <div class="settings-section">
@@ -224,6 +232,7 @@
           <button id="animateAllButton">全結果を再生</button>
           <button id="advanceLineByLineButton">一段ずつ進む</button>
           <button id="regenerateLinesButton">🔄 再生成</button>
+          <button id="shufflePrizesBroadcastButton">🎁 景品シャッフル</button>
           <button id="glimpseButton">景品チラ見せ</button>
           <button id="toggleFullscreenButton">表示エリアを最大化</button>
         </div>

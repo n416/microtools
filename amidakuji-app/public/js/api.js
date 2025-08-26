@@ -89,6 +89,7 @@ export const addMember = (groupId, name) => request(`/api/groups/${groupId}/memb
 export const updateMember = (groupId, memberId, data) => request(`/api/groups/${groupId}/members/${memberId}`, 'PUT', data);
 export const deleteMember = (groupId, memberId) => request(`/api/groups/${groupId}/members/${memberId}`, 'DELETE');
 export const regenerateLines = (eventId) => request(`/api/events/${eventId}/regenerate-lines`, 'POST');
+export const shufflePrizes = (eventId, shuffledPrizes) => request(`/api/events/${eventId}/shuffle-prizes`, 'POST', {shuffledPrizes});
 
 // Bulk Member Registration
 export const analyzeBulkMembers = (groupId, namesText) => request(`/api/groups/${groupId}/members/analyze-bulk`, 'POST', {namesText});

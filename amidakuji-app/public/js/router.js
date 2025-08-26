@@ -129,7 +129,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
 
       ui.elements.displayModeSelect.value = data.displayMode;
       ui.elements.createEventButton.textContent = 'この内容でイベントを保存';
-      ui.renderPrizeList();
+      ui.renderPrizeCardList();
     } else if (viewToShow === 'broadcastView') {
       const {adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, revealRandomButton, regenerateLinesButton, glimpseButton} = ui.elements;
       const hidePrizes = data.displayMode === 'private';
