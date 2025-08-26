@@ -313,7 +313,8 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
   ui.hideParticipantSubViews();
 
   try {
-    const eventData = isShare ? await api.getPublicShareData(eventId) : await api.getPublicEventData(eventId);
+    // ▼▼▼ 修正点：isShareの場合、participantNameをAPIに渡す ▼▼▼
+    const eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
 
     state.setCurrentLotteryData(eventData);
     state.setCurrentGroupId(eventData.groupId);
@@ -321,13 +322,10 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
 
     if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
 
-    // ▼▼▼ ここからが修正点 ▼▼▼
     if (ui.elements.backToGroupEventListLink) {
-      // シェア画面では、ログイン状態にかかわらずリンクを常に非表示にする
       if (isShare) {
         ui.elements.backToGroupEventListLink.style.display = 'none';
       } else {
-        // 通常のイベント画面でのみ、リンクを表示するロジックを実行
         try {
           const groupData = await api.getGroup(eventData.groupId);
           if (groupData) {
@@ -349,7 +347,6 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
         }
       }
     }
-    // ▲▲▲ 修正点ここまで ▲▲▲
 
     if (eventData.otherEvents) {
       ui.renderOtherEvents(eventData.otherEvents, state.currentLotteryData.groupCustomUrl);
@@ -360,10 +357,10 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
     } else if (state.currentParticipantToken && state.currentParticipantId) {
       if (eventData.status === 'started') {
         await showResultsView(eventData, state.currentParticipantName, false);
-        const myParticipation = eventData.participants.find(p => p.memberId === state.currentParticipantId);
+        const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
         if (myParticipation && !myParticipation.acknowledgedResult) {
-            const acknowledgeButton = document.getElementById('acknowledgeButton');
-            if (acknowledgeButton) acknowledgeButton.style.display = 'inline-block';
+          const acknowledgeButton = document.getElementById('acknowledgeButton');
+          if (acknowledgeButton) acknowledgeButton.style.display = 'inline-block';
         }
       } else {
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);

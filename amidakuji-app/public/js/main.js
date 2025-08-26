@@ -4,8 +4,7 @@ import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
 import * as router from './router.js';
-import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, redrawPrizes} from './animation.js';
-
+import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, redrawPrizes, showAllTracersInstantly, adminPanzoom, participantPanzoom} from './animation.js';
 const settings = {
   animation: true,
   theme: 'auto', // 'auto', 'light', 'dark'
@@ -1787,6 +1786,18 @@ function setupEventListeners() {
       }
     });
   }
+  // --- 結果画面のイベントリスナー ---
+  if (elements.allResultsContainer) {
+    elements.allResultsContainer.addEventListener('click', (e) => {
+      if (e.target.id === 'showAllTracersButton') {
+        if (isAnimationRunning()) {
+          return;
+        }
+        // 新しい即時表示関数を呼び出す
+        showAllTracersInstantly();
+      }
+    });
+  }
 }
 
 function setupHamburgerMenu() {
@@ -1905,7 +1916,7 @@ function saveSettings() {
   localStorage.setItem('userSettings', JSON.stringify(settings));
 }
 
-function applyTheme(theme) {
+async function applyTheme(theme, storedState) {
   document.body.classList.remove('light-mode', 'dark-mode');
   if (theme === 'light') {
     document.body.classList.add('light-mode');
@@ -1920,6 +1931,24 @@ function applyTheme(theme) {
   }
   if (settings.animation && tronAnimationAPI) {
     tronAnimationAPI.setTheme(theme);
+  }
+
+  if (isAnimationRunning()) return;
+
+  const adminCanvas = document.getElementById('adminCanvas');
+  const participantCanvas = document.getElementById('participantCanvas');
+  let targetCanvas = null;
+
+  if (adminCanvas && adminCanvas.offsetParent !== null) {
+    targetCanvas = adminCanvas;
+  } else if (participantCanvas && participantCanvas.offsetParent !== null) {
+    targetCanvas = participantCanvas;
+  }
+
+  // 記憶した状態(storedState)を、そのまま再描画関数に渡す
+  if (targetCanvas && state.currentLotteryData) {
+      const hidePrizes = state.currentLotteryData.displayMode === 'private' && state.currentLotteryData.status !== 'started';
+      await prepareStepAnimation(targetCanvas.getContext('2d'), hidePrizes, false, true, storedState);
   }
 }
 
@@ -1950,7 +1979,6 @@ function applySettings() {
     themeRadio.checked = true;
   }
 }
-
 function setupSettingsControls() {
   const fab = document.getElementById('settingsFab');
   const panel = document.getElementById('settingsPanel');
@@ -1961,13 +1989,13 @@ function setupSettingsControls() {
 
   fab.addEventListener('click', () => {
     panel.classList.toggle('visible');
-    fab.classList.toggle('active'); // activeクラスを切り替えてアイコンを回転
+    fab.classList.toggle('active');
   });
 
   document.addEventListener('click', (e) => {
     if (!panel.contains(e.target) && !fab.contains(e.target)) {
       panel.classList.remove('visible');
-      fab.classList.remove('active'); // パネル外クリックで回転を戻す
+      fab.classList.remove('active');
     }
   });
 
@@ -1988,9 +2016,32 @@ function setupSettingsControls() {
 
   themeRadios.forEach((radio) => {
     radio.addEventListener('change', () => {
+      // ▼▼▼ ここからが修正点 ▼▼▼
+      // 1. テーマを変更する「前」に、現在のカメラ状態を記憶する
+      let storedState = null;
+      let panzoomInstance = null;
+      const adminCanvas = document.getElementById('adminCanvas');
+      const participantCanvas = document.getElementById('participantCanvas');
+
+      if (adminCanvas && adminCanvas.offsetParent !== null) {
+        panzoomInstance = adminPanzoom;
+      } else if (participantCanvas && participantCanvas.offsetParent !== null) {
+        panzoomInstance = participantPanzoom;
+      }
+      
+      if (panzoomInstance) {
+          storedState = {
+              pan: panzoomInstance.getPan(),
+              scale: panzoomInstance.getScale()
+          };
+          console.log(`%c[main.js] テーマ変更前。カメラ状態を記憶します:`, 'color: blue; font-weight: bold;', storedState);
+      }
+
+      // 2. 記憶した状態を渡しながら、テーマ変更処理を呼び出す
       settings.theme = radio.value;
       saveSettings();
-      applySettings();
+      applyTheme(settings.theme, storedState);
+      // ▲▲▲ 修正点ここまで ▲▲▲
     });
   });
 }
