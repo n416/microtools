@@ -1982,3 +1982,9 @@ input:checked + .slider {
 input:checked + .slider:before {
   transform: translateX(20px);
 }
+
+.item-list-item.highlight {
+  background-color: var(--notification-bg-color);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 8px rgba(var(--primary-color-rgb, 0, 123, 255), 0.5);
+}

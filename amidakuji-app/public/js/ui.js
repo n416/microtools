@@ -819,20 +819,29 @@ export function renderSuggestions(suggestions, handler) {
   });
 }
 
-export function renderAllResults(results) {
+export function renderAllResults(results, isShareView, highlightName) {
   if (!elements.allResultsContainer || !results) return;
+
+  // ▼▼▼ 修正点：シェア画面では「みんなの結果」を表示しない ▼▼▼
+  if (isShareView) {
+    elements.allResultsContainer.innerHTML = '';
+    return;
+  }
+
   let html = '<h3>みんなの結果</h3><ul class="item-list">';
   for (const name in results) {
     const prize = results[name].prize;
     const prizeName = typeof prize === 'object' ? prize.name : prize;
     const prizeImageUrl = typeof prize === 'object' ? prize.imageUrl : null;
 
+    const isHighlighted = name === highlightName ? 'highlight' : '';
+
     let imageHtml = '';
     if (prizeImageUrl) {
       imageHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image">`;
     }
 
-    html += `<li class="item-list-item">${imageHtml}<span>${name} → ${prizeName}</span></li>`;
+    html += `<li class="item-list-item ${isHighlighted}">${imageHtml}<span>${name} → ${prizeName}</span></li>`;
   }
   html += '</ul>';
   elements.allResultsContainer.innerHTML = html;
