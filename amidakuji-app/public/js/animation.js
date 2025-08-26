@@ -3,8 +3,8 @@
 import * as state from './state.js';
 
 let animationFrameId;
-let adminPanzoom = null;
-let participantPanzoom = null;
+export let adminPanzoom = null;
+export let participantPanzoom = null;
 let resizeDebounceTimer;
 
 const animator = {
@@ -154,14 +154,17 @@ export function isAnimationRunning() {
 function initializePanzoom(canvasElement) {
   if (!canvasElement) return null;
   const panzoomElement = canvasElement.parentElement;
+
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  // 既にインスタンスが存在する場合は、それを破棄せずに再利用する
   if (canvasElement.id === 'adminCanvas' && adminPanzoom) {
-    adminPanzoom.destroy();
-    adminPanzoom = null;
+    return adminPanzoom;
   }
   if (canvasElement.id === 'participantCanvas' && participantPanzoom) {
-    participantPanzoom.destroy();
-    participantPanzoom = null;
+    return participantPanzoom;
   }
+  // ▲▲▲ 修正点ここまで ▲▲▲
+
   const panzoom = Panzoom(panzoomElement, {maxScale: 10, minScale: 0.1, contain: 'outside'});
   const container = canvasElement.closest('.canvas-panzoom-container');
   if (container) {
@@ -172,6 +175,92 @@ function initializePanzoom(canvasElement) {
     });
   }
   return panzoom;
+}
+
+export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMask = true, isResize = false) {
+  if (!targetCtx || !state.currentLotteryData) {
+    console.error('[Animation] Prepare failed: No context or lottery data.');
+    return;
+  }
+  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
+  const mask = document.getElementById(targetCtx.canvas.id === 'adminCanvas' ? 'admin-loading-mask' : 'participant-loading-mask');
+  if (mask && showMask) mask.style.display = 'flex';
+  if (!isResize) {
+    state.setRevealedPrizes([]);
+    animator.tracers = [];
+    animator.icons = {};
+    animator.prizeImages = {};
+  }
+  const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
+  const totalParticipants = state.currentLotteryData.participants.length;
+  await preloadPrizeImages(state.currentLotteryData.prizes);
+  await preloadIcons(allParticipantsWithNames);
+  const VIRTUAL_HEIGHT = getTargetHeight(container);
+
+  animator.tracers = allParticipantsWithNames.map((p) => {
+    const path = calculatePath(p.slot, state.currentLotteryData.lines, totalParticipants, container.clientWidth, VIRTUAL_HEIGHT);
+    const isFinished = state.revealedPrizes.some((r) => r.participantName === p.name);
+    const finalPoint = isFinished ? path[path.length - 1] : path[0];
+    return {
+      name: p.name,
+      color: p.color || '#333',
+      path,
+      pathIndex: isFinished ? path.length - 1 : 0,
+      progress: 0,
+      x: finalPoint.x,
+      y: finalPoint.y,
+      isFinished,
+      celebrated: isFinished,
+    };
+  });
+
+  animator.context = targetCtx;
+  targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';
+  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
+
+  animator.tracers.forEach((tracer) => {
+    if (tracer.isFinished) {
+      drawTracerPath(targetCtx, tracer);
+    }
+    drawTracerIcon(targetCtx, tracer);
+  });
+  if (state.revealedPrizes.length > 0) {
+    drawRevealedPrizes(targetCtx);
+  }
+
+  let currentPanzoom = initializePanzoom(targetCtx.canvas);
+  if (targetCtx.canvas.id === 'adminCanvas') {
+    adminPanzoom = currentPanzoom;
+  } else {
+    participantPanzoom = currentPanzoom;
+  }
+
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  // isResize(テーマ変更など)の場合はカメラ位置リセットを行わないようにする
+  if (!isResize) {
+    setTimeout(() => {
+      if (container && currentPanzoom) {
+        const panzoomElement = targetCtx.canvas.parentElement;
+        const canvasWidth = panzoomElement.offsetWidth;
+        const containerWidth = container.clientWidth;
+        const scale = Math.min(containerWidth / canvasWidth, 1);
+        currentPanzoom.zoom(scale, {animate: false});
+        const scaledCanvasWidth = canvasWidth * scale;
+        const initialX = (containerWidth - scaledCanvasWidth) / 2;
+        currentPanzoom.pan(initialX > 0 ? initialX : 0, 0, {animate: false});
+      }
+    }, 50);
+  }
+
+  if (mask && showMask) {
+    setTimeout(() => {
+      mask.style.display = 'none';
+    }, 50);
+  }
+  // ▲▲▲ 修正点ここまで ▲▲▲
 }
 
 export function stopAnimation() {
@@ -294,7 +383,6 @@ function drawRevealedPrizes(targetCtx) {
     targetCtx.fillText(prizeName, x, prizeTextY);
   });
 }
-
 function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes = false) {
   if (!targetCtx || !targetCtx.canvas || !data || !data.participants || data.participants.length === 0) return;
   const container = targetCtx.canvas.closest('.canvas-panzoom-container');
@@ -319,27 +407,34 @@ function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes = false
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
   targetCtx.font = '14px Arial';
   targetCtx.textAlign = 'center';
-  const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  const isDarkMode = document.body.classList.contains('dark-mode');
   const mainTextColor = isDarkMode ? '#e0e0e0' : '#000';
   const subTextColor = isDarkMode ? '#888' : '#888';
-  const prizeTextColor = isDarkMode ? '#dcdcdc' : '#333';
+  const prizeTextColor = isDarkMode ? '#e0e0e0' : '#333';
+
   const nameY = VIRTUAL_HEIGHT * 0.075;
   const prizeImageY = VIRTUAL_HEIGHT * 0.91;
   const prizeTextY = VIRTUAL_HEIGHT * 0.99;
   const lineTopY = VIRTUAL_HEIGHT * 0.125;
-  // 縦線の終点をトレーサーの最終到達点と合わせる
   const lineBottomY = VIRTUAL_HEIGHT * 0.82;
   const prizeImageSize = VIRTUAL_HEIGHT * 0.075;
 
   participants.forEach((p, i) => {
     const x = participantSpacing * (i + 1);
-    const displayName = p.name || `（参加枠 ${p.slot + 1}）`;
+
+    // ▼▼▼ ここからが修正点 ▼▼▼
+    // 描画対象のキャンバスIDを見て、表示する名前を切り替える
+    const isAdminView = targetCtx.canvas.id === 'adminCanvas';
+    const displayName = p.name || (isAdminView ? `（参加枠 ${p.slot + 1}）` : '');
+    // ▲▲▲ 修正点ここまで ▲▲▲
+
     targetCtx.fillStyle = p.name ? mainTextColor : subTextColor;
     targetCtx.fillText(displayName, x, nameY);
     const isRevealed = state.revealedPrizes.some((r) => r.prizeIndex === i);
     if (prizes && prizes[i] && !isRevealed) {
       const prize = prizes[i];
-      const prizeName = hidePrizes ? '？？？' : typeof prize === 'object' ? prize.name : prize;
+      const prizeName = hidePrizes ? '' : prize.name || '';
       const prizeImage = !hidePrizes && typeof prize === 'object' && prize.imageUrl ? animator.prizeImages[prize.imageUrl] : null;
       if (prizeImage && prizeImage.complete) {
         targetCtx.drawImage(prizeImage, x - prizeImageSize / 2, prizeImageY - prizeImageSize / 2, prizeImageSize, prizeImageSize);
@@ -644,81 +739,6 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
   animationLoop();
 }
 
-export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMask = true, isResize = false) {
-  if (!targetCtx || !state.currentLotteryData) {
-    console.error('[Animation] Prepare failed: No context or lottery data.');
-    return;
-  }
-  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
-  if (!container) return;
-  const mask = document.getElementById(targetCtx.canvas.id === 'adminCanvas' ? 'admin-loading-mask' : 'participant-loading-mask');
-  if (mask && showMask) mask.style.display = 'flex';
-  if (!isResize) {
-    state.setRevealedPrizes([]);
-    animator.tracers = [];
-    animator.icons = {};
-    animator.prizeImages = {};
-  }
-  const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
-  const totalParticipants = state.currentLotteryData.participants.length;
-  await preloadPrizeImages(state.currentLotteryData.prizes);
-  await preloadIcons(allParticipantsWithNames);
-  const VIRTUAL_HEIGHT = getTargetHeight(container);
-
-  animator.tracers = allParticipantsWithNames.map((p) => {
-    const path = calculatePath(p.slot, state.currentLotteryData.lines, totalParticipants, container.clientWidth, VIRTUAL_HEIGHT);
-    const isFinished = state.revealedPrizes.some((r) => r.participantName === p.name);
-    const finalPoint = isFinished ? path[path.length - 1] : path[0];
-    return {
-      name: p.name,
-      color: p.color || '#333',
-      path,
-      pathIndex: isFinished ? path.length - 1 : 0,
-      progress: 0,
-      x: finalPoint.x,
-      y: finalPoint.y,
-      isFinished,
-      celebrated: isFinished,
-    };
-  });
-
-  animator.context = targetCtx;
-  targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
-  const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';
-  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
-
-  animator.tracers.forEach((tracer) => {
-    if (tracer.isFinished) {
-      drawTracerPath(targetCtx, tracer);
-    }
-    drawTracerIcon(targetCtx, tracer);
-  });
-  if (state.revealedPrizes.length > 0) {
-    drawRevealedPrizes(targetCtx);
-  }
-  let currentPanzoom = initializePanzoom(targetCtx.canvas);
-  if (targetCtx.canvas.id === 'adminCanvas') adminPanzoom = currentPanzoom;
-  else participantPanzoom = currentPanzoom;
-
-  setTimeout(() => {
-    if (container && currentPanzoom) {
-      const panzoomElement = targetCtx.canvas.parentElement;
-      const canvasWidth = panzoomElement.offsetWidth;
-      const containerWidth = container.clientWidth;
-      const scale = Math.min(containerWidth / canvasWidth, 1);
-      console.log(`[Panzoom] Resetting zoom to ${scale}`);
-      currentPanzoom.zoom(scale, {animate: false});
-      const scaledCanvasWidth = canvasWidth * scale;
-      const initialX = (containerWidth - scaledCanvasWidth) / 2;
-      currentPanzoom.pan(initialX > 0 ? initialX : 0, 0, {animate: false});
-    }
-    if (mask && showMask) {
-      mask.style.display = 'none';
-    }
-  }, 50);
-}
-
 export function advanceLineByLine() {
   if (animator.tracers.length === 0 || animator.running) return;
   animator.tracers.forEach((tracer) => {
@@ -744,7 +764,7 @@ export function advanceLineByLine() {
   }
 }
 
-export function resetAnimation() {
+export async function resetAnimation() {
   if (isAnimationRunning()) return;
   state.setRevealedPrizes([]);
   const container = animator.context.canvas.closest('.canvas-panzoom-container');
@@ -753,6 +773,11 @@ export function resetAnimation() {
   const VIRTUAL_HEIGHT = getTargetHeight(container);
   const numParticipants = state.currentLotteryData.participants.length;
   const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
+
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  // アニメーションを開始する前に、全参加者のアイコンをプリロードする
+  await preloadIcons(allParticipantsWithNames);
+  // ▲▲▲ 修正点ここまで ▲▲▲
 
   animator.tracers = allParticipantsWithNames.map((p) => {
     const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT);
@@ -790,4 +815,52 @@ export function redrawPrizes(targetCtx, hidePrizes) {
     drawTracerIcon(targetCtx, tracer);
   });
   drawRevealedPrizes(targetCtx);
+}
+
+export async function showAllTracersInstantly() {
+  if (isAnimationRunning()) stopAnimation();
+
+  const targetCtx = animator.context;
+  if (!targetCtx || !state.currentLotteryData) return;
+
+  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
+
+  const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
+
+  // 描画に必要なアイコンをすべて読み込みます
+  await preloadIcons(allParticipantsWithNames);
+
+  const VIRTUAL_HEIGHT = getTargetHeight(container);
+  const numParticipants = state.currentLotteryData.participants.length;
+
+  // 全参加者のトレーサーを「アニメーション終了後」の状態で作成します
+  animator.tracers = allParticipantsWithNames.map((p) => {
+    const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT);
+    const finalPoint = path[path.length - 1];
+    return {
+      name: p.name,
+      color: p.color || '#333',
+      path,
+      pathIndex: path.length - 1, // 最終地点に設定
+      x: finalPoint.x,
+      y: finalPoint.y,
+      isFinished: true, // 完了状態に設定
+      celebrated: true,
+    };
+  });
+
+  // キャンバスを一度だけ再描画します
+  targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const baseLineColor = isDarkMode ? '#444' : '#e0e0e0';
+  const hidePrizes = state.currentLotteryData.displayMode === 'private' && state.currentLotteryData.status !== 'started';
+
+  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
+
+  // 完成した全トレーサーを描画します
+  animator.tracers.forEach((tracer) => {
+    drawTracerPath(targetCtx, tracer);
+    drawTracerIcon(targetCtx, tracer);
+  });
 }

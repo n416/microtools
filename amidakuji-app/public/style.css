@@ -29,7 +29,7 @@
     --text-color: #dcdcdc; /* 文字色を少し落ち着いた色に変更 */
     --border-color: #444;
     --shadow-color: rgba(255, 255, 255, 0.08);
-    --notification-bg-color: #332b00;
+    --notification-bg-color: #555555;
     --notification-border-color: #665600;
     --notification-text-color: #f0e68c;
   }
@@ -1987,4 +1987,8 @@ input:checked + .slider:before {
   background-color: var(--notification-bg-color);
   border-color: var(--primary-color);
   box-shadow: 0 0 8px rgba(var(--primary-color-rgb, 0, 123, 255), 0.5);
+}
+
+.dark-mode .item-list-item.highlight {
+  background-color: #002542;
 }
