@@ -820,15 +820,23 @@ export function renderSuggestions(suggestions, handler) {
 }
 
 export function renderAllResults(results, isShareView, highlightName) {
-  if (!elements.allResultsContainer || !results) return;
-
-  // ▼▼▼ 修正点：シェア画面では「みんなの結果」を表示しない ▼▼▼
   if (isShareView) {
-    elements.allResultsContainer.innerHTML = '';
+    if (elements.allResultsContainer) elements.allResultsContainer.innerHTML = '';
     return;
   }
 
-  let html = '<h3>みんなの結果</h3><ul class="item-list">';
+  if (!elements.allResultsContainer || !results) return;
+
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  let html = `
+    <div class="list-header">
+      <h3>みんなの結果</h3>
+      <button id="showAllTracersButton" class="secondary-btn">他の人の軌跡見る！</button>
+    </div>
+    <ul class="item-list">
+  `;
+  // ▲▲▲ 修正点ここまで ▲▲▲
+
   for (const name in results) {
     const prize = results[name].prize;
     const prizeName = typeof prize === 'object' ? prize.name : prize;

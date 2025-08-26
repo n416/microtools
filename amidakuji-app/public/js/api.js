@@ -53,7 +53,7 @@ export const deleteEvent = (eventId) => request(`/api/events/${eventId}`, 'DELET
 export const startEvent = (eventId) => request(`/api/events/${eventId}/start`, 'POST');
 export const generateEventPrizeUploadUrl = (eventId, fileType, fileHash) => request(`/api/events/${eventId}/generate-upload-url`, 'POST', {fileType, fileHash});
 export const getPublicEventData = (eventId) => request(`/api/events/${eventId}/public`);
-export const getPublicShareData = (eventId) => request(`/api/share/${eventId}`);
+export const getPublicShareData = (eventId, participantName) => request(`/api/share/${eventId}/${encodeURIComponent(participantName)}`);
 export const joinEvent = (eventId, name, memberId) => request(`/api/events/${eventId}/join`, 'POST', {name, memberId});
 export const joinSlot = (eventId, memberId, token, slot) => request(`/api/events/${eventId}/join-slot`, 'POST', {memberId, slot}, {'x-auth-token': token});
 export const verifyPasswordAndJoin = (eventId, memberId, password, slot) => request(`/api/events/${eventId}/verify-password`, 'POST', {memberId, password, slot});

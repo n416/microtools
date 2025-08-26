@@ -8,7 +8,9 @@ const saltRounds = 10;
 //  シェアページ専用の認証不要APIコントローラ
 exports.getPublicShareData = async (req, res) => {
   try {
-    const {eventId} = req.params;
+    const {eventId, participantName} = req.params;
+    const decodedParticipantName = decodeURIComponent(participantName);
+
     const eventRef = firestore.collection('events').doc(eventId);
     const eventDoc = await eventRef.get();
 
@@ -22,23 +24,48 @@ exports.getPublicShareData = async (req, res) => {
     const safeEventName = eventData.eventName || '無題のイベント';
     const eventName = groupData.name ? `${groupData.name} - ${safeEventName}` : safeEventName;
 
+    const singleResult = eventData.results ? {[decodedParticipantName]: eventData.results[decodedParticipantName]} : null;
+    if (!singleResult || !singleResult[decodedParticipantName]) {
+      return res.status(404).json({error: '指定された参加者の結果が見つかりません。'});
+    }
+
+    // ▼▼▼ ここからが修正点 ▼▼▼
+    // 他の参加者の名前を空白にマスキング
+    const sanitizedParticipants = eventData.participants.map((p) => {
+      if (p.name === decodedParticipantName) {
+        return p;
+      }
+      return {...p, name: '', iconUrl: null}; // 名前を空白に
+    });
+
+    // 獲得した賞品以外を空白にマスキング
+    const targetPrizeIndex = singleResult[decodedParticipantName].prizeIndex;
+    const sanitizedPrizes = eventData.prizes.map((prize, index) => {
+      if (index === targetPrizeIndex) {
+        return prize;
+      }
+      return {name: '', imageUrl: null}; // 名前を空白に
+    });
+    // ▲▲▲ 修正点ここまで ▲▲▲
+
     const publicData = {
       eventName: eventName,
-      participants: eventData.participants,
-      prizes: eventData.prizes,
+      participants: sanitizedParticipants,
+      prizes: sanitizedPrizes,
       lines: eventData.lines,
       displayMode: eventData.displayMode,
       status: eventData.status,
-      // ▼▼▼ 修正点：ここでの絞り込みをやめ、常にすべての結果を返すようにする ▼▼▼
-      results: eventData.results, 
+      results: singleResult,
       groupId: eventData.groupId,
     };
+
     res.status(200).json(publicData);
   } catch (error) {
     console.error('Error fetching public share data:', error);
     res.status(500).json({error: 'イベント情報の取得に失敗しました。'});
   }
 };
+
 exports.getEventsForGroup = async (req, res) => {
   try {
     const {groupId} = req.params;
