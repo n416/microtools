@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
-// 【新規】シェアページ専用の認証不要APIコントローラ
+//  シェアページ専用の認証不要APIコントローラ
 exports.getPublicShareData = async (req, res) => {
   try {
     const {eventId} = req.params;
@@ -29,7 +29,8 @@ exports.getPublicShareData = async (req, res) => {
       lines: eventData.lines,
       displayMode: eventData.displayMode,
       status: eventData.status,
-      results: eventData.status === 'started' ? eventData.results : null,
+      // ▼▼▼ 修正点：ここでの絞り込みをやめ、常にすべての結果を返すようにする ▼▼▼
+      results: eventData.results, 
       groupId: eventData.groupId,
     };
     res.status(200).json(publicData);
@@ -38,7 +39,6 @@ exports.getPublicShareData = async (req, res) => {
     res.status(500).json({error: 'イベント情報の取得に失敗しました。'});
   }
 };
-
 exports.getEventsForGroup = async (req, res) => {
   try {
     const {groupId} = req.params;

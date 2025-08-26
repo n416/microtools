@@ -321,27 +321,35 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
 
     if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
 
+    // ▼▼▼ ここからが修正点 ▼▼▼
     if (ui.elements.backToGroupEventListLink) {
-      try {
-        const groupData = await api.getGroup(eventData.groupId);
-        if (groupData) {
-          if (state.currentParticipantId && groupData.customUrl) {
-            ui.elements.backToGroupEventListLink.href = `/g/${groupData.customUrl}/dashboard`;
-            ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のダッシュボードに戻る`;
+      // シェア画面では、ログイン状態にかかわらずリンクを常に非表示にする
+      if (isShare) {
+        ui.elements.backToGroupEventListLink.style.display = 'none';
+      } else {
+        // 通常のイベント画面でのみ、リンクを表示するロジックを実行
+        try {
+          const groupData = await api.getGroup(eventData.groupId);
+          if (groupData) {
+            if (state.currentParticipantId && groupData.customUrl) {
+              ui.elements.backToGroupEventListLink.href = `/g/${groupData.customUrl}/dashboard`;
+              ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のダッシュボードに戻る`;
+            } else {
+              const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
+              ui.elements.backToGroupEventListLink.href = backUrl;
+              ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
+            }
+            ui.elements.backToGroupEventListLink.style.display = 'inline-block';
           } else {
-            const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
-            ui.elements.backToGroupEventListLink.href = backUrl;
-            ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
+            ui.elements.backToGroupEventListLink.style.display = 'none';
           }
-          ui.elements.backToGroupEventListLink.style.display = 'inline-block';
-        } else {
+        } catch (groupError) {
+          console.error('Failed to get group info for back link:', groupError);
           ui.elements.backToGroupEventListLink.style.display = 'none';
         }
-      } catch (groupError) {
-        console.error('Failed to get group info for back link:', groupError);
-        ui.elements.backToGroupEventListLink.style.display = 'none';
       }
     }
+    // ▲▲▲ 修正点ここまで ▲▲▲
 
     if (eventData.otherEvents) {
       ui.renderOtherEvents(eventData.otherEvents, state.currentLotteryData.groupCustomUrl);
@@ -352,10 +360,10 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
     } else if (state.currentParticipantToken && state.currentParticipantId) {
       if (eventData.status === 'started') {
         await showResultsView(eventData, state.currentParticipantName, false);
-        const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
+        const myParticipation = eventData.participants.find(p => p.memberId === state.currentParticipantId);
         if (myParticipation && !myParticipation.acknowledgedResult) {
-          const acknowledgeButton = document.getElementById('acknowledgeButton');
-          if (acknowledgeButton) acknowledgeButton.style.display = 'inline-block';
+            const acknowledgeButton = document.getElementById('acknowledgeButton');
+            if (acknowledgeButton) acknowledgeButton.style.display = 'inline-block';
         }
       } else {
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
@@ -377,6 +385,42 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
       if (ui.elements.participantView) ui.elements.participantView.innerHTML = `<div class="view-container"><p class="error-message">${error.error || error.message}</p></div>`;
     }
   }
+}
+
+async function showResultsView(eventData, targetName, isShareView) {
+  ui.showResultsView();
+  const onAnimationComplete = () => {
+    const result = eventData.results ? eventData.results[targetName] : null;
+    if (result) {
+      const prize = result.prize;
+      const prizeName = typeof prize === 'object' ? prize.name : prize;
+      const prizeImageUrl = typeof prize === 'object' ? prize.imageUrl : null;
+
+      let resultHtml = `<b>${targetName}さんの結果は…「${prizeName}」でした！</b>`;
+      if (prizeImageUrl) {
+        resultHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image large"><br>` + resultHtml;
+      }
+
+      if (ui.elements.myResult) ui.elements.myResult.innerHTML = resultHtml;
+    } else {
+      if (ui.elements.myResult) ui.elements.myResult.textContent = 'まだ結果は発表されていません。';
+    }
+    if (!isShareView) {
+      if (ui.elements.shareButton) ui.elements.shareButton.style.display = 'block';
+      if (ui.elements.backToControlPanelFromResultButton) ui.elements.backToControlPanelFromResultButton.style.display = 'block';
+    }
+    if (eventData.results) {
+      // ▼▼▼ 修正点 ▼▼▼
+      // isShareView とハイライトするべき自分の名前を渡す
+      ui.renderAllResults(eventData.results, isShareView, state.currentParticipantName);
+    }
+  };
+  if (ui.elements.myResult) ui.elements.myResult.innerHTML = `<b>${targetName}さんの結果をアニメーションで確認中...</b>`;
+  const ctxParticipant = ui.elements.participantCanvas ? ui.elements.participantCanvas.getContext('2d') : null;
+
+  // ▼▼▼ 修正点 ▼▼▼
+  // 第4引数に targetName を渡してカメラフォーカスを指示
+  await startAnimation(ctxParticipant, [targetName], onAnimationComplete, targetName);
 }
 
 async function initializeParticipantDashboardView(customUrlOrGroupId, isCustomUrl = true) {
@@ -473,36 +517,6 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
       groupEventListContainer.innerHTML = `<li class="error-message">${error.error || error.message}</li>`;
     }
   }
-}
-async function showResultsView(eventData, targetName, isShareView) {
-  ui.showResultsView();
-  const onAnimationComplete = () => {
-    const result = eventData.results ? eventData.results[targetName] : null;
-    if (result) {
-      const prize = result.prize;
-      const prizeName = typeof prize === 'object' ? prize.name : prize;
-      const prizeImageUrl = typeof prize === 'object' ? prize.imageUrl : null;
-
-      let resultHtml = `<b>${targetName}さんの結果は…「${prizeName}」でした！</b>`;
-      if (prizeImageUrl) {
-        resultHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image large"><br>` + resultHtml;
-      }
-
-      if (ui.elements.myResult) ui.elements.myResult.innerHTML = resultHtml;
-    } else {
-      if (ui.elements.myResult) ui.elements.myResult.textContent = 'まだ結果は発表されていません。';
-    }
-    if (!isShareView) {
-      if (ui.elements.shareButton) ui.elements.shareButton.style.display = 'block';
-      if (ui.elements.backToControlPanelFromResultButton) ui.elements.backToControlPanelFromResultButton.style.display = 'block';
-    }
-    if (eventData.results) {
-      ui.renderAllResults(eventData.results);
-    }
-  };
-  if (ui.elements.myResult) ui.elements.myResult.innerHTML = `<b>${targetName}さんの結果をアニメーションで確認中...</b>`;
-  const ctxParticipant = ui.elements.participantCanvas ? ui.elements.participantCanvas.getContext('2d') : null;
-  await startAnimation(ctxParticipant, [targetName], onAnimationComplete);
 }
 
 export async function handleRouting(initialData) {
