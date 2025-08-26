@@ -215,16 +215,48 @@ exports.updateEvent = async (req, res) => {
     if (eventData.ownerId !== req.user.id) return res.status(403).json({error: 'このイベントを編集する権限がありません。'});
     if (eventData.status === 'started') return res.status(400).json({error: '開始済みのイベントは編集できません。'});
 
+    // ▼▼▼ 不要画像クリーンアップ処理を強化 ▼▼▼
+    const oldImageUrls = new Set((eventData.prizes || []).map((p) => p.imageUrl).filter(Boolean));
+    const newImageUrls = new Set(prizes.map((p) => p.imageUrl).filter(Boolean));
+
+    // 古いリストにはあったが、新しいリストにはないURLを削除候補とする
+    const urlsToDelete = [...oldImageUrls].filter((url) => !newImageUrls.has(url));
+
+    for (const urlToDelete of urlsToDelete) {
+      // 削除候補のURLが、他のどのイベントでも使われていないことを確認する
+      const querySnapshot = await firestore
+        .collection('events')
+        .where(
+          'prizes',
+          'array-contains-any',
+          prizes.filter((p) => p.imageUrl === urlToDelete).map((p) => ({name: p.name, imageUrl: p.imageUrl}))
+        )
+        .limit(1)
+        .get();
+
+      // 他のイベントで参照が見つからなければ、GCSからファイルを削除
+      if (querySnapshot.empty) {
+        try {
+          const fileName = urlToDelete.split(`${bucket.name}/`)[1]?.split('?')[0];
+          if (fileName && fileName.startsWith('shared_images/')) {
+            await bucket.file(fileName).delete();
+            console.log(`Deleted unused image: ${fileName}`);
+          }
+        } catch (gcsError) {
+          console.error(`Failed to delete GCS file, but proceeding: ${gcsError.message}`);
+        }
+      }
+    }
+    // ▲▲▲ クリーンアップ処理ここまで ▲▲▲
+
     const updateData = {
       eventName: eventName || '無題のイベント',
-      prizes: prizes.map((p) => (typeof p === 'string' ? {name: p, imageUrl: null} : p)),
+      prizes: prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
       participantCount,
       displayMode,
     };
 
     if (participantCount !== eventData.participantCount) {
-      const groupDoc = await firestore.collection('groups').doc(eventData.groupId).get();
-      const groupParticipants = groupDoc.exists ? groupDoc.data().participants || [] : [];
       const newParticipants = Array.from({length: participantCount}, (_, i) => ({
         slot: i,
         name: null,
@@ -644,10 +676,11 @@ exports.getEventsByCustomUrl = async (req, res) => {
     res.status(500).json({error: 'イベントの読み込みに失敗しました。'});
   }
 };
+
 exports.generatePrizeUploadUrl = async (req, res) => {
   try {
     const {eventId} = req.params;
-    const {fileType} = req.body;
+    const {fileType, fileHash} = req.body; // fileHashを受け取る
     const eventRef = firestore.collection('events').doc(eventId);
     const eventDoc = await eventRef.get();
 
@@ -660,13 +693,14 @@ exports.generatePrizeUploadUrl = async (req, res) => {
       return res.status(400).json({error: '無効なファイルタイプです。'});
     }
 
-    const fileName = `events/${eventId}/${Date.now()}.${fileExt}`;
+    // ファイル名をハッシュに変更
+    const fileName = `shared_images/${fileHash}.${fileExt}`;
     const file = bucket.file(fileName);
 
     const [url] = await file.getSignedUrl({
       version: 'v4',
       action: 'write',
-      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      expires: Date.now() + 15 * 60 * 1000,
       contentType: fileType,
     });
 

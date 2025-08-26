@@ -115,7 +115,6 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       ui.elements.currentEventUrl.textContent = url;
       ui.elements.currentEventUrl.href = url;
     }
-    // パート2：配信画面のURL表示ロジック
     if (ui.elements.broadcastEventUrl) {
       ui.elements.broadcastEventUrl.textContent = url;
       ui.elements.broadcastEventUrl.href = url;
@@ -129,7 +128,29 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
 
       ui.elements.displayModeSelect.value = data.displayMode;
       ui.elements.createEventButton.textContent = 'この内容でイベントを保存';
-      ui.renderPrizeCardList();
+
+      // ▼▼▼ ここからが修正点 ▼▼▼
+      // データ読み込み後に、保存された表示モードを復元する
+      const savedMode = localStorage.getItem('prizeViewMode') || 'card';
+      const prizeCardContainer = document.getElementById('prizeCardListContainer');
+      const prizeListContainer = document.getElementById('prizeListModeContainer');
+      const viewModeCardBtn = document.getElementById('viewModeCard');
+      const viewModeListBtn = document.getElementById('viewModeList');
+
+      if (savedMode === 'list') {
+        viewModeListBtn.classList.add('active');
+        viewModeCardBtn.classList.remove('active');
+        prizeListContainer.style.display = 'block';
+        prizeCardContainer.style.display = 'none';
+        ui.renderPrizeListMode();
+      } else {
+        viewModeCardBtn.classList.add('active');
+        viewModeListBtn.classList.remove('active');
+        prizeCardContainer.style.display = 'grid';
+        prizeListContainer.style.display = 'none';
+        ui.renderPrizeCardList();
+      }
+      // ▲▲▲ 修正点ここまで ▲▲▲
     } else if (viewToShow === 'broadcastView') {
       const {adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, revealRandomButton, regenerateLinesButton, glimpseButton} = ui.elements;
       const hidePrizes = data.displayMode === 'private';
