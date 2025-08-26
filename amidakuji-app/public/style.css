@@ -29,9 +29,9 @@
     --text-color: #dcdcdc; /* 文字色を少し落ち着いた色に変更 */
     --border-color: #444;
     --shadow-color: rgba(255, 255, 255, 0.08);
-    --notification-bg-color: #555555;
-    --notification-border-color: #665600;
-    --notification-text-color: #f0e68c;
+    --highlight-bg-dark: #002c5d; /* 暗い青に変更 */
+    --highlight-border-dark: #2a609b; /* 境界線も調整 */
+    --highlight-text-dark: #dcdcdc; /* テキスト色はそのままか調整 */
   }
 }
 
@@ -40,7 +40,7 @@ body {
   color: var(--text-color);
   margin: 0;
   transition: background-color 0.5s ease;
-  background-color: var(--light-bg-color); /* --- ▼▼▼ この行を追加 ▼▼▼ --- */
+  background-color: var(--light-bg-color);
 }
 
 #canvas-container {
@@ -64,13 +64,12 @@ h4 {
   color: #4a4a4a;
   font-weight: 300;
 }
-/* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
   h1,
   h2,
   h3,
   h4 {
-    color: #e0e0e0; /* 見出しの色も少し落ち着かせる */
+    color: #e0e0e0;
   }
 }
 
@@ -127,7 +126,6 @@ h4 {
   font-weight: bold;
 }
 
-/* Hamburger Menu */
 #hamburger-button {
   background: transparent;
   border: none;
@@ -164,7 +162,6 @@ h4 {
   transform: rotate(-45deg);
 }
 
-/* Nav Menu */
 #nav-menu {
   display: flex;
   align-items: center;
@@ -180,7 +177,7 @@ h4 {
   }
 
   #nav-menu {
-    display: none; /* Initially hidden */
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
@@ -200,7 +197,7 @@ h4 {
   }
 
   #nav-menu.active {
-    display: flex; /* Show menu when active */
+    display: flex;
   }
 
   .auth-controls {
@@ -234,6 +231,7 @@ h4 {
   margin: 20px auto;
   padding: 0 20px;
   box-sizing: border-box;
+  position: relative;
 }
 
 .controls {
@@ -329,27 +327,24 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* 汎用的な削除ボタンスタイル */
 .delete-btn {
-  background-color: var(--danger-color) !important; /* !importantで他のスタイルを上書き */
+  background-color: var(--danger-color) !important;
   color: white;
 }
 .delete-btn:hover {
   background-color: var(--danger-hover-color) !important;
 }
 
-/* 既存の #settings li .delete-btn は汎用スタイルを継承するためシンプルに */
 #settings li .delete-btn {
   padding: 4px 8px;
   font-size: 12px;
 }
-/* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
   .main-header,
   .controls,
   .modal-content {
-    box-shadow: none; /* 影を削除 */
-    border: 1px solid var(--border-color); /* 微かな境界線を追加 */
+    box-shadow: none;
+    border: 1px solid var(--border-color);
   }
   .url-preview code {
     background-color: #333;
@@ -388,13 +383,11 @@ button:disabled {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* クリック可能なリスト項目に適用するスタイル */
 .list-item-link > span {
-  flex-grow: 1; /* テキスト部分が幅を埋めるように */
+  flex-grow: 1;
   cursor: pointer;
 }
 
-/* シェブロンアイコン(>)をCSSで追加 */
 .list-item-link::after {
   content: '>';
   font-weight: bold;
@@ -411,7 +404,6 @@ button:disabled {
 .item-list-item .item-buttons {
   display: flex;
   gap: 10px;
-  align-items: center;
 }
 .item-list-item .item-buttons button {
   background-color: #6c757d;
@@ -448,6 +440,11 @@ button:disabled {
   display: flex;
   align-items: center;
 }
+.item-list-item.highlight {
+  background-color: var(--notification-bg-color);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 8px rgba(var(--primary-color-rgb, 0, 123, 255), 0.5);
+}
 
 .event-header {
   display: flex;
@@ -455,7 +452,6 @@ button:disabled {
   align-items: center;
   margin-bottom: 15px;
 }
-
 .list-header {
   display: flex;
   justify-content: space-between;
@@ -476,9 +472,17 @@ button:disabled {
   font-weight: bold;
   font-size: 12px;
   color: white;
+  margin: 0 5px;
 }
 .badge.ongoing {
-  background-color: #28a745; /* Green color */
+  background-color: var(--approve-color);
+}
+.badge.joined {
+  background-color: #17a2b8;
+}
+.badge.result-ready {
+  background-color: #ffc107;
+  color: #333;
 }
 
 #backToGroupsButton,
@@ -491,27 +495,27 @@ button:disabled {
 }
 
 #settings {
-  display: block; /* gridからblockに変更 */
+  display: block;
 }
 .settings-section {
-  margin-top: 30px; /* セクション間の余白 */
+  margin-top: 30px;
 }
 .settings-section:first-child {
   margin-top: 0;
 }
 .prize-controls {
   display: flex;
-  flex-wrap: wrap; /* 画面が狭い場合に折り返す */
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
 .prize-controls #prizeInput {
   flex-grow: 1;
-  min-width: 150px; /* 最小幅を確保 */
+  min-width: 150px;
 }
 .prize-buttons {
   display: flex;
-  gap: 10px; /* ボタン間の間隔 */
+  gap: 10px;
 }
 
 #settings h4 {
@@ -539,30 +543,27 @@ button:disabled {
   color: var(--danger-color);
 }
 
-/* panzoom用のコンテナスタイル */
 .canvas-panzoom-container {
   width: 100%;
   height: 400px;
-  overflow: hidden; /* 必須：はみ出した部分を隠す */
+  overflow: hidden;
   border: 1px solid var(--border-color);
   background-color: var(--white-color);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-  position: relative; /* マスク表示のため */
-  transition: all 0.3s ease-in-out; /* フルスクリーン化を滑らかに */
+  position: relative;
+  transition: all 0.3s ease-in-out;
   box-sizing: border-box;
 }
-/* --- ▼▼▼ 新規追加 ▼▼▼ --- */
 .canvas-panzoom-container.fullscreen-mode {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 2000; /* ヘッダーより手前に表示 */
+  z-index: 2000;
   border: none;
   box-shadow: none;
 }
-/* --- ▲▲▲ 追加ここまで ▲▲▲ --- */
 .loading-mask {
   position: absolute;
   top: 0;
@@ -575,7 +576,7 @@ button:disabled {
   align-items: center;
   font-weight: bold;
   z-index: 10;
-  display: none; /* 初期状態は非表示 */
+  display: none;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -584,7 +585,6 @@ button:disabled {
   }
 }
 
-/* canvas自体のスタイルをリセット */
 #adminCanvas,
 #participantCanvas {
   border: none;
@@ -592,35 +592,8 @@ button:disabled {
   box-shadow: none;
   width: auto;
   height: 400px;
-  transition: opacity 0.3s ease-in-out; /* 透明度を0.3秒かけて滑らかに変化させる */
+  transition: opacity 0.3s ease-in-out;
 }
-
-/* ★★★ broadcast-controlsのスタイルをここに集約 ★★★ */
-.broadcast-controls {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  margin-top: 15px;
-  flex-wrap: wrap; /* 画面幅が狭い場合に折り返す */
-}
-
-/* --- ▼▼▼ 新規追加 ▼▼▼ --- */
-/* フルスクリーン時の操作パネルのスタイル */
-.canvas-panzoom-container.fullscreen-mode + .broadcast-controls {
-  position: fixed; /* 画面に固定 */
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: auto;
-  max-width: 90%;
-  background-color: rgba(30, 30, 30, 0.75); /* 半透明の背景 */
-  padding: 15px;
-  border-radius: 12px;
-  z-index: 2001; /* コンテナ(2000)より手前に表示 */
-  margin-top: 0;
-}
-/* --- ▲▲▲ 追加ここまで ▲▲▲ --- */
 
 .error-message {
   color: var(--danger-color);
@@ -710,7 +683,6 @@ button:disabled {
   border: 1px solid #a3e0b7;
 }
 
-/* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
   .item-list-item:hover {
     box-shadow: none;
@@ -727,7 +699,7 @@ button:disabled {
     color: #888;
   }
   .slot.selected {
-    box-shadow: 0 0 8px rgba(13, 132, 255, 0.6); /* 影を光の輪に変更 */
+    box-shadow: 0 0 8px rgba(13, 132, 255, 0.6);
     color: var(--primary-color);
   }
   #waitingMessage {
@@ -762,7 +734,6 @@ button:disabled {
   animation: slideIn 0.3s;
 }
 
-/* スマホ表示ではモーダルを画面にフィットさせる */
 @media (max-width: 768px) {
   .modal-content {
     margin: 10px;
@@ -785,7 +756,6 @@ button:disabled {
   cursor: pointer;
 }
 
-/* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
   .modal-content {
     background-color: #2a2a2a;
@@ -817,17 +787,16 @@ button:disabled {
   border-color: var(--primary-color);
 }
 
-/* ダークモード時の選択色 */
 @media (prefers-color-scheme: dark) {
   .prize-master-item.selectable.selected {
-    background-color: rgba(var(--primary-color-rgb, 13, 132, 255), 0.2); /* 変数がなければデフォルト値を使用 */
+    background-color: rgba(var(--primary-color-rgb, 13, 132, 255), 0.2);
   }
 }
 #prizeMasterSelectModal .modal-content {
   max-width: 700px;
 }
 #prizeMasterSelectModal {
-  z-index: 1060; /* 他のモーダル(1050)より大きな値を設定 */
+  z-index: 1060;
 }
 #prizeMasterSelectList {
   max-height: 40vh;
@@ -838,7 +807,6 @@ button:disabled {
 #resultSection {
   overflow-x: auto;
 }
-/* --- Group Switcher Styles --- */
 #groupSwitcher {
   position: relative;
 }
@@ -849,7 +817,7 @@ button:disabled {
   border: 1px solid var(--border-color);
   min-width: 150px;
   text-align: left;
-  padding-right: 30px; /* for arrow */
+  padding-right: 30px;
   position: relative;
 }
 #currentGroupName::after {
@@ -898,7 +866,6 @@ button:disabled {
   color: var(--primary-color);
 }
 
-/* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
   #currentGroupName {
     background-color: #2a2a2a;
@@ -968,7 +935,6 @@ button:disabled {
   padding-top: 16px;
   border-top: 1px solid var(--border-color);
 }
-/* 左寄せにしたいボタンに適用 */
 .modal-actions .action-left {
   margin-right: auto;
 }
@@ -1002,11 +968,11 @@ button:disabled {
 .secondary-btn.danger {
   color: var(--danger-color);
   border-color: var(--danger-color);
-  background-color: transparent; /* 背景は透明に */
+  background-color: transparent;
 }
 
 .secondary-btn.danger:hover {
-  background-color: #fbe9eb !important; /* ホバー時の背景色を上書き */
+  background-color: #fbe9eb !important;
   color: var(--danger-hover-color);
 }
 
@@ -1138,7 +1104,53 @@ button:disabled {
   background-color: #6c757d;
 }
 
-/* --- Bulk Register Modal Styles --- */
+.member-list-item.inactive {
+  opacity: 0.5;
+  background-color: var(--shadow-color);
+}
+
+.member-list-item.inactive:hover {
+  opacity: 0.7;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.switch input {
+  display: none;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 24px;
+}
+.slider:before {
+  position: absolute;
+  content: '';
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: var(--primary-color);
+}
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
 #bulkNamesTextarea {
   width: 100%;
   box-sizing: border-box;
@@ -1217,7 +1229,7 @@ button:disabled {
 .prize-card-image {
   position: relative;
   width: 100%;
-  padding-top: 100%; /* アスペクト比を1:1に保つ */
+  padding-top: 100%;
   cursor: pointer;
   background-color: var(--light-bg-color);
 }
@@ -1232,8 +1244,8 @@ button:disabled {
 }
 
 .prize-card-image img.placeholder {
-  object-fit: scale-down; /* プレースホルダーアイコンが引き伸ばされないように */
-  padding: 25%; /* アイコンのサイズを調整 */
+  object-fit: scale-down;
+  padding: 25%;
   box-sizing: border-box;
   opacity: 0.5;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E");
@@ -1279,7 +1291,7 @@ button:disabled {
 .prize-card-actions {
   display: flex;
   width: 100%;
-  gap: 5px; /* ボタン間の小さな隙間 */
+  gap: 5px;
 }
 
 .prize-card .delete-btn {
@@ -1289,7 +1301,7 @@ button:disabled {
 }
 
 .prize-card .duplicate-btn {
-  background-color: #6c757d; /* グレー系の色 */
+  background-color: #6c757d;
   padding: 6px;
   font-size: 12px;
   color: white;
@@ -1297,7 +1309,7 @@ button:disabled {
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s;
-  flex-grow: 1; /* ボタンの幅を均等にする */
+  flex-grow: 1;
 }
 
 .prize-card .duplicate-btn:hover {
@@ -1305,7 +1317,7 @@ button:disabled {
 }
 
 .prize-main-controls {
-  justify-content: flex-start; /* ボタンを左寄せにする */
+  justify-content: flex-start;
   gap: 10px;
 }
 
@@ -1321,7 +1333,6 @@ button:disabled {
   margin-left: auto;
 }
 
-/* ファイルの末尾に以下を追加してください */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -1346,7 +1357,6 @@ button:disabled {
   border-radius: 50%;
   border: 2px solid var(--border-color);
 }
-
 .profile-icon-container label.button {
   display: inline-block;
   padding: 8px 12px;
@@ -1357,86 +1367,6 @@ button:disabled {
   font-size: 14px;
 }
 
-/* Draggable Controls Wrapper */
-#controls-draggable-wrapper {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: auto;
-  max-width: 90%;
-  background-color: rgb(34 34 34 / 90%);
-  border-radius: 12px;
-  z-index: 2001;
-  color: white;
-  transition: all 0.3s ease-in-out;
-  border: 1px solid #ffffff44;
-}
-
-.controls-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 10px;
-  cursor: move;
-  user-select: none;
-}
-
-.drag-handle {
-  flex-grow: 1;
-  height: 20px;
-}
-
-#toggleControlsButton {
-  background: #555;
-  border: none;
-  color: white;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 24px;
-  padding: 0;
-}
-
-#controls-draggable-wrapper .broadcast-controls {
-  padding: 15px;
-  margin-top: 0;
-  display: flex;
-}
-
-#controls-draggable-wrapper.minimized .broadcast-controls {
-  display: none;
-}
-
-#controls-draggable-wrapper.minimized {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  overflow: hidden;
-  background-color: rgba(30, 30, 30, 0.7);
-}
-
-#controls-draggable-wrapper.minimized .controls-header {
-  padding: 10px;
-}
-
-#controls-draggable-wrapper.minimized .drag-handle {
-  display: none;
-}
-
-#controls-draggable-wrapper.minimized #toggleControlsButton {
-  margin: 0;
-}
-
-#controls-draggable-wrapper.dragging {
-  transition: none;
-}
-
-/* --- ▼▼▼ ここから追加 ▼▼▼ --- */
-
-/* --- 設定ボタンとパネル --- */
 .settings-fab {
   position: fixed;
   bottom: 20px;
@@ -1519,7 +1449,6 @@ button:disabled {
   gap: 10px;
 }
 
-/* Custom Toggle Switch */
 .setting-item .switch {
   position: relative;
   display: inline-block;
@@ -1564,7 +1493,6 @@ button:disabled {
   border-radius: 50%;
 }
 
-/* Custom Radio Buttons */
 .radio-group {
   display: flex;
   gap: 5px;
@@ -1592,7 +1520,6 @@ button:disabled {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-/* Light Mode Overrides */
 body.light-mode .settings-fab {
   background-color: rgba(255, 255, 255, 0.7);
   border-color: rgba(0, 0, 0, 0.1);
@@ -1613,7 +1540,6 @@ body.light-mode .radio-group {
 body.light-mode .radio-group input[type='radio']:checked + label {
   color: white;
 }
-/* --- スマホ表示への対応 --- */
 @media (max-width: 768px) {
   .settings-fab {
     width: 48px;
@@ -1628,7 +1554,7 @@ body.light-mode .radio-group input[type='radio']:checked + label {
     right: auto;
     transform: translateX(-50%) translateY(10px);
     width: 90vw;
-    max-width: 320px; /* パネルの最大幅を指定 */
+    max-width: 320px;
   }
 
   .settings-panel.visible {
@@ -1636,7 +1562,7 @@ body.light-mode .radio-group input[type='radio']:checked + label {
   }
 
   .setting-item.theme-switcher {
-    align-items: center; /* 中央揃えにする */
+    align-items: center;
   }
 
   .radio-group {
@@ -1644,7 +1570,6 @@ body.light-mode .radio-group input[type='radio']:checked + label {
   }
 }
 
-/* --- テーマ強制切り替え用クラス --- */
 body.light-mode {
   --primary-color: #007bff;
   --primary-hover-color: #0056b3;
@@ -1711,13 +1636,10 @@ body.dark-mode {
     border-color: #555;
   }
 }
-/* --- ▲▲▲ 追加ここまで ▲▲▲ --- */
-
 #adminControls {
   margin-bottom: 10px;
 }
 
-/* Error Overlay */
 .error-overlay {
   position: fixed;
   top: 0;
@@ -1805,7 +1727,7 @@ body.dark-mode {
 .prize-list-table td {
   border: 1px solid var(--border-color);
   padding: 10px;
-  text-align: left;
+  text-align: center;
 }
 
 .prize-list-table th {
@@ -1821,96 +1743,12 @@ body.dark-mode {
 }
 
 .prize-list-table td:nth-child(2) {
-  width: 100px;
+  width: auto;
 }
 .prize-list-table td:nth-child(3) {
   width: 100px;
   text-align: center;
 }
-
-.badge.joined {
-  background-color: #17a2b8; /* Cyan */
-}
-.badge.result-ready {
-  background-color: #ffc107; /* Yellow */
-  color: #333;
-}
-
-/* --- カスタムチェックボックスのスタイル --- */
-.input-group.checkbox-group {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.input-group.checkbox-group input[type='checkbox'] {
-  opacity: 0; /* 元のチェックボックスを非表示に */
-  position: absolute;
-  width: 1px;
-  height: 1px;
-}
-
-.input-group.checkbox-group label {
-  padding-left: 28px; /* チェックボックス用のスペースを確保 */
-  position: relative;
-  cursor: pointer;
-  user-select: none;
-}
-
-/* カスタムチェックボックスのボックス部分 */
-.input-group.checkbox-group label::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--border-color);
-  border-radius: 4px;
-  background-color: var(--white-color);
-  transition: all 0.2s ease;
-}
-
-/* チェックが入った時のボックスのスタイル */
-.input-group.checkbox-group input[type='checkbox']:checked + label::before {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-/* チェックマーク部分 */
-.input-group.checkbox-group label::after {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 50%;
-  width: 5px;
-  height: 10px;
-  border: solid white;
-  border-width: 0 3px 3px 0;
-  transform: translateY(-75%) rotate(45deg);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-/* チェックが入った時にチェックマークを表示 */
-.input-group.checkbox-group input[type='checkbox']:checked + label::after {
-  opacity: 1;
-}
-
-/* ダークモード対応 */
-@media (prefers-color-scheme: dark) {
-  .input-group.checkbox-group label::before {
-    background-color: #333;
-  }
-}
-body.light-mode .input-group.checkbox-group label::before {
-  background-color: var(--white-color);
-}
-body.dark-mode .input-group.checkbox-group label::before {
-  background-color: #333;
-}
-
 .prize-list-table .prize-image-label {
   display: flex;
   justify-content: center;
@@ -1936,59 +1774,268 @@ body.dark-mode .input-group.checkbox-group label::before {
 .prize-list-table .prize-image-cell.no-image {
   background-color: var(--shadow-color);
 }
-.member-list-item.inactive {
-  opacity: 0.5;
-  background-color: var(--shadow-color);
-}
 
-.member-list-item.inactive:hover {
-  opacity: 0.7;
-}
-
-.switch {
+.input-group.checkbox-group {
   position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
+  display: inline-flex;
+  align-items: center;
 }
-.switch input {
-  display: none;
-}
-.slider {
+
+.input-group.checkbox-group input[type='checkbox'] {
+  opacity: 0;
   position: absolute;
+  width: 1px;
+  height: 1px;
+}
+
+.input-group.checkbox-group label {
+  padding-left: 28px;
+  position: relative;
   cursor: pointer;
+  user-select: none;
+}
+
+.input-group.checkbox-group label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--white-color);
+  transition: all 0.2s ease;
+}
+
+.input-group.checkbox-group input[type='checkbox']:checked + label::before {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.input-group.checkbox-group label::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  transform: translateY(-75%) rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.input-group.checkbox-group input[type='checkbox']:checked + label::after {
+  opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .input-group.checkbox-group label::before {
+    background-color: #333;
+  }
+}
+body.light-mode .input-group.checkbox-group label::before {
+  background-color: var(--white-color);
+}
+body.dark-mode .input-group.checkbox-group label::before {
+  background-color: #333;
+}
+/* --- 配信画面 新レイアウト --- */
+.broadcast-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 2005;
+  gap: 10px;
+}
+.broadcast-layout {
+  display: flex;
+  gap: 0px;
+  align-items: flex-start;
+  flex-direction: column;
+}
+.canvas-panzoom-container {
+  flex-grow: 1;
+  position: relative;
+  min-width: 0; /* flexアイテムが縮小できるようにする */
+}
+.floating-controls {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 10;
+  display: flex;
+  gap: 10px;
+}
+.broadcast-sidebar {
+  background-color: var(--white-color);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  transition: transform 0.3s ease-in-out;
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 85%;
+  max-width: 300px;
+  transform: translateX(100%);
+  z-index: 2030;
+  padding-top: 20px;
+  overflow-y: auto;
+}
+.broadcast-sidebar.is-open {
+  transform: translateX(0);
+  box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
+}
+.broadcast-sidebar h4 {
+  margin: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  font-size: 16px;
+}
+.broadcast-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.broadcast-controls .control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.broadcast-controls .control-group h5 {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  color: var(--text-color);
+  opacity: 0.7;
+  font-weight: bold;
+}
+.broadcast-controls .control-group button,
+.broadcast-controls .control-group select {
+  width: 100%;
+  box-sizing: border-box;
+}
+.floating-fab {
+  display: flex;
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  border-radius: 0;
+  background-color: var(--primary-color);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: none;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 2015;
+  bottom: 0;
+  right: 21px;
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+.floating-fab:hover {
+  background-color: var(--primary-hover-color);
+}
+.close-sidebar-btn {
+  display: block;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text-color);
+  opacity: 0.6;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+.close-sidebar-btn:hover {
+  opacity: 0.8;
+}
+.broadcast-sidebar-overlay {
+  position: fixed;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 2025;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
+}
+.broadcast-sidebar-overlay.is-visible {
+  opacity: 0;
+  pointer-events: auto;
+}
+
+/* --- PCワイド画面 (幅1221px以上) --- */
+@media (min-width: 1221px) {
+  #broadcastView.view-container {
+    max-width: 1300px;
+  }
+}
+
+/* --- PC/タブレット (幅769px 以上) --- */
+@media (min-width: 769px) {
+  .broadcast-layout {
+    display: flex;
+  }
+}
+
+/* --- スマートフォン向け (幅768px以下) --- */
+@media (max-width: 768px) {
+  .broadcast-layout {
+    flex-direction: column;
+  }
+}
+
+/* フルスクリーン時にビュー全体の幅制限を解除 */
+#broadcastView.fullscreen-active {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* フルスクリーン時にヘッダーの余白を再設定 */
+#broadcastView.fullscreen-active .broadcast-header {
+  position: fixed !important;
+  top: 0;
+  padding: 10px 20px;
+  border-radius: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 68px;
+}
+
+#toggleFullscreenButton {
+  margin-left: auto;
+}
+
+#broadcastView.fullscreen-active .floating-fab {
+  position: fixed !important;
+  top: 0;
   right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: 0.4s;
-  border-radius: 24px;
-}
-.slider:before {
-  position: absolute;
-  content: '';
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: 0.4s;
-  border-radius: 50%;
-}
-input:checked + .slider {
-  background-color: var(--primary-color);
-}
-input:checked + .slider:before {
-  transform: translateX(20px);
 }
 
-.item-list-item.highlight {
-  background-color: var(--notification-bg-color);
-  border-color: var(--primary-color);
-  box-shadow: 0 0 8px rgba(var(--primary-color-rgb, 0, 123, 255), 0.5);
-}
-
+/* item-list-item highlight のダークモードスタイル */
 .dark-mode .item-list-item.highlight {
-  background-color: #002542;
+  background-color: var(--highlight-bg-dark);
+  border-color: var(--highlight-border-dark);
+  color: var(--highlight-text-dark); /* 必要であれば */
 }

@@ -104,6 +104,12 @@ export const elements = {
   backToDashboardButton: document.getElementById('backToDashboardButton'),
   adminControls: document.getElementById('adminControls'),
   broadcastEventUrl: document.getElementById('broadcastEventUrl'),
+  showFillSlotsModalButton: document.getElementById('showFillSlotsModalButton'),
+  broadcastSidebar: document.getElementById('broadcastSidebar'),
+  openSidebarButton: document.getElementById('openSidebarButton'),
+  closeSidebarButton: document.getElementById('closeSidebarButton'),
+  toggleFullscreenButton: document.getElementById('toggleFullscreenButton'),
+
   startEventButton: document.getElementById('startEventButton'),
   startBroadcastButton: document.getElementById('startBroadcastButton'),
   adminCanvas: document.getElementById('adminCanvas'),
@@ -112,6 +118,7 @@ export const elements = {
   advanceLineByLineButton: document.getElementById('advanceLineByLineButton'),
   regenerateLinesButton: document.getElementById('regenerateLinesButton'),
   glimpseButton: document.getElementById('glimpseButton'),
+  shufflePrizesBroadcastButton: document.getElementById('shufflePrizesBroadcastButton'), // ← この行を追加
   highlightUserSelect: document.getElementById('highlightUserSelect'),
   highlightUserButton: document.getElementById('highlightUserButton'),
   revealRandomButton: document.getElementById('revealRandomButton'),
@@ -1151,4 +1158,10 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
 
   tableHTML += `</tbody></table>`;
   elements.prizeListModeContainer.innerHTML = tableHTML;
+}
+export function setBroadcastControlsDisabled(disabled) {
+  const controls = document.querySelectorAll('#broadcastSidebar button, #broadcastSidebar select');
+  controls.forEach((control) => {
+    control.disabled = disabled;
+  });
 }
