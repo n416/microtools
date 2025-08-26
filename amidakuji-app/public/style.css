@@ -16,25 +16,6 @@
   --notification-text-color: #8a6d3b;
 }
 
-/* ダークモード対応: 変数を定義 */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary-color: #0d84ff;
-    --primary-color-rgb: 13, 132, 255;
-    --primary-hover-color: #3b9aff;
-    --danger-color: #e5484d;
-    --danger-hover-color: #ff5c5c;
-    --light-bg-color: #121212;
-    --white-color: #1e1e1e;
-    --text-color: #dcdcdc; /* 文字色を少し落ち着いた色に変更 */
-    --border-color: #444;
-    --shadow-color: rgba(255, 255, 255, 0.08);
-    --highlight-bg-dark: #002c5d; /* 暗い青に変更 */
-    --highlight-border-dark: #2a609b; /* 境界線も調整 */
-    --highlight-text-dark: #dcdcdc; /* テキスト色はそのままか調整 */
-  }
-}
-
 body {
   font-family: 'Helvetica Neue', Arial, 'Hirino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
   color: var(--text-color);
@@ -63,14 +44,6 @@ h3,
 h4 {
   color: #4a4a4a;
   font-weight: 300;
-}
-@media (prefers-color-scheme: dark) {
-  h1,
-  h2,
-  h3,
-  h4 {
-    color: #e0e0e0;
-  }
 }
 
 .impersonation-banner {
@@ -339,27 +312,6 @@ button:disabled {
   padding: 4px 8px;
   font-size: 12px;
 }
-@media (prefers-color-scheme: dark) {
-  .main-header,
-  .controls,
-  .modal-content {
-    box-shadow: none;
-    border: 1px solid var(--border-color);
-  }
-  .url-preview code {
-    background-color: #333;
-    color: #e0e0e0;
-  }
-  input[type='text'],
-  input[type='number'],
-  input[type='password'],
-  select,
-  textarea {
-    background-color: #2a2a2a;
-    color: var(--text-color);
-    border-color: #555;
-  }
-}
 
 .item-list {
   list-style-type: none;
@@ -393,12 +345,6 @@ button:disabled {
   font-weight: bold;
   color: #ccc;
   margin-left: 10px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .list-item-link::after {
-    color: #666;
-  }
 }
 
 .item-list-item .item-buttons {
@@ -682,32 +628,6 @@ button:disabled {
   border: 1px solid #a3e0b7;
 }
 
-@media (prefers-color-scheme: dark) {
-  .item-list-item:hover {
-    box-shadow: none;
-  }
-  .slot.available {
-    background-color: transparent;
-    border-color: var(--primary-color);
-  }
-  .slot.available:hover {
-    background-color: rgba(13, 132, 255, 0.1);
-  }
-  .slot.taken {
-    background-color: #333;
-    color: #888;
-  }
-  .slot.selected {
-    box-shadow: 0 0 8px rgba(13, 132, 255, 0.6);
-    color: var(--primary-color);
-  }
-  #waitingMessage {
-    background-color: #1c2e23;
-    border-color: #2f4f3a;
-    color: #6ee391;
-  }
-}
-
 .modal {
   display: none;
   position: fixed;
@@ -755,20 +675,6 @@ button:disabled {
   cursor: pointer;
 }
 
-@media (prefers-color-scheme: dark) {
-  .modal-content {
-    background-color: #2a2a2a;
-    border-color: #555;
-  }
-  .close-button {
-    color: #888;
-  }
-  .close-button:hover,
-  .close-button:focus {
-    color: #eee;
-  }
-}
-
 .prize-master-list .item-list-item {
   padding: 10px;
 }
@@ -786,11 +692,6 @@ button:disabled {
   border-color: var(--primary-color);
 }
 
-@media (prefers-color-scheme: dark) {
-  .prize-master-item.selectable.selected {
-    background-color: rgba(var(--primary-color-rgb, 13, 132, 255), 0.2);
-  }
-}
 #prizeMasterSelectModal .modal-content {
   max-width: 700px;
 }
@@ -863,19 +764,6 @@ button:disabled {
   margin-top: 5px;
   padding-top: 10px;
   color: var(--primary-color);
-}
-
-@media (prefers-color-scheme: dark) {
-  #currentGroupName {
-    background-color: #2a2a2a;
-  }
-  .dropdown-content {
-    background-color: #333;
-    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.5);
-  }
-  .dropdown-content button:hover {
-    background-color: #444;
-  }
 }
 
 .event-header {
@@ -975,18 +863,6 @@ button:disabled {
   color: var(--danger-hover-color);
 }
 
-@media (prefers-color-scheme: dark) {
-  .secondary-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  .modal-actions .secondary-btn:hover {
-    background-color: #5a6268;
-  }
-  .secondary-btn.danger:hover {
-    background-color: rgba(229, 72, 77, 0.1);
-  }
-}
-
 .setting-group {
   background-color: transparent;
   border: none;
@@ -1023,24 +899,6 @@ button:disabled {
   gap: 15px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .setting-group-title {
-    color: #ccc;
-  }
-  .danger-zone {
-    border-top-color: #444;
-  }
-  a,
-  a:link,
-  #backToGroupEventListLink {
-    color: var(--primary-color);
-  }
-  a:visited,
-  #backToGroupEventListLink:visited {
-    color: #bb86fc;
-  }
-}
-
 .secondary-btn {
   width: 100%;
   max-width: 300px;
@@ -1055,12 +913,6 @@ button:disabled {
   .secondary-btn {
     width: 100%;
     max-width: 350px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .light-path {
-    filter: drop-shadow(0 0 6px var(--primary-color));
   }
 }
 
@@ -1583,6 +1435,12 @@ body.light-mode {
   --notification-border-color: #ffe58f;
   --notification-text-color: #8a6d3b;
 
+  .main-header,
+  .controls,
+  .modal-content {
+    box-shadow: 0 4px 12px var(--shadow-color);
+    border: 1px solid var(--border-color);
+  }
   h1,
   h2,
   h3,
@@ -1599,6 +1457,22 @@ body.light-mode {
     background-color: #fff;
     color: #333;
     border-color: #ddd;
+  }
+  .item-list-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  .secondary-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  #currentGroupName {
+    background-color: #f8f9fa;
+  }
+  .dropdown-content {
+    background-color: white;
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  }
+  .dropdown-content button:hover {
+    background-color: #f1f1f1;
   }
 }
 
@@ -1633,6 +1507,64 @@ body.dark-mode {
     background-color: #2a2a2a;
     color: #dcdcdc;
     border-color: #555;
+  }
+
+  .main-header,
+  .controls,
+  .modal-content {
+    box-shadow: none;
+    border: 1px solid var(--border-color);
+  }
+  .list-item-link::after {
+    color: #666;
+  }
+  .item-list-item:hover {
+    box-shadow: none;
+  }
+  .slot.available {
+    background-color: transparent;
+    border-color: var(--primary-color);
+  }
+  .slot.available:hover {
+    background-color: rgba(13, 132, 255, 0.1);
+  }
+  .slot.taken {
+    background-color: #333;
+    color: #888;
+  }
+  .slot.selected {
+    box-shadow: 0 0 8px rgba(13, 132, 255, 0.6);
+    color: var(--primary-color);
+  }
+  #waitingMessage {
+    background-color: #1c2e23;
+    border-color: #2f4f3a;
+    color: #6ee391;
+  }
+  .modal-content {
+    background-color: #2a2a2a;
+    border-color: #555;
+  }
+  .close-button {
+    color: #888;
+  }
+  .close-button:hover,
+  .close-button:focus {
+    color: #eee;
+  }
+  .prize-master-item.selectable.selected {
+    background-color: rgba(var(--primary-color-rgb, 13, 132, 255), 0.2);
+  }
+  .secondary-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  .secondary-btn.danger:hover {
+    background-color: rgba(229, 72, 77, 0.1);
+  }
+  a,
+  a:link,
+  #backToGroupEventListLink {
+    color: var(--primary-color);
   }
 }
 #adminControls {
@@ -1681,6 +1613,17 @@ body.dark-mode {
   border-color: var(--primary-color);
 }
 
+.dark-mode #currentGroupName {
+  background-color: #2a2a2a;
+}
+.dark-mode .dropdown-content {
+  background-color: #333;
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.5);
+}
+.dark-mode .dropdown-content button:hover {
+  background-color: #444;
+}
+
 .prize-controls-header {
   display: flex;
   justify-content: space-between;
@@ -1726,7 +1669,7 @@ body.dark-mode {
 .prize-list-table td {
   border: 1px solid var(--border-color);
   padding: 10px;
-  text-align: center;
+  text-align: left;
 }
 
 .prize-list-table th {
@@ -2013,7 +1956,6 @@ body.dark-mode .input-group.checkbox-group label::before {
 
 /* フルスクリーン時にヘッダーの余白を再設定 */
 #broadcastView.fullscreen-active .broadcast-header {
-  margin: 0;
   position: fixed !important;
   top: 0;
   padding: 10px 20px;
@@ -2031,11 +1973,4 @@ body.dark-mode .input-group.checkbox-group label::before {
   position: fixed !important;
   top: 0;
   right: 0;
-}
-
-/* item-list-item highlight のダークモードスタイル */
-.dark-mode .item-list-item.highlight {
-  background-color: var(--highlight-bg-dark);
-  border-color: var(--highlight-border-dark);
-  color: var(--highlight-text-dark); /* 必要であれば */
 }
