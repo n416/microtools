@@ -72,7 +72,8 @@ exports.getPublicEventsForGroup = async (req, res) => {
       }
     }
 
-    const eventsSnapshot = await firestore.collection('events').where('groupId', '==', groupId).where('status', '!=', 'started').orderBy('status').orderBy('createdAt', 'desc').get();
+    // 修正点：終了済みのイベントも全て取得するようにクエリを変更
+    const eventsSnapshot = await firestore.collection('events').where('groupId', '==', groupId).orderBy('createdAt', 'desc').get();
 
     const events = eventsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
     res.status(200).json(events);
@@ -634,8 +635,7 @@ exports.getEventsByCustomUrl = async (req, res) => {
         return res.status(403).json({error: 'このグループへのアクセスには合言葉が必要です。', requiresPassword: true, groupId: groupId, groupName: groupData.name});
       }
     }
-
-    const eventsSnapshot = await firestore.collection('events').where('groupId', '==', groupId).where('status', '!=', 'started').orderBy('status').orderBy('createdAt', 'desc').get();
+    const eventsSnapshot = await firestore.collection('events').where('groupId', '==', groupId).orderBy('createdAt', 'desc').get();
 
     const events = eventsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
     res.status(200).json(events);
@@ -750,5 +750,50 @@ exports.shufflePrizes = async (req, res) => {
   } catch (error) {
     console.error('Error shuffling prizes:', error);
     res.status(500).json({error: '景品のシャッフルに失敗しました。'});
+  }
+};
+
+exports.acknowledgeResult = async (req, res) => {
+  try {
+    const {eventId} = req.params;
+    const {memberId} = req.body;
+    const token = req.headers['x-auth-token'];
+
+    if (!token || !memberId) {
+      return res.status(400).json({error: '認証情報が不足しています。'});
+    }
+
+    const eventRef = firestore.collection('events').doc(eventId);
+    const eventDoc = await eventRef.get();
+
+    if (!eventDoc.exists) {
+      return res.status(404).json({error: 'イベントが見つかりません。'});
+    }
+    const eventData = eventDoc.data();
+    const groupId = eventData.groupId;
+
+    // メンバーの存在とトークンの正当性を確認
+    const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
+    const memberDoc = await memberRef.get();
+
+    if (!memberDoc.exists || memberDoc.data().deleteToken !== token) {
+      return res.status(403).json({error: '認証に失敗しました。'});
+    }
+
+    // participants配列を更新
+    const participantIndex = eventData.participants.findIndex((p) => p.memberId === memberId);
+    if (participantIndex === -1) {
+      return res.status(404).json({error: 'イベントに参加していません。'});
+    }
+
+    const updatedParticipants = [...eventData.participants];
+    updatedParticipants[participantIndex].acknowledgedResult = true;
+
+    await eventRef.update({participants: updatedParticipants});
+
+    res.status(200).json({message: '結果を確認しました。'});
+  } catch (error) {
+    console.error('Error acknowledging result:', error);
+    res.status(500).json({error: '結果の確認処理に失敗しました。'});
   }
 };

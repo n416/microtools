@@ -325,6 +325,11 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
     } else if (state.currentParticipantToken && state.currentParticipantId) {
       if (eventData.status === 'started') {
         await showResultsView(eventData, state.currentParticipantName, false);
+        const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
+        if (myParticipation && !myParticipation.acknowledgedResult) {
+          const acknowledgeButton = document.getElementById('acknowledgeButton');
+          if (acknowledgeButton) acknowledgeButton.style.display = 'inline-block';
+        }
       } else {
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
         if (myParticipation && myParticipation.name) {
@@ -353,7 +358,17 @@ async function initializeParticipantDashboardView(customUrlOrGroupId, isCustomUr
     const events = await api.getPublicEventsForGroup(groupData.id);
 
     state.setCurrentGroupId(groupData.id);
+    state.setCurrentGroupData(groupData);
+    state.setParticipantEventList(events);
     state.loadParticipantState();
+
+    // ▼▼▼ このブロックを追加 ▼▼▼
+    const showAcknowledgedCheckbox = document.getElementById('showAcknowledgedEvents');
+    if (showAcknowledgedCheckbox) {
+      const savedPreference = localStorage.getItem('showAcknowledgedEvents');
+      showAcknowledgedCheckbox.checked = savedPreference === 'true';
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
 
     ui.showUserDashboardView(groupData, events);
   } catch (error) {
