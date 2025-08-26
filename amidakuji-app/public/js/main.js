@@ -1196,9 +1196,9 @@ function setupEventListeners() {
       }
     });
   if (elements.animateAllButton) {
-    elements.animateAllButton.addEventListener('click', () => {
+    elements.animateAllButton.addEventListener('click', async () => {
       ui.setBroadcastControlsDisabled(true);
-      resetAnimation(() => {
+      await resetAnimation(() => {
         ui.setBroadcastControlsDisabled(false);
       });
     });
