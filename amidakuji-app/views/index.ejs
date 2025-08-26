@@ -214,6 +214,7 @@
     </div>
     <div id="adminControls">
       <button id="startEventButton" class="primary-action">🎉 このあみだくじでイベントを開始する</button>
+      <button id="showFillSlotsModalButton" style="display: none;">👥 参加枠を埋める</button>
     </div>
     <div class="canvas-panzoom-container">
       <div class="loading-mask" id="admin-loading-mask">あみだくじを生成中...</div>
@@ -569,6 +570,31 @@
         <label for="theme-light">ライト</label>
         <input type="radio" id="theme-dark" name="theme" value="dark">
         <label for="theme-dark">ダーク</label>
+      </div>
+    </div>
+  </div>
+  <div id="fillSlotsModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close-button">&times;</span>
+      <h3>参加枠を埋める</h3>
+      <p>現在 <strong id="emptySlotCount">0</strong> 件の空き枠があります。</p>
+
+      <div id="fillSlotsStep1">
+        <h4>ステップ1：未参加のアクティブメンバー</h4>
+        <ul id="unjoinedMemberList" class="item-list" style="max-height: 200px; overflow-y: auto;">
+          <li>読み込み中...</li>
+        </ul>
+        <div class="modal-actions">
+          <button id="selectMembersButton" class="primary-action">メンバーをランダム選出</button>
+        </div>
+      </div>
+
+      <div id="fillSlotsStep2" style="display: none;">
+        <h4>ステップ2：選出されたメンバー</h4>
+        <ul id="selectedMemberList" class="item-list"></ul>
+        <div class="modal-actions">
+          <button id="confirmFillSlotsButton" class="primary-action">このメンバーで枠を埋める</button>
+        </div>
       </div>
     </div>
   </div>

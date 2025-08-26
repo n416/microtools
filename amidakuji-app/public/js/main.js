@@ -1717,6 +1717,76 @@ function setupEventListeners() {
       }
     });
   }
+  // --- 「参加枠を埋める」機能のイベントリスナー ---
+  let selectedAssignments = [];
+
+  if (elements.showFillSlotsModalButton) {
+    elements.showFillSlotsModalButton.addEventListener('click', async () => {
+      elements.fillSlotsModal.style.display = 'block';
+      document.getElementById('fillSlotsStep1').style.display = 'block';
+      document.getElementById('fillSlotsStep2').style.display = 'none';
+      elements.unjoinedMemberList.innerHTML = '<li>読み込み中...</li>';
+
+      try {
+        const unjoinedMembers = await api.getUnjoinedMembers(state.currentGroupId, state.currentEventId);
+        const emptySlots = state.currentLotteryData.participants.filter((p) => p.name === null).length;
+        elements.emptySlotCount.textContent = emptySlots;
+
+        if (unjoinedMembers.length > 0) {
+          elements.unjoinedMemberList.innerHTML = unjoinedMembers.map((m) => `<li class="item-list-item">${m.name}</li>`).join('');
+          elements.selectMembersButton.disabled = false;
+        } else {
+          elements.unjoinedMemberList.innerHTML = '<li>対象メンバーがいません。</li>';
+          elements.selectMembersButton.disabled = true;
+        }
+      } catch (error) {
+        elements.unjoinedMemberList.innerHTML = `<li class="error-message">${error.error}</li>`;
+      }
+    });
+  }
+
+  if (elements.fillSlotsModal) {
+    elements.fillSlotsModal.querySelector('.close-button').addEventListener('click', () => {
+      elements.fillSlotsModal.style.display = 'none';
+    });
+  }
+
+  if (elements.selectMembersButton) {
+    elements.selectMembersButton.addEventListener('click', async () => {
+      const unjoinedMembers = await api.getUnjoinedMembers(state.currentGroupId, state.currentEventId);
+      const emptySlots = state.currentLotteryData.participants.filter((p) => p.name === null).length;
+
+      if (unjoinedMembers.length < emptySlots) {
+        alert('空き枠数に対して、未参加のアクティブメンバーが不足しています。');
+        selectedAssignments = [...unjoinedMembers];
+      } else {
+        // ランダムに選出
+        const shuffled = unjoinedMembers.sort(() => 0.5 - Math.random());
+        selectedAssignments = shuffled.slice(0, emptySlots);
+      }
+
+      elements.selectedMemberList.innerHTML = selectedAssignments.map((m) => `<li class="item-list-item">${m.name}</li>`).join('');
+      document.getElementById('fillSlotsStep1').style.display = 'none';
+      document.getElementById('fillSlotsStep2').style.display = 'block';
+    });
+  }
+
+  if (elements.confirmFillSlotsButton) {
+    elements.confirmFillSlotsButton.addEventListener('click', async () => {
+      try {
+        await api.fillSlots(
+          state.currentEventId,
+          selectedAssignments.map((m) => ({id: m.id, name: m.name}))
+        );
+        elements.fillSlotsModal.style.display = 'none';
+        alert('参加枠を更新しました。');
+        // 配信画面を再読み込みして最新の状態を反映
+        await router.loadEventForEditing(state.currentEventId, 'broadcastView');
+      } catch (error) {
+        alert(`エラー: ${error.error}`);
+      }
+    });
+  }
 }
 
 function setupHamburgerMenu() {

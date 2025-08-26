@@ -97,3 +97,6 @@ export const analyzeBulkMembers = (groupId, namesText) => request(`/api/groups/$
 export const finalizeBulkMembers = (groupId, resolutions) => request(`/api/groups/${groupId}/members/finalize-bulk`, 'POST', {resolutions});
 
 export const updateMemberStatus = (groupId, memberId, isActive) => request(`/api/groups/${groupId}/members/${memberId}/status`, 'PUT', {isActive});
+
+export const getUnjoinedMembers = (groupId, eventId) => request(`/api/groups/${groupId}/unjoined-members?eventId=${eventId}`);
+export const fillSlots = (eventId, assignments) => request(`/api/events/${eventId}/fill-slots`, 'POST', {assignments});
