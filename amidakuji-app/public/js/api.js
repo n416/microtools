@@ -51,7 +51,7 @@ export const updateEvent = (id, eventData) => request(`/api/events/${id}`, 'PUT'
 export const copyEvent = (eventId) => request(`/api/events/${eventId}/copy`, 'POST');
 export const deleteEvent = (eventId) => request(`/api/events/${eventId}`, 'DELETE');
 export const startEvent = (eventId) => request(`/api/events/${eventId}/start`, 'POST');
-export const generateEventPrizeUploadUrl = (eventId, fileType) => request(`/api/events/${eventId}/generate-upload-url`, 'POST', {fileType});
+export const generateEventPrizeUploadUrl = (eventId, fileType, fileHash) => request(`/api/events/${eventId}/generate-upload-url`, 'POST', {fileType, fileHash});
 export const getPublicEventData = (eventId) => request(`/api/events/${eventId}/public`);
 export const getPublicShareData = (eventId) => request(`/api/share/${eventId}`);
 export const joinEvent = (eventId, name, memberId) => request(`/api/events/${eventId}/join`, 'POST', {name, memberId});
