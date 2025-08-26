@@ -858,7 +858,6 @@ function setupEventListeners() {
       const members = await api.getMembers(state.currentGroupId);
       ui.renderMemberList(members);
     });
-
     elements.memberList.addEventListener('click', async (e) => {
       const memberItem = e.target.closest('.member-list-item');
       if (!memberItem) return;
@@ -894,6 +893,25 @@ function setupEventListeners() {
             }
           },
         });
+      }
+    });
+
+    // トグルスイッチの変更イベントを監視
+    elements.memberList.addEventListener('change', async (e) => {
+      if (e.target.classList.contains('is-active-toggle')) {
+        const memberItem = e.target.closest('.member-list-item');
+        const memberId = memberItem.dataset.memberId;
+        const isActive = e.target.checked;
+
+        try {
+          await api.updateMemberStatus(state.currentGroupId, memberId, isActive);
+          // 成功したら見た目を更新
+          memberItem.classList.toggle('inactive', !isActive);
+        } catch (error) {
+          alert('状態の更新に失敗しました。');
+          // 失敗したらスイッチを元に戻す
+          e.target.checked = !isActive;
+        }
       }
     });
 

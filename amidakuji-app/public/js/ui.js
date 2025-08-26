@@ -557,6 +557,7 @@ export function renderEventList(allEvents) {
     elements.eventList.appendChild(li);
   });
 }
+
 export function renderMemberList(members) {
   if (!elements.memberList) return;
   elements.memberList.innerHTML = '';
@@ -566,10 +567,13 @@ export function renderMemberList(members) {
     .filter((member) => member.name.toLowerCase().includes(searchTerm))
     .forEach((member) => {
       const li = document.createElement('li');
-      li.className = 'item-list-item member-list-item';
+      // isActiveがfalseの場合にinactiveクラスを付与
+      const isActive = typeof member.isActive === 'boolean' ? member.isActive : true;
+      li.className = `item-list-item member-list-item ${isActive ? '' : 'inactive'}`;
       li.dataset.memberId = member.id;
 
       const createdByLabel = member.createdBy === 'admin' ? '<span class="label admin">管理者登録</span>' : '<span class="label user">本人登録</span>';
+      const checkedAttribute = isActive ? 'checked' : '';
 
       li.innerHTML = `
                 <div class="member-info">
@@ -578,6 +582,10 @@ export function renderMemberList(members) {
                     ${createdByLabel}
                 </div>
                 <div class="item-buttons">
+                    <label class="switch">
+                        <input type="checkbox" class="is-active-toggle" ${checkedAttribute}>
+                        <span class="slider"></span>
+                    </label>
                     <button class="edit-member-btn">編集</button>
                     <button class="delete-btn delete-member-btn">削除</button>
                 </div>
@@ -1034,7 +1042,7 @@ export function renderBulkAnalysisPreview(analysisResults) {
   elements.finalizeBulkButton.disabled = false;
 }
 
-export function renderPrizeListMode(sortConfig = { key: 'name', order: 'asc' }) {
+export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
   if (!elements.prizeListModeContainer) return;
 
   // 1. 景品データを集計し、画像のバリエーションもチェック
@@ -1060,7 +1068,7 @@ export function renderPrizeListMode(sortConfig = { key: 'name', order: 'asc' }) 
   }, {});
 
   let prizeArray = Object.values(prizeSummary);
-  
+
   // 2. ソート処理
   prizeArray.sort((a, b) => {
     const valA = a[sortConfig.key];
@@ -1087,20 +1095,20 @@ export function renderPrizeListMode(sortConfig = { key: 'name', order: 'asc' }) 
       <tbody>
   `;
 
-  prizeArray.forEach(item => {
+  prizeArray.forEach((item) => {
     let imageContent = '';
     const uniqueId = `prize-list-image-upload-${item.name.replace(/\s/g, '-')}`;
-    
+
     // 修正：newImageFileからのプレビュー表示に対応
     if (item.hasMultipleImages) {
-        imageContent = '<div class="prize-image-cell multi-image" title="複数の画像が設定されています">🖼️</div>';
+      imageContent = '<div class="prize-image-cell multi-image" title="複数の画像が設定されています">🖼️</div>';
     } else if (item.newImageFile) {
-        const tempUrl = URL.createObjectURL(item.newImageFile);
-        imageContent = `<img src="${tempUrl}" alt="${item.name}" class="prize-image-cell">`;
+      const tempUrl = URL.createObjectURL(item.newImageFile);
+      imageContent = `<img src="${tempUrl}" alt="${item.name}" class="prize-image-cell">`;
     } else if (item.imageUrl) {
-        imageContent = `<img src="${item.imageUrl}" alt="${item.name}" class="prize-image-cell">`;
+      imageContent = `<img src="${item.imageUrl}" alt="${item.name}" class="prize-image-cell">`;
     } else {
-        imageContent = '<div class="prize-image-cell no-image" title="画像が設定されていません">?</div>';
+      imageContent = '<div class="prize-image-cell no-image" title="画像が設定されていません">?</div>';
     }
 
     tableHTML += `

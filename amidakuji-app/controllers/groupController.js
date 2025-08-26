@@ -147,6 +147,7 @@ exports.finalizeBulkMembers = async (req, res) => {
           iconUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(normalized)}&background=random&color=fff`,
           createdAt: new Date(),
           createdBy: 'admin-bulk',
+          isActive: true, // ★ この行を追加
         };
 
         const newMemberRef = membersRef.doc();
@@ -429,6 +430,7 @@ exports.loginOrRegisterMember = async (req, res) => {
         iconUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(normalized)}&background=random&color=fff`,
         createdAt: new Date(),
         createdBy: 'user', // 出自を'user'として記録
+        isActive: true, // ★ この行を追加
       };
       await membersRef.doc(finalMemberId).set(memberData);
 
@@ -493,6 +495,7 @@ exports.addMember = async (req, res) => {
       iconUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(normalized)}&background=random&color=fff`,
       createdAt: new Date(),
       createdBy: 'admin', // 出自を'admin'として記録
+      isActive: true, // ★ この行を追加
     };
 
     const newMemberRef = await membersRef.add(newMemberData);
@@ -682,5 +685,30 @@ exports.deletePrizeMaster = async (req, res) => {
   } catch (error) {
     console.error('Error deleting prize master:', error);
     res.status(500).json({error: '賞品マスターの削除に失敗しました。'});
+  }
+};
+
+exports.updateMemberStatus = async (req, res) => {
+  try {
+    const {groupId, memberId} = req.params;
+    const {isActive} = req.body;
+
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({error: 'アクティブ状態が必要です。'});
+    }
+
+    const groupRef = firestore.collection('groups').doc(groupId);
+    const groupDoc = await groupRef.get();
+    if (!groupDoc.exists || groupDoc.data().ownerId !== req.user.id) {
+      return res.status(403).json({error: '権限がありません。'});
+    }
+
+    const memberRef = groupRef.collection('members').doc(memberId);
+    await memberRef.update({isActive});
+
+    res.status(200).json({message: 'メンバーの状態を更新しました。'});
+  } catch (error) {
+    console.error('Error updating member status:', error);
+    res.status(500).json({error: 'メンバー状態の更新に失敗しました。'});
   }
 };

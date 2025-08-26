@@ -32,4 +32,7 @@ router.post('/groups/:groupId/prize-masters/generate-upload-url', ensureAuthenti
 router.post('/groups/:groupId/prize-masters', ensureAuthenticated, groupController.addPrizeMaster);
 router.delete('/prize-masters/:masterId', ensureAuthenticated, groupController.deletePrizeMaster);
 
+// Member Status Route
+router.put('/groups/:groupId/members/:memberId/status', ensureAuthenticated, groupController.updateMemberStatus);
+
 module.exports = router;
