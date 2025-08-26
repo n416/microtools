@@ -33,5 +33,6 @@ router.delete('/events/:eventId/participants', eventController.deleteParticipant
 
 router.post('/events/:eventId/regenerate-lines', ensureAuthenticated, eventController.regenerateLines);
 router.post('/events/:eventId/shuffle-prizes', ensureAuthenticated, eventController.shufflePrizes);
+router.post('/events/:eventId/acknowledge-result', eventController.acknowledgeResult);
 
 module.exports = router;

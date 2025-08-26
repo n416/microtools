@@ -276,9 +276,14 @@
           <button id="deleteMyAccountButton" class="secondary-btn danger">アカウントを削除</button>
         </div>
       </div>
-
-      <div id="otherEventsSection" class="controls" style="display: none;">
-        <h4>参加可能なイベント一覧</h4>
+      <div id="otherEventsSection" class="controls" style="display: none; margin-top: 20px;">
+        <div class="list-header">
+          <h4>イベント一覧</h4>
+          <div class="input-group checkbox-group" style="margin-bottom: 0;">
+            <input type="checkbox" id="showAcknowledgedEvents" />
+            <label for="showAcknowledgedEvents">終了済みを表示する</label>
+          </div>
+        </div>
         <ul id="otherEventsList" class="item-list"></ul>
       </div>
       <div id="joinSection" style="display: none">
@@ -308,6 +313,7 @@
       </div>
       <p id="myResult"></p>
       <div id="allResultsContainer"></div>
+      <button id="acknowledgeButton" class="primary-action" style="display: none; margin-top: 15px;">🎁 結果を受け取る</button>
       <button id="shareButton" style="display: none">結果をシェアする</button>
       <button id="backToControlPanelFromResultButton" style="display: none">戻る</button>
     </div>

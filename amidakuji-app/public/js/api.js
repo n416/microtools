@@ -90,6 +90,7 @@ export const updateMember = (groupId, memberId, data) => request(`/api/groups/${
 export const deleteMember = (groupId, memberId) => request(`/api/groups/${groupId}/members/${memberId}`, 'DELETE');
 export const regenerateLines = (eventId) => request(`/api/events/${eventId}/regenerate-lines`, 'POST');
 export const shufflePrizes = (eventId, shuffledPrizes) => request(`/api/events/${eventId}/shuffle-prizes`, 'POST', {shuffledPrizes});
+export const acknowledgeResult = (eventId, memberId, token) => request(`/api/events/${eventId}/acknowledge-result`, 'POST', {memberId}, {'x-auth-token': token});
 
 // Bulk Member Registration
 export const analyzeBulkMembers = (groupId, namesText) => request(`/api/groups/${groupId}/members/analyze-bulk`, 'POST', {namesText});

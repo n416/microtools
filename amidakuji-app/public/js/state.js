@@ -74,3 +74,13 @@ export function clearParticipantState() {
   currentParticipantId = null;
   currentParticipantName = null;
 }
+
+export let participantEventList = [];
+export let currentGroupData = null;
+
+export function setParticipantEventList(events) {
+  participantEventList = events;
+}
+export function setCurrentGroupData(group) {
+  currentGroupData = group;
+}
