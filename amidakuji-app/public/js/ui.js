@@ -2,6 +2,13 @@
 import * as state from './state.js';
 import {stopAnimation} from './animation.js';
 
+// ★ クライアントサイド用のマッピングとヘルパー関数を定義
+// window.emojiMapData は index.ejs でサーバーサイドから渡される
+const clientEmojiMap = new Map(window.emojiMapData || []);
+function clientEmojiToLucide(emoji) {
+  return clientEmojiMap.get(emoji) || '';
+}
+
 /* ==========================================================================
    DOM要素の参照
    -------------------------------------------------------------------------- */
@@ -123,8 +130,6 @@ export const elements = {
   highlightUserButton: document.getElementById('highlightUserButton'),
   revealRandomButton: document.getElementById('revealRandomButton'),
 
-  toggleFullscreenButton: document.getElementById('toggleFullscreenButton'),
-
   // Participant View
   participantEventName: document.getElementById('participantEventName'),
   backToGroupEventListLink: document.getElementById('backToGroupEventListLink'),
@@ -229,7 +234,6 @@ export const elements = {
   selectMembersButton: document.getElementById('selectMembersButton'),
   selectedMemberList: document.getElementById('selectedMemberList'),
   confirmFillSlotsButton: document.getElementById('confirmFillSlotsButton'),
-  showFillSlotsModalButton: document.getElementById('showFillSlotsModalButton'),
 };
 
 const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];
@@ -834,7 +838,6 @@ export function renderAllResults(results, isShareView, highlightName) {
 
   if (!elements.allResultsContainer || !results) return;
 
-  // ▼▼▼ ここからが修正点 ▼▼▼
   let html = `
     <div class="list-header">
       <h3>みんなの結果</h3>
@@ -842,7 +845,6 @@ export function renderAllResults(results, isShareView, highlightName) {
     </div>
     <ul class="item-list">
   `;
-  // ▲▲▲ 修正点ここまで ▲▲▲
 
   for (const name in results) {
     const prize = results[name].prize;
@@ -986,7 +988,8 @@ export function renderOtherEvents(events, groupCustomUrl) {
     let badge = '';
 
     if (event.status === 'started' && myParticipation && !myParticipation.acknowledgedResult) {
-      badge = '<span class="badge result-ready">🎉結果発表！</span>';
+      const iconName = clientEmojiToLucide('🎉');
+      badge = `<span class="badge result-ready"><i data-lucide="${iconName}"></i>結果発表！</span>`;
     } else if (event.status === 'pending') {
       if (myParticipation) {
         badge = '<span class="badge joined">参加登録済</span>';
@@ -1002,6 +1005,11 @@ export function renderOtherEvents(events, groupCustomUrl) {
     elements.otherEventsList.appendChild(li);
   });
   elements.otherEventsSection.style.display = 'block';
+
+  // 動的にアイコンを生成した後に、Lucideを再実行する必要がある
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
 }
 
 export function openBulkRegisterModal() {
@@ -1132,16 +1140,17 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
     let imageContent = '';
     const uniqueId = `prize-list-image-upload-${item.name.replace(/\s/g, '-')}`;
 
-    // 修正：newImageFileからのプレビュー表示に対応
     if (item.hasMultipleImages) {
-      imageContent = '<div class="prize-image-cell multi-image" title="複数の画像が設定されています">🖼️</div>';
+      const iconName = clientEmojiToLucide('🖼️');
+      imageContent = `<div class="prize-image-cell multi-image" title="複数の画像が設定されています"><i data-lucide="${iconName}"></i></div>`;
     } else if (item.newImageFile) {
       const tempUrl = URL.createObjectURL(item.newImageFile);
       imageContent = `<img src="${tempUrl}" alt="${item.name}" class="prize-image-cell">`;
     } else if (item.imageUrl) {
       imageContent = `<img src="${item.imageUrl}" alt="${item.name}" class="prize-image-cell">`;
     } else {
-      imageContent = '<div class="prize-image-cell no-image" title="画像が設定されていません">?</div>';
+      const iconName = clientEmojiToLucide('？');
+      imageContent = `<div class="prize-image-cell no-image" title="画像が設定されていません"><i data-lucide="${iconName}"></i></div>`;
     }
 
     tableHTML += `
@@ -1159,6 +1168,10 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
 
   tableHTML += `</tbody></table>`;
   elements.prizeListModeContainer.innerHTML = tableHTML;
+
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
 }
 export function setBroadcastControlsDisabled(disabled) {
   const controls = document.querySelectorAll('#broadcastSidebar button, #broadcastSidebar select');

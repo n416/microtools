@@ -163,7 +163,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       // ▼▼▼ ここからが修正点 ▼▼▼
       if (data.status === 'pending') {
         if (adminControls) adminControls.style.display = 'block';
-        if (startEventButton) startEventButton.style.display = 'inline-block';
+        if (startEventButton) startEventButton.style.display = 'inline-flex';
 
         // 実施前は「再生・進行」「個別表示」グループを非表示
         if (animateAllButton) animateAllButton.closest('.control-group').style.display = 'none';
@@ -348,7 +348,7 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
         if (myParticipation && !myParticipation.acknowledgedResult) {
           const acknowledgeButton = document.getElementById('acknowledgeButton');
-          if (acknowledgeButton) acknowledgeButton.style.display = 'inline-block';
+          if (acknowledgeButton) acknowledgeButton.style.display = 'inline-flex';
         }
       } else {
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
@@ -391,7 +391,7 @@ async function showResultsView(eventData, targetName, isShareView) {
       if (ui.elements.myResult) ui.elements.myResult.textContent = 'まだ結果は発表されていません。';
     }
     if (!isShareView) {
-      if (ui.elements.shareButton) ui.elements.shareButton.style.display = 'inline-block';
+      if (ui.elements.shareButton) ui.elements.shareButton.style.display = 'inline-flex';
       if (ui.elements.backToControlPanelFromResultButton) ui.elements.backToControlPanelFromResultButton.style.display = 'block';
     }
     if (eventData.results) {

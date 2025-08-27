@@ -243,6 +243,7 @@ async function initializeApp() {
   if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
     await loadUserAndRedirect(state.currentUser.lastUsedGroupId);
   }
+  lucide.createIcons(); // ★ この行を末尾に追加
 }
 
 async function loadUserAndRedirect(lastUsedGroupId) {
