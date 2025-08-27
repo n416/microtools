@@ -14,8 +14,12 @@
   --notification-bg-color: #fffbe6;
   --notification-border-color: #ffe58f;
   --notification-text-color: #8a6d3b;
+  /* ★ここを追加★ Lucideアイコンの線の太さを設定 */
+  --lucide-stroke-width: 1; /* 初期値は2。1.5や1.25などに変更すると細くなります */
 }
-
+.lucide {
+  stroke-width: var(--lucide-stroke-width);
+}
 body {
   font-family: 'Helvetica Neue', Arial, 'Hirino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
   color: var(--text-color);
@@ -282,6 +286,11 @@ input[type='color'] {
 }
 
 button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  baseline-source:last;
+  gap: 5px;
   background-color: var(--primary-color);
   color: white;
   cursor: pointer;
@@ -413,12 +422,20 @@ button:disabled {
   margin: 0;
 }
 .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1;
   padding: 4px 10px;
   border-radius: 12px;
   font-weight: bold;
   font-size: 12px;
   color: white;
   margin: 0 5px;
+}
+.badge svg {
+  height: 16px;
+  width: 16px;
 }
 .badge.ongoing {
   background-color: var(--approve-color);
