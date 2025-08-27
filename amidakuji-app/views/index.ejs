@@ -55,7 +55,7 @@
         <button id="currentGroupName"></button>
         <div id="groupDropdown" class="dropdown-content">
           <ul id="switcherGroupList"></ul>
-          <button id="switcherCreateGroup">＋ 新規グループを作成</button>
+          <button id="switcherCreateGroup"><i data-lucide="<%= emojiToLucide('＋') %>"></i> 新規グループを作成</button>
         </div>
       </div>
       <div class="auth-controls">
@@ -126,9 +126,9 @@
     </div>
 
     <div class="controls">
-      <button id="goToGroupSettingsButton">⚙️ グループ設定</button>
-      <button id="goToPrizeMasterButton">🏆 賞品マスター管理</button>
-      <button id="goToMemberManagementButton">👥 メンバー管理</button>
+      <button id="goToGroupSettingsButton"><i data-lucide="<%= emojiToLucide('⚙️') %>"></i> グループ設定</button>
+      <button id="goToPrizeMasterButton"><i data-lucide="<%= emojiToLucide('🏆') %>"></i> 賞品マスター管理</button>
+      <button id="goToMemberManagementButton"><i data-lucide="<%= emojiToLucide('👥') %>"></i> メンバー管理</button>
       <button id="goToCreateEventViewButton">イベント新規作成</button>
     </div>
     <div class="list-header">
@@ -143,14 +143,14 @@
 
   <div id="memberManagementView" class="view-container" style="display: none">
     <div class="event-header">
-      <button id="backToDashboardFromMembersButton">← ダッシュボードに戻る</button>
+      <button id="backToDashboardFromMembersButton"><i data-lucide="<%= emojiToLucide('←') %>"></i> ダッシュボードに戻る</button>
     </div>
     <h2><span id="memberManagementGroupName"></span> のメンバー管理</h2>
     <div class="controls">
       <div class="input-group">
         <label for="memberSearchInput" class="visually-hidden">メンバー名で検索</label>
         <input type="text" id="memberSearchInput" placeholder="メンバー名で検索..." />
-        <button id="addNewMemberButton" class="primary-action">＋ メンバー追加</button>
+        <button id="addNewMemberButton" class="primary-action"><i data-lucide="<%= emojiToLucide('＋') %>"></i> メンバー追加</button>
         <button id="bulkRegisterButton">一括登録</button>
       </div>
     </div>
@@ -159,7 +159,7 @@
 
   <div id="eventEditView" class="view-container" style="display: none">
     <div class="event-header">
-      <button id="backToGroupsButton">← グループ一覧に戻る</button>
+      <button id="backToGroupsButton"><i data-lucide="<%= emojiToLucide('←') %>"></i> グループ一覧に戻る</button>
     </div>
     <h3>イベント新規作成・編集</h3>
     <div class="controls">
@@ -176,9 +176,9 @@
         <h4>2. 景品</h4>
         <div class="prize-controls-header">
           <div class="input-group prize-main-controls">
-            <button id="openAddPrizeModalButton" class="primary-action">＋ 追加</button>
+            <button id="openAddPrizeModalButton" class="primary-action"><i data-lucide="<%= emojiToLucide('＋') %>"></i> 追加</button>
             <button id="bulkAddPrizesButton">テキスト流し込み</button>
-            <button id="shufflePrizesButton" type="button">🔄 ランダム並び替え</button>
+            <button id="shufflePrizesButton" type="button"><i data-lucide="<%= emojiToLucide('🔄') %>"></i> ランダム並び替え</button>
             <button id="showSummaryButton">集計</button>
           </div>
           <div class="view-mode-switcher">
@@ -210,7 +210,7 @@
 
   <div id="broadcastView" class="view-container" style="display: none">
     <div class="broadcast-header">
-      <button id="backToDashboardButton">← ダッシュボードに戻る</button>
+      <button id="backToDashboardButton"><i data-lucide="<%= emojiToLucide('←') %>"></i> ダッシュボードに戻る</button>
       <button id="toggleFullscreenButton">表示エリアを最大化</button>
     </div>
 
@@ -218,8 +218,8 @@
       <p class="event-url-display">イベントURL: <a id="broadcastEventUrl" href="#" target="_blank">読み込み中...</a></p>
       <div class="canvas-panzoom-container">
         <div id="adminControls" class="floating-controls">
-          <button id="startEventButton" class="primary-action">🎉 イベント開始</button>
-          <button id="showFillSlotsModalButton" style="display: none;">👥 参加枠を埋める</button>
+          <button id="startEventButton" class="primary-action"><i data-lucide="<%= emojiToLucide('🎉') %>"></i> イベント開始</button>
+          <button id="showFillSlotsModalButton" style="display: none;"><i data-lucide="<%= emojiToLucide('👥') %>"></i> 参加枠を埋める</button>
         </div>
         <div class="loading-mask" id="admin-loading-mask">あみだくじを生成中...</div>
         <div class="panzoom-wrapper" id="admin-panzoom-wrapper">
@@ -228,7 +228,7 @@
       </div>
 
       <aside id="broadcastSidebar" class="broadcast-sidebar">
-        <button id="closeSidebarButton" class="close-sidebar-btn" aria-label="閉じる">&times;</button>
+        <button id="closeSidebarButton" class="close-sidebar-btn" aria-label="閉じる"><i data-lucide="<%= emojiToLucide('×') %>"></i></button>
         <h4>コントロールパネル</h4>
         <div class="broadcast-controls">
           <div class="control-group">
@@ -238,8 +238,8 @@
           </div>
           <div class="control-group">
             <h5>あみだくじ操作</h5>
-            <button id="regenerateLinesButton">🔄 線を再生成</button>
-            <button id="shufflePrizesBroadcastButton">🎁 景品シャッフル</button>
+            <button id="regenerateLinesButton"><i data-lucide="<%= emojiToLucide('🔄') %>"></i> 線を再生成</button>
+            <button id="shufflePrizesBroadcastButton"><i data-lucide="<%= emojiToLucide('🎁') %>"></i> 景品シャッフル</button>
             <button id="glimpseButton">景品チラ見せ</button>
           </div>
           <div class="control-group">
@@ -271,7 +271,7 @@
   <div id="participantView" class="view-container" style="display: none">
     <h2 id="participantEventName">イベント読み込み中...</h2>
     <div class="event-header">
-      <a href="#" id="backToGroupEventListLink" style="display: none;">← イベント一覧に戻る</a>
+      <a href="#" id="backToGroupEventListLink" style="display: none;"><i data-lucide="<%= emojiToLucide('←') %>"></i> イベント一覧に戻る</a>
     </div>
     <div id="participantFlow">
       <div id="nameEntrySection" class="controls" style="display: none">
@@ -308,7 +308,7 @@
         <ul id="otherEventsList" class="item-list"></ul>
       </div>
       <div id="joinSection" style="display: none">
-        <button id="backToControlPanelButton">← メニューに戻る</button>
+        <button id="backToControlPanelButton"><i data-lucide="<%= emojiToLucide('←') %>"></i> メニューに戻る</button>
         <div id="prizeDisplay"></div>
         <div class="slot-selection-container">
           <h3>参加枠を選んでください</h3>
@@ -325,7 +325,7 @@
       </div>
     </div>
     <div id="resultSection" style="display: none">
-      <h3>🎉 結果発表 🎉</h3>
+      <h3><i data-lucide="<%= emojiToLucide('🎉') %>"></i> 結果発表 <i data-lucide="<%= emojiToLucide('🎉') %>"></i></h3>
       <div class="canvas-panzoom-container">
         <div class="loading-mask" id="participant-loading-mask">あみだくじを生成中...</div>
         <div class="panzoom-wrapper" id="participant-panzoom-wrapper">
@@ -334,7 +334,7 @@
       </div>
       <p id="myResult"></p>
       <div id="allResultsContainer"></div>
-      <button id="acknowledgeButton" class="primary-action" style="display: none; margin-top: 15px;">🎁 結果を受け取る</button>
+      <button id="acknowledgeButton" class="primary-action" style="display: none; margin-top: 15px;"><i data-lucide="<%= emojiToLucide('🎁') %>"></i> 結果を受け取る</button>
       <button id="shareButton" style="display: none">結果をシェアする</button>
       <button id="backToControlPanelFromResultButton" style="display: none">戻る</button>
     </div>
@@ -342,7 +342,7 @@
 
   <div id="groupSettingsModal" class="modal" style="display: none">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>グループ設定</h3>
       <input type="hidden" id="settingsGroupId" />
       <div class="input-group">
@@ -371,7 +371,7 @@
 
   <div id="prizeMasterModal" class="modal" style="display: none">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>賞品マスター管理</h3>
       <div class="input-group">
         <label for="addMasterPrizeNameInput" class="visually-hidden">新しい賞品名</label>
@@ -388,7 +388,7 @@
 
   <div id="passwordResetRequestModal" class="modal" style="display: none">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>合言葉リセット依頼</h3>
       <ul id="passwordResetRequestList" class="item-list"></ul>
     </div>
@@ -396,7 +396,7 @@
 
   <div id="memberEditModal" class="modal" style="display: none">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>メンバー編集</h3>
       <input type="hidden" id="memberIdInput">
       <div class="input-group">
@@ -415,7 +415,7 @@
 
   <div id="passwordSetModal" class="modal" style="display: none">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>合言葉の設定</h3>
       <p>合言葉を設定すると、他の人があなたのアカウントを使うのを防げます。</p>
       <div class="input-group">
@@ -431,7 +431,7 @@
 
   <div id="profileEditModal" class="modal" style="display: none">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>プロフィール編集</h3>
       <div class="profile-icon-container">
         <img id="profileIconPreview" src="" alt="Profile Icon" width="100" height="100" />
@@ -450,7 +450,7 @@
 
   <div id="prizeMasterSelectModal" class="modal" style="display: none">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>賞品をマスターから選択</h3>
       <ul id="prizeMasterSelectList" class="item-list prize-master-list"></ul>
       <div class="modal-actions">
@@ -461,7 +461,7 @@
 
   <div id="groupPasswordModal" class="modal" style="display: none">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>合言葉の入力</h3>
       <p>グループ「<strong id="verificationTargetGroupName"></strong>」へのアクセスには合言葉が必要です。</p>
       <input type="hidden" id="verificationTargetGroupId" />
@@ -477,7 +477,7 @@
 
   <div id="bulkRegisterModal" class="modal" style="display: none">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>メンバーの一括登録</h3>
       <div id="bulk-step1-input">
         <label for="bulkNamesTextarea">登録したいメンバーの名前を、改行・スペース・カンマ区切りでテキストエリアに貼り付けてください。</label>
@@ -505,7 +505,7 @@
 
   <div id="prizeBulkAddModal" class="modal" style="display: none;">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>景品の一括登録・編集</h3>
       <p>景品リストを編集し、「リストを更新」ボタンを押してください。</p>
       <textarea id="prizeBulkTextarea" rows="10"></textarea>
@@ -519,7 +519,7 @@
 
   <div id="addPrizeModal" class="modal" style="display: none;">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>景品の追加</h3>
       <div class="input-group">
         <label>景品名:</label>
@@ -539,7 +539,7 @@
 
   <div id="summaryModal" class="modal" style="display: none;">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>景品集計</h3>
       <p>合計: <span id="totalPrizes"></span>個</p>
       <ul id="prizeSummaryList"></ul>
@@ -549,8 +549,15 @@
   <script type="module" src="/js/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
 
   <script>
+    <% if (typeof emojiMapJSON !== 'undefined' && emojiMapJSON) { %>
+    window.emojiMapData = <%- emojiMapJSON %>;
+    <% } else { %>
+    window.emojiMapData = [];
+    <% } %>
+
     <% if (typeof groupData !== 'undefined' && groupData) { %>
     const initialGroupData = <%- groupData %>;
     <% } else { %>
@@ -593,7 +600,7 @@
   </div>
   <div id="fillSlotsModal" class="modal" style="display: none;">
     <div class="modal-content">
-      <span class="close-button">&times;</span>
+      <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
       <h3>参加枠を埋める</h3>
       <p>現在 <strong id="emptySlotCount">0</strong> 件の空き枠があります。</p>
 

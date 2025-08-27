@@ -35,6 +35,7 @@ async function startServer() {
   const path = require('path');
   const session = require('express-session');
   const passport = require('passport');
+  const {emojiToLucide, emojiMap} = require('./utils/emoji-map'); // ★ emoji-mapをインポート
 
   // Passport設定の読み込み
   require('./config/passport')(passport);
@@ -46,6 +47,11 @@ async function startServer() {
   // EJS設定
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
+
+  // Expressのapp.localsにヘルパー関数とデータを設定
+  // これにより、すべてのテンプレートでグローバルに利用可能になる
+  app.locals.emojiToLucide = emojiToLucide;
+  app.locals.emojiMapJSON = JSON.stringify(Array.from(emojiMap.entries()));
 
   // 静的ファイルとJSONパーサーのミドルウェア
   app.use(express.static(path.join(__dirname, 'public')));
