@@ -8,6 +8,7 @@ import {initMemberManagement} from './components/memberManagement.js';
 import {initEventEdit} from './components/eventEdit.js';
 import {initAdminDashboard} from './components/adminDashboard.js';
 import * as router from './router.js';
+import {initParticipantView} from './components/participantView.js';
 
 const settings = {
   animation: true,
@@ -235,6 +236,7 @@ async function initializeApp() {
   initMemberManagement();
   initEventEdit();
   initAdminDashboard();
+  initParticipantView();
 
   setupEventListeners();
   setupHamburgerMenu();
@@ -338,19 +340,6 @@ export async function handleCopyEvent(eventId) {
   } catch (error) {
     alert(`エラー: ${error.error}`);
   }
-}
-
-function handleShareResult() {
-  if (!state.currentEventId || !state.currentParticipantName) return;
-  const shareUrl = `${window.location.origin}/share/${state.currentEventId}/${encodeURIComponent(state.currentParticipantName)}`;
-  navigator.clipboard
-    .writeText(shareUrl)
-    .then(() => {
-      alert('クリップボードにシェア用URLをコピーしました！');
-    })
-    .catch((err) => {
-      prompt('このURLをコピーしてシェアしてください:', shareUrl);
-    });
 }
 
 async function buildNewPrizesWithDataPreservation(newNames) {
@@ -693,251 +682,6 @@ function setupEventListeners() {
       }
     });
 
-  if (elements.confirmNameButton) {
-    elements.confirmNameButton.addEventListener('click', async () => {
-      const name = elements.nameInput.value.trim();
-      if (state.currentEventId) {
-        await router.handleLoginOrRegister(state.currentEventId, name);
-      } else if (state.currentGroupId) {
-        await router.handleParticipantLogin(state.currentGroupId, name);
-      }
-    });
-  }
-
-  if (elements.nameInput)
-    elements.nameInput.addEventListener('keyup', () => {
-      clearTimeout(state.debounceTimer);
-      const query = elements.nameInput.value.trim();
-      if (query.length === 0) {
-        if (elements.suggestionList) elements.suggestionList.innerHTML = '';
-        return;
-      }
-      state.setDebounceTimer(
-        setTimeout(async () => {
-          try {
-            const suggestions = await api.getMemberSuggestions(state.currentGroupId, query);
-            ui.renderSuggestions(suggestions, async (name, memberId, hasPassword) => {
-              elements.nameInput.value = name;
-              elements.suggestionList.innerHTML = '';
-              const contextGroupId = state.currentGroupId;
-              if (state.currentEventId) {
-                if (hasPassword) {
-                  const password = prompt(`「${name}」さんの合言葉を入力してください:`);
-                  if (password) await router.verifyAndLogin(state.currentEventId, memberId, password);
-                } else {
-                  await router.handleLoginOrRegister(state.currentEventId, name, memberId);
-                }
-              } else if (contextGroupId) {
-                await router.handleParticipantLogin(contextGroupId, name, memberId);
-              }
-            });
-          } catch (e) {
-            console.error('Suggestion fetch failed', e);
-          }
-        }, 300)
-      );
-    });
-
-  if (elements.goToAmidaButton)
-    elements.goToAmidaButton.addEventListener('click', async () => {
-      const eventData = await api.getPublicEventData(state.currentEventId);
-      state.setCurrentLotteryData(eventData);
-      if (eventData.status === 'started') {
-        await router.navigateTo(window.location.pathname, false);
-      } else {
-        const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
-        if (myParticipation && myParticipation.name) {
-          ui.showWaitingView();
-        } else {
-          ui.showJoinView(eventData);
-        }
-      }
-    });
-
-  if (elements.backToControlPanelButton)
-    elements.backToControlPanelButton.addEventListener('click', async () => {
-      try {
-        const group = await api.getGroup(state.currentGroupId);
-        if (group && group.customUrl) {
-          await router.navigateTo(`/g/${group.customUrl}/dashboard`);
-        } else {
-          await router.navigateTo('/');
-        }
-      } catch (error) {
-        console.error('Failed to get group info for navigation:', error);
-        await router.navigateTo('/');
-      }
-    });
-
-  if (elements.backToControlPanelFromResultButton)
-    elements.backToControlPanelFromResultButton.addEventListener('click', async () => {
-      try {
-        const group = await api.getGroup(state.currentGroupId);
-        if (group && group.customUrl) {
-          await router.navigateTo(`/g/${group.customUrl}/dashboard`);
-        } else {
-          await router.navigateTo('/');
-        }
-      } catch (error) {
-        console.error('Failed to get group info for navigation:', error);
-        await router.navigateTo('/');
-      }
-    });
-
-  if (elements.setPasswordButton)
-    elements.setPasswordButton.addEventListener('click', async () => {
-      try {
-        const memberData = await api.getMemberDetails(state.currentGroupId, state.currentParticipantId);
-        ui.openPasswordSetModal(
-          {
-            onSave: async () => {
-              const password = elements.newPasswordInput.value;
-              try {
-                await api.setPassword(state.currentParticipantId, password, state.currentGroupId, state.currentParticipantToken);
-                alert('合言葉を設定しました。');
-                elements.passwordSetModal.style.display = 'none';
-              } catch (error) {
-                alert(error.error);
-              }
-            },
-          },
-          !!memberData.password
-        );
-      } catch (error) {
-        alert('ユーザー情報の取得に失敗しました。');
-      }
-    });
-
-  if (elements.deleteUserPasswordButton) {
-    elements.deleteUserPasswordButton.addEventListener('click', async () => {
-      if (confirm('合言葉を削除しますか？')) {
-        try {
-          await api.setPassword(state.currentParticipantId, null, state.currentGroupId, state.currentParticipantToken);
-          alert('合言葉を削除しました。');
-          elements.passwordSetModal.style.display = 'none';
-        } catch (error) {
-          alert(error.error || '合言葉の削除に失敗しました。');
-        }
-      }
-    });
-  }
-
-  if (elements.backToDashboardFromWaitingButton) {
-    elements.backToDashboardFromWaitingButton.addEventListener('click', async () => {
-      try {
-        const group = await api.getGroup(state.currentGroupId);
-        if (group && group.customUrl) {
-          await router.navigateTo(`/g/${group.customUrl}/dashboard`);
-        } else {
-          await router.navigateTo(`/groups/${state.currentGroupId}`);
-        }
-      } catch (error) {
-        console.error('Failed to get group info for navigation:', error);
-        await router.navigateTo('/');
-      }
-    });
-  }
-  if (elements.participantLogoutButton)
-    elements.participantLogoutButton.addEventListener('click', async () => {
-      try {
-        await api.clearGroupVerification();
-      } catch (error) {
-        console.error('Failed to clear group verification session:', error);
-      } finally {
-        state.clearParticipantState();
-        window.location.reload();
-      }
-    });
-  if (elements.deleteMyAccountButton)
-    elements.deleteMyAccountButton.addEventListener('click', async () => {
-      if (!confirm('本当にこのグループからあなたのアカウントを削除しますか？\nこの操作は元に戻せません。')) return;
-      try {
-        await api.deleteMemberAccount(state.currentGroupId, state.currentParticipantId, state.currentParticipantToken);
-        alert('アカウントを削除しました。');
-        state.clearParticipantState();
-        window.location.reload();
-      } catch (error) {
-        alert(`削除エラー: ${error.error}`);
-      }
-    });
-  if (elements.slotList)
-    elements.slotList.addEventListener('click', (e) => {
-      const target = e.target.closest('.slot.available');
-      if (!target) return;
-      document.querySelectorAll('.slot.selected').forEach((el) => el.classList.remove('selected'));
-      target.classList.add('selected');
-      state.setSelectedSlot(parseInt(target.dataset.slot, 10));
-      if (elements.joinButton) elements.joinButton.disabled = false;
-    });
-  if (elements.joinButton)
-    elements.joinButton.addEventListener('click', async () => {
-      if (state.selectedSlot === null) return alert('参加枠を選択してください。');
-      elements.joinButton.disabled = true;
-      try {
-        await api.joinSlot(state.currentEventId, state.currentParticipantId, state.currentParticipantToken, state.selectedSlot);
-        await router.navigateTo(window.location.pathname, false);
-      } catch (error) {
-        alert(error.error);
-      } finally {
-        elements.joinButton.disabled = false;
-      }
-    });
-  if (elements.shareButton) elements.shareButton.addEventListener('click', handleShareResult);
-  if (elements.deleteParticipantWaitingButton)
-    elements.deleteParticipantWaitingButton.addEventListener('click', async () => {
-      if (!confirm('このイベントへの参加を取り消しますか？')) return;
-      try {
-        await api.deleteParticipant(state.currentEventId, state.currentParticipantToken);
-        alert('参加を取り消しました。');
-        window.location.reload();
-      } catch (error) {
-        alert(error.error);
-      }
-    });
-
-  if (elements.editProfileButton)
-    elements.editProfileButton.addEventListener('click', async () => {
-      try {
-        const memberData = await api.getMemberDetails(state.currentGroupId, state.currentParticipantId);
-        ui.openProfileEditModal(memberData, {
-          onSave: async () => {
-            elements.saveProfileButton.disabled = true;
-            try {
-              let newIconUrl = null;
-              const file = elements.profileIconInput.files[0];
-              if (file) {
-                const {signedUrl, iconUrl} = await api.generateUploadUrl(state.currentParticipantId, file.type, state.currentGroupId, state.currentParticipantToken);
-                await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
-                newIconUrl = iconUrl;
-              }
-              const profileData = {color: elements.profileColorInput.value};
-              if (newIconUrl) profileData.iconUrl = newIconUrl;
-
-              await api.updateProfile(state.currentParticipantId, profileData, state.currentGroupId, state.currentParticipantToken);
-              alert('プロフィールを保存しました。');
-              ui.closeProfileEditModal();
-            } catch (error) {
-              alert(error.error);
-            } finally {
-              elements.saveProfileButton.disabled = false;
-            }
-          },
-        });
-      } catch (error) {
-        alert(error.error);
-      }
-    });
-  if (elements.profileIconInput)
-    elements.profileIconInput.addEventListener('change', () => {
-      const file = elements.profileIconInput.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (elements.profileIconPreview) elements.profileIconPreview.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
-    });
   if (elements.prizeMasterSelectList)
     elements.prizeMasterSelectList.addEventListener('click', (e) => {
       const item = e.target.closest('li');
@@ -973,33 +717,6 @@ function setupEventListeners() {
     }
   });
 
-  const showAcknowledgedEventsCheckbox = document.getElementById('showAcknowledgedEvents');
-  if (showAcknowledgedEventsCheckbox) {
-    showAcknowledgedEventsCheckbox.addEventListener('change', () => {
-      localStorage.setItem('showAcknowledgedEvents', showAcknowledgedEventsCheckbox.checked);
-
-      if (state.participantEventList && state.currentGroupData) {
-        ui.renderOtherEvents(state.participantEventList, state.currentGroupData.customUrl);
-      }
-    });
-  }
-
-  const acknowledgeButton = document.getElementById('acknowledgeButton');
-  if (acknowledgeButton) {
-    acknowledgeButton.addEventListener('click', async () => {
-      try {
-        await api.acknowledgeResult(state.currentEventId, state.currentParticipantId, state.currentParticipantToken);
-        acknowledgeButton.style.display = 'none';
-        const participant = state.currentLotteryData.participants.find((p) => p.memberId === state.currentParticipantId);
-        if (participant) {
-          participant.acknowledgedResult = true;
-        }
-        alert('結果を受け取りました！');
-      } catch (error) {
-        alert(`エラー: ${error.error || '処理に失敗しました。'}`);
-      }
-    });
-  }
   let selectedAssignments = [];
 
   if (elements.showFillSlotsModalButton) {
@@ -1064,16 +781,6 @@ function setupEventListeners() {
         await router.loadEventForEditing(state.currentEventId, 'broadcastView');
       } catch (error) {
         alert(`エラー: ${error.error}`);
-      }
-    });
-  }
-  if (elements.allResultsContainer) {
-    elements.allResultsContainer.addEventListener('click', (e) => {
-      if (e.target.id === 'showAllTracersButton') {
-        if (isAnimationRunning()) {
-          return;
-        }
-        showAllTracersInstantly();
       }
     });
   }
