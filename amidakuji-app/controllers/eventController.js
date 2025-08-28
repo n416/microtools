@@ -29,7 +29,6 @@ exports.getPublicShareData = async (req, res) => {
       return res.status(404).json({error: '指定された参加者の結果が見つかりません。'});
     }
 
-    // ▼▼▼ ここからが修正点 ▼▼▼
     // 他の参加者の名前を空白にマスキング
     const sanitizedParticipants = eventData.participants.map((p) => {
       if (p.name === decodedParticipantName) {
@@ -46,7 +45,6 @@ exports.getPublicShareData = async (req, res) => {
       }
       return {name: '', imageUrl: null}; // 名前を空白に
     });
-    // ▲▲▲ 修正点ここまで ▲▲▲
 
     const publicData = {
       eventName: eventName,
@@ -99,7 +97,6 @@ exports.getPublicEventsForGroup = async (req, res) => {
       }
     }
 
-    // 修正点：終了済みのイベントも全て取得するようにクエリを変更
     const eventsSnapshot = await firestore.collection('events').where('groupId', '==', groupId).orderBy('createdAt', 'desc').get();
 
     const events = eventsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
@@ -163,7 +160,10 @@ exports.copyEvent = async (req, res) => {
     }
 
     const originalEvent = eventDoc.data();
-    if (originalEvent.ownerId !== req.user.id) {
+    const isOwner = req.user && originalEvent.ownerId === req.user.id;
+    const isSysAdmin = req.user && req.user.role === 'system_admin' && !req.user.isImpersonating;
+
+    if (!isOwner && !isSysAdmin) {
       return res.status(403).json({error: 'このイベントをコピーする権限がありません。'});
     }
 
@@ -197,33 +197,59 @@ exports.copyEvent = async (req, res) => {
 
 exports.getEvent = async (req, res) => {
   try {
+    console.log('--- getEvent Start ---');
     const eventId = req.params.id;
+    console.log(`[LOG] Fetching event with ID: ${eventId}`);
     const doc = await firestore.collection('events').doc(eventId).get();
     if (!doc.exists) {
+      console.log('[LOG] Event not found in database.');
       return res.status(404).json({error: 'イベントが見つかりません。'});
     }
     const eventData = doc.data();
+    console.log('[LOG] Event data retrieved:', eventData);
+
     const groupRef = firestore.collection('groups').doc(eventData.groupId);
     const groupDoc = await groupRef.get();
     if (!groupDoc.exists) {
+      console.log(`[LOG] Group with ID ${eventData.groupId} not found.`);
       return res.status(404).json({error: '所属グループが見つかりません。'});
     }
 
     const groupData = groupDoc.data();
-    const isOwner = req.user && groupData.ownerId === req.user.id;
+    console.log('[LOG] Group data retrieved:', groupData);
+    console.log('[LOG] Current user:', req.user);
 
-    if (groupData.password) {
-      if (!isOwner && (!req.session.verifiedGroups || !req.session.verifiedGroups.includes(eventData.groupId))) {
-        return res.status(403).json({error: 'このグループへのアクセスには合言葉が必要です。', requiresPassword: true, groupId: eventData.groupId, groupName: groupData.name});
+    const isOwner = req.user && groupData.ownerId === req.user.id;
+    const isSysAdmin = req.user && req.user.role === 'system_admin' && !req.user.isImpersonating;
+    console.log(`[LOG] Permission Check: IsOwner=${isOwner}, IsSysAdmin=${isSysAdmin}`);
+
+    // ★★★ 修正点：システム管理者の場合は、所有者でなくても閲覧可能にする ★★★
+    if (isOwner || isSysAdmin) {
+       console.log('[LOG] Access Granted: User is owner or system admin.');
+    } else {
+      console.log('[LOG] User is neither owner nor system admin. Checking for password.');
+      if (groupData.password) {
+        if (!req.session.verifiedGroups || !req.session.verifiedGroups.includes(eventData.groupId)) {
+          console.log('[LOG] Access Denied: Group password required but not verified.');
+          return res.status(403).json({error: 'このグループへのアクセスには合言葉が必要です。', requiresPassword: true, groupId: eventData.groupId, groupName: groupData.name});
+        }
+        console.log('[LOG] Access Granted: Group password verified in session.');
+      } else {
+         // パスワードが無く、所有者でもシステム管理者でもない場合は閲覧できない
+         // ただし、このAPIは管理者画面でのみ使われるため、ここに来ることは通常ないはず
+         console.log('[LOG] Access Denied: No password and user is not authorized.');
+         return res.status(403).json({ error: 'このイベントを閲覧する権限がありません。' });
       }
     }
 
+    console.log('--- getEvent Success ---');
     res.status(200).json({id: doc.id, ...eventData});
   } catch (error) {
-    console.error(`Error fetching event ${req.params.id}:`, error);
+    console.error(`[ERROR] Fatal error in getEvent for event ID ${req.params.id}:`, error);
     res.status(500).json({error: 'イベントの読み込みに失敗しました。'});
   }
 };
+
 
 exports.updateEvent = async (req, res) => {
   try {
@@ -239,18 +265,19 @@ exports.updateEvent = async (req, res) => {
     if (!doc.exists) return res.status(404).json({error: 'イベントが見つかりません。'});
 
     const eventData = doc.data();
-    if (eventData.ownerId !== req.user.id) return res.status(403).json({error: 'このイベントを編集する権限がありません。'});
+    const isOwner = req.user && eventData.ownerId === req.user.id;
+    const isSysAdmin = req.user && req.user.role === 'system_admin' && !req.user.isImpersonating;
+
+    if (!isOwner && !isSysAdmin) {
+      return res.status(403).json({error: 'このイベントを編集する権限がありません。'});
+    }
     if (eventData.status === 'started') return res.status(400).json({error: '開始済みのイベントは編集できません。'});
 
-    // ▼▼▼ 不要画像クリーンアップ処理を強化 ▼▼▼
     const oldImageUrls = new Set((eventData.prizes || []).map((p) => p.imageUrl).filter(Boolean));
     const newImageUrls = new Set(prizes.map((p) => p.imageUrl).filter(Boolean));
-
-    // 古いリストにはあったが、新しいリストにはないURLを削除候補とする
     const urlsToDelete = [...oldImageUrls].filter((url) => !newImageUrls.has(url));
 
     for (const urlToDelete of urlsToDelete) {
-      // 削除候補のURLが、他のどのイベントでも使われていないことを確認する
       const querySnapshot = await firestore
         .collection('events')
         .where(
@@ -261,7 +288,6 @@ exports.updateEvent = async (req, res) => {
         .limit(1)
         .get();
 
-      // 他のイベントで参照が見つからなければ、GCSからファイルを削除
       if (querySnapshot.empty) {
         try {
           const fileName = urlToDelete.split(`${bucket.name}/`)[1]?.split('?')[0];
@@ -274,7 +300,6 @@ exports.updateEvent = async (req, res) => {
         }
       }
     }
-    // ▲▲▲ クリーンアップ処理ここまで ▲▲▲
 
     const updateData = {
       eventName: eventName || '無題のイベント',
@@ -312,7 +337,10 @@ exports.deleteEvent = async (req, res) => {
     }
 
     const eventData = doc.data();
-    if (eventData.ownerId !== req.user.id) {
+    const isOwner = req.user && eventData.ownerId === req.user.id;
+    const isSysAdmin = req.user && req.user.role === 'system_admin' && !req.user.isImpersonating;
+
+    if (!isOwner && !isSysAdmin) {
       return res.status(403).json({error: 'このイベントを削除する権限がありません。'});
     }
 
@@ -329,11 +357,18 @@ exports.startEvent = async (req, res) => {
     const {eventId} = req.params;
     const eventRef = firestore.collection('events').doc(eventId);
     const doc = await eventRef.get();
-    if (!doc.exists || doc.data().ownerId !== req.user.id) {
+
+    if (!doc.exists) {
+        return res.status(404).json({ error: 'イベントが見つかりません。' });
+    }
+    const eventData = doc.data();
+    const isOwner = req.user && eventData.ownerId === req.user.id;
+    const isSysAdmin = req.user && req.user.role === 'system_admin' && !req.user.isImpersonating;
+
+    if (!isOwner && !isSysAdmin) {
       return res.status(403).json({error: 'このイベントを開始する権限がありません。'});
     }
 
-    const eventData = doc.data();
     if (eventData.status === 'started') {
       return res.status(400).json({error: 'イベントは既に開始されています。'});
     }

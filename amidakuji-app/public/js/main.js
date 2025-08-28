@@ -1,17 +1,21 @@
-// amidakuji-app/public/js/main.js
-
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
-import * as router from './router.js';
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, redrawPrizes, showAllTracersInstantly, adminPanzoom, participantPanzoom} from './animation.js';
+import { initGroupDashboard, renderGroupList } from './components/groupDashboard.js';
+import { initEventDashboard } from './components/eventDashboard.js';
+import { initMemberManagement } from './components/memberManagement.js';
+import { initEventEdit } from './components/eventEdit.js';
+import * as router from './router.js';
+
+
 const settings = {
   animation: true,
-  theme: 'auto', // 'auto', 'light', 'dark'
+  theme: 'auto',
 };
 
 const darkModeMatcher = window.matchMedia('(prefers-color-scheme: dark)');
-let tronAnimationAPI = null; // Tron AnimationのAPIを保持する変数
+let tronAnimationAPI = null;
 
 document.addEventListener('DOMContentLoaded', initializeApp);
 
@@ -211,7 +215,6 @@ function initTronAnimation() {
       } else if (theme === 'light') {
         setupTheme(false);
       } else {
-        // auto
         setupTheme(darkModeMatcher.matches);
       }
     },
@@ -226,6 +229,11 @@ async function initializeApp() {
   loadSettings();
   applySettings();
   setupSettingsControls();
+
+  initGroupDashboard();
+  initEventDashboard();
+  initMemberManagement();
+  initEventEdit();
 
   setupEventListeners();
   setupHamburgerMenu();
@@ -243,14 +251,14 @@ async function initializeApp() {
   if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
     await loadUserAndRedirect(state.currentUser.lastUsedGroupId);
   }
-  lucide.createIcons(); // ★ この行を末尾に追加
+  lucide.createIcons();
 }
 
-async function loadUserAndRedirect(lastUsedGroupId) {
+export async function loadUserAndRedirect(lastUsedGroupId) {
   try {
     const groups = await api.getGroups();
     state.setAllUserGroups(groups);
-    ui.renderGroupList(groups);
+    renderGroupList(groups);
 
     if (groups.length > 0) {
       let targetGroup = groups.find((g) => g.id === lastUsedGroupId) || groups[0];
@@ -264,7 +272,7 @@ async function loadUserAndRedirect(lastUsedGroupId) {
   }
 }
 
-async function openGroupSettingsFor(groupId) {
+export async function openGroupSettingsFor(groupId) {
   const groupData = state.allUserGroups.find((g) => g.id === groupId);
   if (!groupData) {
     alert('グループ情報が見つかりませんでした。');
@@ -312,7 +320,7 @@ async function handleSaveSettings() {
     ui.closeSettingsModal();
     const groups = await api.getGroups();
     state.setAllUserGroups(groups);
-    ui.renderGroupList(groups);
+    renderGroupList(groups);
   } catch (error) {
     alert(error.error || '設定の保存に失敗しました。');
   } finally {
@@ -320,7 +328,7 @@ async function handleSaveSettings() {
   }
 }
 
-async function handleCopyEvent(eventId) {
+export async function handleCopyEvent(eventId) {
   if (!confirm('このイベントをコピーしますか？')) return;
   try {
     await api.copyEvent(eventId);
@@ -336,7 +344,7 @@ async function handleApproveAdmin(requestId) {
   try {
     await api.approveAdminRequest(requestId);
     alert('申請を承認しました。');
-    await router.navigateTo('/admin/dashboard', false); // Refresh admin dashboard
+    await router.navigateTo('/admin/dashboard', false);
   } catch (error) {
     alert(error.error);
   }
@@ -358,7 +366,7 @@ async function handleDemoteAdmin(userId) {
   try {
     await api.demoteAdmin(userId);
     alert('ユーザーを降格させました。');
-    await router.navigateTo('/admin/dashboard', false); // Refresh admin dashboard
+    await router.navigateTo('/admin/dashboard', false);
   } catch (error) {
     alert(error.error);
   }
@@ -398,159 +406,6 @@ async function buildNewPrizesWithDataPreservation(newNames) {
 function setupEventListeners() {
   const {elements} = ui;
 
-  // ▼▼▼ パート1：表示モード切替UIのロジック ▼▼▼
-  const viewModeCardBtn = document.getElementById('viewModeCard');
-  const viewModeListBtn = document.getElementById('viewModeList');
-  const prizeCardContainer = document.getElementById('prizeCardListContainer');
-  const prizeListContainer = document.getElementById('prizeListModeContainer');
-  let sortConfig = {key: 'name', order: 'asc'};
-
-  const switchViewMode = (mode) => {
-    if (mode === 'list') {
-      viewModeCardBtn.classList.remove('active');
-      viewModeListBtn.classList.add('active');
-      prizeCardContainer.style.display = 'none';
-      prizeListContainer.style.display = 'block';
-      ui.renderPrizeListMode(sortConfig);
-    } else {
-      viewModeListBtn.classList.remove('active');
-      viewModeCardBtn.classList.add('active');
-      prizeListContainer.style.display = 'none';
-      prizeCardContainer.style.display = 'grid';
-      ui.renderPrizeCardList();
-    }
-    localStorage.setItem('prizeViewMode', mode);
-  };
-
-  if (viewModeCardBtn && viewModeListBtn) {
-    viewModeCardBtn.addEventListener('click', () => switchViewMode('card'));
-    viewModeListBtn.addEventListener('click', () => switchViewMode('list'));
-    const savedMode = localStorage.getItem('prizeViewMode') || 'card';
-  }
-  // ▼▼▼ リストモードのイベント処理 ▼▼▼
-  if (prizeListContainer) {
-    prizeListContainer.addEventListener('change', (e) => {
-      // 数量が変更された時の処理
-      if (e.target.classList.contains('prize-quantity-input')) {
-        const name = e.target.dataset.name;
-        const newQuantity = parseInt(e.target.value, 10);
-        const currentPrizes = state.prizes.filter((p) => p.name === name);
-        const currentQuantity = currentPrizes.length;
-
-        if (isNaN(newQuantity) || newQuantity < 0) {
-          e.target.value = currentQuantity; // 無効な値は元に戻す
-          return;
-        }
-
-        if (newQuantity === 0) {
-          if (!confirm(`景品「${name}」の数量を0にしますか？\nリストからすべての「${name}」が削除されます。よろしいですか？`)) {
-            e.target.value = currentQuantity; // 操作をキャンセルし、数量を元に戻す
-            return;
-          }
-        }
-
-        const prizeMaster = currentPrizes[0] || {name, imageUrl: null};
-
-        if (newQuantity > currentQuantity) {
-          const diff = newQuantity - currentQuantity;
-          for (let i = 0; i < diff; i++) {
-            state.prizes.push({...prizeMaster});
-          }
-        } else if (newQuantity < currentQuantity) {
-          const diff = currentQuantity - newQuantity;
-          for (let i = 0; i < diff; i++) {
-            const indexToRemove = state.prizes.findIndex((p) => p.name === name);
-            if (indexToRemove > -1) {
-              state.prizes.splice(indexToRemove, 1);
-            }
-          }
-        }
-
-        const focusedElement = document.activeElement;
-        const focusedName = focusedElement.dataset.name;
-
-        ui.renderPrizeCardList();
-        ui.renderPrizeListMode(sortConfig);
-
-        // input type="number" は selectionStart をサポートしないため、focus() のみを実行
-        if (focusedName) {
-          const newFocusedElement = prizeListContainer.querySelector(`.prize-quantity-input[data-name="${focusedName}"]`);
-          if (newFocusedElement) {
-            newFocusedElement.focus();
-          }
-        }
-      }
-
-      // 名称が変更された時の処理
-      if (e.target.classList.contains('prize-name-input-list')) {
-        const originalName = e.target.dataset.originalName;
-        const newName = e.target.value.trim();
-        if (!newName || newName === originalName) {
-          e.target.value = originalName;
-          return;
-        }
-        if (confirm(`景品「${originalName}」の名称を「${newName}」に一括変更しますか？`)) {
-          state.prizes.forEach((p) => {
-            if (p.name === originalName) {
-              p.name = newName;
-            }
-          });
-          ui.renderPrizeCardList();
-          ui.renderPrizeListMode(sortConfig);
-        } else {
-          e.target.value = originalName;
-        }
-      }
-
-      // 画像が変更された時の処理
-      if (e.target.classList.contains('prize-image-input-list')) {
-        const name = e.target.dataset.name;
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = async (event) => {
-            const buffer = event.target.result;
-            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-
-            state.prizes.forEach((p) => {
-              if (p.name === name) {
-                p.newImageFile = file;
-                p.newImageFileHash = hashHex;
-                p.imageUrl = null;
-              }
-            });
-            ui.renderPrizeCardList();
-            ui.renderPrizeListMode(sortConfig);
-          };
-          reader.readAsArrayBuffer(file);
-        }
-      }
-    });
-
-    prizeListContainer.addEventListener('click', (e) => {
-      if (e.target.classList.contains('delete-prize-list')) {
-        const name = e.target.dataset.name;
-        if (confirm(`景品「${name}」をすべて削除しますか？`)) {
-          state.setPrizes(state.prizes.filter((p) => p.name !== name));
-          ui.renderPrizeCardList();
-          ui.renderPrizeListMode(sortConfig);
-        }
-      }
-      if (e.target.tagName === 'TH' && e.target.dataset.sortKey) {
-        const newKey = e.target.dataset.sortKey;
-        if (sortConfig.key === newKey) {
-          sortConfig.order = sortConfig.order === 'asc' ? 'desc' : 'asc';
-        } else {
-          sortConfig.key = newKey;
-          sortConfig.order = 'asc';
-        }
-        ui.renderPrizeListMode(sortConfig);
-      }
-    });
-  }
-  // ▲▲▲ リストモードのイベント処理ここまで ▲▲▲
   window.addEventListener('popstate', (e) => {
     router.navigateTo(window.location.pathname, false);
   });
@@ -643,79 +498,6 @@ function setupEventListeners() {
     });
   }
 
-  if (elements.createGroupButton)
-    elements.createGroupButton.addEventListener('click', async () => {
-      const name = elements.groupNameInput.value.trim();
-      if (!name) return alert('グループ名を入力してください。');
-      try {
-        await api.createGroup(name);
-        elements.groupNameInput.value = '';
-        await loadUserAndRedirect();
-      } catch (error) {
-        alert(error.error);
-      }
-    });
-
-  if (elements.groupList) {
-    elements.groupList.addEventListener('click', async (e) => {
-      const groupItem = e.target.closest('.item-list-item');
-      if (!groupItem) return;
-      const {groupId, groupName} = groupItem.dataset;
-      const button = e.target.closest('button');
-
-      if (button) {
-        e.stopPropagation();
-        if (button.classList.contains('delete-group-btn')) {
-          if (confirm(`グループ「${groupName}」を削除しますか？\n関連するすべてのイベントも削除され、元に戻せません。`)) {
-            try {
-              await api.deleteGroup(groupId);
-              alert('グループを削除しました。');
-              await loadUserAndRedirect();
-            } catch (error) {
-              alert(error.error || 'グループの削除に失敗しました。');
-            }
-          }
-        } else {
-          state.setCurrentGroupId(groupId);
-          await openGroupSettingsFor(groupId);
-        }
-      } else {
-        await router.navigateTo(`/admin/groups/${groupId}`);
-      }
-    });
-  }
-
-  if (elements.eventList) {
-    elements.eventList.addEventListener('click', async (e) => {
-      const button = e.target.closest('button');
-      const item = e.target.closest('.item-list-item');
-      if (!item) return;
-
-      const eventId = (button || item.querySelector('.edit-event-btn'))?.dataset.eventId;
-      if (!eventId) return;
-
-      e.stopPropagation();
-
-      if (button?.classList.contains('delete-event-btn')) {
-        if (confirm('このイベントを削除しますか？元に戻せません。')) {
-          api
-            .deleteEvent(eventId)
-            .then(async () => {
-              alert('イベントを削除しました。');
-              await router.navigateTo(window.location.pathname, false);
-            })
-            .catch((err) => alert(err.error || 'イベントの削除に失敗しました。'));
-        }
-      } else if (button?.classList.contains('start-event-btn')) {
-        await router.navigateTo(`/admin/event/${eventId}/broadcast`);
-      } else if (button?.classList.contains('copy-event-btn')) {
-        await handleCopyEvent(eventId);
-      } else {
-        await router.navigateTo(`/admin/event/${eventId}/edit`);
-      }
-    });
-  }
-
   if (elements.adminDashboard) {
     elements.adminDashboard.addEventListener('click', async (e) => {
       const button = e.target.closest('button');
@@ -754,229 +536,10 @@ function setupEventListeners() {
       await router.navigateTo('/');
     });
   }
-
-  if (elements.dashboardView) {
-    elements.dashboardView.addEventListener('click', async (e) => {
-      if (e.target.id === 'goToGroupSettingsButton') {
-        if (state.currentGroupId) {
-          await openGroupSettingsFor(state.currentGroupId);
-        }
-      }
-      if (e.target.id === 'goToPrizeMasterButton') {
-        if (state.currentGroupId) {
-          const handlers = {
-            onAddMaster: async () => {
-              const name = elements.addMasterPrizeNameInput.value.trim();
-              const file = elements.addMasterPrizeImageInput.files[0];
-              if (!name || !file) return alert('賞品名と画像を選択してください');
-              try {
-                elements.addMasterPrizeButton.disabled = true;
-                const {signedUrl, imageUrl} = await api.generatePrizeMasterUploadUrl(state.currentGroupId, file.type);
-                await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
-                await api.addPrizeMaster(state.currentGroupId, name, imageUrl);
-                alert('賞品マスターを追加しました。');
-                const masters = await api.getPrizeMasters(state.currentGroupId);
-                ui.renderPrizeMasterList(masters, false);
-                elements.addMasterPrizeNameInput.value = '';
-                elements.addMasterPrizeImageInput.value = '';
-              } catch (error) {
-                alert(error.error);
-              } finally {
-                elements.addMasterPrizeButton.disabled = false;
-              }
-            },
-            onDeleteMaster: async (masterId) => {
-              if (!confirm('この賞品マスターを削除しますか？')) return;
-              try {
-                await api.deletePrizeMaster(masterId, state.currentGroupId);
-                alert('削除しました');
-                const masters = await api.getPrizeMasters(state.currentGroupId);
-                ui.renderPrizeMasterList(masters, false);
-              } catch (error) {
-                alert(error.error);
-              }
-            },
-          };
-          ui.openPrizeMasterModal(handlers);
-          const masters = await api.getPrizeMasters(state.currentGroupId);
-          ui.renderPrizeMasterList(masters, false);
-        }
-      }
-      if (e.target.id === 'goToMemberManagementButton') {
-        if (state.currentGroupId) {
-          router.navigateTo(`/admin/groups/${state.currentGroupId}/members`);
-        }
-      }
-      if (e.target.id === 'showPasswordResetRequestsButton') {
-        if (state.currentGroupId) {
-          const requests = await api.getPasswordRequests(state.currentGroupId);
-          const handlers = {
-            onApproveReset: async (memberId, groupId, requestId) => {
-              if (!confirm('このユーザーの合言葉を削除しますか？')) return;
-              try {
-                await api.approvePasswordReset(memberId, groupId, requestId);
-                alert('合言葉を削除しました。');
-                const updatedRequests = await api.getPasswordRequests(groupId);
-                ui.renderPasswordRequests(updatedRequests);
-                ui.showPasswordResetNotification(updatedRequests);
-                if (updatedRequests.length === 0) {
-                  ui.closePasswordResetRequestModal();
-                }
-              } catch (error) {
-                alert(error.error);
-              }
-            },
-          };
-          ui.openPasswordResetRequestModal(requests, handlers);
-        }
-      }
-    });
-  }
-
-  if (elements.memberManagementView) {
-    elements.backToDashboardFromMembersButton.addEventListener('click', () => {
-      if (state.currentGroupId) {
-        router.navigateTo(`/admin/groups/${state.currentGroupId}`);
-      }
-    });
-
-    elements.addNewMemberButton.addEventListener('click', async () => {
-      const name = prompt('追加するメンバーの名前を入力してください:');
-      if (name && name.trim()) {
-        try {
-          await api.addMember(state.currentGroupId, name.trim());
-          const members = await api.getMembers(state.currentGroupId);
-          ui.renderMemberList(members);
-        } catch (error) {
-          alert(error.error || 'メンバーの追加に失敗しました。');
-        }
-      }
-    });
-
-    elements.memberSearchInput.addEventListener('input', async () => {
-      const members = await api.getMembers(state.currentGroupId);
-      ui.renderMemberList(members);
-    });
-    elements.memberList.addEventListener('click', async (e) => {
-      const memberItem = e.target.closest('.member-list-item');
-      if (!memberItem) return;
-
-      const memberId = memberItem.dataset.memberId;
-      const members = await api.getMembers(state.currentGroupId);
-      const member = members.find((m) => m.id === memberId);
-
-      if (e.target.classList.contains('delete-member-btn')) {
-        if (confirm(`メンバー「${member.name}」を削除しますか？`)) {
-          try {
-            await api.deleteMember(state.currentGroupId, memberId);
-            const updatedMembers = await api.getMembers(state.currentGroupId);
-            ui.renderMemberList(updatedMembers);
-          } catch (error) {
-            alert(error.error || 'メンバーの削除に失敗しました。');
-          }
-        }
-      } else if (e.target.classList.contains('edit-member-btn')) {
-        ui.openMemberEditModal(member, {
-          onSave: async () => {
-            const newName = elements.memberNameEditInput.value.trim();
-            const newColor = elements.memberColorInput.value;
-            if (!newName) return alert('名前は必須です。');
-
-            try {
-              await api.updateMember(state.currentGroupId, memberId, {name: newName, color: newColor});
-              ui.closeMemberEditModal();
-              const updatedMembers = await api.getMembers(state.currentGroupId);
-              ui.renderMemberList(updatedMembers);
-            } catch (error) {
-              alert(error.error || '更新に失敗しました。');
-            }
-          },
-        });
-      }
-    });
-
-    // トグルスイッチの変更イベントを監視
-    elements.memberList.addEventListener('change', async (e) => {
-      if (e.target.classList.contains('is-active-toggle')) {
-        const memberItem = e.target.closest('.member-list-item');
-        const memberId = memberItem.dataset.memberId;
-        const isActive = e.target.checked;
-
-        try {
-          await api.updateMemberStatus(state.currentGroupId, memberId, isActive);
-          // 成功したら見た目を更新
-          memberItem.classList.toggle('inactive', !isActive);
-        } catch (error) {
-          alert('状態の更新に失敗しました。');
-          // 失敗したらスイッチを元に戻す
-          e.target.checked = !isActive;
-        }
-      }
-    });
-
-    elements.memberManagementView.addEventListener('click', (e) => {
-      if (e.target.id === 'bulkRegisterButton') {
-        ui.openBulkRegisterModal();
-      }
-    });
-  }
-
+  
   if (elements.closeSettingsModalButton) elements.closeSettingsModalButton.addEventListener('click', ui.closeSettingsModal);
   if (elements.closePrizeMasterModalButton) elements.closePrizeMasterModalButton.addEventListener('click', ui.closePrizeMasterModal);
-  if (elements.closePasswordResetRequestModalButton) elements.closePasswordResetRequestModalButton.addEventListener('click', ui.closePasswordResetRequestModal);
-  if (elements.closeMemberEditModalButton) elements.closeMemberEditModalButton.addEventListener('click', ui.closeMemberEditModal);
-  if (elements.closeBulkRegisterModalButton) {
-    elements.closeBulkRegisterModalButton.addEventListener('click', ui.closeBulkRegisterModal);
-  }
-
-  if (elements.analyzeBulkButton) {
-    elements.analyzeBulkButton.addEventListener('click', async () => {
-      const namesText = elements.bulkNamesTextarea.value;
-      if (!namesText.trim()) return alert('名前を入力してください。');
-
-      elements.analyzeBulkButton.disabled = true;
-      elements.analyzeBulkButton.textContent = '分析中...';
-      try {
-        const result = await api.analyzeBulkMembers(state.currentGroupId, namesText);
-        ui.renderBulkAnalysisPreview(result.analysisResults);
-      } catch (error) {
-        alert(error.error || '分析に失敗しました。');
-        elements.analyzeBulkButton.disabled = false;
-        elements.analyzeBulkButton.textContent = '確認する';
-      }
-    });
-  }
-
-  if (elements.finalizeBulkButton) {
-    elements.finalizeBulkButton.addEventListener('click', async () => {
-      elements.finalizeBulkButton.disabled = true;
-      elements.finalizeBulkButton.textContent = '登録処理中...';
-
-      const resolutions = [];
-      document.querySelectorAll('#newRegistrationTab li').forEach((li) => {
-        resolutions.push({inputName: li.textContent.match(/"(.*?)"/)[1], action: 'create'});
-      });
-      document.querySelectorAll('#potentialMatchTab li').forEach((li) => {
-        const inputName = li.dataset.inputName;
-        const action = li.querySelector('input[type="radio"]:checked').value;
-        resolutions.push({inputName, action});
-      });
-
-      try {
-        const result = await api.finalizeBulkMembers(state.currentGroupId, resolutions);
-        alert(`${result.createdCount}名のメンバーを新しく登録しました。`);
-        ui.closeBulkRegisterModal();
-        const members = await api.getMembers(state.currentGroupId);
-        ui.renderMemberList(members);
-      } catch (error) {
-        alert(error.error || '登録に失敗しました。');
-      } finally {
-        elements.finalizeBulkButton.disabled = false;
-        elements.finalizeBulkButton.textContent = 'この内容で登録を実行する';
-      }
-    });
-  }
-
+  
   if (elements.closePasswordSetModal)
     elements.closePasswordSetModal.addEventListener('click', () => {
       if (elements.passwordSetModal) elements.passwordSetModal.style.display = 'none';
@@ -984,9 +547,7 @@ function setupEventListeners() {
   if (elements.closeProfileModalButton) elements.closeProfileModalButton.addEventListener('click', ui.closeProfileEditModal);
   if (elements.closePrizeMasterSelectModal) elements.closePrizeMasterSelectModal.addEventListener('click', ui.closePrizeMasterSelectModal);
   if (elements.closeGroupPasswordModalButton) elements.closeGroupPasswordModalButton.addEventListener('click', ui.closeGroupPasswordModal);
-  if (elements.closePrizeBulkAddModalButton) elements.closePrizeBulkAddModalButton.addEventListener('click', ui.closePrizeBulkAddModal);
-  if (elements.cancelBulkAddButton) elements.cancelBulkAddButton.addEventListener('click', ui.closePrizeBulkAddModal);
-
+  
   if (elements.verifyPasswordButton)
     elements.verifyPasswordButton.addEventListener('click', async () => {
       const groupId = elements.verificationTargetGroupId.value;
@@ -1011,172 +572,7 @@ function setupEventListeners() {
     elements.customUrlInput.addEventListener('keyup', () => {
       if (elements.customUrlPreview) elements.customUrlPreview.textContent = elements.customUrlInput.value.trim();
     });
-
-  if (elements.goToCreateEventViewButton)
-    elements.goToCreateEventViewButton.addEventListener('click', async () => {
-      await router.navigateTo(`/admin/group/${state.currentGroupId}/event/new`);
-    });
-
-  if (elements.backToGroupsButton) {
-    elements.backToGroupsButton.addEventListener('click', async () => {
-      if (state.currentGroupId) {
-        await router.navigateTo(`/admin/groups/${state.currentGroupId}`);
-      } else {
-        await router.navigateTo('/');
-      }
-    });
-  }
-
-  if (elements.prizeCardListContainer) {
-    elements.prizeCardListContainer.addEventListener('click', (event) => {
-      const target = event.target;
-      if (target.classList.contains('delete-btn')) {
-        const index = parseInt(target.dataset.index, 10);
-        state.prizes.splice(index, 1);
-        ui.renderPrizeCardList();
-      }
-      if (target.classList.contains('duplicate-btn')) {
-        event.preventDefault();
-        const sourceIndex = parseInt(target.dataset.index, 10);
-        const prizeToDuplicate = JSON.parse(JSON.stringify(state.prizes[sourceIndex]));
-        if (state.prizes[sourceIndex].newImageFile) {
-          prizeToDuplicate.newImageFile = state.prizes[sourceIndex].newImageFile;
-        }
-        state.prizes.splice(sourceIndex + 1, 0, prizeToDuplicate);
-        ui.renderPrizeCardList();
-      }
-    });
-  }
-
-  const shufflePrizesButton = document.getElementById('shufflePrizesButton');
-  if (shufflePrizesButton) {
-    shufflePrizesButton.addEventListener('click', () => {
-      const prizes = state.prizes;
-      for (let i = prizes.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [prizes[i], prizes[j]] = [prizes[j], prizes[i]];
-      }
-      ui.renderPrizeCardList();
-      ui.renderPrizeListMode(sortConfig);
-    });
-  }
-
-  if (elements.bulkAddPrizesButton) {
-    elements.bulkAddPrizesButton.addEventListener('click', () => {
-      ui.openPrizeBulkAddModal();
-    });
-  }
-
-  if (elements.clearBulkPrizesButton) {
-    elements.clearBulkPrizesButton.addEventListener('click', () => {
-      elements.prizeBulkTextarea.value = '';
-    });
-  }
-
-  if (elements.updatePrizesFromTextButton) {
-    elements.updatePrizesFromTextButton.addEventListener('click', async () => {
-      const text = elements.prizeBulkTextarea.value;
-      const prizeNames = text
-        .split('\n')
-        .map((name) => name.trim())
-        .filter((name) => name);
-
-      const newPrizes = await buildNewPrizesWithDataPreservation(prizeNames);
-      state.setPrizes(newPrizes);
-      // ▼▼▼ 修正点 ▼▼▼
-      ui.renderPrizeCardList();
-      ui.renderPrizeListMode(); // リスト表示も更新
-      // ▲▲▲ 修正点ここまで ▲▲▲
-      ui.closePrizeBulkAddModal();
-    });
-  }
-
-  if (elements.createEventButton) {
-    elements.createEventButton.addEventListener('click', async () => {
-      const isUpdate = !!state.currentEventId;
-      const participantCount = state.prizes.length;
-      if (participantCount < 2) return alert('景品は2つ以上設定してください。');
-
-      elements.createEventButton.disabled = true;
-      let originalButtonText = elements.createEventButton.textContent;
-
-      try {
-        let eventId = state.currentEventId;
-
-        if (!isUpdate) {
-          elements.createEventButton.textContent = 'イベント作成中...';
-          const initialEventData = {
-            eventName: elements.eventNameInput.value.trim(),
-            prizes: state.prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
-            groupId: state.currentGroupId,
-            displayMode: elements.displayModeSelect.value,
-          };
-          const newEvent = await api.createEvent(initialEventData);
-          eventId = newEvent.id;
-          state.setCurrentEventId(eventId);
-        }
-
-        elements.createEventButton.textContent = '画像を準備中...';
-        const uniqueFilesToUpload = [];
-        const fileHashes = {};
-
-        // 直列処理でハッシュを計算
-        for (const prize of state.prizes) {
-          if (prize.newImageFile && !Object.values(fileHashes).includes(prize.newImageFile.name)) {
-            const buffer = await prize.newImageFile.arrayBuffer();
-            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-            if (!uniqueFilesToUpload.some((f) => f.hash === hashHex)) {
-              uniqueFilesToUpload.push({file: prize.newImageFile, hash: hashHex});
-            }
-            fileHashes[prize.newImageFile.name] = hashHex;
-          }
-        }
-
-        elements.createEventButton.textContent = '画像をアップロード中...';
-        const uploadedImageUrls = {};
-
-        for (const {file, hash} of uniqueFilesToUpload) {
-          const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, file.type, hash);
-          await fetch(signedUrl, {
-            method: 'PUT',
-            headers: {'Content-Type': file.type},
-            body: file,
-          });
-          uploadedImageUrls[hash] = imageUrl;
-        }
-
-        const finalPrizes = state.prizes.map((prize) => {
-          if (prize.newImageFile) {
-            const hash = fileHashes[prize.newImageFile.name];
-            return {name: prize.name, imageUrl: uploadedImageUrls[hash]};
-          }
-          return {name: prize.name, imageUrl: prize.imageUrl};
-        });
-
-        elements.createEventButton.textContent = '最終保存中...';
-        const finalEventData = {
-          eventName: elements.eventNameInput.value.trim(),
-          prizes: finalPrizes,
-          participantCount: finalPrizes.length,
-          displayMode: elements.displayModeSelect.value,
-        };
-
-        await api.updateEvent(eventId, finalEventData);
-
-        alert('イベントを保存しました！');
-        await router.navigateTo(`/admin/groups/${state.currentGroupId}`);
-      } catch (error) {
-        alert(error.error || 'イベントの保存に失敗しました。');
-        elements.createEventButton.disabled = false;
-        elements.createEventButton.textContent = originalButtonText;
-      } finally {
-        elements.createEventButton.disabled = false;
-        elements.createEventButton.textContent = originalButtonText;
-      }
-    });
-  }
+    
   if (elements.backToDashboardButton)
     elements.backToDashboardButton.addEventListener('click', async () => {
       if (state.currentGroupId) {
@@ -1598,85 +994,7 @@ function setupEventListeners() {
         if (checkbox) checkbox.checked = item.classList.contains('selected');
       }
     });
-
-  if (elements.openAddPrizeModalButton) {
-    elements.openAddPrizeModalButton.addEventListener('click', ui.openAddPrizeModal);
-  }
-
-  if (elements.addPrizeModal) {
-    elements.addPrizeModal.querySelector('.close-button').addEventListener('click', ui.closeAddPrizeModal);
-  }
-
-  if (elements.addPrizeOkButton) {
-    elements.addPrizeOkButton.addEventListener('click', () => {
-      const name = elements.newPrizeNameInput.value.trim();
-      const file = elements.newPrizeImageInput.files[0];
-      if (!name) return alert('景品名を入力してください。');
-
-      const newPrize = {
-        name,
-        imageUrl: null,
-        newImageFile: file || null,
-      };
-
-      // ▼▼▼ ここからが修正点 ▼▼▼
-      // もし画像が選択されておらず、同じ名前の景品が既にある場合、その画像情報を引き継ぐ
-      if (!file) {
-        const existingPrize = state.prizes.find((p) => p.name === name);
-        if (existingPrize) {
-          newPrize.imageUrl = existingPrize.imageUrl;
-          newPrize.newImageFile = existingPrize.newImageFile;
-          newPrize.newImageFileHash = existingPrize.newImageFileHash;
-        }
-      }
-
-      state.prizes.push(newPrize);
-      ui.renderPrizeCardList();
-      ui.renderPrizeListMode();
-      ui.closeAddPrizeModal();
-    });
-  }
-
-  if (elements.callMasterButton) {
-    elements.callMasterButton.addEventListener('click', async () => {
-      try {
-        const masters = await api.getPrizeMasters(state.currentGroupId);
-        ui.openPrizeMasterSelectModal(masters, {
-          onAddSelected: () => {
-            const selected = elements.prizeMasterSelectList.querySelector('li.selected');
-            if (selected) {
-              elements.newPrizeNameInput.value = selected.dataset.name;
-              elements.newPrizeImagePreview.src = selected.dataset.imageUrl;
-              elements.newPrizeImagePreview.style.display = 'block';
-            }
-            ui.closePrizeMasterSelectModal();
-          },
-        });
-      } catch (error) {
-        alert(error.error);
-      }
-    });
-  }
-
-  if (elements.showSummaryButton) {
-    elements.showSummaryButton.addEventListener('click', () => {
-      const breakdown = state.prizes.reduce((acc, prize) => {
-        const name = prize.name;
-        acc[name] = (acc[name] || 0) + 1;
-        return acc;
-      }, {});
-      const summary = {
-        total: state.prizes.length,
-        breakdown,
-      };
-      ui.openSummaryModal(summary);
-    });
-  }
-
-  if (elements.summaryModal) {
-    elements.summaryModal.querySelector('.close-button').addEventListener('click', ui.closeSummaryModal);
-  }
-
+    
   window.addEventListener('resize', ui.adjustBodyPadding);
   window.addEventListener('click', (event) => {
     if (elements.groupSettingsModal && event.target == elements.groupSettingsModal) ui.closeSettingsModal();
@@ -1690,7 +1008,6 @@ function setupEventListeners() {
     if (elements.passwordResetRequestModal && event.target == elements.passwordResetRequestModal) ui.closePasswordResetRequestModal();
     if (elements.memberEditModal && event.target == elements.memberEditModal) ui.closeMemberEditModal();
     if (elements.bulkRegisterModal && event.target == elements.bulkRegisterModal) ui.closeBulkRegisterModal();
-    if (elements.prizeBulkAddModal && event.target == elements.prizeBulkAddModal) ui.closePrizeBulkAddModal();
     if (elements.addPrizeModal && event.target == elements.addPrizeModal) ui.closeAddPrizeModal();
     if (elements.summaryModal && event.target == elements.summaryModal) ui.closeSummaryModal();
     const link = event.target.closest('a');
@@ -1706,10 +1023,8 @@ function setupEventListeners() {
   const showAcknowledgedEventsCheckbox = document.getElementById('showAcknowledgedEvents');
   if (showAcknowledgedEventsCheckbox) {
     showAcknowledgedEventsCheckbox.addEventListener('change', () => {
-      // 状態をローカルストレージに保存
       localStorage.setItem('showAcknowledgedEvents', showAcknowledgedEventsCheckbox.checked);
 
-      // Stateのデータを使ってUIのリスト部分だけを再描画
       if (state.participantEventList && state.currentGroupData) {
         ui.renderOtherEvents(state.participantEventList, state.currentGroupData.customUrl);
       }
@@ -1721,8 +1036,7 @@ function setupEventListeners() {
     acknowledgeButton.addEventListener('click', async () => {
       try {
         await api.acknowledgeResult(state.currentEventId, state.currentParticipantId, state.currentParticipantToken);
-        acknowledgeButton.style.display = 'none'; // ボタンを非表示に
-        // stateを更新
+        acknowledgeButton.style.display = 'none';
         const participant = state.currentLotteryData.participants.find((p) => p.memberId === state.currentParticipantId);
         if (participant) {
           participant.acknowledgedResult = true;
@@ -1733,7 +1047,6 @@ function setupEventListeners() {
       }
     });
   }
-  // --- 「参加枠を埋める」機能のイベントリスナー ---
   let selectedAssignments = [];
 
   if (elements.showFillSlotsModalButton) {
@@ -1776,7 +1089,6 @@ function setupEventListeners() {
         alert('空き枠数に対して、未参加のアクティブメンバーが不足しています。');
         selectedAssignments = [...unjoinedMembers];
       } else {
-        // ランダムに選出
         const shuffled = unjoinedMembers.sort(() => 0.5 - Math.random());
         selectedAssignments = shuffled.slice(0, emptySlots);
       }
@@ -1796,27 +1108,23 @@ function setupEventListeners() {
         );
         elements.fillSlotsModal.style.display = 'none';
         alert('参加枠を更新しました。');
-        // 配信画面を再読み込みして最新の状態を反映
         await router.loadEventForEditing(state.currentEventId, 'broadcastView');
       } catch (error) {
         alert(`エラー: ${error.error}`);
       }
     });
   }
-  // --- 結果画面のイベントリスナー ---
   if (elements.allResultsContainer) {
     elements.allResultsContainer.addEventListener('click', (e) => {
       if (e.target.id === 'showAllTracersButton') {
         if (isAnimationRunning()) {
           return;
         }
-        // 新しい即時表示関数を呼び出す
         showAllTracersInstantly();
       }
     });
   }
 
-  // --- サイドバー開閉ロジック ---
   if (elements.openSidebarButton && elements.broadcastSidebar) {
     const overlay = document.createElement('div');
     overlay.className = 'broadcast-sidebar-overlay';
@@ -1836,17 +1144,15 @@ function setupEventListeners() {
     overlay.addEventListener('click', closeSidebar);
   }
 
-  // --- 表示エリア最大化ボタンのロジック (★ここが修正箇所) ---
   if (elements.toggleFullscreenButton) {
     elements.toggleFullscreenButton.addEventListener('click', () => {
       const container = elements.adminCanvas.closest('.canvas-panzoom-container');
       if (container) {
         const isMaximized = container.classList.toggle('fullscreen-mode');
-        broadcastView.classList.toggle('fullscreen-active', isMaximized); // 親ビューにもクラスを付与
+        broadcastView.classList.toggle('fullscreen-active', isMaximized);
 
         elements.toggleFullscreenButton.textContent = isMaximized ? '元のサイズに戻す' : '表示エリアを最大化';
 
-        // 300ミリ秒待ってから再描画することで、CSSアニメーション完了後に実行
         setTimeout(() => {
           const hidePrizes = state.currentLotteryData?.displayMode === 'private';
           prepareStepAnimation(elements.adminCanvas.getContext('2d'), hidePrizes, false, true);
@@ -1916,7 +1222,6 @@ async function applyTheme(theme, storedState) {
     targetCanvas = participantCanvas;
   }
 
-  // 記憶した状態(storedState)を、そのまま再描画関数に渡す
   if (targetCanvas && state.currentLotteryData) {
     const hidePrizes = state.currentLotteryData.displayMode === 'private' && state.currentLotteryData.status !== 'started';
     await prepareStepAnimation(targetCanvas.getContext('2d'), hidePrizes, false, true, storedState);
@@ -1987,8 +1292,6 @@ function setupSettingsControls() {
 
   themeRadios.forEach((radio) => {
     radio.addEventListener('change', () => {
-      // ▼▼▼ ここからが修正点 ▼▼▼
-      // 1. テーマを変更する「前」に、現在のカメラ状態を記憶する
       let storedState = null;
       let panzoomInstance = null;
       const adminCanvas = document.getElementById('adminCanvas');
@@ -2005,14 +1308,10 @@ function setupSettingsControls() {
           pan: panzoomInstance.getPan(),
           scale: panzoomInstance.getScale(),
         };
-        console.log(`%c[main.js] テーマ変更前。カメラ状態を記憶します:`, 'color: blue; font-weight: bold;', storedState);
       }
-
-      // 2. 記憶した状態を渡しながら、テーマ変更処理を呼び出す
       settings.theme = radio.value;
       saveSettings();
       applyTheme(settings.theme, storedState);
-      // ▲▲▲ 修正点ここまで ▲▲▲
     });
   });
 }

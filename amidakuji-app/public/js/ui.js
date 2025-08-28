@@ -1,19 +1,11 @@
-// js/ui.js
 import * as state from './state.js';
 import {stopAnimation} from './animation.js';
 
-// ★ クライアントサイド用のマッピングとヘルパー関数を定義
-// window.emojiMapData は index.ejs でサーバーサイドから渡される
 const clientEmojiMap = new Map(window.emojiMapData || []);
 function clientEmojiToLucide(emoji) {
   return clientEmojiMap.get(emoji) || '';
 }
-
-/* ==========================================================================
-   DOM要素の参照
-   -------------------------------------------------------------------------- */
 export const elements = {
-  // Header & Auth
   mainHeader: document.querySelector('.main-header'),
   impersonationBanner: document.querySelector('.impersonation-banner'),
   loginButton: document.getElementById('loginButton'),
@@ -23,40 +15,17 @@ export const elements = {
   stopImpersonatingButton: document.getElementById('stopImpersonatingButton'),
   hamburgerButton: document.getElementById('hamburger-button'),
   navMenu: document.getElementById('nav-menu'),
-
-  // Views
   groupDashboard: document.getElementById('groupDashboard'),
   dashboardView: document.getElementById('dashboardView'),
-  memberManagementView: document.getElementById('memberManagementView'),
-  eventEditView: document.getElementById('eventEditView'),
   broadcastView: document.getElementById('broadcastView'),
   participantView: document.getElementById('participantView'),
   adminDashboard: document.getElementById('adminDashboard'),
   groupEventListView: document.getElementById('groupEventListView'),
-
-  // Group Dashboard
-  groupNameInput: document.getElementById('groupNameInput'),
-  createGroupButton: document.getElementById('createGroupButton'),
-  groupList: document.getElementById('groupList'),
-  requestAdminButton: document.getElementById('requestAdminButton'),
-  requestAdminControls: document.getElementById('requestAdminControls'),
-
-  // Group Switcher
   groupSwitcher: document.getElementById('groupSwitcher'),
   currentGroupName: document.getElementById('currentGroupName'),
   groupDropdown: document.getElementById('groupDropdown'),
   switcherGroupList: document.getElementById('switcherGroupList'),
   switcherCreateGroup: document.getElementById('switcherCreateGroup'),
-
-  // Member Management View
-  memberManagementGroupName: document.getElementById('memberManagementGroupName'),
-  backToDashboardFromMembersButton: document.getElementById('backToDashboardFromMembersButton'),
-  addNewMemberButton: document.getElementById('addNewMemberButton'),
-  memberSearchInput: document.getElementById('memberSearchInput'),
-  memberList: document.getElementById('memberList'),
-  bulkRegisterButton: document.getElementById('bulkRegisterButton'),
-
-  // Group Settings Modal
   groupSettingsModal: document.getElementById('groupSettingsModal'),
   closeSettingsModalButton: document.querySelector('#groupSettingsModal .close-button'),
   settingsGroupId: document.getElementById('settingsGroupId'),
@@ -67,47 +36,12 @@ export const elements = {
   deletePasswordButton: document.getElementById('deletePasswordButton'),
   noIndexCheckbox: document.getElementById('noIndexCheckbox'),
   saveGroupSettingsButton: document.getElementById('saveGroupSettingsButton'),
-
-  // Prize Master Modal
   prizeMasterModal: document.getElementById('prizeMasterModal'),
   closePrizeMasterModalButton: document.querySelector('#prizeMasterModal .close-button'),
   prizeMasterList: document.getElementById('prizeMasterList'),
   addMasterPrizeNameInput: document.getElementById('addMasterPrizeNameInput'),
   addMasterPrizeImageInput: document.getElementById('addMasterPrizeImageInput'),
   addMasterPrizeButton: document.getElementById('addMasterPrizeButton'),
-
-  // Password Reset Notification & Modal
-  passwordResetNotification: document.getElementById('passwordResetNotification'),
-  passwordResetCount: document.getElementById('passwordResetCount'),
-  showPasswordResetRequestsButton: document.getElementById('showPasswordResetRequestsButton'),
-  passwordResetRequestModal: document.getElementById('passwordResetRequestModal'),
-  closePasswordResetRequestModalButton: document.querySelector('#passwordResetRequestModal .close-button'),
-  passwordResetRequestList: document.getElementById('passwordResetRequestList'),
-
-  // Event Dashboard (dashboardView)
-  eventGroupName: document.getElementById('eventGroupName'),
-  goToGroupSettingsButton: document.getElementById('goToGroupSettingsButton'),
-  goToPrizeMasterButton: document.getElementById('goToPrizeMasterButton'),
-  goToMemberManagementButton: document.getElementById('goToMemberManagementButton'),
-  goToCreateEventViewButton: document.getElementById('goToCreateEventViewButton'),
-  eventList: document.getElementById('eventList'),
-
-  // Event Edit View
-  backToGroupsButton: document.getElementById('backToGroupsButton'),
-  eventNameInput: document.getElementById('eventNameInput'),
-  bulkAddPrizesButton: document.getElementById('bulkAddPrizesButton'),
-  prizeCardListContainer: document.getElementById('prizeCardListContainer'),
-  prizeListModeContainer: document.getElementById('prizeListModeContainer'),
-
-  displayModeSelect: document.getElementById('displayModeSelect'),
-  createEventButton: document.getElementById('createEventButton'),
-  eventIdInput: document.getElementById('eventIdInput'),
-  loadButton: document.getElementById('loadButton'),
-  currentEventUrl: document.getElementById('currentEventUrl'),
-  openAddPrizeModalButton: document.getElementById('openAddPrizeModalButton'),
-  showSummaryButton: document.getElementById('showSummaryButton'),
-
-  // Broadcast View
   backToDashboardButton: document.getElementById('backToDashboardButton'),
   adminControls: document.getElementById('adminControls'),
   broadcastEventUrl: document.getElementById('broadcastEventUrl'),
@@ -116,7 +50,6 @@ export const elements = {
   openSidebarButton: document.getElementById('openSidebarButton'),
   closeSidebarButton: document.getElementById('closeSidebarButton'),
   toggleFullscreenButton: document.getElementById('toggleFullscreenButton'),
-
   startEventButton: document.getElementById('startEventButton'),
   startBroadcastButton: document.getElementById('startBroadcastButton'),
   adminCanvas: document.getElementById('adminCanvas'),
@@ -125,12 +58,10 @@ export const elements = {
   advanceLineByLineButton: document.getElementById('advanceLineByLineButton'),
   regenerateLinesButton: document.getElementById('regenerateLinesButton'),
   glimpseButton: document.getElementById('glimpseButton'),
-  shufflePrizesBroadcastButton: document.getElementById('shufflePrizesBroadcastButton'), // ← この行を追加
+  shufflePrizesBroadcastButton: document.getElementById('shufflePrizesBroadcastButton'),
   highlightUserSelect: document.getElementById('highlightUserSelect'),
   highlightUserButton: document.getElementById('highlightUserButton'),
   revealRandomButton: document.getElementById('revealRandomButton'),
-
-  // Participant View
   participantEventName: document.getElementById('participantEventName'),
   backToGroupEventListLink: document.getElementById('backToGroupEventListLink'),
   nameEntrySection: document.getElementById('nameEntrySection'),
@@ -160,74 +91,33 @@ export const elements = {
   allResultsContainer: document.getElementById('allResultsContainer'),
   shareButton: document.getElementById('shareButton'),
   backToControlPanelFromResultButton: document.getElementById('backToControlPanelFromResultButton'),
-
-  // Admin Dashboard
   pendingRequestsList: document.getElementById('pendingRequestsList'),
   adminUserList: document.getElementById('adminUserList'),
   systemAdminList: document.getElementById('systemAdminList'),
-
-  // Modals
   groupPasswordModal: document.getElementById('groupPasswordModal'),
   closeGroupPasswordModalButton: document.querySelector('#groupPasswordModal .close-button'),
   verificationTargetGroupId: document.getElementById('verificationTargetGroupId'),
   verificationTargetGroupName: document.getElementById('verificationTargetGroupName'),
   groupPasswordVerifyInput: document.getElementById('groupPasswordVerifyInput'),
   verifyPasswordButton: document.getElementById('verifyPasswordButton'),
-
   passwordSetModal: document.getElementById('passwordSetModal'),
   closePasswordSetModal: document.querySelector('#passwordSetModal .close-button'),
   newPasswordInput: document.getElementById('newPasswordInput'),
   savePasswordButton: document.getElementById('savePasswordButton'),
   deleteUserPasswordButton: document.getElementById('deleteUserPasswordButton'),
-
   profileEditModal: document.getElementById('profileEditModal'),
   closeProfileModalButton: document.querySelector('#profileEditModal .close-button'),
   profileIconPreview: document.getElementById('profileIconPreview'),
   profileIconInput: document.getElementById('profileIconInput'),
   profileColorInput: document.getElementById('profileColorInput'),
   saveProfileButton: document.getElementById('saveProfileButton'),
-
   prizeMasterSelectModal: document.getElementById('prizeMasterSelectModal'),
   closePrizeMasterSelectModal: document.querySelector('#prizeMasterSelectModal .close-button'),
   prizeMasterSelectList: document.getElementById('prizeMasterSelectList'),
   addSelectedPrizesButton: document.getElementById('addSelectedPrizesButton'),
-
-  memberEditModal: document.getElementById('memberEditModal'),
-  closeMemberEditModalButton: document.querySelector('#memberEditModal .close-button'),
-  memberIdInput: document.getElementById('memberIdInput'),
-  memberNameEditInput: document.getElementById('memberNameEditInput'),
-  memberColorInput: document.getElementById('memberColorInput'),
-  saveMemberButton: document.getElementById('saveMemberButton'),
-
-  bulkRegisterModal: document.getElementById('bulkRegisterModal'),
-  closeBulkRegisterModalButton: document.querySelector('#bulkRegisterModal .close-button'),
-  bulkNamesTextarea: document.getElementById('bulkNamesTextarea'),
-  analyzeBulkButton: document.getElementById('analyzeBulkButton'),
-  bulkStep1Input: document.getElementById('bulk-step1-input'),
-  bulkStep2Preview: document.getElementById('bulk-step2-preview'),
-  finalizeBulkButton: document.getElementById('finalizeBulkButton'),
-
-  prizeBulkAddModal: document.getElementById('prizeBulkAddModal'),
-  closePrizeBulkAddModalButton: document.querySelector('#prizeBulkAddModal .close-button'),
-  prizeBulkTextarea: document.getElementById('prizeBulkTextarea'),
-  updatePrizesFromTextButton: document.getElementById('updatePrizesFromTextButton'),
-  clearBulkPrizesButton: document.getElementById('clearBulkPrizesButton'),
-  cancelBulkAddButton: document.getElementById('cancelBulkAddButton'),
-
   groupEventListContainer: document.getElementById('groupEventList'),
   groupNameTitle: document.getElementById('groupEventListName'),
   backToDashboardFromEventListButton: document.getElementById('backToDashboardFromEventListButton'),
-
-  addPrizeModal: document.getElementById('addPrizeModal'),
-  newPrizeNameInput: document.getElementById('newPrizeNameInput'),
-  newPrizeImageInput: document.getElementById('newPrizeImageInput'),
-  newPrizeImagePreview: document.getElementById('newPrizeImagePreview'),
-  callMasterButton: document.getElementById('callMasterButton'),
-  addPrizeOkButton: document.getElementById('addPrizeOkButton'),
-  summaryModal: document.getElementById('summaryModal'),
-  totalPrizes: document.getElementById('totalPrizes'),
-  prizeSummaryList: document.getElementById('prizeSummaryList'),
-
   fillSlotsModal: document.getElementById('fillSlotsModal'),
   unjoinedMemberList: document.getElementById('unjoinedMemberList'),
   emptySlotCount: document.getElementById('emptySlotCount'),
@@ -247,34 +137,6 @@ export function adjustBodyPadding() {
     totalOffset += elements.impersonationBanner.offsetHeight;
   }
   document.body.style.paddingTop = `${totalOffset}px`;
-}
-export function openAddPrizeModal() {
-  if (!elements.addPrizeModal) return;
-  elements.newPrizeNameInput.value = '';
-  elements.newPrizeImageInput.value = '';
-  elements.newPrizeImagePreview.src = '';
-  elements.newPrizeImagePreview.style.display = 'none';
-  elements.addPrizeModal.style.display = 'block';
-}
-
-export function closeAddPrizeModal() {
-  if (elements.addPrizeModal) elements.addPrizeModal.style.display = 'none';
-}
-
-export function openSummaryModal(summary) {
-  if (!elements.summaryModal) return;
-  elements.totalPrizes.textContent = summary.total;
-  elements.prizeSummaryList.innerHTML = '';
-  for (const name in summary.breakdown) {
-    const li = document.createElement('li');
-    li.textContent = `${name}: ${summary.breakdown[name]}個`;
-    elements.prizeSummaryList.appendChild(li);
-  }
-  elements.summaryModal.style.display = 'block';
-}
-
-export function closeSummaryModal() {
-  if (elements.summaryModal) elements.summaryModal.style.display = 'none';
 }
 
 export function setMainHeaderVisibility(visible) {
@@ -387,10 +249,6 @@ export function openSettingsModal(group, handlers) {
   elements.groupSettingsModal.style.display = 'block';
 }
 
-export function closeSettingsModal() {
-  if (elements.groupSettingsModal) elements.groupSettingsModal.style.display = 'none';
-}
-
 export function openPrizeMasterModal(handlers) {
   if (!elements.prizeMasterModal) return;
   elements.addMasterPrizeButton.onclick = handlers.onAddMaster;
@@ -401,51 +259,6 @@ export function openPrizeMasterModal(handlers) {
     }
   };
   elements.prizeMasterModal.style.display = 'block';
-}
-
-export function closePrizeMasterModal() {
-  if (elements.prizeMasterModal) elements.prizeMasterModal.style.display = 'none';
-}
-
-export function openPasswordResetRequestModal(requests, handlers) {
-  if (!elements.passwordResetRequestModal) return;
-  renderPasswordRequests(requests);
-  elements.passwordResetRequestList.onclick = (e) => {
-    const button = e.target.closest('button.approve-btn');
-    if (button) {
-      const {groupId, memberId, requestId} = button.dataset;
-      handlers.onApproveReset(memberId, groupId, requestId);
-    }
-  };
-  elements.passwordResetRequestModal.style.display = 'block';
-}
-
-export function closePasswordResetRequestModal() {
-  if (elements.passwordResetRequestModal) elements.passwordResetRequestModal.style.display = 'none';
-}
-
-export function showPasswordResetNotification(requests) {
-  if (!elements.passwordResetNotification || !elements.passwordResetCount) return;
-
-  if (requests && requests.length > 0) {
-    elements.passwordResetCount.textContent = requests.length;
-    elements.passwordResetNotification.style.display = 'flex';
-  } else {
-    elements.passwordResetNotification.style.display = 'none';
-  }
-}
-
-export function openMemberEditModal(member, handlers) {
-  if (!elements.memberEditModal) return;
-  elements.memberIdInput.value = member.id;
-  elements.memberNameEditInput.value = member.name;
-  elements.memberColorInput.value = member.color || '#cccccc';
-  elements.saveMemberButton.onclick = handlers.onSave;
-  elements.memberEditModal.style.display = 'block';
-}
-
-export function closeMemberEditModal() {
-  if (elements.memberEditModal) elements.memberEditModal.style.display = 'none';
 }
 
 export function openPasswordSetModal(handlers, showDeleteButton) {
@@ -464,30 +277,12 @@ export function openProfileEditModal(memberData, handlers) {
   if (elements.profileEditModal) elements.profileEditModal.style.display = 'block';
 }
 
-export function closeProfileEditModal() {
-  if (elements.profileEditModal) elements.profileEditModal.style.display = 'none';
-}
-
 export function openPrizeMasterSelectModal(masters, handlers) {
   renderPrizeMasterList(masters, true);
   if (elements.addSelectedPrizesButton) elements.addSelectedPrizesButton.onclick = handlers.onAddSelected;
   if (elements.prizeMasterSelectModal) elements.prizeMasterSelectModal.style.display = 'block';
 }
 
-export function closePrizeMasterSelectModal() {
-  if (elements.prizeMasterSelectModal) elements.prizeMasterSelectModal.style.display = 'none';
-}
-
-export function openPrizeBulkAddModal() {
-  if (elements.prizeBulkAddModal) {
-    elements.prizeBulkTextarea.value = state.prizes.map((p) => p.name).join('\n');
-    elements.prizeBulkAddModal.style.display = 'block';
-  }
-}
-
-export function closePrizeBulkAddModal() {
-  if (elements.prizeBulkAddModal) elements.prizeBulkAddModal.style.display = 'none';
-}
 
 export function showGroupPasswordModal(groupId, groupName) {
   if (!elements.groupPasswordModal) return;
@@ -498,216 +293,24 @@ export function showGroupPasswordModal(groupId, groupName) {
   elements.groupPasswordVerifyInput.focus();
 }
 
+export function closeSettingsModal() {
+  if (elements.groupSettingsModal) elements.groupSettingsModal.style.display = 'none';
+}
+
+export function closePrizeMasterModal() {
+  if (elements.prizeMasterModal) elements.prizeMasterModal.style.display = 'none';
+}
+
+export function closeProfileEditModal() {
+  if (elements.profileEditModal) elements.profileEditModal.style.display = 'none';
+}
+
+export function closePrizeMasterSelectModal() {
+  if (elements.prizeMasterSelectModal) elements.prizeMasterSelectModal.style.display = 'none';
+}
+
 export function closeGroupPasswordModal() {
   if (elements.groupPasswordModal) elements.groupPasswordModal.style.display = 'none';
-}
-
-export function renderGroupList(groups) {
-  if (!elements.groupList) return;
-  elements.groupList.innerHTML = '';
-  groups.forEach((group) => {
-    const li = document.createElement('li');
-    li.className = 'item-list-item list-item-link'; // クリック可能であることを示すクラスを追加
-    li.dataset.groupId = group.id;
-    li.dataset.groupName = group.name;
-
-    const groupInfo = document.createElement('span');
-    const date = new Date((group.createdAt._seconds || group.createdAt.seconds) * 1000);
-    groupInfo.textContent = `${group.name} (${date.toLocaleDateString()})`;
-    groupInfo.style.cursor = 'pointer';
-
-    const settingsBtn = document.createElement('button');
-    settingsBtn.textContent = '設定';
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = '削除';
-    deleteBtn.className = 'delete-btn delete-group-btn';
-
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'item-buttons';
-    buttonContainer.appendChild(settingsBtn);
-    buttonContainer.appendChild(deleteBtn);
-    li.appendChild(groupInfo);
-    li.appendChild(buttonContainer);
-    elements.groupList.appendChild(li);
-  });
-}
-
-export function renderEventList(allEvents) {
-  if (!elements.eventList) return;
-
-  const showStartedCheckbox = document.getElementById('showStartedEvents');
-  const shouldShowStarted = showStartedCheckbox ? showStartedCheckbox.checked : false;
-
-  const eventsToRender = shouldShowStarted ? allEvents : allEvents.filter((event) => event.status !== 'started');
-
-  elements.eventList.innerHTML = '';
-  eventsToRender.forEach((event) => {
-    const li = document.createElement('li');
-    const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
-    const displayDate = !isNaN(date) ? date.toLocaleString() : '日付不明';
-    const eventName = event.eventName || '無題のイベント';
-    const filledSlots = event.participants.filter((p) => p.name).length;
-
-    let statusBadge;
-    if (event.status === 'started') {
-      statusBadge = '<span>実施済み</span>';
-    } else {
-      statusBadge = '<span class="badge ongoing">開催中</span>';
-    }
-
-    const itemClass = state.currentUser ? 'item-list-item list-item-link' : 'item-list-item';
-    li.className = itemClass;
-
-    li.innerHTML = `
-        <span class="event-info">
-          <strong>${eventName}</strong>
-          <span class="event-date">（${displayDate}作成）</span>
-          ${statusBadge}
-          <span class="event-status">${filledSlots} / ${event.participantCount} 名参加</span>
-        </span>
-        <div class="item-buttons">
-            <button class="edit-event-btn" data-event-id="${event.id}">編集</button>
-            <button class="start-event-btn" data-event-id="${event.id}">実施</button>
-            <button class="copy-event-btn" data-event-id="${event.id}">コピー</button>
-            <button class="delete-btn delete-event-btn" data-event-id="${event.id}">削除</button>
-        </div>`;
-
-    elements.eventList.appendChild(li);
-  });
-}
-
-export function renderMemberList(members) {
-  if (!elements.memberList) return;
-  elements.memberList.innerHTML = '';
-  const searchTerm = elements.memberSearchInput.value.toLowerCase();
-
-  members
-    .filter((member) => member.name.toLowerCase().includes(searchTerm))
-    .forEach((member) => {
-      const li = document.createElement('li');
-      // isActiveがfalseの場合にinactiveクラスを付与
-      const isActive = typeof member.isActive === 'boolean' ? member.isActive : true;
-      li.className = `item-list-item member-list-item ${isActive ? '' : 'inactive'}`;
-      li.dataset.memberId = member.id;
-
-      const createdByLabel = member.createdBy === 'admin' ? '<span class="label admin">管理者登録</span>' : '<span class="label user">本人登録</span>';
-      const checkedAttribute = isActive ? 'checked' : '';
-
-      li.innerHTML = `
-                <div class="member-info">
-                    <input type="color" value="${member.color || '#cccccc'}" disabled>
-                    <span>${member.name}</span>
-                    ${createdByLabel}
-                </div>
-                <div class="item-buttons">
-                    <label class="switch">
-                        <input type="checkbox" class="is-active-toggle" ${checkedAttribute}>
-                        <span class="slider"></span>
-                    </label>
-                    <button class="edit-member-btn">編集</button>
-                    <button class="delete-btn delete-member-btn">削除</button>
-                </div>
-            `;
-      elements.memberList.appendChild(li);
-    });
-}
-
-export function renderPrizeCardList() {
-  if (!elements.prizeCardListContainer) return;
-  elements.prizeCardListContainer.innerHTML = '';
-  state.prizes.forEach((p, index) => {
-    const li = document.createElement('li');
-    li.className = 'prize-card';
-
-    const prizeName = typeof p === 'object' ? p.name : p;
-    let prizeImageUrl = typeof p === 'object' ? p.imageUrl : null;
-    const uniqueId = `prize-image-upload-${index}`;
-
-    const imageContainer = document.createElement('div');
-    imageContainer.className = 'prize-card-image';
-    const imgPreview = document.createElement('img');
-    imgPreview.alt = prizeName;
-
-    if (prizeImageUrl) {
-      imgPreview.src = prizeImageUrl;
-    } else if (p.newImageFile) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        imgPreview.src = event.target.result;
-      };
-      reader.readAsDataURL(p.newImageFile);
-    } else {
-      imgPreview.classList.add('placeholder');
-      imgPreview.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-    }
-
-    imageContainer.appendChild(imgPreview);
-    imageContainer.onclick = () => document.getElementById(uniqueId).click();
-
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.id = uniqueId;
-    fileInput.style.display = 'none';
-    fileInput.dataset.index = index;
-
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          imgPreview.src = event.target.result;
-          imgPreview.classList.remove('placeholder');
-        };
-        reader.readAsDataURL(file);
-        state.prizes[index].newImageFile = file;
-        state.prizes[index].imageUrl = null;
-      }
-    });
-    imageContainer.appendChild(fileInput);
-    li.appendChild(imageContainer);
-
-    const infoContainer = document.createElement('div');
-    infoContainer.className = 'prize-card-info';
-
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.value = prizeName;
-    nameInput.className = 'prize-card-name-input';
-    nameInput.dataset.index = index;
-    nameInput.addEventListener('change', (event) => {
-      const updatedIndex = parseInt(event.target.dataset.index, 10);
-      const newName = event.target.value.trim();
-      if (newName) {
-        state.prizes[updatedIndex].name = newName;
-      } else {
-        event.target.value = prizeName;
-      }
-    });
-    infoContainer.appendChild(nameInput);
-
-    const actionsContainer = document.createElement('div');
-    actionsContainer.className = 'prize-card-actions';
-
-    const duplicateBtn = document.createElement('button');
-    duplicateBtn.textContent = '複製';
-    duplicateBtn.className = 'duplicate-btn';
-    duplicateBtn.dataset.index = index;
-    duplicateBtn.type = 'button';
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = '削除';
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.dataset.index = index;
-    deleteBtn.type = 'button';
-
-    actionsContainer.appendChild(duplicateBtn);
-    actionsContainer.appendChild(deleteBtn);
-    infoContainer.appendChild(actionsContainer);
-
-    li.appendChild(infoContainer);
-    elements.prizeCardListContainer.appendChild(li);
-  });
 }
 
 export function renderPrizeMasterList(masters, isSelectMode = false) {
@@ -742,25 +345,6 @@ export function renderPrizeMasterList(masters, isSelectMode = false) {
       li.appendChild(deleteBtn);
     }
     listElement.appendChild(li);
-  });
-}
-
-export function renderPasswordRequests(requests) {
-  if (!elements.passwordResetRequestList) return;
-  elements.passwordResetRequestList.innerHTML = '';
-  if (requests.length === 0) {
-    elements.passwordResetRequestList.innerHTML = '<li>現在、リセット依頼はありません。</li>';
-    return;
-  }
-  requests.forEach((req) => {
-    const li = document.createElement('li');
-    li.className = 'item-list-item';
-    li.innerHTML = `
-            <span>${req.memberName}</span>
-            <div class="item-buttons">
-                <button class="approve-btn" data-group-id="${req.groupId}" data-member-id="${req.memberId}" data-request-id="${req.id}">合言葉を削除</button>
-            </div>`;
-    elements.passwordResetRequestList.appendChild(li);
   });
 }
 
@@ -928,8 +512,6 @@ export function showUserDashboardView(groupData, events) {
 
 export function resetEventCreationForm() {
   state.setPrizes([]);
-  renderPrizeCardList();
-  renderPrizeListMode();
   if (elements.participantCountInput) elements.participantCountInput.value = '';
   if (elements.displayModeSelect) elements.displayModeSelect.value = 'public';
   if (elements.eventNameInput) elements.eventNameInput.value = '';
@@ -958,7 +540,6 @@ export function renderOtherEvents(events, groupCustomUrl) {
   const myMemberId = state.currentParticipantId;
 
   const eventsToRender = events.filter((event) => {
-    // 修正点：myMemberIdが存在する場合のみ、myParticipationを評価する
     const myParticipation = myMemberId ? event.participants.find((p) => p.memberId === myMemberId) : null;
     const isStarted = event.status === 'started';
 
@@ -983,7 +564,6 @@ export function renderOtherEvents(events, groupCustomUrl) {
     const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
     const eventUrl = groupCustomUrl ? `/g/${groupCustomUrl}/${event.id}` : `/events/${event.id}`;
 
-    // 修正点：ここでも同様に、myMemberIdが存在する場合のみ、myParticipationを評価する
     const myParticipation = myMemberId ? event.participants.find((p) => p.memberId === myMemberId) : null;
     let badge = '';
 
@@ -1006,173 +586,11 @@ export function renderOtherEvents(events, groupCustomUrl) {
   });
   elements.otherEventsSection.style.display = 'block';
 
-  // 動的にアイコンを生成した後に、Lucideを再実行する必要がある
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
   }
 }
 
-export function openBulkRegisterModal() {
-  if (!elements.bulkRegisterModal) return;
-  elements.bulkNamesTextarea.value = '';
-  elements.bulkStep1Input.style.display = 'block';
-  elements.bulkStep2Preview.style.display = 'none';
-  elements.analyzeBulkButton.disabled = false;
-  elements.analyzeBulkButton.textContent = '確認する';
-  elements.finalizeBulkButton.disabled = true;
-  elements.bulkRegisterModal.style.display = 'block';
-}
-
-export function closeBulkRegisterModal() {
-  if (elements.bulkRegisterModal) elements.bulkRegisterModal.style.display = 'none';
-}
-
-export function renderBulkAnalysisPreview(analysisResults) {
-  const newRegistrationTab = document.getElementById('newRegistrationTab');
-  const potentialMatchTab = document.getElementById('potentialMatchTab');
-  const exactMatchTab = document.getElementById('exactMatchTab');
-
-  newRegistrationTab.innerHTML =
-    '<ul>' +
-    analysisResults
-      .filter((r) => r.status === 'new_registration')
-      .map((r) => `<li>"${r.inputName}" を新規登録します。</li>`)
-      .join('') +
-    '</ul>';
-  exactMatchTab.innerHTML =
-    '<ul>' +
-    analysisResults
-      .filter((r) => r.status === 'exact_match')
-      .map((r) => `<li>"${r.inputName}" は登録済みのためスキップします。</li>`)
-      .join('') +
-    '</ul>';
-
-  potentialMatchTab.innerHTML =
-    '<ul>' +
-    analysisResults
-      .filter((r) => r.status === 'potential_match')
-      .map(
-        (r, i) => `
-        <li data-input-name="${r.inputName}">
-            <p><strong>"${r.inputName}"</strong> は、既存の <strong>"${r.suggestions[0].name}"</strong> と類似しています。</p>
-            <label><input type="radio" name="resolve_${i}" value="skip" checked> 同一人物として扱う (スキップ)</label>
-            <label><input type="radio" name="resolve_${i}" value="create"> 別人として新規登録する</label>
-        </li>
-    `
-      )
-      .join('') +
-    '</ul>';
-
-  // タブの件数を更新
-  document.querySelector('.tab-link[data-tab="newRegistrationTab"]').textContent = `新規登録 (${analysisResults.filter((r) => r.status === 'new_registration').length})`;
-  document.querySelector('.tab-link[data-tab="potentialMatchTab"]').textContent = `類似候補 (${analysisResults.filter((r) => r.status === 'potential_match').length})`;
-  document.querySelector('.tab-link[data-tab="exactMatchTab"]').textContent = `完全一致 (${analysisResults.filter((r) => r.status === 'exact_match').length})`;
-
-  // タブ切り替えロジック
-  document.querySelectorAll('#bulk-step2-preview .tab-link').forEach((button) => {
-    button.onclick = (e) => {
-      document.querySelectorAll('#bulk-step2-preview .tab-link, #bulk-step2-preview .tab-content').forEach((el) => el.classList.remove('active'));
-      const tabId = e.target.dataset.tab;
-      e.target.classList.add('active');
-      document.getElementById(tabId).classList.add('active');
-    };
-  });
-
-  elements.bulkStep1Input.style.display = 'none';
-  elements.bulkStep2Preview.style.display = 'block';
-  elements.finalizeBulkButton.disabled = false;
-}
-
-export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
-  if (!elements.prizeListModeContainer) return;
-
-  // 1. 景品データを集計し、画像のバリエーションもチェック
-  const prizeSummary = state.prizes.reduce((acc, prize) => {
-    const key = prize.name || '(名称未設定)';
-    if (acc[key]) {
-      acc[key].quantity++;
-      // ハッシュとURLで画像の同一性を判定
-      if (acc[key].imageUrl !== prize.imageUrl || acc[key].newImageFileHash !== prize.newImageFileHash) {
-        acc[key].hasMultipleImages = true;
-      }
-    } else {
-      acc[key] = {
-        name: key,
-        quantity: 1,
-        imageUrl: prize.imageUrl,
-        newImageFile: prize.newImageFile, // プレビュー用にFileオブジェクトを保持
-        newImageFileHash: prize.newImageFileHash, // 同一性チェック用にハッシュを保持
-        hasMultipleImages: false,
-      };
-    }
-    return acc;
-  }, {});
-
-  let prizeArray = Object.values(prizeSummary);
-
-  // 2. ソート処理
-  prizeArray.sort((a, b) => {
-    const valA = a[sortConfig.key];
-    const valB = b[sortConfig.key];
-    if (valA < valB) return sortConfig.order === 'asc' ? -1 : 1;
-    if (valA > valB) return sortConfig.order === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  // 3. テーブルHTMLを生成
-  const nameHeader = `景品名 ${sortConfig.key === 'name' ? (sortConfig.order === 'asc' ? '▲' : '▼') : ''}`;
-  const quantityHeader = `数量 ${sortConfig.key === 'quantity' ? (sortConfig.order === 'asc' ? '▲' : '▼') : ''}`;
-
-  let tableHTML = `
-    <table class="prize-list-table">
-      <thead>
-        <tr>
-          <th style="width: 80px;">画像</th>
-          <th data-sort-key="name" style="cursor: pointer;">${nameHeader}</th>
-          <th data-sort-key="quantity" style="cursor: pointer;">${quantityHeader}</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-
-  prizeArray.forEach((item) => {
-    let imageContent = '';
-    const uniqueId = `prize-list-image-upload-${item.name.replace(/\s/g, '-')}`;
-
-    if (item.hasMultipleImages) {
-      const iconName = clientEmojiToLucide('🖼️');
-      imageContent = `<div class="prize-image-cell multi-image" title="複数の画像が設定されています"><i data-lucide="${iconName}"></i></div>`;
-    } else if (item.newImageFile) {
-      const tempUrl = URL.createObjectURL(item.newImageFile);
-      imageContent = `<img src="${tempUrl}" alt="${item.name}" class="prize-image-cell">`;
-    } else if (item.imageUrl) {
-      imageContent = `<img src="${item.imageUrl}" alt="${item.name}" class="prize-image-cell">`;
-    } else {
-      const iconName = clientEmojiToLucide('？');
-      imageContent = `<div class="prize-image-cell no-image" title="画像が設定されていません"><i data-lucide="${iconName}"></i></div>`;
-    }
-
-    tableHTML += `
-      <tr>
-        <td>
-          <label for="${uniqueId}" class="prize-image-label">${imageContent}</label>
-          <input type="file" id="${uniqueId}" data-name="${item.name}" class="prize-image-input-list" accept="image/*" style="display: none;">
-        </td>
-        <td><input type="text" class="prize-name-input-list" value="${item.name}" data-original-name="${item.name}"></td>
-        <td><input type="number" class="prize-quantity-input" value="${item.quantity}" min="0" data-name="${item.name}"></td>
-        <td><button class="delete-btn delete-prize-list" data-name="${item.name}">削除</button></td>
-      </tr>
-    `;
-  });
-
-  tableHTML += `</tbody></table>`;
-  elements.prizeListModeContainer.innerHTML = tableHTML;
-
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
-}
 export function setBroadcastControlsDisabled(disabled) {
   const controls = document.querySelectorAll('#broadcastSidebar button, #broadcastSidebar select');
   controls.forEach((control) => {
