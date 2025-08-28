@@ -11,8 +11,6 @@ const elements = {
   groupNameInput: document.getElementById('groupNameInput'),
   createGroupButton: document.getElementById('createGroupButton'),
   groupList: document.getElementById('groupList'),
-  requestAdminButton: document.getElementById('requestAdminButton'),
-  requestAdminControls: document.getElementById('requestAdminControls'),
 };
 
 // グループリストを描画する関数

@@ -226,6 +226,9 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
       imageContent = `<div class="prize-image-cell no-image" title="画像が設定されていません"><i data-lucide="image-off"></i></div>`;
     }
 
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★       type="number" を変更       ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     tableHTML += `
       <tr>
         <td>
@@ -233,7 +236,7 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
           <input type="file" id="${uniqueId}" data-name="${item.name}" class="prize-image-input-list" accept="image/*" style="display: none;">
         </td>
         <td><input type="text" class="prize-name-input-list" value="${item.name}" data-original-name="${item.name}"></td>
-        <td><input type="number" class="prize-quantity-input" value="${item.quantity}" min="0" data-name="${item.name}"></td>
+        <td><input type="text" inputmode="numeric" pattern="[0-9]*" class="prize-quantity-input" value="${item.quantity}" data-name="${item.name}"></td>
         <td><button class="delete-btn delete-prize-list" data-name="${item.name}">削除</button></td>
       </tr>
     `;
@@ -287,13 +290,14 @@ export function closePrizeBulkAddModal() {
   if (elements.prizeBulkAddModal) elements.prizeBulkAddModal.style.display = 'none';
 }
 
+
 export function initEventEdit() {
   if (elements.eventEditView) {
     const viewModeCardBtn = document.getElementById('viewModeCard');
     const viewModeListBtn = document.getElementById('viewModeList');
     const prizeCardContainer = document.getElementById('prizeCardListContainer');
     const prizeListContainer = document.getElementById('prizeListModeContainer');
-    let sortConfig = {key: 'name', order: 'asc'};
+    let sortConfig = { key: 'name', order: 'asc' };
 
     const switchViewMode = (mode) => {
       if (mode === 'list') {
@@ -317,48 +321,97 @@ export function initEventEdit() {
       viewModeListBtn.addEventListener('click', () => switchViewMode('list'));
     }
     if (prizeListContainer) {
-      prizeListContainer.addEventListener('change', (e) => {
-        if (e.target.classList.contains('prize-quantity-input')) {
-          const name = e.target.dataset.name;
-          const newQuantity = parseInt(e.target.value, 10);
-          const currentPrizes = state.prizes.filter((p) => p.name === name);
-          const currentQuantity = currentPrizes.length;
+      // [キーボード操作] 上下キー操作時に、変更前のカーソル位置を要素に一時保存する
+      prizeListContainer.addEventListener('keydown', (e) => {
+        const targetInput = e.target;
+        if (targetInput.classList.contains('prize-quantity-input') || targetInput.classList.contains('prize-name-input-list')) {
+          // カスタムプロパティとして現在のカーソル位置を保存
+          targetInput._selectionStart = targetInput.selectionStart;
+          targetInput._selectionEnd = targetInput.selectionEnd;
+        }
 
-          if (isNaN(newQuantity) || newQuantity < 0) {
-            e.target.value = currentQuantity;
-            return;
+        if (targetInput.classList.contains('prize-quantity-input')) {
+          let currentValue = parseInt(targetInput.value, 10);
+          if (isNaN(currentValue)) currentValue = 0;
+
+          let valueChanged = false;
+          if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            targetInput.value = currentValue + 1;
+            valueChanged = true;
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (currentValue > 0) {
+              targetInput.value = currentValue - 1;
+              valueChanged = true;
+            }
           }
-          if (newQuantity === 0) {
-            if (!confirm(`景品「${name}」の数量を0にしますか？\nリストからすべての「${name}」が削除されます。よろしいですか？`)) {
-              e.target.value = currentQuantity;
+
+          if (valueChanged) {
+            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      });
+      
+      // [メイン処理] 値の変更を検知して再描画とフォーカス復元を行う
+      prizeListContainer.addEventListener('change', (e) => {
+        const changedElement = e.target;
+        const isQuantityInput = changedElement.classList.contains('prize-quantity-input');
+        const isNameInput = changedElement.classList.contains('prize-name-input-list');
+
+        let focusedInputInfo = null;
+        if (isQuantityInput || isNameInput) {
+            focusedInputInfo = {
+                name: changedElement.dataset.name || changedElement.dataset.originalName,
+                className: changedElement.className,
+                // keydownイベントで保存したカスタムプロパティがあればそれを優先し、なければ現在の位置を使う
+                selectionStart: typeof changedElement._selectionStart === 'number' ? changedElement._selectionStart : changedElement.selectionStart,
+                selectionEnd: typeof changedElement._selectionEnd === 'number' ? changedElement._selectionEnd : changedElement.selectionEnd
+            };
+            // 一時プロパティを削除
+            delete changedElement._selectionStart;
+            delete changedElement._selectionEnd;
+        }
+
+        if (isQuantityInput) {
+            const name = changedElement.dataset.name;
+            const newQuantity = parseInt(changedElement.value, 10);
+            const currentPrizes = state.prizes.filter((p) => p.name === name);
+            const currentQuantity = currentPrizes.length;
+
+            if (isNaN(newQuantity) || newQuantity < 0) {
+              changedElement.value = currentQuantity;
               return;
             }
-          }
-
-          const prizeMaster = currentPrizes[0] || {name, imageUrl: null};
-
-          if (newQuantity > currentQuantity) {
-            const diff = newQuantity - currentQuantity;
-            for (let i = 0; i < diff; i++) {
-              state.prizes.push({...prizeMaster});
-            }
-          } else if (newQuantity < currentQuantity) {
-            const diff = currentQuantity - newQuantity;
-            for (let i = 0; i < diff; i++) {
-              const indexToRemove = state.prizes.findIndex((p) => p.name === name);
-              if (indexToRemove > -1) {
-                state.prizes.splice(indexToRemove, 1);
+            if (newQuantity === 0) {
+              if (!confirm(`景品「${name}」の数量を0にしますか？\nリストからすべての「${name}」が削除されます。よろしいですか？`)) {
+                changedElement.value = currentQuantity;
+                return;
               }
             }
-          }
-          renderPrizeCardList();
-          renderPrizeListMode(sortConfig);
+  
+            const prizeMaster = currentPrizes[0] || { name, imageUrl: null };
+  
+            if (newQuantity > currentQuantity) {
+              const diff = newQuantity - currentQuantity;
+              for (let i = 0; i < diff; i++) {
+                state.prizes.push({ ...prizeMaster });
+              }
+            } else if (newQuantity < currentQuantity) {
+              const diff = currentQuantity - newQuantity;
+              for (let i = 0; i < diff; i++) {
+                const indexToRemove = state.prizes.findIndex((p) => p.name === name);
+                if (indexToRemove > -1) {
+                  state.prizes.splice(indexToRemove, 1);
+                }
+              }
+            }
         }
-        if (e.target.classList.contains('prize-name-input-list')) {
-          const originalName = e.target.dataset.originalName;
-          const newName = e.target.value.trim();
+        if (isNameInput) {
+          const originalName = changedElement.dataset.originalName;
+          const newName = changedElement.value.trim();
           if (!newName || newName === originalName) {
-            e.target.value = originalName;
+            changedElement.value = originalName;
             return;
           }
           if (confirm(`景品「${originalName}」の名称を「${newName}」に一括変更しますか？`)) {
@@ -367,18 +420,16 @@ export function initEventEdit() {
                 p.name = newName;
               }
             });
-            renderPrizeCardList();
-            renderPrizeListMode(sortConfig);
           } else {
-            e.target.value = originalName;
+            changedElement.value = originalName;
           }
         }
-        if (e.target.classList.contains('prize-image-input-list')) {
-          const name = e.target.dataset.name;
-          const file = e.target.files[0];
+        if (changedElement.classList.contains('prize-image-input-list')) {
+          const name = changedElement.dataset.name;
+          const file = changedElement.files[0];
           if (file) {
             const reader = new FileReader();
-            reader.onload = async (event) => {
+            reader.onload = async () => {
               state.prizes.forEach((p) => {
                 if (p.name === name) {
                   p.newImageFile = file;
@@ -390,6 +441,24 @@ export function initEventEdit() {
             };
             reader.readAsArrayBuffer(file);
           }
+        }
+
+        renderPrizeCardList();
+        renderPrizeListMode(sortConfig);
+
+        if (focusedInputInfo) {
+            const nameAttribute = (focusedInputInfo.className.includes('prize-name-input-list')) ? 'data-original-name' : 'data-name';
+            const selector = `input.${focusedInputInfo.className.split(' ').join('.')}[${nameAttribute}="${focusedInputInfo.name}"]`;
+            const newFocusedElement = prizeListContainer.querySelector(selector);
+            
+            if (newFocusedElement) {
+                newFocusedElement.focus();
+                if (newFocusedElement.type === 'text') {
+                    setTimeout(() => {
+                        newFocusedElement.setSelectionRange(focusedInputInfo.selectionStart, focusedInputInfo.selectionEnd);
+                    }, 0);
+                }
+            }
         }
       });
 
@@ -501,7 +570,7 @@ export function initEventEdit() {
             elements.createEventButton.textContent = 'イベント作成中...';
             const initialEventData = {
               eventName: elements.eventNameInput.value.trim(),
-              prizes: state.prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
+              prizes: state.prizes.map((p) => ({ name: p.name, imageUrl: p.imageUrl || null })),
               groupId: state.currentGroupId,
               displayMode: elements.displayModeSelect.value,
             };
@@ -521,7 +590,7 @@ export function initEventEdit() {
               const hashArray = Array.from(new Uint8Array(hashBuffer));
               const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
               if (!uniqueFilesToUpload.some((f) => f.hash === hashHex)) {
-                uniqueFilesToUpload.push({file: prize.newImageFile, hash: hashHex});
+                uniqueFilesToUpload.push({ file: prize.newImageFile, hash: hashHex });
               }
               fileHashes[prize.newImageFile.name] = hashHex;
             }
@@ -530,11 +599,11 @@ export function initEventEdit() {
           elements.createEventButton.textContent = '画像をアップロード中...';
           const uploadedImageUrls = {};
 
-          for (const {file, hash} of uniqueFilesToUpload) {
-            const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, file.type, hash);
+          for (const { file, hash } of uniqueFilesToUpload) {
+            const { signedUrl, imageUrl } = await api.generateEventPrizeUploadUrl(eventId, file.type, hash);
             await fetch(signedUrl, {
               method: 'PUT',
-              headers: {'Content-Type': file.type},
+              headers: { 'Content-Type': file.type },
               body: file,
             });
             uploadedImageUrls[hash] = imageUrl;
@@ -543,9 +612,9 @@ export function initEventEdit() {
           const finalPrizes = state.prizes.map((prize) => {
             if (prize.newImageFile) {
               const hash = fileHashes[prize.newImageFile.name];
-              return {name: prize.name, imageUrl: uploadedImageUrls[hash]};
+              return { name: prize.name, imageUrl: uploadedImageUrls[hash] };
             }
-            return {name: prize.name, imageUrl: prize.imageUrl};
+            return { name: prize.name, imageUrl: prize.imageUrl };
           });
 
           elements.createEventButton.textContent = '最終保存中...';
