@@ -19,7 +19,6 @@ export const elements = {
   dashboardView: document.getElementById('dashboardView'),
   broadcastView: document.getElementById('broadcastView'),
   participantView: document.getElementById('participantView'),
-  adminDashboard: document.getElementById('adminDashboard'),
   groupEventListView: document.getElementById('groupEventListView'),
   groupSwitcher: document.getElementById('groupSwitcher'),
   currentGroupName: document.getElementById('currentGroupName'),
@@ -45,6 +44,7 @@ export const elements = {
   backToDashboardButton: document.getElementById('backToDashboardButton'),
   adminControls: document.getElementById('adminControls'),
   broadcastEventUrl: document.getElementById('broadcastEventUrl'),
+  currentEventUrl: document.getElementById('currentEventUrl'),
   showFillSlotsModalButton: document.getElementById('showFillSlotsModalButton'),
   broadcastSidebar: document.getElementById('broadcastSidebar'),
   openSidebarButton: document.getElementById('openSidebarButton'),
@@ -91,9 +91,6 @@ export const elements = {
   allResultsContainer: document.getElementById('allResultsContainer'),
   shareButton: document.getElementById('shareButton'),
   backToControlPanelFromResultButton: document.getElementById('backToControlPanelFromResultButton'),
-  pendingRequestsList: document.getElementById('pendingRequestsList'),
-  adminUserList: document.getElementById('adminUserList'),
-  systemAdminList: document.getElementById('systemAdminList'),
   groupPasswordModal: document.getElementById('groupPasswordModal'),
   closeGroupPasswordModalButton: document.querySelector('#groupPasswordModal .close-button'),
   verificationTargetGroupId: document.getElementById('verificationTargetGroupId'),
@@ -124,6 +121,11 @@ export const elements = {
   selectMembersButton: document.getElementById('selectMembersButton'),
   selectedMemberList: document.getElementById('selectedMemberList'),
   confirmFillSlotsButton: document.getElementById('confirmFillSlotsButton'),
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ 以下2行を追記 ★★★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  requestAdminButton: document.getElementById('requestAdminButton'),
+  requestAdminControls: document.getElementById('requestAdminControls'),
 };
 
 const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];
@@ -283,7 +285,6 @@ export function openPrizeMasterSelectModal(masters, handlers) {
   if (elements.prizeMasterSelectModal) elements.prizeMasterSelectModal.style.display = 'block';
 }
 
-
 export function showGroupPasswordModal(groupId, groupName) {
   if (!elements.groupPasswordModal) return;
   elements.verificationTargetGroupId.value = groupId;
@@ -346,26 +347,6 @@ export function renderPrizeMasterList(masters, isSelectMode = false) {
     }
     listElement.appendChild(li);
   });
-}
-
-export function renderAdminLists(requests, groupAdmins, systemAdmins) {
-  const {pendingRequestsList, adminUserList, systemAdminList} = elements;
-
-  if (pendingRequestsList) {
-    pendingRequestsList.innerHTML = requests.length === 0 ? '<li>現在、承認待ちの申請はありません。</li>' : requests.map((req) => `<li class="item-list-item"><span>${req.name} (${req.email})</span><div class="item-buttons"><button class="approve-btn" data-request-id="${req.id}">承認</button></div></li>`).join('');
-  }
-  if (adminUserList) {
-    adminUserList.innerHTML = groupAdmins.map((user) => `<li class="item-list-item"><span>${user.name} (${user.email})</span><div class="item-buttons"><button class="impersonate-btn" data-user-id="${user.id}">成り代わり</button></div></li>`).join('');
-  }
-  if (systemAdminList) {
-    systemAdminList.innerHTML = systemAdmins
-      .map((admin) => {
-        const isCurrentUser = admin.id === (state.currentUser.isImpersonating ? state.currentUser.originalUser.id : state.currentUser.id);
-        const buttons = isCurrentUser ? '' : `<div class="item-buttons"><button class="demote-btn delete-btn" data-user-id="${admin.id}">権限剥奪</button></div>`;
-        return `<li class="item-list-item"><span>${admin.name} (${admin.email})</span> ${buttons}</li>`;
-      })
-      .join('');
-  }
 }
 
 export function renderSlots(participants) {
