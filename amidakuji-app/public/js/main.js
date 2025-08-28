@@ -2,12 +2,12 @@ import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
 import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, redrawPrizes, showAllTracersInstantly, adminPanzoom, participantPanzoom} from './animation.js';
-import { initGroupDashboard, renderGroupList } from './components/groupDashboard.js';
-import { initEventDashboard } from './components/eventDashboard.js';
-import { initMemberManagement } from './components/memberManagement.js';
-import { initEventEdit } from './components/eventEdit.js';
+import {initGroupDashboard, renderGroupList} from './components/groupDashboard.js';
+import {initEventDashboard} from './components/eventDashboard.js';
+import {initMemberManagement} from './components/memberManagement.js';
+import {initEventEdit} from './components/eventEdit.js';
+import {initAdminDashboard} from './components/adminDashboard.js';
 import * as router from './router.js';
-
 
 const settings = {
   animation: true,
@@ -234,6 +234,7 @@ async function initializeApp() {
   initEventDashboard();
   initMemberManagement();
   initEventEdit();
+  initAdminDashboard();
 
   setupEventListeners();
   setupHamburgerMenu();
@@ -336,39 +337,6 @@ export async function handleCopyEvent(eventId) {
     await router.navigateTo(window.location.pathname, false);
   } catch (error) {
     alert(`エラー: ${error.error}`);
-  }
-}
-
-async function handleApproveAdmin(requestId) {
-  if (!confirm('このユーザーの管理者権限を承認しますか？')) return;
-  try {
-    await api.approveAdminRequest(requestId);
-    alert('申請を承認しました。');
-    await router.navigateTo('/admin/dashboard', false);
-  } catch (error) {
-    alert(error.error);
-  }
-}
-
-async function handleImpersonate(userId) {
-  if (!confirm('このユーザーとしてログインしますか？')) return;
-  try {
-    await api.impersonateUser(userId);
-    alert('成り代わりました。ページをリロードします。');
-    window.location.href = '/';
-  } catch (error) {
-    alert(error.error);
-  }
-}
-
-async function handleDemoteAdmin(userId) {
-  if (!confirm('本当にこのシステム管理者を通常ユーザーに戻しますか？')) return;
-  try {
-    await api.demoteAdmin(userId);
-    alert('ユーザーを降格させました。');
-    await router.navigateTo('/admin/dashboard', false);
-  } catch (error) {
-    alert(error.error);
   }
 }
 
@@ -498,21 +466,6 @@ function setupEventListeners() {
     });
   }
 
-  if (elements.adminDashboard) {
-    elements.adminDashboard.addEventListener('click', async (e) => {
-      const button = e.target.closest('button');
-      if (!button) return;
-
-      if (button.classList.contains('impersonate-btn')) {
-        await handleImpersonate(button.dataset.userId);
-      } else if (button.classList.contains('approve-btn')) {
-        await handleApproveAdmin(button.dataset.requestId);
-      } else if (button.classList.contains('demote-btn')) {
-        await handleDemoteAdmin(button.dataset.userId);
-      }
-    });
-  }
-
   if (elements.currentGroupName) {
     elements.currentGroupName.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -536,10 +489,10 @@ function setupEventListeners() {
       await router.navigateTo('/');
     });
   }
-  
+
   if (elements.closeSettingsModalButton) elements.closeSettingsModalButton.addEventListener('click', ui.closeSettingsModal);
   if (elements.closePrizeMasterModalButton) elements.closePrizeMasterModalButton.addEventListener('click', ui.closePrizeMasterModal);
-  
+
   if (elements.closePasswordSetModal)
     elements.closePasswordSetModal.addEventListener('click', () => {
       if (elements.passwordSetModal) elements.passwordSetModal.style.display = 'none';
@@ -547,7 +500,7 @@ function setupEventListeners() {
   if (elements.closeProfileModalButton) elements.closeProfileModalButton.addEventListener('click', ui.closeProfileEditModal);
   if (elements.closePrizeMasterSelectModal) elements.closePrizeMasterSelectModal.addEventListener('click', ui.closePrizeMasterSelectModal);
   if (elements.closeGroupPasswordModalButton) elements.closeGroupPasswordModalButton.addEventListener('click', ui.closeGroupPasswordModal);
-  
+
   if (elements.verifyPasswordButton)
     elements.verifyPasswordButton.addEventListener('click', async () => {
       const groupId = elements.verificationTargetGroupId.value;
@@ -572,7 +525,7 @@ function setupEventListeners() {
     elements.customUrlInput.addEventListener('keyup', () => {
       if (elements.customUrlPreview) elements.customUrlPreview.textContent = elements.customUrlInput.value.trim();
     });
-    
+
   if (elements.backToDashboardButton)
     elements.backToDashboardButton.addEventListener('click', async () => {
       if (state.currentGroupId) {
@@ -994,7 +947,7 @@ function setupEventListeners() {
         if (checkbox) checkbox.checked = item.classList.contains('selected');
       }
     });
-    
+
   window.addEventListener('resize', ui.adjustBodyPadding);
   window.addEventListener('click', (event) => {
     if (elements.groupSettingsModal && event.target == elements.groupSettingsModal) ui.closeSettingsModal();

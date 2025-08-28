@@ -197,35 +197,47 @@ exports.copyEvent = async (req, res) => {
 
 exports.getEvent = async (req, res) => {
   try {
+    // --- ▼▼▼ ログ追加 ▼▼▼ ---
     console.log('--- getEvent Start ---');
     const eventId = req.params.id;
     console.log(`[LOG] Fetching event with ID: ${eventId}`);
+    // --- ▲▲▲ ログ追加 ▲▲▲ ---
+
     const doc = await firestore.collection('events').doc(eventId).get();
     if (!doc.exists) {
+      // --- ▼▼▼ ログ追加 ▼▼▼ ---
       console.log('[LOG] Event not found in database.');
+      // --- ▲▲▲ ログ追加 ▲▲▲ ---
       return res.status(404).json({error: 'イベントが見つかりません。'});
     }
     const eventData = doc.data();
+    // --- ▼▼▼ ログ追加 ▼▼▼ ---
     console.log('[LOG] Event data retrieved:', eventData);
+    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
     const groupRef = firestore.collection('groups').doc(eventData.groupId);
     const groupDoc = await groupRef.get();
     if (!groupDoc.exists) {
+      // --- ▼▼▼ ログ追加 ▼▼▼ ---
       console.log(`[LOG] Group with ID ${eventData.groupId} not found.`);
+      // --- ▲▲▲ ログ追加 ▲▲▲ ---
       return res.status(404).json({error: '所属グループが見つかりません。'});
     }
 
     const groupData = groupDoc.data();
+    // --- ▼▼▼ ログ追加 ▼▼▼ ---
     console.log('[LOG] Group data retrieved:', groupData);
     console.log('[LOG] Current user:', req.user);
+    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
     const isOwner = req.user && groupData.ownerId === req.user.id;
     const isSysAdmin = req.user && req.user.role === 'system_admin' && !req.user.isImpersonating;
+    // --- ▼▼▼ ログ追加 ▼▼▼ ---
     console.log(`[LOG] Permission Check: IsOwner=${isOwner}, IsSysAdmin=${isSysAdmin}`);
+    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
-    // ★★★ 修正点：システム管理者の場合は、所有者でなくても閲覧可能にする ★★★
     if (isOwner || isSysAdmin) {
-       console.log('[LOG] Access Granted: User is owner or system admin.');
+      console.log('[LOG] Access Granted: User is owner or system admin.');
     } else {
       console.log('[LOG] User is neither owner nor system admin. Checking for password.');
       if (groupData.password) {
@@ -235,21 +247,22 @@ exports.getEvent = async (req, res) => {
         }
         console.log('[LOG] Access Granted: Group password verified in session.');
       } else {
-         // パスワードが無く、所有者でもシステム管理者でもない場合は閲覧できない
-         // ただし、このAPIは管理者画面でのみ使われるため、ここに来ることは通常ないはず
-         console.log('[LOG] Access Denied: No password and user is not authorized.');
-         return res.status(403).json({ error: 'このイベントを閲覧する権限がありません。' });
+        console.log('[LOG] Access Denied: No password and user is not authorized.');
+        return res.status(403).json({error: 'このイベントを閲覧する権限がありません。'});
       }
     }
 
+    // --- ▼▼▼ ログ追加 ▼▼▼ ---
     console.log('--- getEvent Success ---');
+    // --- ▲▲▲ ログ追加 ▲▲▲ ---
     res.status(200).json({id: doc.id, ...eventData});
   } catch (error) {
+    // --- ▼▼▼ ログ追加 ▼▼▼ ---
     console.error(`[ERROR] Fatal error in getEvent for event ID ${req.params.id}:`, error);
+    // --- ▲▲▲ ログ追加 ▲▲▲ ---
     res.status(500).json({error: 'イベントの読み込みに失敗しました。'});
   }
 };
-
 
 exports.updateEvent = async (req, res) => {
   try {
@@ -359,7 +372,7 @@ exports.startEvent = async (req, res) => {
     const doc = await eventRef.get();
 
     if (!doc.exists) {
-        return res.status(404).json({ error: 'イベントが見つかりません。' });
+      return res.status(404).json({error: 'イベントが見つかりません。'});
     }
     const eventData = doc.data();
     const isOwner = req.user && eventData.ownerId === req.user.id;

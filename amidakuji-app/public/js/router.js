@@ -5,12 +5,13 @@ import {startAnimation, stopAnimation, prepareStepAnimation} from './animation.j
 import {renderGroupList} from './components/groupDashboard.js';
 import {renderEventList, showPasswordResetNotification} from './components/eventDashboard.js';
 import {renderMemberList} from './components/memberManagement.js';
-import {renderPrizeCardList, renderPrizeListMode,renderEventForEditing} from './components/eventEdit.js';
+import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
+import {renderAdminLists} from './components/adminDashboard.js';
 
 async function loadAdminDashboard() {
   try {
     const [requests, groupAdmins, systemAdmins] = await Promise.all([api.getAdminRequests(), api.getGroupAdmins(), api.getSystemAdmins()]);
-    ui.renderAdminLists(requests, groupAdmins, systemAdmins);
+    renderAdminLists(requests, groupAdmins, systemAdmins);
   } catch (error) {
     console.error('管理ダッシュボードの読み込みに失敗:', error);
   }
@@ -92,7 +93,6 @@ async function loadAndShowMemberManagement(groupId) {
     }
   }
 }
-
 export async function loadEventForEditing(eventId, viewToShow = 'eventEditView') {
   if (!eventId) return;
   try {
@@ -101,15 +101,42 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       state.setAllUserGroups(groups);
     }
 
+    // --- ▼▼▼ ログ追加 ▼▼▼ ---
+    console.log(`[FRONTEND] 1. Calling api.getEvent for eventId: ${eventId}`);
     const data = await api.getEvent(eventId);
+    console.log('[FRONTEND] 2. Received event data from API:', data);
+    // --- ▲▲▲ ログ追加 ▲▲▲ ---
+
     state.setCurrentLotteryData(data);
     state.setCurrentEventId(eventId);
     state.setCurrentGroupId(data.groupId);
 
     ui.showView(viewToShow);
 
-    const parentGroup = state.allUserGroups.find((g) => g.id === data.groupId);
-    const url = parentGroup && parentGroup.customUrl ? `${window.location.origin}/g/${parentGroup.customUrl}/${eventId}` : `/events/${eventId}`;
+    let parentGroup = state.allUserGroups.find((g) => g.id === data.groupId);
+    // --- ▼▼▼ ログ追加 ▼▼▼ ---
+    console.log(`[FRONTEND] 3. Searching for parentGroup in state.allUserGroups (User's own groups). Found:`, parentGroup);
+    // --- ▲▲▲ ログ追加 ▲▲▲ ---
+
+    if (!parentGroup) {
+      // --- ▼▼▼ ログ追加 ▼▼▼ ---
+      console.log('[FRONTEND] 4. parentGroup not found in state. Attempting to fetch it directly via API.');
+      // --- ▲▲▲ ログ追加 ▲▲▲ ---
+      try {
+        parentGroup = await api.getGroup(data.groupId);
+        // --- ▼▼▼ ログ追加 ▼▼▼ ---
+        console.log('[FRONTEND] 5. Successfully fetched parentGroup from API:', parentGroup);
+        // --- ▲▲▲ ログ追加 ▲▲▲ ---
+      } catch (groupError) {
+        console.error(`Could not fetch parent group ${data.groupId}`, groupError);
+        parentGroup = null;
+      }
+    }
+    const url = parentGroup && parentGroup.customUrl ? `${window.location.origin}/g/${parentGroup.customUrl}/${eventId}` : `${window.location.origin}/events/${eventId}`;
+
+    // --- ▼▼▼ ログ追加 ▼▼▼ ---
+    console.log('[FRONTEND] 6. Final constructed URL:', url);
+    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
     if (ui.elements.currentEventUrl) {
       ui.elements.currentEventUrl.textContent = url;
