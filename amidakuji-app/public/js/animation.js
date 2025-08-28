@@ -942,7 +942,7 @@ export async function showAllTracersInstantly() {
   const numParticipants = state.currentLotteryData.participants.length;
 
   animator.tracers = allParticipantsWithNames.map((p) => {
-    const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT);
+    const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
     const finalPoint = path[path.length - 1];
     return {
       name: p.name,

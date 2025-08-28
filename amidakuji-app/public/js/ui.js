@@ -2,7 +2,7 @@ import * as state from './state.js';
 import {stopAnimation} from './animation.js';
 
 const clientEmojiMap = new Map(window.emojiMapData || []);
-function clientEmojiToLucide(emoji) {
+export function clientEmojiToLucide(emoji) {
   return clientEmojiMap.get(emoji) || '';
 }
 export const elements = {
@@ -62,35 +62,6 @@ export const elements = {
   highlightUserSelect: document.getElementById('highlightUserSelect'),
   highlightUserButton: document.getElementById('highlightUserButton'),
   revealRandomButton: document.getElementById('revealRandomButton'),
-  participantEventName: document.getElementById('participantEventName'),
-  backToGroupEventListLink: document.getElementById('backToGroupEventListLink'),
-  nameEntrySection: document.getElementById('nameEntrySection'),
-  nameInput: document.getElementById('nameInput'),
-  confirmNameButton: document.getElementById('confirmNameButton'),
-  suggestionList: document.getElementById('suggestionList'),
-  participantControlPanel: document.getElementById('participantControlPanel'),
-  welcomeName: document.getElementById('welcomeName'),
-  goToAmidaButton: document.getElementById('goToAmidaButton'),
-  setPasswordButton: document.getElementById('setPasswordButton'),
-  editProfileButton: document.getElementById('editProfileButton'),
-  participantLogoutButton: document.getElementById('participantLogoutButton'),
-  deleteMyAccountButton: document.getElementById('deleteMyAccountButton'),
-  otherEventsSection: document.getElementById('otherEventsSection'),
-  otherEventsList: document.getElementById('otherEventsList'),
-  joinSection: document.getElementById('joinSection'),
-  backToControlPanelButton: document.getElementById('backToControlPanelButton'),
-  prizeDisplay: document.getElementById('prizeDisplay'),
-  slotList: document.getElementById('slotList'),
-  joinButton: document.getElementById('joinButton'),
-  waitingMessage: document.getElementById('waitingMessage'),
-  deleteParticipantWaitingButton: document.getElementById('deleteParticipantWaitingButton'),
-  backToDashboardFromWaitingButton: document.getElementById('backToDashboardFromWaitingButton'),
-  resultSection: document.getElementById('resultSection'),
-  participantCanvas: document.getElementById('participantCanvas'),
-  myResult: document.getElementById('myResult'),
-  allResultsContainer: document.getElementById('allResultsContainer'),
-  shareButton: document.getElementById('shareButton'),
-  backToControlPanelFromResultButton: document.getElementById('backToControlPanelFromResultButton'),
   groupPasswordModal: document.getElementById('groupPasswordModal'),
   closeGroupPasswordModalButton: document.querySelector('#groupPasswordModal .close-button'),
   verificationTargetGroupId: document.getElementById('verificationTargetGroupId'),
@@ -121,9 +92,6 @@ export const elements = {
   selectMembersButton: document.getElementById('selectMembersButton'),
   selectedMemberList: document.getElementById('selectedMemberList'),
   confirmFillSlotsButton: document.getElementById('confirmFillSlotsButton'),
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-  // ★★★ 以下2行を追記 ★★★
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
   requestAdminButton: document.getElementById('requestAdminButton'),
   requestAdminControls: document.getElementById('requestAdminControls'),
 };
@@ -349,148 +317,6 @@ export function renderPrizeMasterList(masters, isSelectMode = false) {
   });
 }
 
-export function renderSlots(participants) {
-  if (!elements.slotList) return;
-  elements.slotList.innerHTML = '';
-  participants.forEach((p) => {
-    const slotEl = document.createElement('div');
-    slotEl.className = 'slot';
-    slotEl.dataset.slot = p.slot;
-    if (p.name) {
-      slotEl.classList.add('taken');
-      slotEl.textContent = p.name;
-    } else {
-      slotEl.classList.add('available');
-      slotEl.textContent = `参加枠 ${p.slot + 1}`;
-    }
-    elements.slotList.appendChild(slotEl);
-  });
-}
-
-export function renderPrizesForParticipant(prizes, displayMode) {
-  if (!elements.prizeDisplay) return;
-  elements.prizeDisplay.innerHTML = '<h3>景品一覧</h3>';
-  const ul = document.createElement('ul');
-  prizes.forEach((prize) => {
-    const li = document.createElement('li');
-    const prizeName = typeof prize === 'object' ? prize.name : prize;
-    li.textContent = prizeName;
-    ul.appendChild(li);
-  });
-  elements.prizeDisplay.appendChild(ul);
-}
-
-export function renderSuggestions(suggestions, handler) {
-  if (!elements.suggestionList) return;
-  elements.suggestionList.innerHTML = '';
-  suggestions.forEach((s) => {
-    const button = document.createElement('button');
-    button.textContent = s.name;
-    button.dataset.name = s.name;
-    button.dataset.memberId = s.id;
-    button.dataset.hasPassword = String(s.hasPassword);
-    button.className = 'suggestion-button';
-    button.addEventListener('click', () => handler(s.name, s.id, s.hasPassword));
-    elements.suggestionList.appendChild(button);
-  });
-}
-
-export function renderAllResults(results, isShareView, highlightName) {
-  if (isShareView) {
-    if (elements.allResultsContainer) elements.allResultsContainer.innerHTML = '';
-    return;
-  }
-
-  if (!elements.allResultsContainer || !results) return;
-
-  let html = `
-    <div class="list-header">
-      <h3>みんなの結果</h3>
-      <button id="showAllTracersButton" class="secondary-btn">他の人の軌跡見る！</button>
-    </div>
-    <ul class="item-list">
-  `;
-
-  for (const name in results) {
-    const prize = results[name].prize;
-    const prizeName = typeof prize === 'object' ? prize.name : prize;
-    const prizeImageUrl = typeof prize === 'object' ? prize.imageUrl : null;
-
-    const isHighlighted = name === highlightName ? 'highlight' : '';
-
-    let imageHtml = '';
-    if (prizeImageUrl) {
-      imageHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image">`;
-    }
-
-    html += `<li class="item-list-item ${isHighlighted}">${imageHtml}<span>${name} → ${prizeName}</span></li>`;
-  }
-  html += '</ul>';
-  elements.allResultsContainer.innerHTML = html;
-}
-
-export function hideParticipantSubViews() {
-  if (elements.nameEntrySection) elements.nameEntrySection.style.display = 'none';
-  if (elements.participantControlPanel) elements.participantControlPanel.style.display = 'none';
-  if (elements.joinSection) elements.joinSection.style.display = 'none';
-  if (elements.waitingMessage) elements.waitingMessage.style.display = 'none';
-  if (elements.resultSection) elements.resultSection.style.display = 'none';
-}
-
-export function showNameEntryView() {
-  hideParticipantSubViews();
-  if (elements.nameEntrySection) elements.nameEntrySection.style.display = 'block';
-  if (elements.nameInput) elements.nameInput.value = '';
-  if (elements.suggestionList) elements.suggestionList.innerHTML = '';
-}
-
-export function showControlPanelView(eventData) {
-  hideParticipantSubViews();
-  if (elements.participantControlPanel) elements.participantControlPanel.style.display = 'block';
-  if (elements.welcomeName) elements.welcomeName.textContent = state.currentParticipantName;
-}
-
-export function showJoinView(eventData) {
-  hideParticipantSubViews();
-  if (elements.joinSection) elements.joinSection.style.display = 'block';
-  renderSlots(eventData.participants);
-  renderPrizesForParticipant(eventData.prizes, eventData.displayMode);
-}
-
-export function showWaitingView() {
-  hideParticipantSubViews();
-  if (elements.waitingMessage) elements.waitingMessage.style.display = 'block';
-}
-
-export function showResultsView() {
-  hideParticipantSubViews();
-  if (elements.resultSection) elements.resultSection.style.display = 'block';
-}
-
-export function showUserDashboardView(groupData, events) {
-  showView('participantView');
-  hideParticipantSubViews();
-  elements.backToGroupEventListLink.style.display = 'none';
-
-  if (elements.participantEventName) {
-    elements.participantEventName.textContent = `${groupData.name} のダッシュボード`;
-  }
-
-  state.loadParticipantState();
-  if (state.currentParticipantId && state.currentParticipantToken) {
-    showControlPanelView({participants: [], status: 'pending'});
-  } else {
-    showNameEntryView();
-    if (elements.nameInput) elements.nameInput.placeholder = '名前を入力して参加/ログイン';
-    if (elements.confirmNameButton) {
-      elements.confirmNameButton.textContent = 'OK';
-      elements.confirmNameButton.style.display = 'block';
-    }
-  }
-
-  renderOtherEvents(events, groupData.customUrl);
-}
-
 export function resetEventCreationForm() {
   state.setPrizes([]);
   if (elements.participantCountInput) elements.participantCountInput.value = '';
@@ -511,65 +337,6 @@ export function resetEventCreationForm() {
   state.setCurrentLotteryData(null);
   if (elements.adminControls) elements.adminControls.style.display = 'none';
   if (elements.broadcastControls) elements.broadcastControls.style.display = 'none';
-}
-
-export function renderOtherEvents(events, groupCustomUrl) {
-  if (!elements.otherEventsList || !elements.otherEventsSection) return;
-
-  const showAcknowledgedCheckbox = document.getElementById('showAcknowledgedEvents');
-  const shouldShowAcknowledged = showAcknowledgedCheckbox ? showAcknowledgedCheckbox.checked : false;
-  const myMemberId = state.currentParticipantId;
-
-  const eventsToRender = events.filter((event) => {
-    const myParticipation = myMemberId ? event.participants.find((p) => p.memberId === myMemberId) : null;
-    const isStarted = event.status === 'started';
-
-    if (isStarted && myParticipation && !myParticipation.acknowledgedResult) {
-      return true;
-    }
-    if (shouldShowAcknowledged) {
-      return true;
-    }
-    return !isStarted;
-  });
-
-  if (eventsToRender.length === 0) {
-    elements.otherEventsSection.style.display = 'none';
-    return;
-  }
-
-  elements.otherEventsList.innerHTML = '';
-  eventsToRender.forEach((event) => {
-    const li = document.createElement('li');
-    li.className = 'item-list-item';
-    const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
-    const eventUrl = groupCustomUrl ? `/g/${groupCustomUrl}/${event.id}` : `/events/${event.id}`;
-
-    const myParticipation = myMemberId ? event.participants.find((p) => p.memberId === myMemberId) : null;
-    let badge = '';
-
-    if (event.status === 'started' && myParticipation && !myParticipation.acknowledgedResult) {
-      const iconName = clientEmojiToLucide('🎉');
-      badge = `<span class="badge result-ready"><i data-lucide="${iconName}"></i>結果発表！</span>`;
-    } else if (event.status === 'pending') {
-      if (myParticipation) {
-        badge = '<span class="badge joined">参加登録済</span>';
-      } else {
-        badge = '<span class="badge ongoing">開催中</span>';
-      }
-    }
-
-    li.innerHTML = `
-            <span><strong>${event.eventName || '無題のイベント'}</strong> ${badge}</span>
-            <a href="${eventUrl}" class="button">${event.status === 'started' ? '結果を見る' : '参加する'}</a>
-        `;
-    elements.otherEventsList.appendChild(li);
-  });
-  elements.otherEventsSection.style.display = 'block';
-
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
 }
 
 export function setBroadcastControlsDisabled(disabled) {
