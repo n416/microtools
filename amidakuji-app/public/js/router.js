@@ -7,6 +7,7 @@ import {renderEventList, showPasswordResetNotification} from './components/event
 import {renderMemberList} from './components/memberManagement.js';
 import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
 import {renderAdminLists} from './components/adminDashboard.js';
+import { showUserDashboardView, showJoinView, showWaitingView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents } from './components/participantView.js';
 
 async function loadAdminDashboard() {
   try {
@@ -229,7 +230,7 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
         try {
           const result = await api.loginMemberToGroup(groupId, error.memberId, password);
           state.saveParticipantState(result.token, result.memberId, result.name);
-          ui.showControlPanelView({participants: [], status: 'pending'});
+          showControlPanelView({participants: [], status: 'pending'});
           await handleRouting();
         } catch (loginError) {
           alert(loginError.error || '合言葉が違います。');
@@ -279,7 +280,7 @@ export async function verifyAndLogin(eventId, memberId, password, slot = null) {
     const result = await api.verifyPasswordAndJoin(eventId, memberId, password, slot);
     state.saveParticipantState(result.token, result.memberId, result.name);
     if (slot !== null) {
-      ui.showWaitingView();
+      showWaitingView();
     } else {
       await handleRouting();
     }
@@ -295,7 +296,7 @@ export async function verifyAndLogin(eventId, memberId, password, slot = null) {
 async function initializeParticipantView(eventId, isShare, sharedParticipantName) {
   state.setCurrentEventId(eventId);
   ui.showView('participantView');
-  ui.hideParticipantSubViews();
+  hideParticipantSubViews();
 
   try {
     const eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
@@ -333,7 +334,7 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
     }
 
     if (eventData.otherEvents) {
-      ui.renderOtherEvents(eventData.otherEvents, state.currentLotteryData.groupCustomUrl);
+      renderOtherEvents(eventData.otherEvents, state.currentLotteryData.groupCustomUrl);
     }
 
     if (isShare) {
@@ -349,13 +350,13 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
       } else {
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
         if (myParticipation && myParticipation.name) {
-          ui.showWaitingView();
+          showWaitingView();
         } else {
-          ui.showJoinView(eventData);
+          showJoinView(eventData);
         }
       }
     } else {
-      ui.showNameEntryView((name) => handleLoginOrRegister(eventId, name));
+      showNameEntryView((name) => handleLoginOrRegister(eventId, name));
     }
   } catch (error) {
     console.error('Error in initializeParticipantView:', error);
@@ -366,38 +367,6 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
       if (ui.elements.participantView) ui.elements.participantView.innerHTML = `<div class="view-container"><p class="error-message">${error.error || error.message}</p></div>`;
     }
   }
-}
-
-async function showResultsView(eventData, targetName, isShareView) {
-  ui.showResultsView();
-  const onAnimationComplete = () => {
-    const result = eventData.results ? eventData.results[targetName] : null;
-    if (result) {
-      const prize = result.prize;
-      const prizeName = typeof prize === 'object' ? prize.name : prize;
-      const prizeImageUrl = typeof prize === 'object' ? prize.imageUrl : null;
-
-      let resultHtml = `<b>${targetName}さんの結果は…「${prizeName}」でした！</b>`;
-      if (prizeImageUrl) {
-        resultHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image large"><br>` + resultHtml;
-      }
-
-      if (ui.elements.myResult) ui.elements.myResult.innerHTML = resultHtml;
-    } else {
-      if (ui.elements.myResult) ui.elements.myResult.textContent = 'まだ結果は発表されていません。';
-    }
-    if (!isShareView) {
-      if (ui.elements.shareButton) ui.elements.shareButton.style.display = 'inline-flex';
-      if (ui.elements.backToControlPanelFromResultButton) ui.elements.backToControlPanelFromResultButton.style.display = 'block';
-    }
-    if (eventData.results) {
-      ui.renderAllResults(eventData.results, isShareView, state.currentParticipantName);
-    }
-  };
-  if (ui.elements.myResult) ui.elements.myResult.innerHTML = `<b>${targetName}さんの結果をアニメーションで確認中...</b>`;
-  const ctxParticipant = ui.elements.participantCanvas ? ui.elements.participantCanvas.getContext('2d') : null;
-
-  await startAnimation(ctxParticipant, [targetName], onAnimationComplete, targetName);
 }
 
 async function initializeParticipantDashboardView(customUrlOrGroupId, isCustomUrl = true) {
@@ -416,7 +385,7 @@ async function initializeParticipantDashboardView(customUrlOrGroupId, isCustomUr
       showAcknowledgedCheckbox.checked = savedPreference === 'true';
     }
 
-    ui.showUserDashboardView(groupData, events);
+    showUserDashboardView(groupData, events);
   } catch (error) {
     console.error('Failed to initialize participant dashboard:', error);
     if (error.requiresPassword) {
