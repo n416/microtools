@@ -1,9 +1,11 @@
-// amidakuji-app/public/js/router.js
-
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
 import {startAnimation, stopAnimation, prepareStepAnimation} from './animation.js';
+import {renderGroupList} from './components/groupDashboard.js';
+import {renderEventList, showPasswordResetNotification} from './components/eventDashboard.js';
+import {renderMemberList} from './components/memberManagement.js';
+import {renderPrizeCardList, renderPrizeListMode,renderEventForEditing} from './components/eventEdit.js';
 
 async function loadAdminDashboard() {
   try {
@@ -38,20 +40,18 @@ async function loadAndShowGroupEvents(groupId) {
   const showStartedCheckbox = document.getElementById('showStartedEvents');
   let originalEvents = [];
 
-  // ローカルストレージから設定を読み込み、チェックボックスに反映
   const savedPreference = localStorage.getItem('showStartedEvents');
   if (showStartedCheckbox) {
     showStartedCheckbox.checked = savedPreference === 'true';
   }
 
   const rerenderEvents = () => {
-    ui.renderEventList(originalEvents);
+    renderEventList(originalEvents);
   };
 
   if (showStartedCheckbox) {
     showStartedCheckbox.removeEventListener('change', rerenderEvents);
     showStartedCheckbox.addEventListener('change', () => {
-      // 変更時にローカルストレージに設定を保存
       localStorage.setItem('showStartedEvents', showStartedCheckbox.checked);
       rerenderEvents();
     });
@@ -61,9 +61,9 @@ async function loadAndShowGroupEvents(groupId) {
     const [events, passwordRequests] = await Promise.all([api.getEventsForGroup(groupId), api.getPasswordRequests(groupId)]);
 
     originalEvents = events;
-    rerenderEvents(); // 初回レンダリング
+    rerenderEvents();
 
-    ui.showPasswordResetNotification(passwordRequests);
+    showPasswordResetNotification(passwordRequests);
 
     if (state.allUserGroups.length === 0) {
       const allGroups = await api.getGroups();
@@ -84,7 +84,7 @@ async function loadAndShowMemberManagement(groupId) {
     if (ui.elements.memberManagementGroupName) {
       ui.elements.memberManagementGroupName.textContent = group.name;
     }
-    ui.renderMemberList(members);
+    renderMemberList(members);
   } catch (error) {
     console.error(`メンバー管理画面の読み込み失敗 (Group ID: ${groupId}):`, error);
     if (ui.elements.memberList) {
@@ -123,31 +123,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
     if (ui.elements.eventIdInput) ui.elements.eventIdInput.value = eventId;
 
     if (viewToShow === 'eventEditView') {
-      ui.elements.eventNameInput.value = data.eventName || '';
-      state.setPrizes(data.prizes || []);
-
-      ui.elements.displayModeSelect.value = data.displayMode;
-      ui.elements.createEventButton.textContent = 'この内容でイベントを保存';
-
-      const savedMode = localStorage.getItem('prizeViewMode') || 'card';
-      const prizeCardContainer = document.getElementById('prizeCardListContainer');
-      const prizeListContainer = document.getElementById('prizeListModeContainer');
-      const viewModeCardBtn = document.getElementById('viewModeCard');
-      const viewModeListBtn = document.getElementById('viewModeList');
-
-      if (savedMode === 'list') {
-        viewModeListBtn.classList.add('active');
-        viewModeCardBtn.classList.remove('active');
-        prizeListContainer.style.display = 'block';
-        prizeCardContainer.style.display = 'none';
-        ui.renderPrizeListMode();
-      } else {
-        viewModeCardBtn.classList.add('active');
-        viewModeListBtn.classList.remove('active');
-        prizeCardContainer.style.display = 'grid';
-        prizeListContainer.style.display = 'none';
-        ui.renderPrizeCardList();
-      }
+      renderEventForEditing(data);
     } else if (viewToShow === 'broadcastView') {
       const {adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, revealRandomButton, regenerateLinesButton, glimpseButton, shufflePrizesBroadcastButton} = ui.elements;
       const hidePrizes = data.displayMode === 'private';
@@ -160,33 +136,27 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
         highlightUserSelect.innerHTML = allParticipants.map((p) => `<option value="${p.name}">${p.name}</option>`).join('');
       }
 
-      // ▼▼▼ ここからが修正点 ▼▼▼
       if (data.status === 'pending') {
         if (adminControls) adminControls.style.display = 'block';
         if (startEventButton) startEventButton.style.display = 'inline-flex';
 
-        // 実施前は「再生・進行」「個別表示」グループを非表示
         if (animateAllButton) animateAllButton.closest('.control-group').style.display = 'none';
         if (highlightUserButton) highlightUserButton.closest('.control-group').style.display = 'none';
 
-        // 実施前は「あみだくじ操作」グループを表示
         if (regenerateLinesButton) regenerateLinesButton.closest('.control-group').style.display = 'flex';
       } else if (data.status === 'started') {
         if (adminControls) adminControls.style.display = 'none';
 
-        // 実施後は「再生・進行」「個別表示」グループを表示
         if (animateAllButton) animateAllButton.closest('.control-group').style.display = 'flex';
         if (highlightUserButton) highlightUserButton.closest('.control-group').style.display = 'flex';
 
-        // 実施後は「あみだくじ操作」グループを非表示
         if (regenerateLinesButton) regenerateLinesButton.closest('.control-group').style.display = 'none';
       }
-      // ▲▲▲ 修正点ここまで ▲▲▲
-
       const ctx = adminCanvas.getContext('2d');
       await prepareStepAnimation(ctx, hidePrizes);
     }
   } catch (error) {
+    console.error('イベントの読み込み中にAPIエラーが発生しました:', error);
     alert(error.error || 'イベントの読み込みに失敗しました。');
   }
 }
@@ -301,7 +271,6 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
   ui.hideParticipantSubViews();
 
   try {
-    // ▼▼▼ 修正点：isShareの場合、participantNameをAPIに渡す ▼▼▼
     const eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
 
     state.setCurrentLotteryData(eventData);
@@ -395,16 +364,12 @@ async function showResultsView(eventData, targetName, isShareView) {
       if (ui.elements.backToControlPanelFromResultButton) ui.elements.backToControlPanelFromResultButton.style.display = 'block';
     }
     if (eventData.results) {
-      // ▼▼▼ 修正点 ▼▼▼
-      // isShareView とハイライトするべき自分の名前を渡す
       ui.renderAllResults(eventData.results, isShareView, state.currentParticipantName);
     }
   };
   if (ui.elements.myResult) ui.elements.myResult.innerHTML = `<b>${targetName}さんの結果をアニメーションで確認中...</b>`;
   const ctxParticipant = ui.elements.participantCanvas ? ui.elements.participantCanvas.getContext('2d') : null;
 
-  // ▼▼▼ 修正点 ▼▼▼
-  // 第4引数に targetName を渡してカメラフォーカスを指示
   await startAnimation(ctxParticipant, [targetName], onAnimationComplete, targetName);
 }
 
@@ -418,13 +383,11 @@ async function initializeParticipantDashboardView(customUrlOrGroupId, isCustomUr
     state.setParticipantEventList(events);
     state.loadParticipantState();
 
-    // ▼▼▼ このブロックを追加 ▼▼▼
     const showAcknowledgedCheckbox = document.getElementById('showAcknowledgedEvents');
     if (showAcknowledgedCheckbox) {
       const savedPreference = localStorage.getItem('showAcknowledgedEvents');
       showAcknowledgedCheckbox.checked = savedPreference === 'true';
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 
     ui.showUserDashboardView(groupData, events);
   } catch (error) {
@@ -539,7 +502,7 @@ export async function handleRouting(initialData) {
       ui.showView('groupDashboard');
       const groups = await api.getGroups();
       state.setAllUserGroups(groups);
-      ui.renderGroupList(groups);
+      renderGroupList(groups);
       ui.updateGroupSwitcher();
       return;
     }
