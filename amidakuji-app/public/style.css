@@ -289,7 +289,7 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  baseline-source:last;
+  baseline-source: last;
   gap: 5px;
   background-color: var(--primary-color);
   color: white;
@@ -554,7 +554,6 @@ button:disabled {
   box-shadow: none;
   width: auto;
   height: 400px;
-  transition: opacity 0.3s ease-in-out;
 }
 
 .error-message {

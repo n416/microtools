@@ -7,6 +7,14 @@ export let adminPanzoom = null;
 export let participantPanzoom = null;
 let resizeDebounceTimer;
 
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+// ★★★ ここからが修正点 ★★★
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+let prizeFadeAnimationId;
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+// ★★★ 修正はここまで ★★★
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
 const animator = {
   tracers: [],
   icons: {},
@@ -911,23 +919,90 @@ export async function resetAnimation(onComplete = null) {
   animationLoop();
 }
 
-export function redrawPrizes(targetCtx, hidePrizes) {
-  if (!targetCtx || !state.currentLotteryData) return;
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+// ★★★ ここからが修正点 ★★★
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+function drawPrizesOnly(targetCtx, hidePrizes) {
+  if (!targetCtx || !targetCtx.canvas || !state.currentLotteryData) return;
+
+  const {participants, prizes} = state.currentLotteryData;
   const container = targetCtx.canvas.closest('.canvas-panzoom-container');
   if (!container) return;
+  const numParticipants = participants.length;
+  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, container.clientWidth);
+  const VIRTUAL_HEIGHT = getTargetHeight(container);
+  const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
+  const prizeAreaHeight = calculatePrizeAreaHeight(prizes);
+  const lineBottomY = VIRTUAL_HEIGHT - prizeAreaHeight;
   const isDarkMode = document.body.classList.contains('dark-mode');
-  const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';
+  const prizeTextColor = isDarkMode ? '#e0e0e0' : '#333';
 
-  drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
+  // Clear only the prize area
+  targetCtx.clearRect(0, lineBottomY, VIRTUAL_WIDTH, prizeAreaHeight);
 
-  animator.tracers.forEach((tracer) => {
-    if (tracer.isFinished) {
-      drawTracerPath(targetCtx, tracer);
+  // Redraw prizes
+  prizes.forEach((prize, i) => {
+    const isRevealed = state.revealedPrizes.some((r) => r.prizeIndex === i);
+    if (!isRevealed) {
+      const x = participantSpacing * (i + 1);
+      const prizeName = hidePrizes ? '' : prize.name || '';
+      const prizeImage = !hidePrizes && prize.imageUrl ? animator.prizeImages[prize.imageUrl] : null;
+
+      const prizeImageHeight = 35;
+      const prizeAreaTopMargin = 30;
+      const imageTextGap = 15;
+      let prizeTextY;
+
+      if (prizeImage && prizeImage.complete) {
+        const prizeImageY = lineBottomY + prizeAreaTopMargin + prizeImageHeight / 2;
+        prizeTextY = prizeImageY + prizeImageHeight / 2 + imageTextGap;
+        targetCtx.drawImage(prizeImage, x - prizeImageHeight / 2, prizeImageY - prizeImageHeight / 2, prizeImageHeight, prizeImageHeight);
+      } else {
+        prizeTextY = lineBottomY + prizeAreaTopMargin + 18;
+      }
+      targetCtx.fillStyle = prizeTextColor;
+      wrapText(targetCtx, prizeName, x, prizeTextY, 5, 18);
     }
-    drawTracerIcon(targetCtx, tracer);
   });
+
+  // Redraw any revealed prizes that might be in this area
   drawRevealedPrizes(targetCtx);
 }
+
+export function fadePrizes(targetCtx, show) {
+  if (!targetCtx || !targetCtx.canvas) return;
+  cancelAnimationFrame(prizeFadeAnimationId);
+
+  const duration = 200;
+  let start = null;
+
+  function step(timestamp) {
+    if (!start) start = timestamp;
+    const progress = timestamp - start;
+    const ratio = Math.min(progress / duration, 1);
+
+    // Fade-in: 0 to 1, Fade-out: 1 to 0
+    const alpha = show ? ratio : 1 - ratio;
+
+    targetCtx.globalAlpha = alpha;
+    drawPrizesOnly(targetCtx, false); // Always draw names when fading in/out
+    targetCtx.globalAlpha = 1;
+
+    if (progress < duration) {
+      prizeFadeAnimationId = requestAnimationFrame(step);
+    } else {
+      // Ensure final state is drawn correctly
+      if (!show) {
+        drawPrizesOnly(targetCtx, true);
+      }
+    }
+  }
+
+  prizeFadeAnimationId = requestAnimationFrame(step);
+}
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+// ★★★ 修正はここまで ★★★
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
 export async function showAllTracersInstantly() {
   if (isAnimationRunning()) stopAnimation();
@@ -945,9 +1020,6 @@ export async function showAllTracersInstantly() {
   const VIRTUAL_HEIGHT = getTargetHeight(container);
   const numParticipants = state.currentLotteryData.participants.length;
 
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-  // ★★★ ここからが修正点 ★★★
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
   const allResults = state.currentLotteryData.results;
   const allPrizes = state.currentLotteryData.prizes;
   if (allResults && allPrizes) {
@@ -970,9 +1042,6 @@ export async function showAllTracersInstantly() {
       .filter(Boolean);
     state.setRevealedPrizes(allRevealedPrizes);
   }
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-  // ★★★ 修正はここまで ★★★
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
   animator.tracers = allParticipantsWithNames.map((p) => {
     const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
@@ -1001,11 +1070,5 @@ export async function showAllTracersInstantly() {
     drawTracerIcon(targetCtx, tracer);
   });
 
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-  // ★★★ ここからが修正点 ★★★
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
   drawRevealedPrizes(targetCtx);
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-  // ★★★ 修正はここまで ★★★
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 }
