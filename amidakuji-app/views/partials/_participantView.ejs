@@ -1,0 +1,69 @@
+<h2 id="participantEventName">イベント読み込み中...</h2>
+<div class="event-header">
+  <a href="#" id="backToGroupEventListLink" style="display: none;"><i data-lucide="<%= emojiToLucide('←') %>"></i> イベント一覧に戻る</a>
+</div>
+<div id="participantFlow">
+  <div id="nameEntrySection" class="controls" style="display: none">
+    <h3>イベントに参加</h3>
+    <div class="input-group">
+      <label for="nameInput" class="visually-hidden">あなたの名前</label>
+      <input type="text" id="nameInput" placeholder="あなたの名前を入力してください" />
+      <button id="confirmNameButton">OK</button>
+    </div>
+    <div id="suggestionList" class="suggestion-list"></div>
+  </div>
+  <div id="participantControlPanel" class="controls participant-dashboard" style="display: none">
+    <h3>ようこそ、<span id="welcomeName"></span> さん</h3>
+    <div class="setting-group">
+      <h4 class="setting-group-title">アカウント設定</h4>
+      <div class="setting-group-buttons">
+        <button id="editProfileButton" class="secondary-btn">プロフィール編集</button>
+        <button id="setPasswordButton" class="secondary-btn">合言葉を設定</button>
+      </div>
+    </div>
+    <div class="danger-zone">
+      <button id="participantLogoutButton" class="secondary-btn">ログアウト</button>
+      <button id="deleteMyAccountButton" class="secondary-btn danger">アカウントを削除</button>
+    </div>
+  </div>
+  <div id="otherEventsSection" class="controls" style="display: none; margin-top: 20px;">
+    <div class="list-header">
+      <h4>イベント一覧</h4>
+      <div class="input-group checkbox-group" style="margin-bottom: 0;">
+        <input type="checkbox" id="showAcknowledgedEvents" />
+        <label for="showAcknowledgedEvents">終了済みを表示する</label>
+      </div>
+    </div>
+    <ul id="otherEventsList" class="item-list"></ul>
+  </div>
+  <div id="joinSection" style="display: none">
+    <button id="backToControlPanelButton"><i data-lucide="<%= emojiToLucide('←') %>"></i> メニューに戻る</button>
+    <div id="prizeDisplay"></div>
+    <div class="slot-selection-container">
+      <h3>参加枠を選んでください</h3>
+      <div id="slotList"></div>
+    </div>
+    <div class="join-form">
+      <button id="joinButton" disabled>この枠で参加する</button>
+    </div>
+  </div>
+  <div id="waitingMessage" style="display: none">
+    <p>参加登録しました！結果発表をお待ちください...</p>
+    <button id="deleteParticipantWaitingButton" class="delete-btn">参加を取り消す</button>
+    <button id="backToDashboardFromWaitingButton">ダッシュボードに戻る</button>
+  </div>
+</div>
+<div id="resultSection" style="display: none">
+  <h3><i data-lucide="<%= emojiToLucide('🎉') %>"></i> 結果発表 <i data-lucide="<%= emojiToLucide('🎉') %>"></i></h3>
+  <div class="canvas-panzoom-container">
+    <div class="loading-mask" id="participant-loading-mask">あみだくじを生成中...</div>
+    <div class="panzoom-wrapper" id="participant-panzoom-wrapper">
+      <canvas id="participantCanvas"></canvas>
+    </div>
+  </div>
+  <p id="myResult"></p>
+  <div id="allResultsContainer"></div>
+  <button id="acknowledgeButton" class="primary-action" style="display: none; margin-top: 15px;"><i data-lucide="<%= emojiToLucide('🎁') %>"></i> 結果を受け取る</button>
+  <button id="shareButton" style="display: none">結果をシェアする</button>
+  <button id="backToControlPanelFromResultButton" style="display: none">戻る</button>
+</div>

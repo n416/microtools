@@ -1,0 +1,27 @@
+<div id="bulkRegisterModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
+    <h3>メンバーの一括登録</h3>
+    <div id="bulk-step1-input">
+      <label for="bulkNamesTextarea">登録したいメンバーの名前を、改行・スペース・カンマ区切りでテキストエリアに貼り付けてください。</label>
+      <textarea id="bulkNamesTextarea" rows="10" placeholder="佐藤 太郎, 鈴木 一郎, ..."></textarea>
+      <div class="modal-actions">
+        <button id="analyzeBulkButton" class="primary-action">確認する</button>
+      </div>
+    </div>
+    <div id="bulk-step2-preview" style="display: none;">
+      <p>入力された名前を分析しました。内容を確認し、登録を実行してください。</p>
+      <div class="tabs">
+        <button class="tab-link active" data-tab="newRegistrationTab">新規登録</button>
+        <button class="tab-link" data-tab="potentialMatchTab">類似候補</button>
+        <button class="tab-link" data-tab="exactMatchTab">完全一致</button>
+      </div>
+      <div id="newRegistrationTab" class="tab-content active"></div>
+      <div id="potentialMatchTab" class="tab-content"></div>
+      <div id="exactMatchTab" class="tab-content"></div>
+      <div class="modal-actions">
+        <button id="finalizeBulkButton" class="primary-action" disabled>この内容で登録を実行する</button>
+      </div>
+    </div>
+  </div>
+</div>
