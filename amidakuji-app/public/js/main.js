@@ -1,8 +1,8 @@
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
-import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, showAllTracersInstantly, adminPanzoom, participantPanzoom, fadePrizes} from './animation.js';
-import {initGroupDashboard, renderGroupList} from './components/groupDashboard.js';
+import {startAnimation, stopAnimation, prepareStepAnimation, isAnimationRunning, adminPanzoom, participantPanzoom} from './animation.js';
+import {initGroupDashboard} from './components/groupDashboard.js';
 import {initEventDashboard} from './components/eventDashboard.js';
 import {initMemberManagement} from './components/memberManagement.js';
 import {initEventEdit} from './components/eventEdit.js';
@@ -253,94 +253,9 @@ async function initializeApp() {
   await router.navigateTo(window.location.pathname, false);
 
   if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
-    await loadUserAndRedirect(state.currentUser.lastUsedGroupId);
+    await router.loadUserAndRedirect(state.currentUser.lastUsedGroupId);
   }
   lucide.createIcons();
-}
-
-export async function loadUserAndRedirect(lastUsedGroupId) {
-  try {
-    const groups = await api.getGroups();
-    state.setAllUserGroups(groups);
-    renderGroupList(groups);
-
-    if (groups.length > 0) {
-      let targetGroup = groups.find((g) => g.id === lastUsedGroupId) || groups[0];
-      await router.navigateTo(`/admin/groups/${targetGroup.id}`);
-    } else {
-      ui.showView('groupDashboard');
-    }
-  } catch (error) {
-    console.error(error);
-    ui.showView('groupDashboard');
-  }
-}
-
-export async function openGroupSettingsFor(groupId) {
-  const groupData = state.allUserGroups.find((g) => g.id === groupId);
-  if (!groupData) {
-    alert('グループ情報が見つかりませんでした。');
-    return;
-  }
-
-  groupData.hasPassword = !!groupData.password;
-
-  const handlers = {
-    onSave: handleSaveSettings,
-    onDeletePassword: async () => {
-      if (!confirm('本当にこのグループの合言葉を削除しますか？')) return;
-      try {
-        await api.deleteGroupPassword(groupId);
-        alert('合言葉を削除しました。');
-        if (elements.deletePasswordButton) {
-          elements.deletePasswordButton.style.display = 'none';
-        }
-        const groupInState = state.allUserGroups.find((g) => g.id === groupId);
-        if (groupInState) delete groupInState.password;
-      } catch (error) {
-        alert(error.error);
-      }
-    },
-  };
-
-  ui.openSettingsModal(groupData, handlers);
-}
-
-async function handleSaveSettings() {
-  const groupId = elements.settingsGroupId.value;
-  const settingsPayload = {
-    groupName: elements.groupNameEditInput.value.trim(),
-    customUrl: elements.customUrlInput.value.trim(),
-    noIndex: elements.noIndexCheckbox.checked,
-  };
-  if (elements.groupPasswordInput.value) {
-    settingsPayload.password = elements.groupPasswordInput.value;
-  }
-
-  elements.saveGroupSettingsButton.disabled = true;
-  try {
-    await api.updateGroupSettings(groupId, settingsPayload);
-    alert('設定を保存しました。');
-    ui.closeSettingsModal();
-    const groups = await api.getGroups();
-    state.setAllUserGroups(groups);
-    renderGroupList(groups);
-  } catch (error) {
-    alert(error.error || '設定の保存に失敗しました。');
-  } finally {
-    elements.saveGroupSettingsButton.disabled = false;
-  }
-}
-
-export async function handleCopyEvent(eventId) {
-  if (!confirm('このイベントをコピーしますか？')) return;
-  try {
-    await api.copyEvent(eventId);
-    alert('イベントをコピーしました。');
-    await router.navigateTo(window.location.pathname, false);
-  } catch (error) {
-    alert(`エラー: ${error.error}`);
-  }
 }
 
 function setupEventListeners() {

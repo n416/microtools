@@ -2,7 +2,7 @@ import * as api from '../api.js';
 import * as state from '../state.js';
 import * as router from '../router.js';
 import * as ui from '../ui.js';
-import {handleCopyEvent, openGroupSettingsFor} from '../main.js';
+import {openGroupSettingsFor} from './groupDashboard.js';
 
 // このコンポーネントが管理するDOM要素
 const elements = {
@@ -20,7 +20,6 @@ const elements = {
   closePasswordResetRequestModalButton: document.querySelector('#passwordResetRequestModal .close-button'),
   passwordResetRequestList: document.getElementById('passwordResetRequestList'),
 };
-
 
 // イベントリストを描画する関数
 export function renderEventList(allEvents) {
@@ -116,6 +115,16 @@ export function renderPasswordRequests(requests) {
             </div>`;
     elements.passwordResetRequestList.appendChild(li);
   });
+}
+async function handleCopyEvent(eventId) {
+  if (!confirm('このイベントをコピーしますか？')) return;
+  try {
+    await api.copyEvent(eventId);
+    alert('イベントをコピーしました。');
+    await router.navigateTo(window.location.pathname, false);
+  } catch (error) {
+    alert(`エラー: ${error.error}`);
+  }
 }
 
 // イベントリスナーを初期化する関数
