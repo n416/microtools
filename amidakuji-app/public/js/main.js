@@ -343,24 +343,6 @@ export async function handleCopyEvent(eventId) {
   }
 }
 
-async function buildNewPrizesWithDataPreservation(newNames) {
-  const oldPrizes = [...state.prizes];
-  const prizeMasters = await api.getPrizeMasters(state.currentGroupId).catch(() => []);
-  const oldPrizesMap = new Map(oldPrizes.map((p) => [p.name, p]));
-  const prizeMastersMap = new Map(prizeMasters.map((p) => [p.name, p.imageUrl]));
-
-  const newPrizes = newNames.map((name) => {
-    if (oldPrizesMap.has(name)) {
-      return {...oldPrizesMap.get(name)};
-    }
-    if (prizeMastersMap.has(name)) {
-      return {name, imageUrl: prizeMastersMap.get(name), newImageFile: null};
-    }
-    return {name, imageUrl: null, newImageFile: null};
-  });
-  return newPrizes;
-}
-
 function setupEventListeners() {
   initBroadcast();
   const {elements} = ui;

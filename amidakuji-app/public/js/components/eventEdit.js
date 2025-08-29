@@ -290,14 +290,13 @@ export function closePrizeBulkAddModal() {
   if (elements.prizeBulkAddModal) elements.prizeBulkAddModal.style.display = 'none';
 }
 
-
 export function initEventEdit() {
   if (elements.eventEditView) {
     const viewModeCardBtn = document.getElementById('viewModeCard');
     const viewModeListBtn = document.getElementById('viewModeList');
     const prizeCardContainer = document.getElementById('prizeCardListContainer');
     const prizeListContainer = document.getElementById('prizeListModeContainer');
-    let sortConfig = { key: 'name', order: 'asc' };
+    let sortConfig = {key: 'name', order: 'asc'};
 
     const switchViewMode = (mode) => {
       if (mode === 'list') {
@@ -348,11 +347,11 @@ export function initEventEdit() {
           }
 
           if (valueChanged) {
-            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+            targetInput.dispatchEvent(new Event('change', {bubbles: true}));
           }
         }
       });
-      
+
       // [メイン処理] 値の変更を検知して再描画とフォーカス復元を行う
       prizeListContainer.addEventListener('change', (e) => {
         const changedElement = e.target;
@@ -361,51 +360,51 @@ export function initEventEdit() {
 
         let focusedInputInfo = null;
         if (isQuantityInput || isNameInput) {
-            focusedInputInfo = {
-                name: changedElement.dataset.name || changedElement.dataset.originalName,
-                className: changedElement.className,
-                // keydownイベントで保存したカスタムプロパティがあればそれを優先し、なければ現在の位置を使う
-                selectionStart: typeof changedElement._selectionStart === 'number' ? changedElement._selectionStart : changedElement.selectionStart,
-                selectionEnd: typeof changedElement._selectionEnd === 'number' ? changedElement._selectionEnd : changedElement.selectionEnd
-            };
-            // 一時プロパティを削除
-            delete changedElement._selectionStart;
-            delete changedElement._selectionEnd;
+          focusedInputInfo = {
+            name: changedElement.dataset.name || changedElement.dataset.originalName,
+            className: changedElement.className,
+            // keydownイベントで保存したカスタムプロパティがあればそれを優先し、なければ現在の位置を使う
+            selectionStart: typeof changedElement._selectionStart === 'number' ? changedElement._selectionStart : changedElement.selectionStart,
+            selectionEnd: typeof changedElement._selectionEnd === 'number' ? changedElement._selectionEnd : changedElement.selectionEnd,
+          };
+          // 一時プロパティを削除
+          delete changedElement._selectionStart;
+          delete changedElement._selectionEnd;
         }
 
         if (isQuantityInput) {
-            const name = changedElement.dataset.name;
-            const newQuantity = parseInt(changedElement.value, 10);
-            const currentPrizes = state.prizes.filter((p) => p.name === name);
-            const currentQuantity = currentPrizes.length;
+          const name = changedElement.dataset.name;
+          const newQuantity = parseInt(changedElement.value, 10);
+          const currentPrizes = state.prizes.filter((p) => p.name === name);
+          const currentQuantity = currentPrizes.length;
 
-            if (isNaN(newQuantity) || newQuantity < 0) {
+          if (isNaN(newQuantity) || newQuantity < 0) {
+            changedElement.value = currentQuantity;
+            return;
+          }
+          if (newQuantity === 0) {
+            if (!confirm(`景品「${name}」の数量を0にしますか？\nリストからすべての「${name}」が削除されます。よろしいですか？`)) {
               changedElement.value = currentQuantity;
               return;
             }
-            if (newQuantity === 0) {
-              if (!confirm(`景品「${name}」の数量を0にしますか？\nリストからすべての「${name}」が削除されます。よろしいですか？`)) {
-                changedElement.value = currentQuantity;
-                return;
+          }
+
+          const prizeMaster = currentPrizes[0] || {name, imageUrl: null};
+
+          if (newQuantity > currentQuantity) {
+            const diff = newQuantity - currentQuantity;
+            for (let i = 0; i < diff; i++) {
+              state.prizes.push({...prizeMaster});
+            }
+          } else if (newQuantity < currentQuantity) {
+            const diff = currentQuantity - newQuantity;
+            for (let i = 0; i < diff; i++) {
+              const indexToRemove = state.prizes.findIndex((p) => p.name === name);
+              if (indexToRemove > -1) {
+                state.prizes.splice(indexToRemove, 1);
               }
             }
-  
-            const prizeMaster = currentPrizes[0] || { name, imageUrl: null };
-  
-            if (newQuantity > currentQuantity) {
-              const diff = newQuantity - currentQuantity;
-              for (let i = 0; i < diff; i++) {
-                state.prizes.push({ ...prizeMaster });
-              }
-            } else if (newQuantity < currentQuantity) {
-              const diff = currentQuantity - newQuantity;
-              for (let i = 0; i < diff; i++) {
-                const indexToRemove = state.prizes.findIndex((p) => p.name === name);
-                if (indexToRemove > -1) {
-                  state.prizes.splice(indexToRemove, 1);
-                }
-              }
-            }
+          }
         }
         if (isNameInput) {
           const originalName = changedElement.dataset.originalName;
@@ -447,18 +446,18 @@ export function initEventEdit() {
         renderPrizeListMode(sortConfig);
 
         if (focusedInputInfo) {
-            const nameAttribute = (focusedInputInfo.className.includes('prize-name-input-list')) ? 'data-original-name' : 'data-name';
-            const selector = `input.${focusedInputInfo.className.split(' ').join('.')}[${nameAttribute}="${focusedInputInfo.name}"]`;
-            const newFocusedElement = prizeListContainer.querySelector(selector);
-            
-            if (newFocusedElement) {
-                newFocusedElement.focus();
-                if (newFocusedElement.type === 'text') {
-                    setTimeout(() => {
-                        newFocusedElement.setSelectionRange(focusedInputInfo.selectionStart, focusedInputInfo.selectionEnd);
-                    }, 0);
-                }
+          const nameAttribute = focusedInputInfo.className.includes('prize-name-input-list') ? 'data-original-name' : 'data-name';
+          const selector = `input.${focusedInputInfo.className.split(' ').join('.')}[${nameAttribute}="${focusedInputInfo.name}"]`;
+          const newFocusedElement = prizeListContainer.querySelector(selector);
+
+          if (newFocusedElement) {
+            newFocusedElement.focus();
+            if (newFocusedElement.type === 'text') {
+              setTimeout(() => {
+                newFocusedElement.setSelectionRange(focusedInputInfo.selectionStart, focusedInputInfo.selectionEnd);
+              }, 0);
             }
+          }
         }
       });
 
@@ -570,7 +569,7 @@ export function initEventEdit() {
             elements.createEventButton.textContent = 'イベント作成中...';
             const initialEventData = {
               eventName: elements.eventNameInput.value.trim(),
-              prizes: state.prizes.map((p) => ({ name: p.name, imageUrl: p.imageUrl || null })),
+              prizes: state.prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
               groupId: state.currentGroupId,
               displayMode: elements.displayModeSelect.value,
             };
@@ -590,7 +589,7 @@ export function initEventEdit() {
               const hashArray = Array.from(new Uint8Array(hashBuffer));
               const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
               if (!uniqueFilesToUpload.some((f) => f.hash === hashHex)) {
-                uniqueFilesToUpload.push({ file: prize.newImageFile, hash: hashHex });
+                uniqueFilesToUpload.push({file: prize.newImageFile, hash: hashHex});
               }
               fileHashes[prize.newImageFile.name] = hashHex;
             }
@@ -599,11 +598,11 @@ export function initEventEdit() {
           elements.createEventButton.textContent = '画像をアップロード中...';
           const uploadedImageUrls = {};
 
-          for (const { file, hash } of uniqueFilesToUpload) {
-            const { signedUrl, imageUrl } = await api.generateEventPrizeUploadUrl(eventId, file.type, hash);
+          for (const {file, hash} of uniqueFilesToUpload) {
+            const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, file.type, hash);
             await fetch(signedUrl, {
               method: 'PUT',
-              headers: { 'Content-Type': file.type },
+              headers: {'Content-Type': file.type},
               body: file,
             });
             uploadedImageUrls[hash] = imageUrl;
@@ -612,9 +611,9 @@ export function initEventEdit() {
           const finalPrizes = state.prizes.map((prize) => {
             if (prize.newImageFile) {
               const hash = fileHashes[prize.newImageFile.name];
-              return { name: prize.name, imageUrl: uploadedImageUrls[hash] };
+              return {name: prize.name, imageUrl: uploadedImageUrls[hash]};
             }
-            return { name: prize.name, imageUrl: prize.imageUrl };
+            return {name: prize.name, imageUrl: prize.imageUrl};
           });
 
           elements.createEventButton.textContent = '最終保存中...';
@@ -657,7 +656,21 @@ export function initEventEdit() {
           imageUrl: null,
           newImageFile: file || null,
         };
-        if (!file) {
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ ここからが修正点 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // マスターから選択された画像があり、かつ新しいファイルが選択されていない場合
+        if (elements.newPrizeImagePreview.src && !file) {
+          // httpから始まるURLであることを確認（Base64のdata URIではないことを保証）
+          if (elements.newPrizeImagePreview.src.startsWith('http')) {
+            newPrize.imageUrl = elements.newPrizeImagePreview.src;
+          }
+        }
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ 修正はここまで ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+        if (!file && !newPrize.imageUrl) {
           const existingPrize = state.prizes.find((p) => p.name === name);
           if (existingPrize) {
             newPrize.imageUrl = existingPrize.imageUrl;
@@ -671,6 +684,25 @@ export function initEventEdit() {
         closeAddPrizeModal();
       });
     }
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ ここからが修正点 ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    if (elements.newPrizeImageInput) {
+      elements.newPrizeImageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            elements.newPrizeImagePreview.src = event.target.result;
+            elements.newPrizeImagePreview.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ 修正はここまで ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     if (elements.callMasterButton) {
       elements.callMasterButton.addEventListener('click', async () => {
         try {
