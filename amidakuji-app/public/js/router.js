@@ -162,7 +162,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       const regenerateLinesButton = document.getElementById('regenerateLinesButton');
       const adminCanvas = document.getElementById('adminCanvas');
 
-      const hidePrizes = data.displayMode === 'private';
+      const hidePrizes = true;
 
       console.log('[FRONTEND] Configuring broadcast view...');
 
@@ -175,13 +175,9 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
         highlightUserSelect.innerHTML = allParticipants.map((p) => `<option value="${p.name}">${p.name}</option>`).join('');
       }
 
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-      // ★★★ ここからが修正点 ★★★
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
       const isPending = data.status === 'pending';
       console.log(`[FRONTEND LOG] Event status is: ${data.status} (isPending: ${isPending})`);
 
-      // ボタン要素が存在するかどうかをログに出力
       console.log('[FRONTEND LOG] Checking button elements:', {
         adminControls: !!adminControls,
         startEventButton: !!startEventButton,
@@ -192,15 +188,9 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
 
       if (adminControls) adminControls.style.display = isPending ? 'flex' : 'none';
 
-      // 再生・進行グループ
       if (animateAllButton) animateAllButton.closest('.control-group').style.display = isPending ? 'none' : 'flex';
-      // あみだくじ操作グループ
       if (regenerateLinesButton) regenerateLinesButton.closest('.control-group').style.display = isPending ? 'flex' : 'none';
-      // 個別表示グループ
       if (highlightUserButton) highlightUserButton.closest('.control-group').style.display = isPending ? 'none' : 'flex';
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-      // ★★★ 修正はここまで ★★★
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
       console.log('[FRONTEND] 7. Preparing animation step...');
       if (!adminCanvas) {
@@ -367,7 +357,15 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
     }
 
     if (isShare) {
-      await showResultsView(eventData, sharedParticipantName, true);
+      if (eventData.status === 'started') {
+        await showResultsView(eventData, sharedParticipantName, true);
+      } else {
+        showWaitingView();
+        const p = ui.elements.waitingMessage.querySelector('p');
+        if (p) p.textContent = '結果はまだ発表されていません。イベント開始までお待ちください。';
+        if (ui.elements.deleteParticipantWaitingButton) ui.elements.deleteParticipantWaitingButton.style.display = 'none';
+        if (ui.elements.backToDashboardFromWaitingButton) ui.elements.backToDashboardFromWaitingButton.style.display = 'none';
+      }
     } else if (state.currentParticipantToken && state.currentParticipantId) {
       if (eventData.status === 'started') {
         await showResultsView(eventData, state.currentParticipantName, false);
