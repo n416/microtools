@@ -239,17 +239,8 @@ exports.getEvent = async (req, res) => {
     if (isOwner || isSysAdmin) {
       console.log('[LOG] Access Granted: User is owner or system admin.');
     } else {
-      console.log('[LOG] User is neither owner nor system admin. Checking for password.');
-      if (groupData.password) {
-        if (!req.session.verifiedGroups || !req.session.verifiedGroups.includes(eventData.groupId)) {
-          console.log('[LOG] Access Denied: Group password required but not verified.');
-          return res.status(403).json({error: 'このグループへのアクセスには合言葉が必要です。', requiresPassword: true, groupId: eventData.groupId, groupName: groupData.name});
-        }
-        console.log('[LOG] Access Granted: Group password verified in session.');
-      } else {
-        console.log('[LOG] Access Denied: No password and user is not authorized.');
-        return res.status(403).json({error: 'このイベントを閲覧する権限がありません。'});
-      }
+      console.log('[LOG] User is not authorized.');
+      return res.status(403).json({error: 'このイベントを閲覧する権限がありません。'});
     }
 
     // --- ▼▼▼ ログ追加 ▼▼▼ ---

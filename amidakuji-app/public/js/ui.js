@@ -42,26 +42,9 @@ export const elements = {
   addMasterPrizeImageInput: document.getElementById('addMasterPrizeImageInput'),
   addMasterPrizeButton: document.getElementById('addMasterPrizeButton'),
   backToDashboardButton: document.getElementById('backToDashboardButton'),
-  adminControls: document.getElementById('adminControls'),
   broadcastEventUrl: document.getElementById('broadcastEventUrl'),
   currentEventUrl: document.getElementById('currentEventUrl'),
-  showFillSlotsModalButton: document.getElementById('showFillSlotsModalButton'),
-  broadcastSidebar: document.getElementById('broadcastSidebar'),
-  openSidebarButton: document.getElementById('openSidebarButton'),
-  closeSidebarButton: document.getElementById('closeSidebarButton'),
-  toggleFullscreenButton: document.getElementById('toggleFullscreenButton'),
-  startEventButton: document.getElementById('startEventButton'),
-  startBroadcastButton: document.getElementById('startBroadcastButton'),
-  adminCanvas: document.getElementById('adminCanvas'),
   broadcastControls: document.querySelector('.broadcast-controls'),
-  animateAllButton: document.getElementById('animateAllButton'),
-  advanceLineByLineButton: document.getElementById('advanceLineByLineButton'),
-  regenerateLinesButton: document.getElementById('regenerateLinesButton'),
-  glimpseButton: document.getElementById('glimpseButton'),
-  shufflePrizesBroadcastButton: document.getElementById('shufflePrizesBroadcastButton'),
-  highlightUserSelect: document.getElementById('highlightUserSelect'),
-  highlightUserButton: document.getElementById('highlightUserButton'),
-  revealRandomButton: document.getElementById('revealRandomButton'),
   groupPasswordModal: document.getElementById('groupPasswordModal'),
   closeGroupPasswordModalButton: document.querySelector('#groupPasswordModal .close-button'),
   verificationTargetGroupId: document.getElementById('verificationTargetGroupId'),
@@ -86,12 +69,6 @@ export const elements = {
   groupEventListContainer: document.getElementById('groupEventList'),
   groupNameTitle: document.getElementById('groupEventListName'),
   backToDashboardFromEventListButton: document.getElementById('backToDashboardFromEventListButton'),
-  fillSlotsModal: document.getElementById('fillSlotsModal'),
-  unjoinedMemberList: document.getElementById('unjoinedMemberList'),
-  emptySlotCount: document.getElementById('emptySlotCount'),
-  selectMembersButton: document.getElementById('selectMembersButton'),
-  selectedMemberList: document.getElementById('selectedMemberList'),
-  confirmFillSlotsButton: document.getElementById('confirmFillSlotsButton'),
   requestAdminButton: document.getElementById('requestAdminButton'),
   requestAdminControls: document.getElementById('requestAdminControls'),
 };
@@ -337,11 +314,4 @@ export function resetEventCreationForm() {
   state.setCurrentLotteryData(null);
   if (elements.adminControls) elements.adminControls.style.display = 'none';
   if (elements.broadcastControls) elements.broadcastControls.style.display = 'none';
-}
-
-export function setBroadcastControlsDisabled(disabled) {
-  const controls = document.querySelectorAll('#broadcastSidebar button, #broadcastSidebar select');
-  controls.forEach((control) => {
-    control.disabled = disabled;
-  });
 }
