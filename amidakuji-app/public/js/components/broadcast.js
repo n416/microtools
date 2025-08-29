@@ -108,7 +108,7 @@ export function initBroadcast() {
           if (elements.highlightUserButton) elements.highlightUserButton.disabled = false;
           if (elements.animateAllButton) elements.animateAllButton.disabled = false;
 
-          const hide = state.currentLotteryData.displayMode === 'private';
+          const hide = true;
           await prepareStepAnimation(ctx, hide);
           alert('あみだくじを再生成しました。');
         } catch (error) {
@@ -131,7 +131,7 @@ export function initBroadcast() {
           state.currentLotteryData.results = result.results;
 
           const ctx = elements.adminCanvas.getContext('2d');
-          const hide = state.currentLotteryData.displayMode === 'private';
+          const hide = true;
           await prepareStepAnimation(ctx, hide);
 
           alert('景品をシャッフルし、結果を保存しました。');

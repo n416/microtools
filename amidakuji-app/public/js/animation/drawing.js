@@ -59,7 +59,7 @@ export function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes 
     const isRevealed = state.revealedPrizes.some((r) => r.prizeIndex === i);
     if (prizes && prizes[i] && !isRevealed) {
       const prize = prizes[i];
-      const prizeName = hidePrizes ? '' : prize.name || '';
+      const prizeName = hidePrizes ? '？？？' : prize.name || '';
       const prizeImage = !hidePrizes && (prize.imageUrl || prize.newImageFile) ? animator.prizeImages[prize.imageUrl] : null;
 
       const prizeImageHeight = 35;
