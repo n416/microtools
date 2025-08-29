@@ -1,0 +1,19 @@
+<h2 id="eventGroupName"></h2>
+<div id="passwordResetNotification" class="notification-banner" style="display: none;">
+  <p><span id="passwordResetCount"></span>件の合言葉リセット依頼が承認を待っています。</p>
+  <button id="showPasswordResetRequestsButton">詳細を表示</button>
+</div>
+<div class="controls">
+  <button id="goToGroupSettingsButton"><i data-lucide="<%= emojiToLucide('⚙️') %>"></i> グループ設定</button>
+  <button id="goToPrizeMasterButton"><i data-lucide="<%= emojiToLucide('🏆') %>"></i> 賞品マスター管理</button>
+  <button id="goToMemberManagementButton"><i data-lucide="<%= emojiToLucide('👥') %>"></i> メンバー管理</button>
+  <button id="goToCreateEventViewButton">イベント新規作成</button>
+</div>
+<div class="list-header">
+  <h3>このグループのイベント一覧</h3>
+  <div class="input-group checkbox-group">
+    <input type="checkbox" id="showStartedEvents" />
+    <label for="showStartedEvents">終了済みを表示する</label>
+  </div>
+</div>
+<ul id="eventList" class="item-list"></ul>

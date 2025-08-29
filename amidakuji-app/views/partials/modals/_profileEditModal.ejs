@@ -1,0 +1,18 @@
+<div id="profileEditModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
+    <h3>プロフィール編集</h3>
+    <div class="profile-icon-container">
+      <img id="profileIconPreview" src="" alt="Profile Icon" width="100" height="100" />
+      <label for="profileIconInput" class="button">画像を変更...</label>
+      <input type="file" id="profileIconInput" accept="image/*" class="visually-hidden" />
+    </div>
+    <div class="input-group">
+      <label for="profileColorInput">テーマカラー:</label>
+      <input type="color" id="profileColorInput" />
+    </div>
+    <div class="modal-actions">
+      <button id="saveProfileButton" class="primary-action">保存する</button>
+    </div>
+  </div>
+</div>

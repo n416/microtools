@@ -1,0 +1,18 @@
+<div id="memberEditModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
+    <h3>メンバー編集</h3>
+    <input type="hidden" id="memberIdInput">
+    <div class="input-group">
+      <label for="memberNameEditInput">名前:</label>
+      <input type="text" id="memberNameEditInput">
+    </div>
+    <div class="input-group">
+      <label for="memberColorInput">カラー:</label>
+      <input type="color" id="memberColorInput">
+    </div>
+    <div class="modal-actions">
+      <button id="saveMemberButton" class="primary-action">保存</button>
+    </div>
+  </div>
+</div>

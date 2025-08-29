@@ -1,0 +1,54 @@
+<div class="broadcast-header">
+  <button id="backToDashboardButton"><i data-lucide="<%= emojiToLucide('←') %>"></i> ダッシュボードに戻る</button>
+  <button id="toggleFullscreenButton">表示エリアを最大化</button>
+</div>
+<div class="broadcast-layout">
+  <p class="event-url-display">イベントURL: <a id="broadcastEventUrl" href="#" target="_blank">読み込み中...</a></p>
+  <div class="canvas-panzoom-container">
+    <div id="adminControls" class="floating-controls">
+      <button id="startEventButton" class="primary-action"><i data-lucide="<%= emojiToLucide('🎉') %>"></i> イベント開始</button>
+      <button id="showFillSlotsModalButton" style="display: none;"><i data-lucide="<%= emojiToLucide('👥') %>"></i> 参加枠を埋める</button>
+    </div>
+    <div class="loading-mask" id="admin-loading-mask">あみだくじを生成中...</div>
+    <div class="panzoom-wrapper" id="admin-panzoom-wrapper">
+      <canvas id="adminCanvas" width="800" height="400"></canvas>
+    </div>
+  </div>
+  <aside id="broadcastSidebar" class="broadcast-sidebar">
+    <button id="closeSidebarButton" class="close-sidebar-btn" aria-label="閉じる"><i data-lucide="<%= emojiToLucide('×') %>"></i></button>
+    <h4>コントロールパネル</h4>
+    <div class="broadcast-controls">
+      <div class="control-group">
+        <h5>再生・進行</h5>
+        <button id="animateAllButton">全結果を再生</button>
+        <button id="advanceLineByLineButton">一段ずつ進む</button>
+      </div>
+      <div class="control-group">
+        <h5>あみだくじ操作</h5>
+        <button id="regenerateLinesButton"><i data-lucide="<%= emojiToLucide('🔄') %>"></i> 線を再生成</button>
+        <button id="shufflePrizesBroadcastButton"><i data-lucide="<%= emojiToLucide('🎁') %>"></i> 景品シャッフル</button>
+        <button id="glimpseButton">景品チラ見せ</button>
+      </div>
+      <div class="control-group">
+        <h5>個別表示</h5>
+        <label for="highlightUserSelect">特定ユーザー:</label>
+        <select id="highlightUserSelect"></select>
+        <button id="highlightUserButton">選択した人を表示</button>
+        <button id="revealRandomButton">ランダムに一人表示</button>
+      </div>
+    </div>
+  </aside>
+</div>
+<button id="openSidebarButton" class="floating-fab" aria-label="コントロールパネルを開く">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="4" y1="21" x2="4" y2="14"></line>
+    <line x1="4" y1="10" x2="4" y2="3"></line>
+    <line x1="12" y1="21" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12" y2="3"></line>
+    <line x1="20" y1="21" x2="20" y2="16"></line>
+    <line x1="20" y1="12" x2="20" y2="3"></line>
+    <line x1="1" y1="14" x2="7" y2="14"></line>
+    <line x1="9" y1="8" x2="15" y2="8"></line>
+    <line x1="17" y1="16" x2="23" y2="16"></line>
+  </svg>
+</button>
