@@ -1,7 +1,6 @@
 // amidakuji-app/controllers/event/public.js
 const {firestore} = require('../../utils/firestore');
 
-//  （getPublicShareData, getEventsForGroup, getPublicEventsForGroup は変更なし）
 exports.getPublicShareData = async (req, res) => {
   try {
     const {eventId, participantName} = req.params;
@@ -20,27 +19,35 @@ exports.getPublicShareData = async (req, res) => {
     const safeEventName = eventData.eventName || '無題のイベント';
     const eventName = groupData.name ? `${groupData.name} - ${safeEventName}` : safeEventName;
 
-    const singleResult = eventData.results ? {[decodedParticipantName]: eventData.results[decodedParticipantName]} : null;
-    if (!singleResult || !singleResult[decodedParticipantName]) {
-      return res.status(404).json({error: '指定された参加者の結果が見つかりません。'});
+    let sanitizedPrizes;
+    let singleResult = null;
+    let sanitizedParticipants = eventData.participants;
+
+    if (eventData.status !== 'started') {
+      // イベントが開始されていない場合は、全ての景品をマスキング
+      sanitizedPrizes = eventData.prizes.map(() => ({name: '？？？', imageUrl: null}));
+    } else {
+      // イベント開始済みの場合は、従来通り1件だけ表示
+      singleResult = eventData.results ? {[decodedParticipantName]: eventData.results[decodedParticipantName]} : null;
+      if (!singleResult || !singleResult[decodedParticipantName]) {
+        return res.status(404).json({error: '指定された参加者の結果が見つかりません。'});
+      }
+
+      const targetPrizeIndex = singleResult[decodedParticipantName].prizeIndex;
+      sanitizedPrizes = eventData.prizes.map((prize, index) => {
+        if (index === targetPrizeIndex) {
+          return prize;
+        }
+        return {name: '', imageUrl: null};
+      });
+
+      sanitizedParticipants = eventData.participants.map((p) => {
+        if (p.name === decodedParticipantName) {
+          return p;
+        }
+        return {...p, name: '', iconUrl: null};
+      });
     }
-
-    // 他の参加者の名前を空白にマスキング
-    const sanitizedParticipants = eventData.participants.map((p) => {
-      if (p.name === decodedParticipantName) {
-        return p;
-      }
-      return {...p, name: '', iconUrl: null}; // 名前を空白に
-    });
-
-    // 獲得した賞品以外を空白にマスキング
-    const targetPrizeIndex = singleResult[decodedParticipantName].prizeIndex;
-    const sanitizedPrizes = eventData.prizes.map((prize, index) => {
-      if (index === targetPrizeIndex) {
-        return prize;
-      }
-      return {name: '', imageUrl: null}; // 名前を空白に
-    });
 
     const publicData = {
       eventName: eventName,
@@ -48,7 +55,7 @@ exports.getPublicShareData = async (req, res) => {
       prizes: sanitizedPrizes,
       lines: eventData.lines,
       status: eventData.status,
-      results: singleResult,
+      results: singleResult, // 開始前はnullになる
       groupId: eventData.groupId,
     };
 
@@ -123,8 +130,7 @@ exports.getPublicEventData = async (req, res) => {
 
     const safeEventName = eventData.eventName || '無題のイベント';
     const eventName = groupData.name ? `${groupData.name} - ${safeEventName}` : safeEventName;
-
-    const publicPrizes = eventData.status !== 'started' ? eventData.prizes.map(() => ({name: '？？？', imageUrl: null})) : eventData.prizes;
+    const publicPrizes = eventData.prizes;
 
     const otherEventsSnapshot = await firestore.collection('events').where('groupId', '==', eventData.groupId).where('status', '==', 'pending').get();
 
@@ -148,7 +154,6 @@ exports.getPublicEventData = async (req, res) => {
   }
 };
 
-// (getEventsByCustomUrl は変更なし)
 exports.getEventsByCustomUrl = async (req, res) => {
   try {
     const {customUrl} = req.params;

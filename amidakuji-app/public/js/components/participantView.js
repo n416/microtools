@@ -71,7 +71,7 @@ export function renderSlots(participants) {
   });
 }
 
-export function renderPrizesForParticipant(prizes, displayMode) {
+export function renderPrizesForParticipant(prizes) {
   if (!elements.prizeDisplay) return;
   elements.prizeDisplay.innerHTML = '<h3>景品一覧</h3>';
   const ul = document.createElement('ul');
@@ -158,7 +158,7 @@ export function showJoinView(eventData) {
   hideParticipantSubViews();
   if (elements.joinSection) elements.joinSection.style.display = 'block';
   renderSlots(eventData.participants);
-  renderPrizesForParticipant(eventData.prizes, eventData.displayMode);
+  renderPrizesForParticipant(eventData.prizes);
 }
 
 export function showWaitingView() {

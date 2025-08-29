@@ -49,39 +49,46 @@ export function stopAnimation() {
 function updateTracerPosition(tracer, speed) {
   const revealPrize = () => {
     const targetCanvasId = animator.context.canvas.id;
+
+    // ■ 管理者画面('adminCanvas')の場合の処理
     if (targetCanvasId === 'adminCanvas') {
       const resultExists = state.revealedPrizes.some((r) => r.participantName === tracer.name);
       if (!resultExists) {
-        if (!state.currentLotteryData.results) {
-          console.warn('[Animation] Attempted to reveal prize, but results are not available.');
-          return;
-        }
+        // まだ表示されていなければ追加
         const result = state.currentLotteryData.results[tracer.name];
         if (result) {
           const prizeIndex = result.prizeIndex;
           const realPrize = state.currentLotteryData.prizes[prizeIndex];
           if (typeof prizeIndex !== 'undefined' && prizeIndex > -1 && realPrize) {
-            console.log(`[Animation] Revealing prize for ${tracer.name}:`, realPrize);
             state.revealedPrizes.push({participantName: tracer.name, prize: realPrize, prizeIndex, revealProgress: 0});
           }
         }
       }
-    } else if (targetCanvasId === 'participantCanvas' && state.revealedPrizes.length === 0) {
-      const allResults = state.currentLotteryData.results;
-      const allPrizes = state.currentLotteryData.prizes;
-      const newRevealedPrizes = Object.keys(allResults)
-        .map((participantName) => {
-          const result = allResults[participantName];
-          const prizeIndex = result.prizeIndex;
-          const realPrize = allPrizes[prizeIndex];
-          if (typeof prizeIndex !== 'undefined' && prizeIndex > -1 && realPrize) {
-            return {participantName, prize: realPrize, prizeIndex, revealProgress: 0};
-          }
-          return null;
-        })
-        .filter(Boolean);
-      if (newRevealedPrizes.length > 0) {
-        state.setRevealedPrizes(newRevealedPrizes);
+    }
+    // ■ 参加者・シェア画面('participantCanvas')の場合の処理
+    else if (targetCanvasId === 'participantCanvas') {
+      // まだ1つも景品が表示されていなければ、全結果を一度に表示する
+      if (state.revealedPrizes.length === 0) {
+        const allPrizes = state.currentLotteryData.prizes; // サーバーから受け取った「正しい全景品リスト」
+        const allResults = state.currentLotteryData.results;
+
+        // [修正点] 全景品リストを元に、当選者情報を付加して「公開済みリスト」を生成する
+        const newRevealedPrizes = allPrizes.map((prize, index) => {
+          // この景品(index)を獲得した参加者がいるか、allResultsから探す
+          const winnerEntry = Object.entries(allResults).find(([name, result]) => result.prizeIndex === index);
+          const winnerName = winnerEntry ? winnerEntry[0] : null;
+
+          return {
+            participantName: winnerName, // 当選者がいなければ null
+            prize: prize, // 正しい景品情報
+            prizeIndex: index,
+            revealProgress: 0,
+          };
+        });
+
+        if (newRevealedPrizes.length > 0) {
+          state.setRevealedPrizes(newRevealedPrizes);
+        }
       }
     }
   };
@@ -175,7 +182,9 @@ function animationLoop() {
   const isDarkMode = document.body.classList.contains('dark-mode');
   const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';
 
-  const hidePrizes = state.currentLotteryData.displayMode === 'private';
+  const isParticipantView = animator.context.canvas.id === 'participantCanvas';
+  // [修正点] 参加者画面では、景品が公開されるまで(revealedPrizesが空の間)は常に景品を隠します
+  const hidePrizes = isParticipantView ? state.revealedPrizes.length === 0 : true;
 
   drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
   drawRevealedPrizes(targetCtx);
@@ -225,11 +234,6 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
   state.currentLotteryData.results = ensureResultsFormat(state.currentLotteryData);
 
   let currentPanzoom = initializePanzoom(targetCtx.canvas);
-
-  // ▼▼▼ 以下の2行を削除 ▼▼▼
-  // if (targetCtx.canvas.id === 'adminCanvas') adminPanzoom = currentPanzoom;
-  // else participantPanzoom = currentPanzoom;
-  // ▲▲▲ 削除ここまで ▲▲▲
 
   if (!currentPanzoom) {
     console.error('[Animation] Panzoom initialization failed.');
