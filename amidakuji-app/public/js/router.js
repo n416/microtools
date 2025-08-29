@@ -352,10 +352,6 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
       }
     }
 
-    if (eventData.otherEvents) {
-      renderOtherEvents(eventData.otherEvents, state.currentLotteryData.groupCustomUrl);
-    }
-
     if (isShare) {
       if (eventData.status === 'started') {
         await showResultsView(eventData, sharedParticipantName, true);

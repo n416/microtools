@@ -132,9 +132,10 @@ exports.getPublicEventData = async (req, res) => {
     const eventName = groupData.name ? `${groupData.name} - ${safeEventName}` : safeEventName;
     const publicPrizes = eventData.prizes;
 
-    const otherEventsSnapshot = await firestore.collection('events').where('groupId', '==', eventData.groupId).where('status', '==', 'pending').get();
-
-    const otherEvents = otherEventsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()})).filter((event) => event.id !== eventId);
+    // --- 削除 ---
+    // const otherEventsSnapshot = await firestore.collection('events').where('groupId', '==', eventData.groupId).where('status', '==', 'pending').get();
+    // const otherEvents = otherEventsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()})).filter((event) => event.id !== eventId);
+    // --- 削除ここまで ---
 
     const publicData = {
       eventName: eventName,
@@ -145,7 +146,7 @@ exports.getPublicEventData = async (req, res) => {
       status: eventData.status,
       results: eventData.status === 'started' ? eventData.results : null,
       groupId: eventData.groupId,
-      otherEvents: otherEvents,
+      // --- otherEvents プロパティを削除 ---
     };
     res.status(200).json(publicData);
   } catch (error) {
