@@ -2,6 +2,7 @@ import * as api from '../api.js';
 import * as state from '../state.js';
 import * as router from '../router.js';
 import {prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, startAnimation, fadePrizes} from '../animation.js';
+
 import * as ui from '../ui.js';
 
 const elements = {
