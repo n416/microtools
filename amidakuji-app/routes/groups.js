@@ -1,40 +1,44 @@
 const express = require('express');
-const groupController = require('../controllers/groupController');
 const {ensureAuthenticated} = require('../middleware/auth');
 const router = express.Router();
 
+// 分割したコントローラーを正しい相対パスで読み込む
+const groupController = require('../controllers/group/group.js');
+const settingsController = require('../controllers/group/settings.js');
+const memberController = require('../controllers/member/member.js');
+const bulkMemberController = require('../controllers/member/bulk.js');
+const prizeMasterController = require('../controllers/prize/master.js');
+
+// --- Group Routes ---
 router.get('/groups', ensureAuthenticated, groupController.getGroups);
 router.get('/groups/:groupId', groupController.getGroup);
 router.get('/groups/url/:customUrl', groupController.getGroupByCustomUrl);
 router.post('/groups', ensureAuthenticated, groupController.createGroup);
 router.delete('/groups/:groupId', ensureAuthenticated, groupController.deleteGroup);
-router.put('/groups/:groupId/settings', ensureAuthenticated, groupController.updateGroupSettings);
 
-router.post('/groups/:groupId/verify-password', groupController.verifyPassword);
-router.delete('/groups/:groupId/password', ensureAuthenticated, groupController.deleteGroupPassword);
+// --- Group Settings Routes ---
+router.put('/groups/:groupId/settings', ensureAuthenticated, settingsController.updateGroupSettings);
+router.post('/groups/:groupId/verify-password', settingsController.verifyPassword);
+router.delete('/groups/:groupId/password', ensureAuthenticated, settingsController.deleteGroupPassword);
 
-router.get('/groups/:groupId/member-suggestions', groupController.getMemberSuggestions);
-router.post('/groups/:groupId/login-or-register', groupController.loginOrRegisterMember);
+// --- Member Routes ---
+router.get('/groups/:groupId/members', ensureAuthenticated, memberController.getMembers);
+router.post('/groups/:groupId/members', ensureAuthenticated, memberController.addMember);
+router.put('/groups/:groupId/members/:memberId', ensureAuthenticated, memberController.updateMember);
+router.delete('/groups/:groupId/members/:memberId', ensureAuthenticated, memberController.deleteMember);
+router.get('/groups/:groupId/member-suggestions', memberController.getMemberSuggestions);
+router.post('/groups/:groupId/login-or-register', memberController.loginOrRegisterMember);
+router.put('/groups/:groupId/members/:memberId/status', ensureAuthenticated, memberController.updateMemberStatus);
+router.get('/groups/:groupId/unjoined-members', ensureAuthenticated, memberController.getUnjoinedMembers);
 
-// Member Management Routes
-router.get('/groups/:groupId/members', ensureAuthenticated, groupController.getMembers);
-router.post('/groups/:groupId/members', ensureAuthenticated, groupController.addMember);
-router.put('/groups/:groupId/members/:memberId', ensureAuthenticated, groupController.updateMember);
-router.delete('/groups/:groupId/members/:memberId', ensureAuthenticated, groupController.deleteMember);
+// --- Bulk Member Registration Routes ---
+router.post('/groups/:groupId/members/analyze-bulk', ensureAuthenticated, bulkMemberController.analyzeBulkMembers);
+router.post('/groups/:groupId/members/finalize-bulk', ensureAuthenticated, bulkMemberController.finalizeBulkMembers);
 
-// Bulk Member Registration Routes
-router.post('/groups/:groupId/members/analyze-bulk', ensureAuthenticated, groupController.analyzeBulkMembers);
-router.post('/groups/:groupId/members/finalize-bulk', ensureAuthenticated, groupController.finalizeBulkMembers);
-
-// Prize Master Routes
-router.get('/groups/:groupId/prize-masters', ensureAuthenticated, groupController.getPrizeMasters);
-router.post('/groups/:groupId/prize-masters/generate-upload-url', ensureAuthenticated, groupController.generatePrizeMasterUploadUrl);
-router.post('/groups/:groupId/prize-masters', ensureAuthenticated, groupController.addPrizeMaster);
-router.delete('/prize-masters/:masterId', ensureAuthenticated, groupController.deletePrizeMaster);
-
-// Member Status Route
-router.put('/groups/:groupId/members/:memberId/status', ensureAuthenticated, groupController.updateMemberStatus);
-
-router.get('/groups/:groupId/unjoined-members', ensureAuthenticated, groupController.getUnjoinedMembers);
+// --- Prize Master Routes ---
+router.get('/groups/:groupId/prize-masters', ensureAuthenticated, prizeMasterController.getPrizeMasters);
+router.post('/groups/:groupId/prize-masters/generate-upload-url', ensureAuthenticated, prizeMasterController.generatePrizeMasterUploadUrl);
+router.post('/groups/:groupId/prize-masters', ensureAuthenticated, prizeMasterController.addPrizeMaster);
+router.delete('/prize-masters/:masterId', ensureAuthenticated, prizeMasterController.deletePrizeMaster);
 
 module.exports = router;
