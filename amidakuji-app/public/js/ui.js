@@ -20,6 +20,8 @@ export const elements = {
   broadcastView: document.getElementById('broadcastView'),
   participantView: document.getElementById('participantView'),
   groupEventListView: document.getElementById('groupEventListView'),
+  memberManagementGroupName: document.getElementById('memberManagementGroupName'), // ★★★ この行を追記しました ★★★
+  groupSwitcher: document.getElementById('groupSwitcher'),
   groupSwitcher: document.getElementById('groupSwitcher'),
   currentGroupName: document.getElementById('currentGroupName'),
   groupDropdown: document.getElementById('groupDropdown'),

@@ -1,6 +1,7 @@
 import * as api from '../api.js';
 import * as state from '../state.js';
 import * as ui from '../ui.js';
+import * as router from '../router.js'; // この行を追記
 
 const elements = {
   memberManagementView: document.getElementById('memberManagementView'),
