@@ -1,3 +1,4 @@
+import * as api from './api.js';
 import * as state from './state.js';
 import {stopAnimation} from './animation.js';
 
@@ -316,4 +317,22 @@ export function resetEventCreationForm() {
   state.setCurrentLotteryData(null);
   if (elements.adminControls) elements.adminControls.style.display = 'none';
   if (elements.broadcastControls) elements.broadcastControls.style.display = 'none';
+}
+
+export async function buildNewPrizesWithDataPreservation(newNames) {
+  const oldPrizes = [...state.prizes];
+  const prizeMasters = await api.getPrizeMasters(state.currentGroupId).catch(() => []);
+  const oldPrizesMap = new Map(oldPrizes.map((p) => [p.name, p]));
+  const prizeMastersMap = new Map(prizeMasters.map((p) => [p.name, p.imageUrl]));
+
+  const newPrizes = newNames.map((name) => {
+    if (oldPrizesMap.has(name)) {
+      return {...oldPrizesMap.get(name)};
+    }
+    if (prizeMastersMap.has(name)) {
+      return {name, imageUrl: prizeMastersMap.get(name), newImageFile: null};
+    }
+    return {name, imageUrl: null, newImageFile: null};
+  });
+  return newPrizes;
 }
