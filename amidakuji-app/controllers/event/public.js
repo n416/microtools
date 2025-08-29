@@ -1,6 +1,7 @@
+// amidakuji-app/controllers/event/public.js
 const {firestore} = require('../../utils/firestore');
 
-//  シェアページ専用の認証不要APIコントローラ
+//  （getPublicShareData, getEventsForGroup, getPublicEventsForGroup は変更なし）
 exports.getPublicShareData = async (req, res) => {
   try {
     const {eventId, participantName} = req.params;
@@ -46,7 +47,6 @@ exports.getPublicShareData = async (req, res) => {
       participants: sanitizedParticipants,
       prizes: sanitizedPrizes,
       lines: eventData.lines,
-      displayMode: eventData.displayMode,
       status: eventData.status,
       results: singleResult,
       groupId: eventData.groupId,
@@ -124,7 +124,7 @@ exports.getPublicEventData = async (req, res) => {
     const safeEventName = eventData.eventName || '無題のイベント';
     const eventName = groupData.name ? `${groupData.name} - ${safeEventName}` : safeEventName;
 
-    const publicPrizes = eventData.displayMode === 'private' && eventData.status !== 'started' ? eventData.prizes.map(() => ({name: '？？？', imageUrl: null})) : eventData.prizes;
+    const publicPrizes = eventData.status !== 'started' ? eventData.prizes.map(() => ({name: '？？？', imageUrl: null})) : eventData.prizes;
 
     const otherEventsSnapshot = await firestore.collection('events').where('groupId', '==', eventData.groupId).where('status', '==', 'pending').get();
 
@@ -136,7 +136,6 @@ exports.getPublicEventData = async (req, res) => {
       prizes: publicPrizes,
       lines: eventData.lines,
       hasPassword: !!groupData.password,
-      displayMode: eventData.displayMode,
       status: eventData.status,
       results: eventData.status === 'started' ? eventData.results : null,
       groupId: eventData.groupId,
@@ -149,6 +148,7 @@ exports.getPublicEventData = async (req, res) => {
   }
 };
 
+// (getEventsByCustomUrl は変更なし)
 exports.getEventsByCustomUrl = async (req, res) => {
   try {
     const {customUrl} = req.params;
