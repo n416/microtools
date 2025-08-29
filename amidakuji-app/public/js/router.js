@@ -645,3 +645,20 @@ export async function handleRouting(initialData) {
 
   ui.adjustBodyPadding();
 }
+export async function loadUserAndRedirect(lastUsedGroupId) {
+  try {
+    const groups = await api.getGroups();
+    state.setAllUserGroups(groups);
+    renderGroupList(groups);
+
+    if (groups.length > 0) {
+      let targetGroup = groups.find((g) => g.id === lastUsedGroupId) || groups[0];
+      await navigateTo(`/admin/groups/${targetGroup.id}`);
+    } else {
+      ui.showView('groupDashboard');
+    }
+  } catch (error) {
+    console.error(error);
+    ui.showView('groupDashboard');
+  }
+}

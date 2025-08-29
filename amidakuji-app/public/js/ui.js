@@ -22,7 +22,7 @@ export const elements = {
   participantView: document.getElementById('participantView'),
   groupEventListView: document.getElementById('groupEventListView'),
   memberManagementGroupName: document.getElementById('memberManagementGroupName'), // ★★★ この行を追記しました ★★★
-  participantEventName: document.getElementById('participantEventName'), // ★★★ この行を追記 ★★★
+  participantEventName: document.getElementById('participantEventName'), // ★★★ この行を追記しました ★★★
   groupSwitcher: document.getElementById('groupSwitcher'),
   currentGroupName: document.getElementById('currentGroupName'),
   groupDropdown: document.getElementById('groupDropdown'),

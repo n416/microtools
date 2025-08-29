@@ -1,9 +1,7 @@
 import * as api from '../api.js';
 import * as state from '../state.js';
 import * as router from '../router.js';
-
-// 外部の関数や状態に依存するため、main.jsからインポートします
-import {openGroupSettingsFor, loadUserAndRedirect} from '../main.js';
+import * as ui from '../ui.js';
 
 // このコンポーネントが管理するDOM要素
 const elements = {
@@ -45,6 +43,62 @@ export function renderGroupList(groups) {
   });
 }
 
+export async function openGroupSettingsFor(groupId) {
+  const groupData = state.allUserGroups.find((g) => g.id === groupId);
+  if (!groupData) {
+    alert('グループ情報が見つかりませんでした。');
+    return;
+  }
+
+  groupData.hasPassword = !!groupData.password;
+
+  const handlers = {
+    onSave: handleSaveSettings,
+    onDeletePassword: async () => {
+      if (!confirm('本当にこのグループの合言葉を削除しますか？')) return;
+      try {
+        await api.deleteGroupPassword(groupId);
+        alert('合言葉を削除しました。');
+        if (ui.elements.deletePasswordButton) {
+          ui.elements.deletePasswordButton.style.display = 'none';
+        }
+        const groupInState = state.allUserGroups.find((g) => g.id === groupId);
+        if (groupInState) delete groupInState.password;
+      } catch (error) {
+        alert(error.error);
+      }
+    },
+  };
+
+  ui.openSettingsModal(groupData, handlers);
+}
+
+async function handleSaveSettings() {
+  const groupId = ui.elements.settingsGroupId.value;
+  const settingsPayload = {
+    groupName: ui.elements.groupNameEditInput.value.trim(),
+    customUrl: ui.elements.customUrlInput.value.trim(),
+    noIndex: ui.elements.noIndexCheckbox.checked,
+  };
+  if (ui.elements.groupPasswordInput.value) {
+    settingsPayload.password = ui.elements.groupPasswordInput.value;
+  }
+
+  ui.elements.saveGroupSettingsButton.disabled = true;
+  try {
+    await api.updateGroupSettings(groupId, settingsPayload);
+    alert('設定を保存しました。');
+    ui.closeSettingsModal();
+    const groups = await api.getGroups();
+    state.setAllUserGroups(groups);
+    renderGroupList(groups);
+  } catch (error) {
+    alert(error.error || '設定の保存に失敗しました。');
+  } finally {
+    ui.elements.saveGroupSettingsButton.disabled = false;
+  }
+}
+
 // イベントリスナーを初期化する関数
 export function initGroupDashboard() {
   if (elements.createGroupButton) {
@@ -54,7 +108,7 @@ export function initGroupDashboard() {
       try {
         await api.createGroup(name);
         elements.groupNameInput.value = '';
-        await loadUserAndRedirect();
+        await router.loadUserAndRedirect();
       } catch (error) {
         alert(error.error);
       }
@@ -75,7 +129,7 @@ export function initGroupDashboard() {
             try {
               await api.deleteGroup(groupId);
               alert('グループを削除しました。');
-              await loadUserAndRedirect();
+              await router.loadUserAndRedirect();
             } catch (error) {
               alert(error.error || 'グループの削除に失敗しました。');
             }
