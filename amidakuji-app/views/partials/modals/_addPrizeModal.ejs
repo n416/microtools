@@ -1,0 +1,19 @@
+<div id="addPrizeModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
+    <h3>景品の追加</h3>
+    <div class="input-group">
+      <label>景品名:</label>
+      <input type="text" id="newPrizeNameInput" placeholder="景品名を入力">
+    </div>
+    <div class="input-group">
+      <label>画像:</label>
+      <input type="file" id="newPrizeImageInput" accept="image/*">
+    </div>
+    <img id="newPrizeImagePreview" src="" alt="Image Preview" style="max-width: 100px; max-height: 100px; display: none;">
+    <div class="modal-actions">
+      <button id="callMasterButton" class="secondary-btn action-left">マスターから呼び出し</button>
+      <button id="addPrizeOkButton" class="primary-action">追加</button>
+    </div>
+  </div>
+</div>
