@@ -10,7 +10,6 @@ const elements = {
   bulkAddPrizesButton: document.getElementById('bulkAddPrizesButton'),
   prizeCardListContainer: document.getElementById('prizeCardListContainer'),
   prizeListModeContainer: document.getElementById('prizeListModeContainer'),
-  displayModeSelect: document.getElementById('displayModeSelect'),
   createEventButton: document.getElementById('createEventButton'),
   openAddPrizeModalButton: document.getElementById('openAddPrizeModalButton'),
   showSummaryButton: document.getElementById('showSummaryButton'),
@@ -35,7 +34,6 @@ export function renderEventForEditing(data) {
   elements.eventNameInput.value = data.eventName || '';
   state.setPrizes(data.prizes || []);
 
-  elements.displayModeSelect.value = data.displayMode;
   elements.createEventButton.textContent = 'この内容でイベントを保存';
 
   const savedMode = localStorage.getItem('prizeViewMode') || 'card';
@@ -565,7 +563,6 @@ export function initEventEdit() {
               eventName: elements.eventNameInput.value.trim(),
               prizes: state.prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
               groupId: state.currentGroupId,
-              displayMode: elements.displayModeSelect.value,
             };
             const newEvent = await api.createEvent(initialEventData);
             eventId = newEvent.id;
@@ -615,7 +612,6 @@ export function initEventEdit() {
             eventName: elements.eventNameInput.value.trim(),
             prizes: finalPrizes,
             participantCount: finalPrizes.length,
-            displayMode: elements.displayModeSelect.value,
           };
 
           await api.updateEvent(eventId, finalEventData);
