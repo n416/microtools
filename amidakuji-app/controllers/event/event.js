@@ -1,10 +1,12 @@
+// amidakuji-app/controllers/event/event.js
+
 const {firestore, bucket} = require('../../utils/firestore');
 const {generateLines} = require('../../utils/amidakuji');
 const {getNextAvailableColor} = require('../../utils/color');
 
 exports.createEvent = async (req, res) => {
   try {
-    const {prizes, groupId, displayMode, eventName} = req.body;
+    const {prizes, groupId, eventName} = req.body; // displayModeを削除
     const participantCount = prizes ? prizes.length : 0;
 
     if (!groupId) return res.status(400).json({error: 'グループIDは必須です。'});
@@ -30,7 +32,7 @@ exports.createEvent = async (req, res) => {
       groupId,
       participantCount,
       participants,
-      displayMode,
+      // displayMode, を削除
       createdAt: new Date(),
       ownerId: req.user.id,
       status: 'pending',
@@ -107,7 +109,7 @@ exports.getEvent = async (req, res) => {
 exports.updateEvent = async (req, res) => {
   try {
     const {id: eventId} = req.params;
-    const {prizes, displayMode, eventName} = req.body;
+    const {prizes, eventName} = req.body; // displayModeを削除
     const participantCount = prizes ? prizes.length : 0;
 
     if (participantCount < 2) return res.status(400).json({error: '景品は2つ以上で設定してください。'});
@@ -158,7 +160,7 @@ exports.updateEvent = async (req, res) => {
       eventName: eventName || '無題のイベント',
       prizes: prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
       participantCount,
-      displayMode,
+      // displayMode, を削除
     };
 
     if (participantCount !== eventData.participantCount) {
@@ -179,6 +181,7 @@ exports.updateEvent = async (req, res) => {
   }
 };
 
+// (他の関数は変更なし)
 exports.deleteEvent = async (req, res) => {
   try {
     const {eventId} = req.params;

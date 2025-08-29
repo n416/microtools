@@ -21,8 +21,8 @@ export const elements = {
   broadcastView: document.getElementById('broadcastView'),
   participantView: document.getElementById('participantView'),
   groupEventListView: document.getElementById('groupEventListView'),
-  memberManagementGroupName: document.getElementById('memberManagementGroupName'), // ★★★ この行を追記しました ★★★
-  participantEventName: document.getElementById('participantEventName'), // ★★★ この行を追記しました ★★★
+  memberManagementGroupName: document.getElementById('memberManagementGroupName'),
+  participantEventName: document.getElementById('participantEventName'),
   groupSwitcher: document.getElementById('groupSwitcher'),
   currentGroupName: document.getElementById('currentGroupName'),
   groupDropdown: document.getElementById('groupDropdown'),
@@ -74,6 +74,32 @@ export const elements = {
   backToDashboardFromEventListButton: document.getElementById('backToDashboardFromEventListButton'),
   requestAdminButton: document.getElementById('requestAdminButton'),
   requestAdminControls: document.getElementById('requestAdminControls'),
+
+  // --- eventEdit.js elements ---
+  eventEditView: document.getElementById('eventEditView'),
+  backToGroupsButton: document.getElementById('backToGroupsButton'),
+  eventNameInput: document.getElementById('eventNameInput'),
+  bulkAddPrizesButton: document.getElementById('bulkAddPrizesButton'),
+  prizeCardListContainer: document.getElementById('prizeCardListContainer'),
+  prizeListModeContainer: document.getElementById('prizeListModeContainer'),
+  createEventButton: document.getElementById('createEventButton'),
+  openAddPrizeModalButton: document.getElementById('openAddPrizeModalButton'),
+  showSummaryButton: document.getElementById('showSummaryButton'),
+  addPrizeModal: document.getElementById('addPrizeModal'),
+  newPrizeNameInput: document.getElementById('newPrizeNameInput'),
+  newPrizeImageInput: document.getElementById('newPrizeImageInput'),
+  newPrizeImagePreview: document.getElementById('newPrizeImagePreview'),
+  callMasterButton: document.getElementById('callMasterButton'),
+  addPrizeOkButton: document.getElementById('addPrizeOkButton'),
+  summaryModal: document.getElementById('summaryModal'),
+  totalPrizes: document.getElementById('totalPrizes'),
+  prizeSummaryList: document.getElementById('prizeSummaryList'),
+  prizeBulkAddModal: document.getElementById('prizeBulkAddModal'),
+  closePrizeBulkAddModalButton: document.querySelector('#prizeBulkAddModal .close-button'),
+  prizeBulkTextarea: document.getElementById('prizeBulkTextarea'),
+  updatePrizesFromTextButton: document.getElementById('updatePrizesFromTextButton'),
+  clearBulkPrizesButton: document.getElementById('clearBulkPrizesButton'),
+  cancelBulkAddButton: document.getElementById('cancelBulkAddButton'),
 };
 
 const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];
@@ -298,25 +324,28 @@ export function renderPrizeMasterList(masters, isSelectMode = false) {
 }
 
 export function resetEventCreationForm() {
-  state.setPrizes([]);
-  if (elements.participantCountInput) elements.participantCountInput.value = '';
-  if (elements.displayModeSelect) elements.displayModeSelect.value = 'public';
-  if (elements.eventNameInput) elements.eventNameInput.value = '';
-  if (elements.createEventButton) elements.createEventButton.textContent = 'この内容でイベントを作成';
-  if (elements.adminCanvas) {
-    const ctx = elements.adminCanvas.getContext('2d');
-    ctx.clearRect(0, 0, elements.adminCanvas.width, elements.adminCanvas.height);
-    elements.adminCanvas.style.display = 'none';
-  }
-  if (elements.currentEventUrl) {
-    elements.currentEventUrl.textContent = '（イベント作成後に表示されます）';
-    elements.currentEventUrl.href = '#';
-  }
-  if (elements.eventIdInput) elements.eventIdInput.value = '';
-  state.setCurrentEventId(null);
-  state.setCurrentLotteryData(null);
-  if (elements.adminControls) elements.adminControls.style.display = 'none';
-  if (elements.broadcastControls) elements.broadcastControls.style.display = 'none';
+    state.setPrizes([]);
+    if (elements.prizeCardListContainer) {
+        elements.prizeCardListContainer.innerHTML = '';
+    }
+    if (elements.prizeListModeContainer) {
+        elements.prizeListModeContainer.innerHTML = '';
+    }
+    if (elements.eventNameInput) elements.eventNameInput.value = '';
+    if (elements.createEventButton) elements.createEventButton.textContent = 'この内容でイベントを作成';
+    if (elements.adminCanvas) {
+        const ctx = elements.adminCanvas.getContext('2d');
+        ctx.clearRect(0, 0, elements.adminCanvas.width, elements.adminCanvas.height);
+        elements.adminCanvas.style.display = 'none';
+    }
+    if (elements.currentEventUrl) {
+        elements.currentEventUrl.textContent = '（イベント作成後に表示されます）';
+        elements.currentEventUrl.href = '#';
+    }
+    state.setCurrentEventId(null);
+    state.setCurrentLotteryData(null);
+    if (elements.adminControls) elements.adminControls.style.display = 'none';
+    if (elements.broadcastControls) elements.broadcastControls.style.display = 'none';
 }
 
 export async function buildNewPrizesWithDataPreservation(newNames) {
