@@ -31,9 +31,6 @@ const elements = {
   cancelBulkAddButton: document.getElementById('cancelBulkAddButton'),
 };
 
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-// ★★★ 以下を追記してください ★★★
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 export function renderEventForEditing(data) {
   elements.eventNameInput.value = data.eventName || '';
   state.setPrizes(data.prizes || []);
@@ -61,10 +58,6 @@ export function renderEventForEditing(data) {
     renderPrizeCardList();
   }
 }
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-// ★★★ 追記はここまで ★★★
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
 export function renderPrizeCardList() {
   if (!elements.prizeCardListContainer) return;
   elements.prizeCardListContainer.innerHTML = '';
@@ -73,7 +66,7 @@ export function renderPrizeCardList() {
     li.className = 'prize-card';
 
     const prizeName = typeof p === 'object' ? p.name : p;
-    let prizeImageUrl = typeof p === 'object' ? p.imageUrl : null;
+    const prizeImageUrl = typeof p === 'object' ? p.imageUrl : null;
     const uniqueId = `prize-image-upload-${index}`;
 
     const imageContainer = document.createElement('div');
@@ -81,8 +74,14 @@ export function renderPrizeCardList() {
     const imgPreview = document.createElement('img');
     imgPreview.alt = prizeName;
 
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ ここからが修正点 ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     if (prizeImageUrl) {
       imgPreview.src = prizeImageUrl;
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      // ★★★ 修正はここまで ★★★
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     } else if (p.newImageFile) {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -161,7 +160,6 @@ export function renderPrizeCardList() {
     elements.prizeCardListContainer.appendChild(li);
   });
 }
-
 export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
   if (!elements.prizeListModeContainer) return;
 
@@ -226,9 +224,6 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
       imageContent = `<div class="prize-image-cell no-image" title="画像が設定されていません"><i data-lucide="image-off"></i></div>`;
     }
 
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★★★       type="number" を変更       ★★★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     tableHTML += `
       <tr>
         <td>
@@ -249,12 +244,11 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
     lucide.createIcons();
   }
 }
-
 export function openAddPrizeModal() {
   if (!elements.addPrizeModal) return;
   elements.newPrizeNameInput.value = '';
   elements.newPrizeImageInput.value = '';
-  elements.newPrizeImagePreview.src = '';
+  elements.newPrizeImagePreview.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
   elements.newPrizeImagePreview.style.display = 'none';
   elements.addPrizeModal.style.display = 'block';
 }
