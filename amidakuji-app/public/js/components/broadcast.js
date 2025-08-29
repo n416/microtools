@@ -1,7 +1,7 @@
 import * as api from '../api.js';
 import * as state from '../state.js';
 import * as router from '../router.js';
-import {prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, redrawPrizes, startAnimation} from '../animation.js';
+import {prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, startAnimation, fadePrizes} from '../animation.js';
 import * as ui from '../ui.js';
 
 const elements = {
@@ -141,29 +141,24 @@ export function initBroadcast() {
     });
   }
 
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ ここからが修正点 ★★★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
   if (elements.glimpseButton) {
     const canvas = elements.adminCanvas;
     const ctx = canvas.getContext('2d');
-    const transitionDuration = 150;
-    let isGlimpsing = false;
+    let isGlimpsing = false; // Flag to track button press state
 
-    const showPrizes = async () => {
+    const showPrizes = () => {
       if (isGlimpsing) return;
       isGlimpsing = true;
-      canvas.style.transition = `opacity ${transitionDuration}ms`;
-      canvas.style.opacity = '0';
-      await new Promise((r) => setTimeout(r, transitionDuration));
-      redrawPrizes(ctx, false);
-      canvas.style.opacity = '1';
+      fadePrizes(ctx, true);
     };
 
-    const hidePrizes = async () => {
+    const hidePrizes = () => {
       if (!isGlimpsing) return;
       isGlimpsing = false;
-      canvas.style.opacity = '0';
-      await new Promise((r) => setTimeout(r, transitionDuration));
-      redrawPrizes(ctx, true);
-      canvas.style.opacity = '1';
+      fadePrizes(ctx, false);
     };
 
     elements.glimpseButton.addEventListener('mousedown', showPrizes);
@@ -179,6 +174,9 @@ export function initBroadcast() {
       hidePrizes();
     });
   }
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ 修正はここまで ★★★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
   if (elements.highlightUserButton)
     elements.highlightUserButton.addEventListener('click', async () => {

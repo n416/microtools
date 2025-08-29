@@ -1,7 +1,7 @@
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
-import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, redrawPrizes, showAllTracersInstantly, adminPanzoom, participantPanzoom} from './animation.js';
+import {startAnimation, stopAnimation, prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, showAllTracersInstantly, adminPanzoom, participantPanzoom, fadePrizes} from './animation.js';
 import {initGroupDashboard, renderGroupList} from './components/groupDashboard.js';
 import {initEventDashboard} from './components/eventDashboard.js';
 import {initMemberManagement} from './components/memberManagement.js';
