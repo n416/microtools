@@ -635,6 +635,10 @@ function updateTracerPosition(tracer, speed) {
     if (targetCanvasId === 'adminCanvas') {
       const resultExists = state.revealedPrizes.some((r) => r.participantName === tracer.name);
       if (!resultExists) {
+        if (!state.currentLotteryData.results) {
+          console.warn('[Animation] Attempted to reveal prize, but results are not available.');
+          return;
+        }
         const result = state.currentLotteryData.results[tracer.name];
         if (result) {
           const prizeIndex = result.prizeIndex;
@@ -941,6 +945,35 @@ export async function showAllTracersInstantly() {
   const VIRTUAL_HEIGHT = getTargetHeight(container);
   const numParticipants = state.currentLotteryData.participants.length;
 
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ ここからが修正点 ★★★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  const allResults = state.currentLotteryData.results;
+  const allPrizes = state.currentLotteryData.prizes;
+  if (allResults && allPrizes) {
+    const allRevealedPrizes = Object.keys(allResults)
+      .map((participantName) => {
+        const result = allResults[participantName];
+        if (!result) return null;
+        const prizeIndex = result.prizeIndex;
+        const realPrize = allPrizes[prizeIndex];
+        if (typeof prizeIndex !== 'undefined' && prizeIndex > -1 && realPrize) {
+          return {
+            participantName,
+            prize: realPrize,
+            prizeIndex,
+            revealProgress: 15,
+          }; // 15 is max
+        }
+        return null;
+      })
+      .filter(Boolean);
+    state.setRevealedPrizes(allRevealedPrizes);
+  }
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ 修正はここまで ★★★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
   animator.tracers = allParticipantsWithNames.map((p) => {
     const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
     const finalPoint = path[path.length - 1];
@@ -967,4 +1000,12 @@ export async function showAllTracersInstantly() {
     drawTracerPath(targetCtx, tracer);
     drawTracerIcon(targetCtx, tracer);
   });
+
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ ここからが修正点 ★★★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  drawRevealedPrizes(targetCtx);
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ 修正はここまで ★★★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 }

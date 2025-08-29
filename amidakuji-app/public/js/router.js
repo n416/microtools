@@ -7,7 +7,7 @@ import {renderEventList, showPasswordResetNotification} from './components/event
 import {renderMemberList} from './components/memberManagement.js';
 import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
 import {renderAdminLists} from './components/adminDashboard.js';
-import { showUserDashboardView, showJoinView, showWaitingView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents } from './components/participantView.js';
+import {showUserDashboardView, showJoinView, showWaitingView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents} from './components/participantView.js';
 
 async function loadAdminDashboard() {
   try {
@@ -95,49 +95,46 @@ async function loadAndShowMemberManagement(groupId) {
   }
 }
 export async function loadEventForEditing(eventId, viewToShow = 'eventEditView') {
-  if (!eventId) return;
+  console.log(`[FRONTEND] loadEventForEditing called for eventId: ${eventId}, view: ${viewToShow}`);
+  if (!eventId) {
+    console.error('[FRONTEND] eventId is missing. Aborting.');
+    return;
+  }
   try {
     if (state.allUserGroups.length === 0) {
+      console.log('[FRONTEND] User groups not in state, fetching...');
       const groups = await api.getGroups();
       state.setAllUserGroups(groups);
+      console.log('[FRONTEND] User groups fetched and set.');
     }
 
-    // --- ▼▼▼ ログ追加 ▼▼▼ ---
     console.log(`[FRONTEND] 1. Calling api.getEvent for eventId: ${eventId}`);
     const data = await api.getEvent(eventId);
     console.log('[FRONTEND] 2. Received event data from API:', data);
-    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
     state.setCurrentLotteryData(data);
     state.setCurrentEventId(eventId);
     state.setCurrentGroupId(data.groupId);
 
     ui.showView(viewToShow);
+    console.log(`[FRONTEND] Switched to view: ${viewToShow}`);
 
     let parentGroup = state.allUserGroups.find((g) => g.id === data.groupId);
-    // --- ▼▼▼ ログ追加 ▼▼▼ ---
     console.log(`[FRONTEND] 3. Searching for parentGroup in state.allUserGroups (User's own groups). Found:`, parentGroup);
-    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
     if (!parentGroup) {
-      // --- ▼▼▼ ログ追加 ▼▼▼ ---
       console.log('[FRONTEND] 4. parentGroup not found in state. Attempting to fetch it directly via API.');
-      // --- ▲▲▲ ログ追加 ▲▲▲ ---
       try {
         parentGroup = await api.getGroup(data.groupId);
-        // --- ▼▼▼ ログ追加 ▼▼▼ ---
         console.log('[FRONTEND] 5. Successfully fetched parentGroup from API:', parentGroup);
-        // --- ▲▲▲ ログ追加 ▲▲▲ ---
       } catch (groupError) {
-        console.error(`Could not fetch parent group ${data.groupId}`, groupError);
+        console.error(`[FRONTEND] Could not fetch parent group ${data.groupId}`, groupError);
         parentGroup = null;
       }
     }
     const url = parentGroup && parentGroup.customUrl ? `${window.location.origin}/g/${parentGroup.customUrl}/${eventId}` : `${window.location.origin}/events/${eventId}`;
 
-    // --- ▼▼▼ ログ追加 ▼▼▼ ---
     console.log('[FRONTEND] 6. Final constructed URL:', url);
-    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
     if (ui.elements.currentEventUrl) {
       ui.elements.currentEventUrl.textContent = url;
@@ -153,10 +150,24 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
     if (viewToShow === 'eventEditView') {
       renderEventForEditing(data);
     } else if (viewToShow === 'broadcastView') {
-      const {adminControls, startEventButton, broadcastControls, adminCanvas, animateAllButton, advanceLineByLineButton, highlightUserSelect, highlightUserButton, revealRandomButton, regenerateLinesButton, glimpseButton, shufflePrizesBroadcastButton} = ui.elements;
+      // broadcastViewに属する要素をここで再取得する
+      const adminControls = document.getElementById('adminControls');
+      const startEventButton = document.getElementById('startEventButton');
+      const broadcastControls = document.querySelector('.broadcast-controls');
+      const animateAllButton = document.getElementById('animateAllButton');
+      const advanceLineByLineButton = document.getElementById('advanceLineByLineButton');
+      const highlightUserSelect = document.getElementById('highlightUserSelect');
+      const highlightUserButton = document.getElementById('highlightUserButton');
+      const revealRandomButton = document.getElementById('revealRandomButton');
+      const regenerateLinesButton = document.getElementById('regenerateLinesButton');
+      const adminCanvas = document.getElementById('adminCanvas');
+
       const hidePrizes = data.displayMode === 'private';
 
+      console.log('[FRONTEND] Configuring broadcast view...');
+
       if (broadcastControls) broadcastControls.style.display = 'flex';
+
       if (adminCanvas) adminCanvas.style.display = 'block';
 
       const allParticipants = data.participants.filter((p) => p.name);
@@ -164,24 +175,42 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
         highlightUserSelect.innerHTML = allParticipants.map((p) => `<option value="${p.name}">${p.name}</option>`).join('');
       }
 
-      if (data.status === 'pending') {
-        if (adminControls) adminControls.style.display = 'block';
-        if (startEventButton) startEventButton.style.display = 'inline-flex';
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      // ★★★ ここからが修正点 ★★★
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      const isPending = data.status === 'pending';
+      console.log(`[FRONTEND LOG] Event status is: ${data.status} (isPending: ${isPending})`);
 
-        if (animateAllButton) animateAllButton.closest('.control-group').style.display = 'none';
-        if (highlightUserButton) highlightUserButton.closest('.control-group').style.display = 'none';
+      // ボタン要素が存在するかどうかをログに出力
+      console.log('[FRONTEND LOG] Checking button elements:', {
+        adminControls: !!adminControls,
+        startEventButton: !!startEventButton,
+        animateAllButton: !!animateAllButton,
+        regenerateLinesButton: !!regenerateLinesButton,
+        highlightUserButton: !!highlightUserButton,
+      });
 
-        if (regenerateLinesButton) regenerateLinesButton.closest('.control-group').style.display = 'flex';
-      } else if (data.status === 'started') {
-        if (adminControls) adminControls.style.display = 'none';
+      if (adminControls) adminControls.style.display = isPending ? 'flex' : 'none';
 
-        if (animateAllButton) animateAllButton.closest('.control-group').style.display = 'flex';
-        if (highlightUserButton) highlightUserButton.closest('.control-group').style.display = 'flex';
+      // 再生・進行グループ
+      if (animateAllButton) animateAllButton.closest('.control-group').style.display = isPending ? 'none' : 'flex';
+      // あみだくじ操作グループ
+      if (regenerateLinesButton) regenerateLinesButton.closest('.control-group').style.display = isPending ? 'flex' : 'none';
+      // 個別表示グループ
+      if (highlightUserButton) highlightUserButton.closest('.control-group').style.display = isPending ? 'none' : 'flex';
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      // ★★★ 修正はここまで ★★★
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-        if (regenerateLinesButton) regenerateLinesButton.closest('.control-group').style.display = 'none';
+      console.log('[FRONTEND] 7. Preparing animation step...');
+      if (!adminCanvas) {
+        console.error('[FRONTEND][FATAL] adminCanvas is null or undefined before getContext!');
+        alert('エラー：描画エリアの初期化に失敗しました。');
+        return;
       }
       const ctx = adminCanvas.getContext('2d');
       await prepareStepAnimation(ctx, hidePrizes);
+      console.log('[FRONTEND] 8. Animation step prepared.');
     }
   } catch (error) {
     console.error('イベントの読み込み中にAPIエラーが発生しました:', error);
