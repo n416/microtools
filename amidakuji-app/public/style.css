@@ -1990,3 +1990,25 @@ body.dark-mode .input-group.checkbox-group label::before {
   top: 0;
   right: 0;
 }
+
+.display-preview {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.display-preview h5 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #555;
+  text-align: center;
+}
+
+.display-preview .item-list li {
+  background-color: #fff;
+  padding: 8px 12px;
+  font-size: 14px;
+}
