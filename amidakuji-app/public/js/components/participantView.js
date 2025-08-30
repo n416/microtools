@@ -471,19 +471,60 @@ export function initParticipantView() {
       }
     });
 
-    staticCanvas.addEventListener('click', (e) => {
+    staticCanvas.addEventListener('click', async (e) => {
       if (!state.currentLotteryData || !state.currentLotteryData.allowDoodleMode) {
         return;
       }
+
+      const doodleControls = document.getElementById('doodleControls');
+      const setControlsDisabled = (disabled) => {
+        if (doodleControls) {
+          doodleControls.querySelectorAll('button').forEach((btn) => (btn.disabled = disabled));
+        }
+      };
+
       if (state.doodleTool === 'draw') {
-        const currentHoverDoodle = state.hoverDoodle;
-        if (currentHoverDoodle) {
-          state.setPreviewDoodle(currentHoverDoodle);
+        const doodleData = state.hoverDoodle;
+        if (!doodleData) return;
+
+        state.setPreviewDoodle(doodleData);
+        setControlsDisabled(true);
+
+        try {
+          await api.addDoodle(state.currentEventId, state.currentParticipantId, doodleData);
+          state.currentLotteryData.doodles = state.currentLotteryData.doodles.filter((d) => d.memberId !== state.currentParticipantId);
+          state.currentLotteryData.doodles.push({...doodleData, memberId: state.currentParticipantId});
+          state.setPreviewDoodle(null);
+        } catch (error) {
+          if (error.error === '他の線に近すぎるため、線を引けません。') {
+            ui.showToast(error.error);
+          } else {
+            alert(error.error || '線の追加に失敗しました。');
+          }
+          state.setPreviewDoodle(null);
+        } finally {
+          setControlsDisabled(false);
+          redrawCanvas();
         }
       } else if (state.doodleTool === 'erase') {
-        state.setPreviewDoodle(null);
+        const myDoodle = state.currentLotteryData.doodles.find((d) => d.memberId === state.currentParticipantId);
+
+        if (!myDoodle && !state.previewDoodle) return;
+
+        setControlsDisabled(true);
+        try {
+          if (myDoodle) {
+            await api.deleteDoodle(state.currentEventId, state.currentParticipantId);
+          }
+          state.setPreviewDoodle(null);
+          state.currentLotteryData.doodles = state.currentLotteryData.doodles.filter((d) => d.memberId !== state.currentParticipantId);
+        } catch (error) {
+          ui.showToast(error.error || '線の削除に失敗しました。');
+        } finally {
+          setControlsDisabled(false);
+          redrawCanvas();
+        }
       }
-      redrawCanvas();
     });
 
     const doodleModePanBtn = document.getElementById('doodleModePan');
@@ -492,12 +533,15 @@ export function initParticipantView() {
 
     if (doodleModePanBtn && doodleModeDrawBtn && doodleModeEraseBtn) {
       const btns = [doodleModePanBtn, doodleModeDrawBtn, doodleModeEraseBtn];
+      // ▼▼▼ ここから修正 ▼▼▼
+      const panzoomWrapper = staticCanvas.parentElement;
       const switchMode = (tool) => {
         state.setDoodleTool(tool);
         participantPanzoom.setOptions({
           disablePan: tool !== 'pan',
           disableZoom: tool !== 'pan',
         });
+        panzoomWrapper.style.cursor = tool === 'pan' ? 'grab' : 'crosshair';
         btns.forEach((btn) => btn.classList.remove('active'));
         document.getElementById(`doodleMode${tool.charAt(0).toUpperCase() + tool.slice(1)}`).classList.add('active');
 
@@ -506,6 +550,7 @@ export function initParticipantView() {
           redrawCanvas();
         }
       };
+      // ▲▲▲ ここまで修正 ▲▲▲
       doodleModePanBtn.addEventListener('click', () => switchMode('pan'));
       doodleModeDrawBtn.addEventListener('click', () => switchMode('draw'));
       doodleModeEraseBtn.addEventListener('click', () => switchMode('erase'));
@@ -641,7 +686,7 @@ export function initParticipantView() {
     });
   }
 
-  if (elements.backToDashboardFromWaitingButton) {
+  if (elements.backToDashboardFromWaitingButton)
     elements.backToDashboardFromWaitingButton.addEventListener('click', async () => {
       try {
         const group = await api.getGroup(state.currentGroupId);
@@ -655,7 +700,6 @@ export function initParticipantView() {
         await router.navigateTo('/');
       }
     });
-  }
   if (elements.participantLogoutButton)
     elements.participantLogoutButton.addEventListener('click', async () => {
       try {
