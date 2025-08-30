@@ -2,6 +2,9 @@ import * as api from '../api.js';
 import * as state from '../state.js';
 import * as router from '../router.js';
 import {startAnimation, isAnimationRunning, showAllTracersInstantly, prepareStepAnimation} from '../animation.js';
+import {drawDoodlePreview, drawDoodleHoverPreview} from '../animation/drawing.js';
+import {getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight, getTargetHeight} from '../animation/path.js';
+import {participantPanzoom} from '../animation/setup.js';
 import * as ui from '../ui.js';
 import {clientEmojiToLucide} from '../ui.js';
 
@@ -174,8 +177,26 @@ export async function showStaticAmidaView() {
   hideParticipantSubViews(true);
   if (ui.elements.staticAmidaView) ui.elements.staticAmidaView.style.display = 'block';
 
+  const doodleControls = document.getElementById('doodleControls');
+  if (doodleControls) {
+    const eventData = state.currentLotteryData;
+    if (eventData && eventData.allowDoodleMode) {
+      doodleControls.style.display = 'block';
+    } else {
+      doodleControls.style.display = 'none';
+    }
+  }
+
   const ctx = ui.elements.participantCanvasStatic.getContext('2d');
-  await prepareStepAnimation(ctx, true, false);
+  const storedState = participantPanzoom ? {pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale()} : null;
+  await prepareStepAnimation(ctx, true, false, false, storedState);
+
+  if (state.hoverDoodle) {
+    drawDoodleHoverPreview(ctx, state.hoverDoodle);
+  }
+  if (state.previewDoodle) {
+    drawDoodlePreview(ctx, state.previewDoodle);
+  }
 }
 
 export function showResultsView(eventData, targetName, isShareView) {
@@ -195,13 +216,7 @@ export function showResultsView(eventData, targetName, isShareView) {
 
       if (elements.myResult) elements.myResult.innerHTML = resultHtml;
     } else {
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-      // ★★★ ここからが修正点 ★★★
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
       if (elements.myResult) elements.myResult.innerHTML = '<b>全結果を表示します</b>';
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-      // ★★★ 修正はここまで ★★★
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     }
     if (!isShareView) {
       if (elements.shareButton) elements.shareButton.style.display = 'inline-flex';
@@ -300,7 +315,203 @@ export function renderOtherEvents(events, groupCustomUrl) {
   }
 }
 
+async function initializeParticipantView(eventId, isShare, sharedParticipantName) {
+  state.setCurrentEventId(eventId);
+
+  ui.showView('participantView');
+  hideParticipantSubViews(true);
+
+  try {
+    let eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
+
+    state.setCurrentGroupId(eventData.groupId);
+    state.loadParticipantState();
+
+    if (!isShare && state.currentParticipantId) {
+      eventData = await api.getPublicEventData(eventId);
+    }
+
+    state.setCurrentLotteryData(eventData);
+
+    if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
+
+    if (ui.elements.backToGroupEventListLink) {
+      if (isShare) {
+        ui.elements.backToGroupEventListLink.style.display = 'none';
+      } else {
+        try {
+          const groupData = await api.getGroup(eventData.groupId);
+          if (groupData) {
+            if (state.currentParticipantId && groupData.customUrl) {
+              ui.elements.backToGroupEventListLink.href = `/g/${groupData.customUrl}/dashboard`;
+              ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のダッシュボードに戻る`;
+            } else {
+              const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
+              ui.elements.backToGroupEventListLink.href = backUrl;
+              ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
+            }
+            ui.elements.backToGroupEventListLink.style.display = 'inline-block';
+          } else {
+            ui.elements.backToGroupEventListLink.style.display = 'none';
+          }
+        } catch (groupError) {
+          console.error('Failed to get group info for back link:', groupError);
+          ui.elements.backToGroupEventListLink.style.display = 'none';
+        }
+      }
+    }
+
+    if (isShare) {
+      if (eventData.status === 'started') {
+        await showResultsView(eventData, sharedParticipantName, true);
+      } else {
+        await showStaticAmidaView();
+      }
+    } else if (eventData.status === 'started') {
+      await showResultsView(eventData, state.currentParticipantName, false);
+    } else {
+      const myParticipation = state.currentParticipantId ? eventData.participants.find((p) => p.memberId === state.currentParticipantId) : null;
+      if (myParticipation && myParticipation.name) {
+        await showStaticAmidaView();
+      } else {
+        showJoinView(eventData);
+      }
+    }
+  } catch (error) {
+    console.error('Error in initializeParticipantView:', error);
+    if (error.requiresPassword) {
+      state.setLastFailedAction(() => initializeParticipantView(eventId, isShare, sharedParticipantName));
+      ui.showGroupPasswordModal(error.groupId, error.groupName);
+    } else {
+      if (ui.elements.participantView) ui.elements.participantView.innerHTML = `<div class="view-container"><p class="error-message">${error.error || error.message}</p></div>`;
+    }
+  }
+}
+
 export function initParticipantView() {
+  const staticCanvas = document.getElementById('participantCanvasStatic');
+  if (staticCanvas) {
+    const redrawCanvas = async () => {
+      const storedState = participantPanzoom ? {pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale()} : null;
+      const ctx = staticCanvas.getContext('2d');
+      await prepareStepAnimation(ctx, true, false, false, storedState);
+      if (state.hoverDoodle) {
+        drawDoodleHoverPreview(ctx, state.hoverDoodle);
+      }
+      if (state.previewDoodle) {
+        drawDoodlePreview(ctx, state.previewDoodle);
+      }
+    };
+
+    staticCanvas.addEventListener('mousemove', (e) => {
+      if (!state.currentLotteryData || !state.currentLotteryData.allowDoodleMode || state.doodleTool !== 'draw' || 'ontouchstart' in window) {
+        return;
+      }
+
+      const canvas = e.target;
+      const rect = canvas.getBoundingClientRect();
+      const pan = participantPanzoom.getPan();
+      const scale = participantPanzoom.getScale();
+      const x = (e.clientX - rect.left - pan.x) / scale;
+      const y = (e.clientY - rect.top - pan.y) / scale;
+
+      const {participants, prizes} = state.currentLotteryData;
+      const numParticipants = participants.length;
+      const container = canvas.closest('.canvas-panzoom-container');
+      const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, container.clientWidth);
+      const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
+
+      const nameAreaHeight = getNameAreaHeight(container);
+      const prizeAreaHeight = calculatePrizeAreaHeight(prizes);
+      const lineTopY = nameAreaHeight;
+      const lineBottomY = getTargetHeight(container) - prizeAreaHeight;
+      const amidaDrawableHeight = lineBottomY - lineTopY;
+
+      const topMargin = 70;
+      const bottomMargin = 330;
+      const sourceLineRange = bottomMargin - topMargin;
+
+      if (y < lineTopY || y > lineBottomY) {
+        if (state.hoverDoodle) {
+          state.setHoverDoodle(null);
+          redrawCanvas();
+        }
+        return;
+      }
+
+      let fromIndex = -1;
+      for (let i = 0; i < numParticipants - 1; i++) {
+        const startX = participantSpacing * (i + 1);
+        const endX = participantSpacing * (i + 2);
+        if (x > startX && x < endX) {
+          fromIndex = i;
+          break;
+        }
+      }
+
+      if (fromIndex === -1) {
+        if (state.hoverDoodle) {
+          state.setHoverDoodle(null);
+          redrawCanvas();
+        }
+        return;
+      }
+
+      const relativeY = y - lineTopY;
+      const originalY = (relativeY / amidaDrawableHeight) * sourceLineRange + topMargin;
+
+      state.setHoverDoodle({fromIndex, toIndex: fromIndex + 1, y: originalY});
+      redrawCanvas();
+    });
+
+    staticCanvas.addEventListener('mouseleave', () => {
+      if (state.hoverDoodle) {
+        state.setHoverDoodle(null);
+        redrawCanvas();
+      }
+    });
+
+    staticCanvas.addEventListener('click', (e) => {
+      if (!state.currentLotteryData || !state.currentLotteryData.allowDoodleMode) {
+        return;
+      }
+      if (state.doodleTool === 'draw') {
+        const currentHoverDoodle = state.hoverDoodle;
+        if (currentHoverDoodle) {
+          state.setPreviewDoodle(currentHoverDoodle);
+        }
+      } else if (state.doodleTool === 'erase') {
+        state.setPreviewDoodle(null);
+      }
+      redrawCanvas();
+    });
+
+    const doodleModePanBtn = document.getElementById('doodleModePan');
+    const doodleModeDrawBtn = document.getElementById('doodleModeDraw');
+    const doodleModeEraseBtn = document.getElementById('doodleModeErase');
+
+    if (doodleModePanBtn && doodleModeDrawBtn && doodleModeEraseBtn) {
+      const btns = [doodleModePanBtn, doodleModeDrawBtn, doodleModeEraseBtn];
+      const switchMode = (tool) => {
+        state.setDoodleTool(tool);
+        participantPanzoom.setOptions({
+          disablePan: tool !== 'pan',
+          disableZoom: tool !== 'pan',
+        });
+        btns.forEach((btn) => btn.classList.remove('active'));
+        document.getElementById(`doodleMode${tool.charAt(0).toUpperCase() + tool.slice(1)}`).classList.add('active');
+
+        if (state.hoverDoodle) {
+          state.setHoverDoodle(null);
+          redrawCanvas();
+        }
+      };
+      doodleModePanBtn.addEventListener('click', () => switchMode('pan'));
+      doodleModeDrawBtn.addEventListener('click', () => switchMode('draw'));
+      doodleModeEraseBtn.addEventListener('click', () => switchMode('erase'));
+    }
+  }
+
   if (elements.confirmNameButton) {
     elements.confirmNameButton.addEventListener('click', async () => {
       const name = elements.nameInput.value.trim();

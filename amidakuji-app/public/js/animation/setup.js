@@ -9,6 +9,13 @@ let resizeDebounceTimer;
 
 export function initializePanzoom(canvasElement) {
   if (!canvasElement) return null;
+
+  // ▼▼▼ ここから修正 ▼▼▼
+  if (canvasElement.id === 'participantCanvasStatic' && participantPanzoom) {
+    return participantPanzoom;
+  }
+  // ▲▲▲ ここまで修正 ▲▲▲
+
   const panzoomElement = canvasElement.parentElement;
 
   const panzoom = Panzoom(panzoomElement, {
@@ -175,7 +182,7 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMa
   if (storedState && currentPanzoom) {
     currentPanzoom.pan(storedState.pan.x, storedState.pan.y, {animate: false});
     currentPanzoom.zoom(storedState.scale, {animate: false});
-  } else if (!isResize) {
+  } else if (isResize) {
     setTimeout(() => {
       if (container && currentPanzoom) {
         const panzoomElement = targetCtx.canvas.parentElement;
