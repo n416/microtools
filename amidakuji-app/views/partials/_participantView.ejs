@@ -58,6 +58,15 @@
       <canvas id="participantCanvasStatic"></canvas>
     </div>
   </div>
+  <div id="doodleControls" style="display: none;">
+    <div class="doodle-mode-switcher">
+      <button id="doodleModePan" class="doodle-mode-btn active" title="移動モード"><i data-lucide="hand"></i></button>
+      <button id="doodleModeDraw" class="doodle-mode-btn" title="落書きモード"><i data-lucide="pencil"></i></button>
+      <button id="doodleModeErase" class="doodle-mode-btn" title="消しゴムモード"><i data-lucide="eraser"></i></button>
+    </div>
+    <p>隣り合った縦線の間をクリックして横線を追加し、1本だけ線を引いて運命を変えよう！</p>
+    <button id="confirmDoodleButton" class="primary-action">この線で確定する</button>
+  </div>
   <div class="controls" style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
     <button id="deleteParticipantWaitingButton" class="delete-btn">参加を取り消す</button>
     <button id="backToDashboardFromWaitingButton">ダッシュボードに戻る</button>

@@ -6,7 +6,7 @@ const {getNextAvailableColor} = require('../../utils/color');
 
 exports.createEvent = async (req, res) => {
   try {
-    const {prizes, groupId, eventName, displayPrizeName, displayPrizeCount, allowDoodleMode} = req.body; // allowDoodleMode を受け取る
+    const {prizes, groupId, eventName, displayPrizeName, displayPrizeCount, allowDoodleMode} = req.body;
     const participantCount = prizes ? prizes.length : 0;
 
     if (!groupId) return res.status(400).json({error: 'グループIDは必須です。'});
@@ -34,7 +34,7 @@ exports.createEvent = async (req, res) => {
       participants,
       displayPrizeName: !!displayPrizeName,
       displayPrizeCount: !!displayPrizeCount,
-      allowDoodleMode: typeof allowDoodleMode === 'boolean' ? allowDoodleMode : false, // ここを修正
+      allowDoodleMode: typeof allowDoodleMode === 'boolean' ? allowDoodleMode : false,
       createdAt: new Date(),
       ownerId: req.user.id,
       status: 'pending',
@@ -50,60 +50,32 @@ exports.createEvent = async (req, res) => {
 
 exports.getEvent = async (req, res) => {
   try {
-    // --- ▼▼▼ ログ追加 ▼▼▼ ---
-    console.log('--- getEvent Start ---');
     const eventId = req.params.id;
-    console.log(`[LOG] Fetching event with ID: ${eventId}`);
-    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
     const doc = await firestore.collection('events').doc(eventId).get();
     if (!doc.exists) {
-      // --- ▼▼▼ ログ追加 ▼▼▼ ---
-      console.log('[LOG] Event not found in database.');
-      // --- ▲▲▲ ログ追加 ▲▲▲ ---
       return res.status(404).json({error: 'イベントが見つかりません。'});
     }
     const eventData = doc.data();
-    // --- ▼▼▼ ログ追加 ▼▼▼ ---
-    console.log('[LOG] Event data retrieved:', eventData);
-    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
     const groupRef = firestore.collection('groups').doc(eventData.groupId);
     const groupDoc = await groupRef.get();
     if (!groupDoc.exists) {
-      // --- ▼▼▼ ログ追加 ▼▼▼ ---
-      console.log(`[LOG] Group with ID ${eventData.groupId} not found.`);
-      // --- ▲▲▲ ログ追加 ▲▲▲ ---
       return res.status(404).json({error: '所属グループが見つかりません。'});
     }
 
     const groupData = groupDoc.data();
-    // --- ▼▼▼ ログ追加 ▼▼▼ ---
-    console.log('[LOG] Group data retrieved:', groupData);
-    console.log('[LOG] Current user:', req.user);
-    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
     const isOwner = req.user && groupData.ownerId === req.user.id;
     const isSysAdmin = req.user && req.user.role === 'system_admin' && !req.user.isImpersonating;
-    // --- ▼▼▼ ログ追加 ▼▼▼ ---
-    console.log(`[LOG] Permission Check: IsOwner=${isOwner}, IsSysAdmin=${isSysAdmin}`);
-    // --- ▲▲▲ ログ追加 ▲▲▲ ---
 
-    if (isOwner || isSysAdmin) {
-      console.log('[LOG] Access Granted: User is owner or system admin.');
-    } else {
-      console.log('[LOG] User is not authorized.');
+    if (!isOwner && !isSysAdmin) {
       return res.status(403).json({error: 'このイベントを閲覧する権限がありません。'});
     }
 
-    // --- ▼▼▼ ログ追加 ▼▼▼ ---
-    console.log('--- getEvent Success ---');
-    // --- ▲▲▲ ログ追加 ▲▲▲ ---
     res.status(200).json({id: doc.id, ...eventData});
   } catch (error) {
-    // --- ▼▼▼ ログ追加 ▼▼▼ ---
     console.error(`[ERROR] Fatal error in getEvent for event ID ${req.params.id}:`, error);
-    // --- ▲▲▲ ログ追加 ▲▲▲ ---
     res.status(500).json({error: 'イベントの読み込みに失敗しました。'});
   }
 };
@@ -111,7 +83,7 @@ exports.getEvent = async (req, res) => {
 exports.updateEvent = async (req, res) => {
   try {
     const {id: eventId} = req.params;
-    const {prizes, eventName, displayPrizeName, displayPrizeCount, allowDoodleMode} = req.body; // allowDoodleMode を受け取る
+    const {prizes, eventName, displayPrizeName, displayPrizeCount, allowDoodleMode} = req.body;
     const participantCount = prizes ? prizes.length : 0;
 
     if (participantCount < 2) return res.status(400).json({error: '景品は2つ以上で設定してください。'});
@@ -164,7 +136,7 @@ exports.updateEvent = async (req, res) => {
       participantCount,
       displayPrizeName: !!displayPrizeName,
       displayPrizeCount: !!displayPrizeCount,
-      allowDoodleMode: typeof allowDoodleMode === 'boolean' ? allowDoodleMode : eventData.allowDoodleMode || false, // ここを修正
+      allowDoodleMode: typeof allowDoodleMode === 'boolean' ? allowDoodleMode : eventData.allowDoodleMode || false,
     };
 
     if (participantCount !== eventData.participantCount) {
@@ -212,125 +184,6 @@ exports.deleteEvent = async (req, res) => {
   }
 };
 
-exports.copyEvent = async (req, res) => {
-  try {
-    const {eventId} = req.params;
-    const eventRef = firestore.collection('events').doc(eventId);
-    const eventDoc = await eventRef.get();
-
-    if (!eventDoc.exists) {
-      return res.status(404).json({error: 'コピー元のイベントが見つかりません。'});
-    }
-
-    const originalEvent = eventDoc.data();
-    const isOwner = req.user && originalEvent.ownerId === req.user.id;
-    const isSysAdmin = req.user && req.user.role === 'system_admin' && !req.user.isImpersonating;
-
-    if (!isOwner && !isSysAdmin) {
-      return res.status(403).json({error: 'このイベントをコピーする権限がありません。'});
-    }
-
-    const initialParticipants = Array.from({length: originalEvent.participantCount}, (_, i) => ({
-      slot: i,
-      name: null,
-      memberId: null,
-      iconUrl: null,
-      color: `#${Math.floor(Math.random() * 16777215)
-        .toString(16)
-        .padStart(6, '0')}`,
-    }));
-
-    const newEventData = {
-      ...originalEvent,
-      createdAt: new Date(),
-      status: 'pending',
-      participants: initialParticipants,
-      ownerId: req.user.id,
-    };
-    delete newEventData.results;
-    delete newEventData.eventPassword;
-
-    const newDocRef = await firestore.collection('events').add(newEventData);
-    res.status(201).json({newId: newDocRef.id});
-  } catch (error) {
-    console.error('Error copying event:', error);
-    res.status(500).json({error: 'イベントのコピーに失敗しました。'});
-  }
-};
-
-exports.generatePrizeUploadUrl = async (req, res) => {
-  try {
-    const {eventId} = req.params;
-    const {fileType, fileHash} = req.body; // fileHashを受け取る
-    const eventRef = firestore.collection('events').doc(eventId);
-    const eventDoc = await eventRef.get();
-
-    if (!eventDoc.exists || eventDoc.data().ownerId !== req.user.id) {
-      return res.status(403).json({error: 'このイベントの画像をアップロードする権限がありません。'});
-    }
-
-    const fileExt = fileType.split('/')[1];
-    if (!['png', 'jpeg', 'jpg', 'gif', 'webp'].includes(fileExt)) {
-      return res.status(400).json({error: '無効なファイルタイプです。'});
-    }
-
-    // ファイル名をハッシュに変更
-    const fileName = `shared_images/${fileHash}.${fileExt}`;
-    const file = bucket.file(fileName);
-
-    const [url] = await file.getSignedUrl({
-      version: 'v4',
-      action: 'write',
-      expires: Date.now() + 15 * 60 * 1000,
-      contentType: fileType,
-    });
-
-    res.status(200).json({
-      signedUrl: url,
-      imageUrl: `https://storage.googleapis.com/${bucket.name}/${fileName}`,
-    });
-  } catch (error) {
-    console.error('Error generating upload URL for event prize:', error);
-    res.status(500).json({error: 'URLの生成に失敗しました。'});
-  }
-};
-
-exports.generatePrizeUploadUrl = async (req, res) => {
-  try {
-    const {eventId} = req.params;
-    const {fileType, fileHash} = req.body; // fileHashを受け取る
-    const eventRef = firestore.collection('events').doc(eventId);
-    const eventDoc = await eventRef.get();
-
-    if (!eventDoc.exists || eventDoc.data().ownerId !== req.user.id) {
-      return res.status(403).json({error: 'このイベントの画像をアップロードする権限がありません。'});
-    }
-
-    const fileExt = fileType.split('/')[1];
-    if (!['png', 'jpeg', 'jpg', 'gif', 'webp'].includes(fileExt)) {
-      return res.status(400).json({error: '無効なファイルタイプです。'});
-    }
-
-    // ファイル名をハッシュに変更
-    const fileName = `shared_images/${fileHash}.${fileExt}`;
-    const file = bucket.file(fileName);
-
-    const [url] = await file.getSignedUrl({
-      version: 'v4',
-      action: 'write',
-      expires: Date.now() + 15 * 60 * 1000,
-      contentType: fileType,
-    });
-
-    res.status(200).json({
-      signedUrl: url,
-      imageUrl: `https://storage.googleapis.com/${bucket.name}/${fileName}`,
-    });
-  } catch (error) {
-    console.error('Error generating upload URL for event prize:', error);
-    res.status(500).json({error: 'URLの生成に失敗しました。'});
-  }
-};
 exports.copyEvent = async (req, res) => {
   try {
     const {eventId} = req.params;

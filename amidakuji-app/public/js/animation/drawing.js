@@ -106,6 +106,54 @@ export function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes 
   }
 }
 
+function drawDoodleLine(targetCtx, doodle, color, isDashed = true) {
+  if (!doodle || !state.currentLotteryData) return;
+
+  const {participants} = state.currentLotteryData;
+  const numParticipants = participants.length;
+  const container = targetCtx.canvas.closest('.canvas-panzoom-container');
+  if (!container) return;
+  const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, container.clientWidth);
+  const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
+
+  targetCtx.strokeStyle = color;
+  targetCtx.lineWidth = 3;
+  if (isDashed) {
+    targetCtx.setLineDash([5, 5]);
+  }
+
+  const nameAreaHeight = getNameAreaHeight(container);
+  const prizeAreaHeight = calculatePrizeAreaHeight(state.currentLotteryData.prizes);
+  const lineTopY = nameAreaHeight;
+  const lineBottomY = getTargetHeight(container) - prizeAreaHeight;
+  const amidaDrawableHeight = lineBottomY - lineTopY;
+  const sourceLineRange = 330 - 70;
+
+  const startX = participantSpacing * (doodle.fromIndex + 1);
+  const endX = participantSpacing * (doodle.toIndex + 1);
+  const lineY = lineTopY + ((doodle.y - 70) / sourceLineRange) * amidaDrawableHeight;
+
+  targetCtx.beginPath();
+  targetCtx.moveTo(startX, lineY);
+  targetCtx.lineTo(endX, lineY);
+  targetCtx.stroke();
+
+  if (isDashed) {
+    targetCtx.setLineDash([]);
+  }
+}
+
+export function drawDoodlePreview(targetCtx, doodle) {
+  const myParticipant = state.currentLotteryData.participants.find((p) => p.memberId === state.currentParticipantId);
+  const color = myParticipant ? myParticipant.color : '#ff00ff';
+  drawDoodleLine(targetCtx, doodle, color, true);
+}
+
+export function drawDoodleHoverPreview(targetCtx, doodle) {
+  const color = '#cccccc';
+  drawDoodleLine(targetCtx, doodle, color, true);
+}
+
 export function drawTracerPath(targetCtx, tracer) {
   targetCtx.strokeStyle = tracer.color;
   targetCtx.lineWidth = 4;
