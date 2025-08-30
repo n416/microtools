@@ -23,7 +23,7 @@
       <div class="view-mode-switcher">
         <button id="viewModeCard" class="view-mode-btn active" data-mode="card">カード表示</button>
         <button id="viewModeList" class="view-mode-btn" data-mode="list">リスト表示</button>
-      </div>
+       </div>
     </div>
     <ul id="prizeCardListContainer" class="prize-card-list"></ul>
     <div id="prizeListModeContainer" style="display: none;"></div>
@@ -45,7 +45,14 @@
     </div>
   </div>
   <div class="settings-section">
-    <h4>4. 作成</h4>
+    <h4>4. インタラクティブ設定</h4>
+    <div class="input-group checkbox-group">
+      <input type="checkbox" id="allowDoodleModeCheckbox" />
+      <label for="allowDoodleModeCheckbox">落書きモードを許可する</label>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h4>5. 作成</h4>
     <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
   </div>
 </div>

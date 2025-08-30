@@ -30,6 +30,7 @@ const elements = {
   cancelBulkAddButton: document.getElementById('cancelBulkAddButton'),
   displayPrizeName: document.getElementById('displayPrizeName'),
   displayPrizeCount: document.getElementById('displayPrizeCount'),
+  allowDoodleModeCheckbox: document.getElementById('allowDoodleModeCheckbox'),
   prizeDisplayPreview: document.getElementById('prizeDisplayPreview'),
 };
 
@@ -48,19 +49,25 @@ function updatePrizePreview() {
   let previewHTML = '';
 
   if (displayPrizeName && displayPrizeCount) {
-    previewHTML = Object.entries(prizeSummary).map(([name, count]) => `<li>${name}: ${count}個</li>`).join('');
+    previewHTML = Object.entries(prizeSummary)
+      .map(([name, count]) => `<li>${name}: ${count}個</li>`)
+      .join('');
   } else if (!displayPrizeName && displayPrizeCount) {
-    previewHTML = Object.entries(prizeSummary).map(([name, count]) => `<li>？？？: ${count}個</li>`).join('');
+    previewHTML = Object.entries(prizeSummary)
+      .map(([name, count]) => `<li>？？？: ${count}個</li>`)
+      .join('');
   } else if (displayPrizeName && !displayPrizeCount) {
-    previewHTML = Object.keys(prizeSummary).map(name => `<li>${name}</li>`).join('');
-  } else { // !displayPrizeName && !displayPrizeCount
+    previewHTML = Object.keys(prizeSummary)
+      .map((name) => `<li>${name}</li>`)
+      .join('');
+  } else {
+    // !displayPrizeName && !displayPrizeCount
     const totalCount = state.prizes.length;
     previewHTML = `<li>合計景品数: ${totalCount}個</li>`;
   }
-  
+
   elements.prizeDisplayPreview.innerHTML = previewHTML || '<li>景品を登録するとプレビューが表示されます</li>';
 }
-
 
 export function renderEventForEditing(data) {
   elements.eventNameInput.value = data.eventName || '';
@@ -72,6 +79,11 @@ export function renderEventForEditing(data) {
   if (elements.displayPrizeCount) {
     elements.displayPrizeCount.checked = data.hasOwnProperty('displayPrizeCount') ? data.displayPrizeCount : true;
   }
+  // ▼▼▼ ここから修正 ▼▼▼
+  if (elements.allowDoodleModeCheckbox) {
+    elements.allowDoodleModeCheckbox.checked = data.allowDoodleMode || false;
+  }
+  // ▲▲▲ ここまで修正 ▲▲▲
 
   elements.createEventButton.textContent = 'この内容でイベントを保存';
 
@@ -112,14 +124,8 @@ export function renderPrizeCardList() {
     const imgPreview = document.createElement('img');
     imgPreview.alt = prizeName;
 
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★★★ ここからが修正点 ★★★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     if (prizeImageUrl) {
       imgPreview.src = prizeImageUrl;
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-      // ★★★ 修正はここまで ★★★
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     } else if (p.newImageFile) {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -327,7 +333,6 @@ export function closePrizeBulkAddModal() {
 
 export function initEventEdit() {
   if (elements.eventEditView) {
-
     if (elements.displayPrizeName) elements.displayPrizeName.addEventListener('change', updatePrizePreview);
     if (elements.displayPrizeCount) elements.displayPrizeCount.addEventListener('change', updatePrizePreview);
 
@@ -605,6 +610,9 @@ export function initEventEdit() {
           let eventId = state.currentEventId;
           const displayPrizeName = document.getElementById('displayPrizeName').checked;
           const displayPrizeCount = document.getElementById('displayPrizeCount').checked;
+          // ▼▼▼ ここから修正 ▼▼▼
+          const allowDoodleMode = document.getElementById('allowDoodleModeCheckbox').checked;
+          // ▲▲▲ ここまで修正 ▲▲▲
 
           if (!isUpdate) {
             elements.createEventButton.textContent = 'イベント作成中...';
@@ -614,7 +622,11 @@ export function initEventEdit() {
               groupId: state.currentGroupId,
               displayPrizeName,
               displayPrizeCount,
+              allowDoodleMode,
             };
+            // ▼▼▼ ここから修正 ▼▼▼
+            console.log('API Request Payload (Create):', initialEventData);
+            // ▲▲▲ ここまで修正 ▲▲▲
             const newEvent = await api.createEvent(initialEventData);
             eventId = newEvent.id;
             state.setCurrentEventId(eventId);
@@ -665,8 +677,14 @@ export function initEventEdit() {
             participantCount: finalPrizes.length,
             displayPrizeName,
             displayPrizeCount,
+            allowDoodleMode,
           };
 
+          // ▼▼▼ ここから修正 ▼▼▼
+          if (isUpdate) {
+            console.log('API Request Payload (Update):', finalEventData);
+          }
+          // ▲▲▲ ここまで修正 ▲▲▲
           await api.updateEvent(eventId, finalEventData);
 
           alert('イベントを保存しました！');
@@ -699,19 +717,11 @@ export function initEventEdit() {
           imageUrl: null,
           newImageFile: file || null,
         };
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ ここからが修正点 ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // マスターから選択された画像があり、かつ新しいファイルが選択されていない場合
         if (elements.newPrizeImagePreview.src && !file) {
-          // httpから始まるURLであることを確認（Base64のdata URIではないことを保証）
           if (elements.newPrizeImagePreview.src.startsWith('http')) {
             newPrize.imageUrl = elements.newPrizeImagePreview.src;
           }
         }
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ 修正はここまで ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
         if (!file && !newPrize.imageUrl) {
           const existingPrize = state.prizes.find((p) => p.name === name);
@@ -727,9 +737,6 @@ export function initEventEdit() {
         closeAddPrizeModal();
       });
     }
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★★★ ここからが修正点 ★★★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     if (elements.newPrizeImageInput) {
       elements.newPrizeImageInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -743,9 +750,6 @@ export function initEventEdit() {
         }
       });
     }
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★★★ 修正はここまで ★★★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     if (elements.callMasterButton) {
       elements.callMasterButton.addEventListener('click', async () => {
         try {
