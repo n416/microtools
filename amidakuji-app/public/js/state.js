@@ -14,6 +14,9 @@ export let currentParticipantName = null;
 export let debounceTimer;
 export let lastFailedAction = null;
 export let revealedPrizes = [];
+export let previewDoodle = null;
+export let doodleTool = 'pan'; // 'pan', 'draw', 'erase'
+export let hoverDoodle = null;
 
 export function setAllUserGroups(groups) {
   allUserGroups = groups;
@@ -48,6 +51,15 @@ export function setLastFailedAction(action) {
 }
 export function setRevealedPrizes(prizes) {
   revealedPrizes = prizes;
+}
+export function setPreviewDoodle(doodle) {
+  previewDoodle = doodle;
+}
+export function setDoodleTool(tool) {
+  doodleTool = tool;
+}
+export function setHoverDoodle(doodle) {
+  hoverDoodle = doodle;
 }
 
 export function loadParticipantState() {
