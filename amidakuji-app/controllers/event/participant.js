@@ -1,8 +1,80 @@
 const {firestore} = require('../../utils/firestore');
+const {FieldValue} = require('@google-cloud/firestore'); // FieldValueをインポート
 const {getNextAvailableColor} = require('../../utils/color');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
+
+// ▼▼▼ ここから修正 ▼▼▼
+exports.addDoodle = async (req, res) => {
+  try {
+    const {eventId} = req.params;
+    const {memberId, doodle} = req.body;
+    const token = req.headers['x-auth-token'];
+
+    if (!memberId || !doodle || !token) {
+      return res.status(400).json({error: '必要な情報が不足しています。'});
+    }
+
+    const eventRef = firestore.collection('events').doc(eventId);
+    const eventDoc = await eventRef.get();
+
+    if (!eventDoc.exists) {
+      return res.status(404).json({error: 'イベントが見つかりません。'});
+    }
+    const eventData = eventDoc.data();
+    const groupId = eventData.groupId;
+
+    // 認証
+    const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
+    const memberDoc = await memberRef.get();
+    if (!memberDoc.exists || memberDoc.data().deleteToken !== token) {
+      return res.status(403).json({error: '認証に失敗しました。'});
+    }
+
+    // イベント状態の検証
+    if (!eventData.allowDoodleMode) {
+      return res.status(403).json({error: 'このイベントでは落書きモードが許可されていません。'});
+    }
+    if (eventData.status !== 'pending') {
+      return res.status(403).json({error: 'このイベントは既に開始されているか終了しています。'});
+    }
+
+    const doodles = eventData.doodles || [];
+
+    // 重複投稿チェック
+    if (doodles.some((d) => d.memberId === memberId)) {
+      return res.status(409).json({error: '既に線を引いています。'});
+    }
+
+    // 近接チェック
+    const allLines = [...(eventData.lines || []), ...doodles];
+    const isTooClose = allLines.some((line) => {
+      if (line.fromIndex === doodle.fromIndex || line.toIndex === doodle.fromIndex || line.fromIndex === doodle.toIndex) {
+        if (Math.abs(line.y - doodle.y) < 15) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (isTooClose) {
+      return res.status(400).json({error: '他の線に近すぎるため、線を引けません。'});
+    }
+
+    // データ保存
+    const newDoodle = {...doodle, memberId};
+    await eventRef.update({
+      doodles: FieldValue.arrayUnion(newDoodle),
+    });
+
+    res.status(200).json({message: '線を追加しました。'});
+  } catch (error) {
+    console.error('Error adding doodle:', error);
+    res.status(500).json({error: '線の追加処理中にエラーが発生しました。'});
+  }
+};
+// ▲▲▲ ここまで修正 ▲▲▲
 
 exports.joinEvent = async (req, res) => {
   try {

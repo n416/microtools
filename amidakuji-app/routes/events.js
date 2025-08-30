@@ -16,7 +16,6 @@ router.get('/share/:eventId', publicController.getPublicShareData);
 router.get('/share/:eventId/:participantName', publicController.getPublicShareData);
 router.get('/events/:eventId/public', publicController.getPublicEventData);
 
-
 // --- Event Management Routes (Authenticated) ---
 router.get('/events/:id', ensureAuthenticated, eventController.getEvent);
 router.post('/events', ensureAuthenticated, eventController.createEvent);
@@ -37,6 +36,8 @@ router.post('/events/:eventId/verify-password', participantController.verifyPass
 router.delete('/events/:eventId/participants', participantController.deleteParticipant);
 router.post('/events/:eventId/acknowledge-result', participantController.acknowledgeResult);
 router.post('/events/:eventId/fill-slots', ensureAuthenticated, participantController.fillSlots);
-
+// ▼▼▼ ここから修正 ▼▼▼
+router.post('/events/:eventId/doodle', participantController.addDoodle);
+// ▲▲▲ ここまで修正 ▲▲▲
 
 module.exports = router;
