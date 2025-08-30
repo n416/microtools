@@ -28,6 +28,8 @@ const elements = {
   updatePrizesFromTextButton: document.getElementById('updatePrizesFromTextButton'),
   clearBulkPrizesButton: document.getElementById('clearBulkPrizesButton'),
   cancelBulkAddButton: document.getElementById('cancelBulkAddButton'),
+  displayPrizeName: document.getElementById('displayPrizeName'),
+  displayPrizeCount: document.getElementById('displayPrizeCount'),
 };
 
 export function renderEventForEditing(data) {
@@ -556,6 +558,8 @@ export function initEventEdit() {
 
         try {
           let eventId = state.currentEventId;
+          const displayPrizeName = document.getElementById('displayPrizeName').checked;
+          const displayPrizeCount = document.getElementById('displayPrizeCount').checked;
 
           if (!isUpdate) {
             elements.createEventButton.textContent = 'イベント作成中...';
@@ -563,6 +567,8 @@ export function initEventEdit() {
               eventName: elements.eventNameInput.value.trim(),
               prizes: state.prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
               groupId: state.currentGroupId,
+              displayPrizeName,
+              displayPrizeCount,
             };
             const newEvent = await api.createEvent(initialEventData);
             eventId = newEvent.id;
@@ -612,6 +618,8 @@ export function initEventEdit() {
             eventName: elements.eventNameInput.value.trim(),
             prizes: finalPrizes,
             participantCount: finalPrizes.length,
+            displayPrizeName,
+            displayPrizeCount,
           };
 
           await api.updateEvent(eventId, finalEventData);
