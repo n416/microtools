@@ -9,6 +9,29 @@ export function clientEmojiToLucide(emoji) {
 
 export let elements = {};
 
+export function showToast(message, duration = 3000) {
+  const toastId = `toast-${Date.now()}`;
+  const toast = document.createElement('div');
+  toast.id = toastId;
+  toast.className = 'toast-notification';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('show');
+  }, 10);
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+    toast.addEventListener('transitionend', () => {
+      const existingToast = document.getElementById(toastId);
+      if (existingToast) {
+        document.body.removeChild(existingToast);
+      }
+    });
+  }, duration);
+}
+
 export function initUI() {
   elements = {
     mainHeader: document.querySelector('.main-header'),
@@ -102,7 +125,6 @@ export function initUI() {
     updatePrizesFromTextButton: document.getElementById('updatePrizesFromTextButton'),
     clearBulkPrizesButton: document.getElementById('clearBulkPrizesButton'),
     cancelBulkAddButton: document.getElementById('cancelBulkAddButton'),
-    // participantView elements
     resultSection: document.getElementById('resultSection'),
     myResult: document.getElementById('myResult'),
     allResultsContainer: document.getElementById('allResultsContainer'),
@@ -110,18 +132,10 @@ export function initUI() {
     acknowledgeButton: document.getElementById('acknowledgeButton'),
     backToControlPanelFromResultButton: document.getElementById('backToControlPanelFromResultButton'),
     participantCanvas: document.getElementById('participantCanvas'),
-
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★★★ ここからが修正点 ★★★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // New static view elements
     staticAmidaView: document.getElementById('staticAmidaView'),
     participantCanvasStatic: document.getElementById('participantCanvasStatic'),
     deleteParticipantWaitingButton: document.getElementById('deleteParticipantWaitingButton'),
     backToDashboardFromWaitingButton: document.getElementById('backToDashboardFromWaitingButton'),
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★★★ 修正はここまで ★★★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
   };
 }
 

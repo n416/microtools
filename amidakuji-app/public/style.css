@@ -2012,3 +2012,38 @@ body.dark-mode .input-group.checkbox-group label::before {
   padding: 8px 12px;
   font-size: 14px;
 }
+
+.toast-notification {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+  font-size: 14px;
+}
+
+.toast-notification.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.doodle-mode-switcher .doodle-mode-btn {
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.doodle-mode-switcher .doodle-mode-btn:not(.active) {
+  background-color: #6c757d; /* 非アクティブ時の背景色をグレーに */
+  opacity: 0.5; /* 半透明にする */
+}
+
+.doodle-mode-switcher .doodle-mode-btn:not(.active):hover {
+  opacity: 0.75;
+  background-color: #5a6268;
+}

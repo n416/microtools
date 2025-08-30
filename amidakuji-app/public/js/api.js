@@ -53,6 +53,10 @@ export const copyEvent = (eventId) => request(`/api/events/${eventId}/copy`, 'PO
 export const deleteEvent = (eventId) => request(`/api/events/${eventId}`, 'DELETE');
 export const startEvent = (eventId) => request(`/api/events/${eventId}/start`, 'POST');
 export const generateEventPrizeUploadUrl = (eventId, fileType, fileHash) => request(`/api/events/${eventId}/generate-upload-url`, 'POST', {fileType, fileHash});
+export const addDoodle = (eventId, memberId, doodle) => request(`/api/events/${eventId}/doodle`, 'POST', { memberId, doodle }, { 'x-auth-token': state.currentParticipantToken });
+// ▼▼▼ ここから修正 ▼▼▼
+export const deleteDoodle = (eventId, memberId) => request(`/api/events/${eventId}/doodle`, 'DELETE', { memberId }, { 'x-auth-token': state.currentParticipantToken });
+// ▲▲▲ ここまで修正 ▲▲▲
 
 export const getPublicEventData = (eventId) => {
   const headers = {};

@@ -104,6 +104,16 @@ export function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes 
       targetCtx.stroke();
     });
   }
+
+  // ▼▼▼ ここから修正 ▼▼▼
+  if (data.doodles && data.doodles.length > 0) {
+    data.doodles.forEach((doodle) => {
+      const participant = data.participants.find((p) => p.memberId === doodle.memberId);
+      const color = participant ? participant.color : '#ff00ff'; // Fallback color
+      drawDoodleLine(targetCtx, doodle, color, false); // false for solid line
+    });
+  }
+  // ▲▲▲ ここまで修正 ▲▲▲
 }
 
 function drawDoodleLine(targetCtx, doodle, color, isDashed = true) {
