@@ -6,103 +6,126 @@ const clientEmojiMap = new Map(window.emojiMapData || []);
 export function clientEmojiToLucide(emoji) {
   return clientEmojiMap.get(emoji) || '';
 }
-export const elements = {
-  mainHeader: document.querySelector('.main-header'),
-  impersonationBanner: document.querySelector('.impersonation-banner'),
-  loginButton: document.getElementById('loginButton'),
-  logoutButton: document.getElementById('logoutButton'),
-  deleteAccountButton: document.getElementById('deleteAccountButton'),
-  adminDashboardButton: document.getElementById('adminDashboardButton'),
-  stopImpersonatingButton: document.getElementById('stopImpersonatingButton'),
-  hamburgerButton: document.getElementById('hamburger-button'),
-  navMenu: document.getElementById('nav-menu'),
-  groupDashboard: document.getElementById('groupDashboard'),
-  dashboardView: document.getElementById('dashboardView'),
-  broadcastView: document.getElementById('broadcastView'),
-  participantView: document.getElementById('participantView'),
-  groupEventListView: document.getElementById('groupEventListView'),
-  memberManagementGroupName: document.getElementById('memberManagementGroupName'),
-  participantEventName: document.getElementById('participantEventName'),
-  groupSwitcher: document.getElementById('groupSwitcher'),
-  currentGroupName: document.getElementById('currentGroupName'),
-  groupDropdown: document.getElementById('groupDropdown'),
-  switcherGroupList: document.getElementById('switcherGroupList'),
-  switcherCreateGroup: document.getElementById('switcherCreateGroup'),
-  groupSettingsModal: document.getElementById('groupSettingsModal'),
-  closeSettingsModalButton: document.querySelector('#groupSettingsModal .close-button'),
-  settingsGroupId: document.getElementById('settingsGroupId'),
-  groupNameEditInput: document.getElementById('groupNameEditInput'),
-  customUrlInput: document.getElementById('customUrlInput'),
-  customUrlPreview: document.getElementById('customUrlPreview'),
-  groupPasswordInput: document.getElementById('groupPasswordInput'),
-  deletePasswordButton: document.getElementById('deletePasswordButton'),
-  noIndexCheckbox: document.getElementById('noIndexCheckbox'),
-  saveGroupSettingsButton: document.getElementById('saveGroupSettingsButton'),
-  prizeMasterModal: document.getElementById('prizeMasterModal'),
-  closePrizeMasterModalButton: document.querySelector('#prizeMasterModal .close-button'),
-  prizeMasterList: document.getElementById('prizeMasterList'),
-  addMasterPrizeNameInput: document.getElementById('addMasterPrizeNameInput'),
-  addMasterPrizeImageInput: document.getElementById('addMasterPrizeImageInput'),
-  addMasterPrizeButton: document.getElementById('addMasterPrizeButton'),
-  backToDashboardButton: document.getElementById('backToDashboardButton'),
-  broadcastEventUrl: document.getElementById('broadcastEventUrl'),
-  currentEventUrl: document.getElementById('currentEventUrl'),
-  broadcastControls: document.querySelector('.broadcast-controls'),
-  groupPasswordModal: document.getElementById('groupPasswordModal'),
-  closeGroupPasswordModalButton: document.querySelector('#groupPasswordModal .close-button'),
-  verificationTargetGroupId: document.getElementById('verificationTargetGroupId'),
-  verificationTargetGroupName: document.getElementById('verificationTargetGroupName'),
-  groupPasswordVerifyInput: document.getElementById('groupPasswordVerifyInput'),
-  verifyPasswordButton: document.getElementById('verifyPasswordButton'),
-  passwordSetModal: document.getElementById('passwordSetModal'),
-  closePasswordSetModal: document.querySelector('#passwordSetModal .close-button'),
-  newPasswordInput: document.getElementById('newPasswordInput'),
-  savePasswordButton: document.getElementById('savePasswordButton'),
-  deleteUserPasswordButton: document.getElementById('deleteUserPasswordButton'),
-  profileEditModal: document.getElementById('profileEditModal'),
-  closeProfileModalButton: document.querySelector('#profileEditModal .close-button'),
-  profileIconPreview: document.getElementById('profileIconPreview'),
-  profileIconInput: document.getElementById('profileIconInput'),
-  profileColorInput: document.getElementById('profileColorInput'),
-  saveProfileButton: document.getElementById('saveProfileButton'),
-  prizeMasterSelectModal: document.getElementById('prizeMasterSelectModal'),
-  closePrizeMasterSelectModal: document.querySelector('#prizeMasterSelectModal .close-button'),
-  prizeMasterSelectList: document.getElementById('prizeMasterSelectList'),
-  addSelectedPrizesButton: document.getElementById('addSelectedPrizesButton'),
-  groupEventListContainer: document.getElementById('groupEventList'),
-  groupNameTitle: document.getElementById('groupEventListName'),
-  backToDashboardFromEventListButton: document.getElementById('backToDashboardFromEventListButton'),
-  requestAdminButton: document.getElementById('requestAdminButton'),
-  requestAdminControls: document.getElementById('requestAdminControls'),
 
-  // --- eventEdit.js elements ---
-  eventEditView: document.getElementById('eventEditView'),
-  backToGroupsButton: document.getElementById('backToGroupsButton'),
-  eventNameInput: document.getElementById('eventNameInput'),
-  bulkAddPrizesButton: document.getElementById('bulkAddPrizesButton'),
-  prizeCardListContainer: document.getElementById('prizeCardListContainer'),
-  prizeListModeContainer: document.getElementById('prizeListModeContainer'),
-  createEventButton: document.getElementById('createEventButton'),
-  openAddPrizeModalButton: document.getElementById('openAddPrizeModalButton'),
-  showSummaryButton: document.getElementById('showSummaryButton'),
-  addPrizeModal: document.getElementById('addPrizeModal'),
-  newPrizeNameInput: document.getElementById('newPrizeNameInput'),
-  newPrizeImageInput: document.getElementById('newPrizeImageInput'),
-  newPrizeImagePreview: document.getElementById('newPrizeImagePreview'),
-  callMasterButton: document.getElementById('callMasterButton'),
-  addPrizeOkButton: document.getElementById('addPrizeOkButton'),
-  summaryModal: document.getElementById('summaryModal'),
-  totalPrizes: document.getElementById('totalPrizes'),
-  prizeSummaryList: document.getElementById('prizeSummaryList'),
-  prizeBulkAddModal: document.getElementById('prizeBulkAddModal'),
-  closePrizeBulkAddModalButton: document.querySelector('#prizeBulkAddModal .close-button'),
-  prizeBulkTextarea: document.getElementById('prizeBulkTextarea'),
-  updatePrizesFromTextButton: document.getElementById('updatePrizesFromTextButton'),
-  clearBulkPrizesButton: document.getElementById('clearBulkPrizesButton'),
-  cancelBulkAddButton: document.getElementById('cancelBulkAddButton'),
-};
+export let elements = {};
 
-const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView'];
+export function initUI() {
+  elements = {
+    mainHeader: document.querySelector('.main-header'),
+    impersonationBanner: document.querySelector('.impersonation-banner'),
+    loginButton: document.getElementById('loginButton'),
+    logoutButton: document.getElementById('logoutButton'),
+    deleteAccountButton: document.getElementById('deleteAccountButton'),
+    adminDashboardButton: document.getElementById('adminDashboardButton'),
+    stopImpersonatingButton: document.getElementById('stopImpersonatingButton'),
+    hamburgerButton: document.getElementById('hamburger-button'),
+    navMenu: document.getElementById('nav-menu'),
+    groupDashboard: document.getElementById('groupDashboard'),
+    dashboardView: document.getElementById('dashboardView'),
+    broadcastView: document.getElementById('broadcastView'),
+    participantView: document.getElementById('participantView'),
+    groupEventListView: document.getElementById('groupEventListView'),
+    memberManagementGroupName: document.getElementById('memberManagementGroupName'),
+    participantEventName: document.getElementById('participantEventName'),
+    groupSwitcher: document.getElementById('groupSwitcher'),
+    currentGroupName: document.getElementById('currentGroupName'),
+    groupDropdown: document.getElementById('groupDropdown'),
+    switcherGroupList: document.getElementById('switcherGroupList'),
+    switcherCreateGroup: document.getElementById('switcherCreateGroup'),
+    groupSettingsModal: document.getElementById('groupSettingsModal'),
+    closeSettingsModalButton: document.querySelector('#groupSettingsModal .close-button'),
+    settingsGroupId: document.getElementById('settingsGroupId'),
+    groupNameEditInput: document.getElementById('groupNameEditInput'),
+    customUrlInput: document.getElementById('customUrlInput'),
+    customUrlPreview: document.getElementById('customUrlPreview'),
+    groupPasswordInput: document.getElementById('groupPasswordInput'),
+    deletePasswordButton: document.getElementById('deletePasswordButton'),
+    noIndexCheckbox: document.getElementById('noIndexCheckbox'),
+    saveGroupSettingsButton: document.getElementById('saveGroupSettingsButton'),
+    prizeMasterModal: document.getElementById('prizeMasterModal'),
+    closePrizeMasterModalButton: document.querySelector('#prizeMasterModal .close-button'),
+    prizeMasterList: document.getElementById('prizeMasterList'),
+    addMasterPrizeNameInput: document.getElementById('addMasterPrizeNameInput'),
+    addMasterPrizeImageInput: document.getElementById('addMasterPrizeImageInput'),
+    addMasterPrizeButton: document.getElementById('addMasterPrizeButton'),
+    backToDashboardButton: document.getElementById('backToDashboardButton'),
+    broadcastEventUrl: document.getElementById('broadcastEventUrl'),
+    currentEventUrl: document.getElementById('currentEventUrl'),
+    broadcastControls: document.querySelector('.broadcast-controls'),
+    groupPasswordModal: document.getElementById('groupPasswordModal'),
+    closeGroupPasswordModalButton: document.querySelector('#groupPasswordModal .close-button'),
+    verificationTargetGroupId: document.getElementById('verificationTargetGroupId'),
+    verificationTargetGroupName: document.getElementById('verificationTargetGroupName'),
+    groupPasswordVerifyInput: document.getElementById('groupPasswordVerifyInput'),
+    verifyPasswordButton: document.getElementById('verifyPasswordButton'),
+    passwordSetModal: document.getElementById('passwordSetModal'),
+    closePasswordSetModal: document.querySelector('#passwordSetModal .close-button'),
+    newPasswordInput: document.getElementById('newPasswordInput'),
+    savePasswordButton: document.getElementById('savePasswordButton'),
+    deleteUserPasswordButton: document.getElementById('deleteUserPasswordButton'),
+    profileEditModal: document.getElementById('profileEditModal'),
+    closeProfileModalButton: document.querySelector('#profileEditModal .close-button'),
+    profileIconPreview: document.getElementById('profileIconPreview'),
+    profileIconInput: document.getElementById('profileIconInput'),
+    profileColorInput: document.getElementById('profileColorInput'),
+    saveProfileButton: document.getElementById('saveProfileButton'),
+    prizeMasterSelectModal: document.getElementById('prizeMasterSelectModal'),
+    closePrizeMasterSelectModal: document.querySelector('#prizeMasterSelectModal .close-button'),
+    prizeMasterSelectList: document.getElementById('prizeMasterSelectList'),
+    addSelectedPrizesButton: document.getElementById('addSelectedPrizesButton'),
+    groupEventListContainer: document.getElementById('groupEventList'),
+    groupNameTitle: document.getElementById('groupEventListName'),
+    backToDashboardFromEventListButton: document.getElementById('backToDashboardFromEventListButton'),
+    requestAdminButton: document.getElementById('requestAdminButton'),
+    requestAdminControls: document.getElementById('requestAdminControls'),
+    eventEditView: document.getElementById('eventEditView'),
+    backToGroupsButton: document.getElementById('backToGroupsButton'),
+    eventNameInput: document.getElementById('eventNameInput'),
+    bulkAddPrizesButton: document.getElementById('bulkAddPrizesButton'),
+    prizeCardListContainer: document.getElementById('prizeCardListContainer'),
+    prizeListModeContainer: document.getElementById('prizeListModeContainer'),
+    createEventButton: document.getElementById('createEventButton'),
+    openAddPrizeModalButton: document.getElementById('openAddPrizeModalButton'),
+    showSummaryButton: document.getElementById('showSummaryButton'),
+    addPrizeModal: document.getElementById('addPrizeModal'),
+    newPrizeNameInput: document.getElementById('newPrizeNameInput'),
+    newPrizeImageInput: document.getElementById('newPrizeImageInput'),
+    newPrizeImagePreview: document.getElementById('newPrizeImagePreview'),
+    callMasterButton: document.getElementById('callMasterButton'),
+    addPrizeOkButton: document.getElementById('addPrizeOkButton'),
+    summaryModal: document.getElementById('summaryModal'),
+    totalPrizes: document.getElementById('totalPrizes'),
+    prizeSummaryList: document.getElementById('prizeSummaryList'),
+    prizeBulkAddModal: document.getElementById('prizeBulkAddModal'),
+    closePrizeBulkAddModalButton: document.querySelector('#prizeBulkAddModal .close-button'),
+    prizeBulkTextarea: document.getElementById('prizeBulkTextarea'),
+    updatePrizesFromTextButton: document.getElementById('updatePrizesFromTextButton'),
+    clearBulkPrizesButton: document.getElementById('clearBulkPrizesButton'),
+    cancelBulkAddButton: document.getElementById('cancelBulkAddButton'),
+    // participantView elements
+    resultSection: document.getElementById('resultSection'),
+    myResult: document.getElementById('myResult'),
+    allResultsContainer: document.getElementById('allResultsContainer'),
+    shareButton: document.getElementById('shareButton'),
+    acknowledgeButton: document.getElementById('acknowledgeButton'),
+    backToControlPanelFromResultButton: document.getElementById('backToControlPanelFromResultButton'),
+    participantCanvas: document.getElementById('participantCanvas'),
+
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ ここからが修正点 ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // New static view elements
+    staticAmidaView: document.getElementById('staticAmidaView'),
+    participantCanvasStatic: document.getElementById('participantCanvasStatic'),
+    deleteParticipantWaitingButton: document.getElementById('deleteParticipantWaitingButton'),
+    backToDashboardFromWaitingButton: document.getElementById('backToDashboardFromWaitingButton'),
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ 修正はここまで ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  };
+}
+
+const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView', 'staticAmidaView'];
 
 export function adjustBodyPadding() {
   let totalOffset = 0;
@@ -324,28 +347,28 @@ export function renderPrizeMasterList(masters, isSelectMode = false) {
 }
 
 export function resetEventCreationForm() {
-    state.setPrizes([]);
-    if (elements.prizeCardListContainer) {
-        elements.prizeCardListContainer.innerHTML = '';
-    }
-    if (elements.prizeListModeContainer) {
-        elements.prizeListModeContainer.innerHTML = '';
-    }
-    if (elements.eventNameInput) elements.eventNameInput.value = '';
-    if (elements.createEventButton) elements.createEventButton.textContent = 'この内容でイベントを作成';
-    if (elements.adminCanvas) {
-        const ctx = elements.adminCanvas.getContext('2d');
-        ctx.clearRect(0, 0, elements.adminCanvas.width, elements.adminCanvas.height);
-        elements.adminCanvas.style.display = 'none';
-    }
-    if (elements.currentEventUrl) {
-        elements.currentEventUrl.textContent = '（イベント作成後に表示されます）';
-        elements.currentEventUrl.href = '#';
-    }
-    state.setCurrentEventId(null);
-    state.setCurrentLotteryData(null);
-    if (elements.adminControls) elements.adminControls.style.display = 'none';
-    if (elements.broadcastControls) elements.broadcastControls.style.display = 'none';
+  state.setPrizes([]);
+  if (elements.prizeCardListContainer) {
+    elements.prizeCardListContainer.innerHTML = '';
+  }
+  if (elements.prizeListModeContainer) {
+    elements.prizeListModeContainer.innerHTML = '';
+  }
+  if (elements.eventNameInput) elements.eventNameInput.value = '';
+  if (elements.createEventButton) elements.createEventButton.textContent = 'この内容でイベントを作成';
+  if (elements.adminCanvas) {
+    const ctx = elements.adminCanvas.getContext('2d');
+    ctx.clearRect(0, 0, elements.adminCanvas.width, elements.adminCanvas.height);
+    elements.adminCanvas.style.display = 'none';
+  }
+  if (elements.currentEventUrl) {
+    elements.currentEventUrl.textContent = '（イベント作成後に表示されます）';
+    elements.currentEventUrl.href = '#';
+  }
+  state.setCurrentEventId(null);
+  state.setCurrentLotteryData(null);
+  if (elements.adminControls) elements.adminControls.style.display = 'none';
+  if (elements.broadcastControls) elements.broadcastControls.style.display = 'none';
 }
 
 export async function buildNewPrizesWithDataPreservation(newNames) {

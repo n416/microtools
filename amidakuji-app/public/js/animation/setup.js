@@ -11,22 +11,34 @@ export function initializePanzoom(canvasElement) {
   if (!canvasElement) return null;
   const panzoomElement = canvasElement.parentElement;
 
-  if (canvasElement.id === 'adminCanvas' && adminPanzoom) {
-    return adminPanzoom;
-  }
-  if (canvasElement.id === 'participantCanvas' && participantPanzoom) {
-    return participantPanzoom;
+  const panzoom = Panzoom(panzoomElement, {
+    maxScale: 10,
+    minScale: 0.1,
+    contain: 'outside',
+  });
+
+  const container = canvasElement.closest('.canvas-panzoom-container');
+
+  const wheelListener = (event) => {
+    if (!event.shiftKey) {
+      panzoom.zoomWithWheel(event);
+    }
+  };
+
+  if (container) {
+    if (container._wheelListener) {
+      container.removeEventListener('wheel', container._wheelListener);
+    }
+    container.addEventListener('wheel', wheelListener);
+    container._wheelListener = wheelListener;
   }
 
-  const panzoom = Panzoom(panzoomElement, {maxScale: 10, minScale: 0.1, contain: 'outside'});
-  const container = canvasElement.closest('.canvas-panzoom-container');
-  if (container) {
-    container.addEventListener('wheel', (event) => {
-      if (!event.shiftKey) {
-        panzoom.zoomWithWheel(event);
-      }
-    });
+  if (canvasElement.id === 'adminCanvas') {
+    adminPanzoom = panzoom;
+  } else if (canvasElement.id === 'participantCanvas' || canvasElement.id === 'participantCanvasStatic') {
+    participantPanzoom = panzoom;
   }
+
   return panzoom;
 }
 
@@ -82,6 +94,7 @@ export function handleResize() {
   console.log('[Animation] Animation is NOT running, redrawing static canvas.');
   const adminCanvas = document.getElementById('adminCanvas');
   const participantCanvas = document.getElementById('participantCanvas');
+  const participantCanvasStatic = document.getElementById('participantCanvasStatic');
 
   if (adminCanvas && adminCanvas.offsetParent !== null) {
     console.log('[Animation] Redrawing admin canvas for resize.');
@@ -91,6 +104,9 @@ export function handleResize() {
     console.log('[Animation] Redrawing participant canvas for resize.');
     const hidePrizes = state.currentLotteryData?.displayMode === 'private' && state.currentLotteryData?.status !== 'started';
     prepareStepAnimation(participantCanvas.getContext('2d'), hidePrizes, false, true);
+  } else if (participantCanvasStatic && participantCanvasStatic.offsetParent !== null) {
+    console.log('[Animation] Redrawing static participant canvas for resize.');
+    prepareStepAnimation(participantCanvasStatic.getContext('2d'), true, false, true);
   }
 }
 
@@ -106,7 +122,9 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMa
   }
   const container = targetCtx.canvas.closest('.canvas-panzoom-container');
   if (!container) return;
-  const mask = document.getElementById(targetCtx.canvas.id === 'adminCanvas' ? 'admin-loading-mask' : 'participant-loading-mask');
+  const maskId = targetCtx.canvas.id === 'adminCanvas' ? 'admin-loading-mask' : targetCtx.canvas.id === 'participantCanvas' ? 'participant-loading-mask' : 'participant-loading-mask-static';
+  const mask = document.getElementById(maskId);
+
   if (mask && showMask) mask.style.display = 'flex';
   if (!isResize) {
     state.setRevealedPrizes([]);
@@ -153,11 +171,6 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMa
   }
 
   let currentPanzoom = initializePanzoom(targetCtx.canvas);
-  if (targetCtx.canvas.id === 'adminCanvas') {
-    adminPanzoom = currentPanzoom;
-  } else {
-    participantPanzoom = currentPanzoom;
-  }
 
   if (storedState && currentPanzoom) {
     currentPanzoom.pan(storedState.pan.x, storedState.pan.y, {animate: false});

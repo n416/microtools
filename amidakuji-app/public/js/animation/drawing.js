@@ -52,7 +52,7 @@ export function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes 
     const x = participantSpacing * (i + 1);
 
     const isAdminView = targetCtx.canvas.id === 'adminCanvas';
-    const displayName = p.name || (isAdminView ? `（参加枠 ${p.slot + 1}）` : '');
+    const displayName = p.name || `（参加枠 ${p.slot + 1}）`;
 
     targetCtx.fillStyle = p.name ? mainTextColor : subTextColor;
     targetCtx.fillText(displayName, x, nameY);
