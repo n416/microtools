@@ -30,11 +30,48 @@ const elements = {
   cancelBulkAddButton: document.getElementById('cancelBulkAddButton'),
   displayPrizeName: document.getElementById('displayPrizeName'),
   displayPrizeCount: document.getElementById('displayPrizeCount'),
+  prizeDisplayPreview: document.getElementById('prizeDisplayPreview'),
 };
+
+function updatePrizePreview() {
+  if (!elements.prizeDisplayPreview) return;
+
+  const displayPrizeName = elements.displayPrizeName.checked;
+  const displayPrizeCount = elements.displayPrizeCount.checked;
+
+  const prizeSummary = state.prizes.reduce((acc, prize) => {
+    const name = prize.name || '（名称未設定）';
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+
+  let previewHTML = '';
+
+  if (displayPrizeName && displayPrizeCount) {
+    previewHTML = Object.entries(prizeSummary).map(([name, count]) => `<li>${name}: ${count}個</li>`).join('');
+  } else if (!displayPrizeName && displayPrizeCount) {
+    previewHTML = Object.entries(prizeSummary).map(([name, count]) => `<li>？？？: ${count}個</li>`).join('');
+  } else if (displayPrizeName && !displayPrizeCount) {
+    previewHTML = Object.keys(prizeSummary).map(name => `<li>${name}</li>`).join('');
+  } else { // !displayPrizeName && !displayPrizeCount
+    const totalCount = state.prizes.length;
+    previewHTML = `<li>合計景品数: ${totalCount}個</li>`;
+  }
+  
+  elements.prizeDisplayPreview.innerHTML = previewHTML || '<li>景品を登録するとプレビューが表示されます</li>';
+}
+
 
 export function renderEventForEditing(data) {
   elements.eventNameInput.value = data.eventName || '';
   state.setPrizes(data.prizes || []);
+
+  if (elements.displayPrizeName) {
+    elements.displayPrizeName.checked = data.hasOwnProperty('displayPrizeName') ? data.displayPrizeName : true;
+  }
+  if (elements.displayPrizeCount) {
+    elements.displayPrizeCount.checked = data.hasOwnProperty('displayPrizeCount') ? data.displayPrizeCount : true;
+  }
 
   elements.createEventButton.textContent = 'この内容でイベントを保存';
 
@@ -57,6 +94,7 @@ export function renderEventForEditing(data) {
     prizeListContainer.style.display = 'none';
     renderPrizeCardList();
   }
+  updatePrizePreview();
 }
 export function renderPrizeCardList() {
   if (!elements.prizeCardListContainer) return;
@@ -135,6 +173,7 @@ export function renderPrizeCardList() {
       } else {
         event.target.value = prizeName;
       }
+      updatePrizePreview();
     });
     infoContainer.appendChild(nameInput);
 
@@ -159,6 +198,7 @@ export function renderPrizeCardList() {
     li.appendChild(infoContainer);
     elements.prizeCardListContainer.appendChild(li);
   });
+  updatePrizePreview();
 }
 export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
   if (!elements.prizeListModeContainer) return;
@@ -243,6 +283,7 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
   }
+  updatePrizePreview();
 }
 export function openAddPrizeModal() {
   if (!elements.addPrizeModal) return;
@@ -286,6 +327,10 @@ export function closePrizeBulkAddModal() {
 
 export function initEventEdit() {
   if (elements.eventEditView) {
+
+    if (elements.displayPrizeName) elements.displayPrizeName.addEventListener('change', updatePrizePreview);
+    if (elements.displayPrizeCount) elements.displayPrizeCount.addEventListener('change', updatePrizePreview);
+
     const viewModeCardBtn = document.getElementById('viewModeCard');
     const viewModeListBtn = document.getElementById('viewModeList');
     const prizeCardContainer = document.getElementById('prizeCardListContainer');
