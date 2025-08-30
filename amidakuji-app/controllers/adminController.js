@@ -59,30 +59,61 @@ exports.approveAdminRequest = async (req, res) => {
 
 exports.getGroupAdmins = async (req, res) => {
   try {
-    const groupsSnapshot = await firestore.collection('groups').get();
-    const ownerIds = [...new Set(groupsSnapshot.docs.map((doc) => doc.data().ownerId))];
+    const {lastVisible} = req.query;
+    const PAGE_SIZE = 2; // テストのため、ページサイズを2に設定
 
-    if (ownerIds.length === 0) {
-      return res.status(200).json([]);
+    let query = firestore
+      .collection('users')
+      .orderBy(Firestore.FieldPath.documentId()) // ドキュメントIDでソート
+      .limit(PAGE_SIZE + 1);
+
+    if (lastVisible) {
+      const lastDoc = await firestore.collection('users').doc(lastVisible).get();
+      if (lastDoc.exists) {
+        query = query.startAfter(lastDoc);
+      }
     }
 
-    const usersRef = firestore.collection('users');
-    const usersSnapshot = await usersRef.where(Firestore.FieldPath.documentId(), 'in', ownerIds).get();
-    const users = usersSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+    const snapshot = await query.get();
+    const hasNextPage = snapshot.docs.length > PAGE_SIZE;
+    const admins = snapshot.docs.slice(0, PAGE_SIZE).map((doc) => ({id: doc.id, ...doc.data()}));
 
-    res.status(200).json(users);
+    const newLastVisible = hasNextPage ? snapshot.docs[PAGE_SIZE - 1].id : null;
+
+    res.status(200).json({admins, lastVisible: newLastVisible, hasNextPage});
   } catch (error) {
-    console.error('Error fetching group admins:', error);
+    console.error('Error fetching users (formerly group admins):', error);
     res.status(500).json({error: 'ユーザーの取得に失敗しました。'});
   }
 };
 
 exports.getSystemAdmins = async (req, res) => {
   try {
-    const usersRef = firestore.collection('users');
-    const snapshot = await usersRef.where('role', '==', 'system_admin').get();
-    const admins = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
-    res.status(200).json(admins);
+    const {lastVisible} = req.query;
+    // テストのため、ページサイズを2に設定
+    const PAGE_SIZE = 2;
+
+    // ▼▼▼ 修正箇所 ▼▼▼
+    // 並び替えの基準を createdAt から ドキュメントID に変更します。
+    let query = firestore
+      .collection('users')
+      .where('role', '==', 'system_admin')
+      .orderBy(Firestore.FieldPath.documentId(), 'desc')
+      .limit(PAGE_SIZE + 1);
+    // ▲▲▲ 修正箇所 ▲▲▲
+
+    if (lastVisible) {
+      const lastDoc = await firestore.collection('users').doc(lastVisible).get();
+      query = query.startAfter(lastDoc);
+    }
+
+    const snapshot = await query.get();
+    const hasNextPage = snapshot.docs.length > PAGE_SIZE;
+    const admins = snapshot.docs.slice(0, PAGE_SIZE).map((doc) => ({id: doc.id, ...doc.data()}));
+
+    const newLastVisible = hasNextPage ? snapshot.docs[PAGE_SIZE - 1].id : null;
+
+    res.status(200).json({admins, lastVisible: newLastVisible, hasNextPage});
   } catch (error) {
     console.error('Error fetching system admins:', error);
     res.status(500).json({error: 'システム管理者の取得に失敗しました。'});

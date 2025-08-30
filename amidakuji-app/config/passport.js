@@ -1,3 +1,5 @@
+// amidakuji-app/config/passport.js
+
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const {firestore} = require('../utils/firestore');
 
@@ -19,6 +21,7 @@ module.exports = function (passport) {
               email: profile.emails[0].value,
               name: profile.displayName,
               role: 'user',
+              createdAt: new Date(),
             };
             await userRef.set(newUser);
 

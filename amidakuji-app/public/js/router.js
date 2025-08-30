@@ -6,13 +6,16 @@ import {renderGroupList} from './components/groupDashboard.js';
 import {renderEventList, showPasswordResetNotification} from './components/eventDashboard.js';
 import {renderMemberList} from './components/memberManagement.js';
 import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
-import {renderAdminLists} from './components/adminDashboard.js';
+// ▼▼▼ ここを修正 ▼▼▼
+import {loadAdminDashboardData} from './components/adminDashboard.js';
+// ▲▲▲ ここを修正 ▲▲▲
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents} from './components/participantView.js';
 
 async function loadAdminDashboard() {
   try {
-    const [requests, groupAdmins, systemAdmins] = await Promise.all([api.getAdminRequests(), api.getGroupAdmins(), api.getSystemAdmins()]);
-    renderAdminLists(requests, groupAdmins, systemAdmins);
+    // ▼▼▼ ここを修正 ▼▼▼
+    await loadAdminDashboardData();
+    // ▲▲▲ ここを修正 ▲▲▲
   } catch (error) {
     console.error('管理ダッシュボードの読み込みに失敗:', error);
   }
