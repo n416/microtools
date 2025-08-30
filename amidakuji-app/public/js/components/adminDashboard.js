@@ -9,54 +9,54 @@ const elements = {
   systemAdminList: document.getElementById('systemAdminList'),
   groupAdminPagination: document.getElementById('groupAdminPagination'),
   systemAdminPagination: document.getElementById('systemAdminPagination'),
+  groupAdminSearchInput: document.getElementById('groupAdminSearchInput'),
+  groupAdminSearchButton: document.getElementById('groupAdminSearchButton'),
+  systemAdminSearchInput: document.getElementById('systemAdminSearchInput'),
+  systemAdminSearchButton: document.getElementById('systemAdminSearchButton'),
 };
 
-let groupAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false};
-let systemAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false};
+let groupAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false, searchTerm: ''};
+let systemAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false, searchTerm: ''};
 
 export async function loadAdminDashboardData() {
-  console.log('[FRONTEND LOG] --- Enter loadAdminDashboardData ---');
-  groupAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false};
-  systemAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false};
+  groupAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false, searchTerm: ''};
+  systemAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false, searchTerm: ''};
+  if (elements.groupAdminSearchInput) elements.groupAdminSearchInput.value = '';
+  if (elements.systemAdminSearchInput) elements.systemAdminSearchInput.value = '';
 
   try {
-    console.log('[FRONTEND LOG] Fetching pending requests...');
     const requests = await api.getAdminRequests();
     renderPendingRequests(requests || []);
 
     await loadGroupAdmins();
     await loadSystemAdmins();
   } catch (error) {
-    console.error('[FRONTEND ERROR] Initial dashboard load failed:', error);
+    console.error('管理ダッシュボードの読み込みに失敗:', error);
   }
 }
 
-async function loadGroupAdmins(cursor = null) {
-  console.log(`[FRONTEND LOG] --- Enter loadGroupAdmins (cursor: ${cursor}) ---`);
+async function loadGroupAdmins(cursor = null, search = '') {
   try {
-    const data = await api.getGroupAdmins(cursor);
-    console.log('[FRONTEND LOG] Received data from getGroupAdmins API:', data);
+    const data = await api.getGroupAdmins(cursor, search);
     renderGroupAdmins(data?.admins || []);
     groupAdminState.nextCursor = data?.lastVisible;
     groupAdminState.hasNext = data?.hasNextPage || false;
     updatePaginationControls('groupAdmin');
   } catch (error) {
-    console.error('[FRONTEND ERROR] loadGroupAdmins failed:', error);
+    console.error('グループ管理者の読み込みに失敗:', error);
     renderGroupAdmins([]);
   }
 }
 
-async function loadSystemAdmins(cursor = null) {
-  console.log(`[FRONTEND LOG] --- Enter loadSystemAdmins (cursor: ${cursor}) ---`);
+async function loadSystemAdmins(cursor = null, search = '') {
   try {
-    const data = await api.getSystemAdmins(cursor);
-    console.log('[FRONTEND LOG] Received data from getSystemAdmins API:', data);
+    const data = await api.getSystemAdmins(cursor, search);
     renderSystemAdmins(data?.admins || []);
     systemAdminState.nextCursor = data?.lastVisible;
     systemAdminState.hasNext = data?.hasNextPage || false;
     updatePaginationControls('systemAdmin');
   } catch (error) {
-    console.error('[FRONTEND ERROR] loadSystemAdmins failed:', error);
+    console.error('システム管理者の読み込みに失敗:', error);
     renderSystemAdmins([]);
   }
 }
@@ -118,16 +118,30 @@ export function initAdminDashboard() {
     });
   }
 
+  if (elements.groupAdminSearchButton) {
+    elements.groupAdminSearchButton.addEventListener('click', () => {
+      groupAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false, searchTerm: elements.groupAdminSearchInput.value};
+      loadGroupAdmins(null, groupAdminState.searchTerm);
+    });
+  }
+
+  if (elements.systemAdminSearchButton) {
+    elements.systemAdminSearchButton.addEventListener('click', () => {
+      systemAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false, searchTerm: elements.systemAdminSearchInput.value};
+      loadSystemAdmins(null, systemAdminState.searchTerm);
+    });
+  }
+
   if (elements.groupAdminPagination) {
     elements.groupAdminPagination.querySelector('.next-btn').addEventListener('click', () => {
       groupAdminState.page++;
       groupAdminState.history.push(groupAdminState.nextCursor);
-      loadGroupAdmins(groupAdminState.nextCursor);
+      loadGroupAdmins(groupAdminState.nextCursor, groupAdminState.searchTerm);
     });
     elements.groupAdminPagination.querySelector('.prev-btn').addEventListener('click', () => {
       groupAdminState.page--;
       groupAdminState.history.pop();
-      loadGroupAdmins(groupAdminState.history[groupAdminState.page]);
+      loadGroupAdmins(groupAdminState.history[groupAdminState.page], groupAdminState.searchTerm);
     });
   }
 
@@ -135,12 +149,12 @@ export function initAdminDashboard() {
     elements.systemAdminPagination.querySelector('.next-btn').addEventListener('click', () => {
       systemAdminState.page++;
       systemAdminState.history.push(systemAdminState.nextCursor);
-      loadSystemAdmins(systemAdminState.nextCursor);
+      loadSystemAdmins(systemAdminState.nextCursor, systemAdminState.searchTerm);
     });
     elements.systemAdminPagination.querySelector('.prev-btn').addEventListener('click', () => {
       systemAdminState.page--;
       systemAdminState.history.pop();
-      loadSystemAdmins(systemAdminState.history[systemAdminState.page]);
+      loadSystemAdmins(systemAdminState.history[systemAdminState.page], systemAdminState.searchTerm);
     });
   }
 }
