@@ -56,16 +56,18 @@ exports.approveAdminRequest = async (req, res) => {
     res.status(500).json({error: '承認処理中にエラーが発生しました。'});
   }
 };
-
 exports.getGroupAdmins = async (req, res) => {
   try {
-    const {lastVisible} = req.query;
-    const PAGE_SIZE = 2; // テストのため、ページサイズを2に設定
+    const {lastVisible, searchEmail} = req.query;
+    const PAGE_SIZE = 10;
 
-    let query = firestore
-      .collection('users')
-      .orderBy(Firestore.FieldPath.documentId()) // ドキュメントIDでソート
-      .limit(PAGE_SIZE + 1);
+    let query = firestore.collection('users');
+
+    if (searchEmail) {
+      query = query.where('email', '>=', searchEmail).where('email', '<=', searchEmail + '\uf8ff');
+    }
+
+    query = query.orderBy('email').limit(PAGE_SIZE + 1);
 
     if (lastVisible) {
       const lastDoc = await firestore.collection('users').doc(lastVisible).get();
@@ -89,18 +91,16 @@ exports.getGroupAdmins = async (req, res) => {
 
 exports.getSystemAdmins = async (req, res) => {
   try {
-    const {lastVisible} = req.query;
-    // テストのため、ページサイズを2に設定
-    const PAGE_SIZE = 2;
+    const {lastVisible, searchEmail} = req.query;
+    const PAGE_SIZE = 10;
 
-    // ▼▼▼ 修正箇所 ▼▼▼
-    // 並び替えの基準を createdAt から ドキュメントID に変更します。
-    let query = firestore
-      .collection('users')
-      .where('role', '==', 'system_admin')
-      .orderBy(Firestore.FieldPath.documentId(), 'desc')
-      .limit(PAGE_SIZE + 1);
-    // ▲▲▲ 修正箇所 ▲▲▲
+    let query = firestore.collection('users').where('role', '==', 'system_admin');
+
+    if (searchEmail) {
+      query = query.where('email', '>=', searchEmail).where('email', '<=', searchEmail + '\uf8ff');
+    }
+
+    query = query.orderBy('email').limit(PAGE_SIZE + 1);
 
     if (lastVisible) {
       const lastDoc = await firestore.collection('users').doc(lastVisible).get();
