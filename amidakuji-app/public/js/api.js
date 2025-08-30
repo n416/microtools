@@ -82,12 +82,21 @@ export const deletePrizeMaster = (masterId, groupId) => request(`/api/prize-mast
 export const requestAdminAccess = () => request('/api/admin/request', 'POST');
 export const getAdminRequests = () => request('/api/admin/requests');
 export const approveAdminRequest = (requestId) => request('/api/admin/approve', 'POST', {requestId});
-export const getSystemAdmins = (lastVisible = null) => {
-  const endpoint = lastVisible ? `/api/admin/system-admins?lastVisible=${lastVisible}` : '/api/admin/system-admins';
+export const getSystemAdmins = (lastVisible = null, searchEmail = '') => {
+  let endpoint = '/api/admin/system-admins';
+  const params = new URLSearchParams();
+  if (lastVisible) params.append('lastVisible', lastVisible);
+  if (searchEmail) params.append('searchEmail', searchEmail);
+  if (params.toString()) endpoint += `?${params.toString()}`;
   return request(endpoint);
 };
-export const getGroupAdmins = (lastVisible = null) => {
-  const endpoint = lastVisible ? `/api/admin/group-admins?lastVisible=${lastVisible}` : '/api/admin/group-admins';
+
+export const getGroupAdmins = (lastVisible = null, searchEmail = '') => {
+  let endpoint = '/api/admin/group-admins';
+  const params = new URLSearchParams();
+  if (lastVisible) params.append('lastVisible', lastVisible);
+  if (searchEmail) params.append('searchEmail', searchEmail);
+  if (params.toString()) endpoint += `?${params.toString()}`;
   return request(endpoint);
 };
 export const demoteAdmin = (userId) => request('/api/admin/demote', 'POST', {userId});
