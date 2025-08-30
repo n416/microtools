@@ -82,8 +82,14 @@ export const deletePrizeMaster = (masterId, groupId) => request(`/api/prize-mast
 export const requestAdminAccess = () => request('/api/admin/request', 'POST');
 export const getAdminRequests = () => request('/api/admin/requests');
 export const approveAdminRequest = (requestId) => request('/api/admin/approve', 'POST', {requestId});
-export const getGroupAdmins = () => request('/api/admin/group-admins');
-export const getSystemAdmins = () => request('/api/admin/system-admins');
+export const getSystemAdmins = (lastVisible = null) => {
+  const endpoint = lastVisible ? `/api/admin/system-admins?lastVisible=${lastVisible}` : '/api/admin/system-admins';
+  return request(endpoint);
+};
+export const getGroupAdmins = (lastVisible = null) => {
+  const endpoint = lastVisible ? `/api/admin/group-admins?lastVisible=${lastVisible}` : '/api/admin/group-admins';
+  return request(endpoint);
+};
 export const demoteAdmin = (userId) => request('/api/admin/demote', 'POST', {userId});
 export const impersonateUser = (targetUserId) => request('/api/admin/impersonate', 'POST', {targetUserId});
 export const stopImpersonating = () => request('/api/admin/stop-impersonating', 'POST');
