@@ -6,7 +6,7 @@ const {getNextAvailableColor} = require('../../utils/color');
 
 exports.createEvent = async (req, res) => {
   try {
-    const {prizes, groupId, eventName, displayPrizeName, displayPrizeCount} = req.body;
+    const {prizes, groupId, eventName, displayPrizeName, displayPrizeCount, allowDoodleMode} = req.body; // allowDoodleMode を受け取る
     const participantCount = prizes ? prizes.length : 0;
 
     if (!groupId) return res.status(400).json({error: 'グループIDは必須です。'});
@@ -34,6 +34,7 @@ exports.createEvent = async (req, res) => {
       participants,
       displayPrizeName: !!displayPrizeName,
       displayPrizeCount: !!displayPrizeCount,
+      allowDoodleMode: typeof allowDoodleMode === 'boolean' ? allowDoodleMode : false, // ここを修正
       createdAt: new Date(),
       ownerId: req.user.id,
       status: 'pending',
@@ -110,7 +111,7 @@ exports.getEvent = async (req, res) => {
 exports.updateEvent = async (req, res) => {
   try {
     const {id: eventId} = req.params;
-    const {prizes, eventName, displayPrizeName, displayPrizeCount} = req.body;
+    const {prizes, eventName, displayPrizeName, displayPrizeCount, allowDoodleMode} = req.body; // allowDoodleMode を受け取る
     const participantCount = prizes ? prizes.length : 0;
 
     if (participantCount < 2) return res.status(400).json({error: '景品は2つ以上で設定してください。'});
@@ -163,6 +164,7 @@ exports.updateEvent = async (req, res) => {
       participantCount,
       displayPrizeName: !!displayPrizeName,
       displayPrizeCount: !!displayPrizeCount,
+      allowDoodleMode: typeof allowDoodleMode === 'boolean' ? allowDoodleMode : eventData.allowDoodleMode || false, // ここを修正
     };
 
     if (participantCount !== eventData.participantCount) {

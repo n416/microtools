@@ -1,0 +1,26 @@
+### イベント新規作成テスト
+POST http://localhost:3000/api/events
+Content-Type: application/json
+
+{
+    "eventName": "落書きモードテスト",
+    "groupId": "jNNPx8vL6ToPYLe86csm",
+    "prizes": [
+        {"name": "景品A"},
+        {"name": "景品B"}
+    ],
+    "allowDoodleMode": true
+}
+
+### イベント更新テスト (YOUR_EVENT_IDは実際のIDに置き換えてください)
+PUT http://localhost:3000/api/events/A5kTze3H4qkgu5qiUMug
+Content-Type: application/json
+
+{
+    "eventName": "落書きモード更新テスト",
+    "prizes": [
+        {"name": "景品XA"},
+        {"name": "景品XB"}
+    ],
+    "allowDoodleMode": false
+}
