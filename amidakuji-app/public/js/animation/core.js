@@ -183,7 +183,6 @@ function animationLoop() {
   const baseLineColor = isDarkMode ? '#dcdcdc' : '#333';
 
   const isParticipantView = animator.context.canvas.id === 'participantCanvas';
-  // [修正点] 参加者画面では、景品が公開されるまで(revealedPrizesが空の間)は常に景品を隠します
   const hidePrizes = isParticipantView ? state.revealedPrizes.length === 0 : true;
 
   drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
@@ -239,8 +238,15 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
     console.error('[Animation] Panzoom initialization failed.');
     return;
   }
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ ここからが修正点 ★★★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  const namesToAnimate = userNames || [];
+  const participantsToAnimate = state.currentLotteryData.participants.filter((p) => p && p.name && namesToAnimate.includes(p.name));
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ 修正はここまで ★★★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-  const participantsToAnimate = state.currentLotteryData.participants.filter((p) => p && p.name && userNames.includes(p.name));
   await preloadPrizeImages(state.currentLotteryData.prizes);
   await preloadIcons(participantsToAnimate);
   const container = targetCtx.canvas.closest('.canvas-panzoom-container');
@@ -253,8 +259,8 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
     const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
     return {name: p.name, color: p.color || '#333', path, pathIndex: 0, progress: 0, x: path[0].x, y: path[0].y, isFinished: false, celebrated: false};
   });
-  const namesToAnimate = new Set(userNames);
-  const uniqueFinishedTracers = finishedTracers.filter((t) => !namesToAnimate.has(t.name));
+
+  const uniqueFinishedTracers = finishedTracers.filter((t) => !namesToAnimate.includes(t.name));
   animator.tracers = [...uniqueFinishedTracers, ...newTracers];
 
   animator.particles = [];

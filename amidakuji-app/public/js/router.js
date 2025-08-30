@@ -7,7 +7,7 @@ import {renderEventList, showPasswordResetNotification} from './components/event
 import {renderMemberList} from './components/memberManagement.js';
 import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
 import {renderAdminLists} from './components/adminDashboard.js';
-import {showUserDashboardView, showJoinView, showWaitingView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents} from './components/participantView.js';
+import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents} from './components/participantView.js';
 
 async function loadAdminDashboard() {
   try {
@@ -299,7 +299,7 @@ export async function verifyAndLogin(eventId, memberId, password, slot = null) {
     const result = await api.verifyPasswordAndJoin(eventId, memberId, password, slot);
     state.saveParticipantState(result.token, result.memberId, result.name);
     if (slot !== null) {
-      showWaitingView();
+      showStaticAmidaView();
     } else {
       await handleRouting();
     }
@@ -313,16 +313,32 @@ export async function verifyAndLogin(eventId, memberId, password, slot = null) {
 }
 
 async function initializeParticipantView(eventId, isShare, sharedParticipantName) {
+  console.log(`[FRONTEND LOG] initializeParticipantView started for event: ${eventId}`);
   state.setCurrentEventId(eventId);
+
   ui.showView('participantView');
-  hideParticipantSubViews();
+  hideParticipantSubViews(true);
 
   try {
-    const eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ ここからが修正点 ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    let eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
 
-    state.setCurrentLotteryData(eventData);
     state.setCurrentGroupId(eventData.groupId);
     state.loadParticipantState();
+
+    if (!isShare && state.currentParticipantId) {
+      console.log('[FRONTEND LOG] Re-fetching event data with authentication headers.');
+      eventData = await api.getPublicEventData(eventId);
+    }
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ 修正はここまで ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+    console.log('[FRONTEND LOG] Fetched eventData from API:', eventData);
+
+    state.setCurrentLotteryData(eventData);
 
     if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
 
@@ -353,33 +369,26 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
     }
 
     if (isShare) {
+      console.log('[FRONTEND LOG] Share view logic started.');
       if (eventData.status === 'started') {
         await showResultsView(eventData, sharedParticipantName, true);
       } else {
-        showWaitingView();
-        const p = ui.elements.waitingMessage.querySelector('p');
-        if (p) p.textContent = '結果はまだ発表されていません。イベント開始までお待ちください。';
-        if (ui.elements.deleteParticipantWaitingButton) ui.elements.deleteParticipantWaitingButton.style.display = 'none';
-        if (ui.elements.backToDashboardFromWaitingButton) ui.elements.backToDashboardFromWaitingButton.style.display = 'none';
+        await showStaticAmidaView();
       }
-    } else if (state.currentParticipantToken && state.currentParticipantId) {
-      if (eventData.status === 'started') {
-        await showResultsView(eventData, state.currentParticipantName, false);
-        const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
-        if (myParticipation && !myParticipation.acknowledgedResult) {
-          const acknowledgeButton = document.getElementById('acknowledgeButton');
-          if (acknowledgeButton) acknowledgeButton.style.display = 'inline-flex';
-        }
-      } else {
-        const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
-        if (myParticipation && myParticipation.name) {
-          showWaitingView();
-        } else {
-          showJoinView(eventData);
-        }
-      }
+    } else if (eventData.status === 'started') {
+      console.log('[FRONTEND LOG] Event has started, showing results for everyone.');
+      await showResultsView(eventData, state.currentParticipantName, false);
     } else {
-      showNameEntryView((name) => handleLoginOrRegister(eventId, name));
+      // イベントがまだ開始されていない場合
+      const myParticipation = state.currentParticipantId ? eventData.participants.find((p) => p.memberId === state.currentParticipantId) : null;
+      if (myParticipation && myParticipation.name) {
+        console.log('[FRONTEND LOG] Event not started, but user has joined. Showing static amidakuji.');
+        await showStaticAmidaView();
+        console.log('[FRONTEND LOG] Static amidakuji rendered.');
+      } else {
+        console.log('[FRONTEND LOG] Event not started, user has NOT joined. Showing join view.');
+        showJoinView(eventData);
+      }
     }
   } catch (error) {
     console.error('Error in initializeParticipantView:', error);
