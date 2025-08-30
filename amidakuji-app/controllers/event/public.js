@@ -143,7 +143,26 @@ exports.getPublicEventData = async (req, res) => {
     }
 
     if (eventData.status !== 'started') {
-      publicPrizes = eventData.prizes.map(() => ({name: '？？？', imageUrl: null}));
+      const displayPrizeName = eventData.hasOwnProperty('displayPrizeName') ? Boolean(eventData.displayPrizeName) : true;
+      const displayPrizeCount = eventData.hasOwnProperty('displayPrizeCount') ? Boolean(eventData.displayPrizeCount) : true;
+
+      const prizeSummary = eventData.prizes.reduce((acc, prize) => {
+        const name = prize.name || '（名称未設定）';
+        acc[name] = (acc[name] || 0) + 1;
+        return acc;
+      }, {});
+
+      if (displayPrizeName && displayPrizeCount) {
+        publicPrizes = Object.entries(prizeSummary).map(([name, count]) => ({name, count}));
+      } else if (!displayPrizeName && displayPrizeCount) {
+        publicPrizes = Object.entries(prizeSummary).map(([name, count]) => ({name: '？？？', count}));
+      } else if (displayPrizeName && !displayPrizeCount) {
+        publicPrizes = Object.keys(prizeSummary).map((name) => ({name}));
+      } else {
+        // !displayPrizeName && !displayPrizeCount
+        const totalCount = eventData.prizes.length;
+        publicPrizes = [{name: '合計景品数', count: totalCount}];
+      }
 
       if (myParticipant) {
         publicLines = eventData.lines;

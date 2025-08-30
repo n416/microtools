@@ -77,8 +77,11 @@ export function renderPrizesForParticipant(prizes) {
   const ul = document.createElement('ul');
   prizes.forEach((prize) => {
     const li = document.createElement('li');
-    const prizeName = typeof prize === 'object' ? prize.name : prize;
-    li.textContent = prizeName;
+    if (prize.count) {
+      li.textContent = `${prize.name}: ${prize.count}個`;
+    } else {
+      li.textContent = prize.name;
+    }
     ul.appendChild(li);
   });
   elements.prizeDisplay.appendChild(ul);
@@ -168,11 +171,11 @@ export function showJoinView(eventData) {
 }
 
 export async function showStaticAmidaView() {
-    hideParticipantSubViews(true);
-    if(ui.elements.staticAmidaView) ui.elements.staticAmidaView.style.display = 'block';
-    
-    const ctx = ui.elements.participantCanvasStatic.getContext('2d');
-    await prepareStepAnimation(ctx, true, false);
+  hideParticipantSubViews(true);
+  if (ui.elements.staticAmidaView) ui.elements.staticAmidaView.style.display = 'block';
+
+  const ctx = ui.elements.participantCanvasStatic.getContext('2d');
+  await prepareStepAnimation(ctx, true, false);
 }
 
 export function showResultsView(eventData, targetName, isShareView) {
@@ -192,13 +195,13 @@ export function showResultsView(eventData, targetName, isShareView) {
 
       if (elements.myResult) elements.myResult.innerHTML = resultHtml;
     } else {
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ ここからが修正点 ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        if (elements.myResult) elements.myResult.innerHTML = '<b>全結果を表示します</b>';
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ 修正はここまで ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      // ★★★ ここからが修正点 ★★★
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      if (elements.myResult) elements.myResult.innerHTML = '<b>全結果を表示します</b>';
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      // ★★★ 修正はここまで ★★★
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     }
     if (!isShareView) {
       if (elements.shareButton) elements.shareButton.style.display = 'inline-flex';
