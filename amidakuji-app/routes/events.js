@@ -36,8 +36,9 @@ router.post('/events/:eventId/verify-password', participantController.verifyPass
 router.delete('/events/:eventId/participants', participantController.deleteParticipant);
 router.post('/events/:eventId/acknowledge-result', participantController.acknowledgeResult);
 router.post('/events/:eventId/fill-slots', ensureAuthenticated, participantController.fillSlots);
-// ▼▼▼ ここから修正 ▼▼▼
 router.post('/events/:eventId/doodle', participantController.addDoodle);
+// ▼▼▼ ここから修正 ▼▼▼
+router.delete('/events/:eventId/doodle', participantController.deleteDoodle);
 // ▲▲▲ ここまで修正 ▲▲▲
 
 module.exports = router;

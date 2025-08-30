@@ -188,8 +188,9 @@ exports.getPublicEventData = async (req, res) => {
       status: eventData.status,
       results: eventData.status === 'started' ? eventData.results : null,
       groupId: eventData.groupId,
-      // ▼▼▼ ここから修正 ▼▼▼
       allowDoodleMode: eventData.allowDoodleMode || false,
+      // ▼▼▼ ここから修正 ▼▼▼
+      doodles: eventData.doodles || [],
       // ▲▲▲ ここまで修正 ▲▲▲
     };
 
