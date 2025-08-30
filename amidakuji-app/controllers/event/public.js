@@ -130,24 +130,47 @@ exports.getPublicEventData = async (req, res) => {
 
     const safeEventName = eventData.eventName || '無題のイベント';
     const eventName = groupData.name ? `${groupData.name} - ${safeEventName}` : safeEventName;
-    const publicPrizes = eventData.prizes;
 
-    // --- 削除 ---
-    // const otherEventsSnapshot = await firestore.collection('events').where('groupId', '==', eventData.groupId).where('status', '==', 'pending').get();
-    // const otherEvents = otherEventsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()})).filter((event) => event.id !== eventId);
-    // --- 削除ここまで ---
+    let publicPrizes = eventData.prizes;
+    let publicParticipants = eventData.participants;
+    let publicLines = []; // デフォルトでは線を送らない
+
+    const memberId = req.headers['x-member-id'];
+
+    const myParticipant = memberId ? eventData.participants.find((p) => p.memberId === memberId) : null;
+    if (myParticipant) {
+    } else {
+    }
+
+    if (eventData.status !== 'started') {
+      publicPrizes = eventData.prizes.map(() => ({name: '？？？', imageUrl: null}));
+
+      if (myParticipant) {
+        publicLines = eventData.lines;
+        publicParticipants = eventData.participants.map((p) => {
+          if (p.memberId === myParticipant.memberId) {
+            return p;
+          }
+          return {...p, name: null, iconUrl: null};
+        });
+      } else {
+        publicParticipants = eventData.participants.map((p) => ({...p, name: null, iconUrl: null}));
+      }
+    } else {
+      publicLines = eventData.lines;
+    }
 
     const publicData = {
       eventName: eventName,
-      participants: eventData.participants,
+      participants: publicParticipants,
       prizes: publicPrizes,
-      lines: eventData.lines,
+      lines: publicLines,
       hasPassword: !!groupData.password,
       status: eventData.status,
       results: eventData.status === 'started' ? eventData.results : null,
       groupId: eventData.groupId,
-      // --- otherEvents プロパティを削除 ---
     };
+
     res.status(200).json(publicData);
   } catch (error) {
     console.error('Error fetching public event data:', error);

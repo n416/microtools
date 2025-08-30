@@ -1,7 +1,7 @@
 import * as api from '../api.js';
 import * as state from '../state.js';
 import * as router from '../router.js';
-import {startAnimation, isAnimationRunning, showAllTracersInstantly} from '../animation.js';
+import {startAnimation, isAnimationRunning, showAllTracersInstantly, prepareStepAnimation} from '../animation.js';
 import * as ui from '../ui.js';
 import {clientEmojiToLucide} from '../ui.js';
 
@@ -27,9 +27,6 @@ const elements = {
   prizeDisplay: document.getElementById('prizeDisplay'),
   slotList: document.getElementById('slotList'),
   joinButton: document.getElementById('joinButton'),
-  waitingMessage: document.getElementById('waitingMessage'),
-  deleteParticipantWaitingButton: document.getElementById('deleteParticipantWaitingButton'),
-  backToDashboardFromWaitingButton: document.getElementById('backToDashboardFromWaitingButton'),
   resultSection: document.getElementById('resultSection'),
   participantCanvas: document.getElementById('participantCanvas'),
   myResult: document.getElementById('myResult'),
@@ -38,6 +35,9 @@ const elements = {
   backToControlPanelFromResultButton: document.getElementById('backToControlPanelFromResultButton'),
   acknowledgeButton: document.getElementById('acknowledgeButton'),
   showAcknowledgedEventsCheckbox: document.getElementById('showAcknowledgedEvents'),
+  staticAmidaView: document.getElementById('staticAmidaView'),
+  deleteParticipantWaitingButton: document.getElementById('deleteParticipantWaitingButton'),
+  backToDashboardFromWaitingButton: document.getElementById('backToDashboardFromWaitingButton'),
 };
 
 function handleShareResult() {
@@ -133,41 +133,50 @@ export function renderAllResults(results, isShareView, highlightName) {
   elements.allResultsContainer.innerHTML = html;
 }
 
-export function hideParticipantSubViews() {
+export function hideParticipantSubViews(keepMainViewVisible = false) {
+  if (!keepMainViewVisible && elements.participantView) elements.participantView.style.display = 'none';
   if (elements.nameEntrySection) elements.nameEntrySection.style.display = 'none';
   if (elements.participantControlPanel) elements.participantControlPanel.style.display = 'none';
   if (elements.joinSection) elements.joinSection.style.display = 'none';
-  if (elements.waitingMessage) elements.waitingMessage.style.display = 'none';
-  if (elements.resultSection) elements.resultSection.style.display = 'none';
+  if (elements.resultSection) {
+    elements.resultSection.style.display = 'none';
+    if (elements.myResult) elements.myResult.innerHTML = '';
+    if (elements.allResultsContainer) elements.allResultsContainer.innerHTML = '';
+  }
+  if (elements.staticAmidaView) elements.staticAmidaView.style.display = 'none';
+  if (elements.otherEventsSection) elements.otherEventsSection.style.display = 'none';
 }
 
 export function showNameEntryView() {
-  hideParticipantSubViews();
+  hideParticipantSubViews(true);
   if (elements.nameEntrySection) elements.nameEntrySection.style.display = 'block';
   if (elements.nameInput) elements.nameInput.value = '';
   if (elements.suggestionList) elements.suggestionList.innerHTML = '';
 }
 
 export function showControlPanelView(eventData) {
-  hideParticipantSubViews();
+  hideParticipantSubViews(true);
   if (elements.participantControlPanel) elements.participantControlPanel.style.display = 'block';
   if (elements.welcomeName) elements.welcomeName.textContent = state.currentParticipantName;
 }
 
 export function showJoinView(eventData) {
-  hideParticipantSubViews();
+  hideParticipantSubViews(true);
   if (elements.joinSection) elements.joinSection.style.display = 'block';
   renderSlots(eventData.participants);
   renderPrizesForParticipant(eventData.prizes);
 }
 
-export function showWaitingView() {
-  hideParticipantSubViews();
-  if (elements.waitingMessage) elements.waitingMessage.style.display = 'block';
+export async function showStaticAmidaView() {
+    hideParticipantSubViews(true);
+    if(ui.elements.staticAmidaView) ui.elements.staticAmidaView.style.display = 'block';
+    
+    const ctx = ui.elements.participantCanvasStatic.getContext('2d');
+    await prepareStepAnimation(ctx, true, false);
 }
 
 export function showResultsView(eventData, targetName, isShareView) {
-  hideParticipantSubViews();
+  hideParticipantSubViews(true);
   if (elements.resultSection) elements.resultSection.style.display = 'block';
   const onAnimationComplete = () => {
     const result = eventData.results ? eventData.results[targetName] : null;
@@ -183,7 +192,13 @@ export function showResultsView(eventData, targetName, isShareView) {
 
       if (elements.myResult) elements.myResult.innerHTML = resultHtml;
     } else {
-      if (elements.myResult) elements.myResult.textContent = 'まだ結果は発表されていません。';
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ ここからが修正点 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        if (elements.myResult) elements.myResult.innerHTML = '<b>全結果を表示します</b>';
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ 修正はここまで ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     }
     if (!isShareView) {
       if (elements.shareButton) elements.shareButton.style.display = 'inline-flex';
@@ -193,15 +208,15 @@ export function showResultsView(eventData, targetName, isShareView) {
       renderAllResults(eventData.results, isShareView, state.currentParticipantName);
     }
   };
-  if (elements.myResult) elements.myResult.innerHTML = `<b>${targetName}さんの結果をアニメーションで確認中...</b>`;
+  if (elements.myResult) elements.myResult.innerHTML = `<b>${targetName ? targetName + 'さんの結果をアニメーションで確認中...' : '結果を読み込んでいます...'}</b>`;
   const ctxParticipant = elements.participantCanvas ? elements.participantCanvas.getContext('2d') : null;
 
-  startAnimation(ctxParticipant, [targetName], onAnimationComplete, targetName);
+  startAnimation(ctxParticipant, targetName ? [targetName] : null, onAnimationComplete, targetName);
 }
 
 export function showUserDashboardView(groupData, events) {
   ui.showView('participantView');
-  hideParticipantSubViews();
+  hideParticipantSubViews(true);
   elements.backToGroupEventListLink.style.display = 'none';
 
   if (elements.participantEventName) {
@@ -337,7 +352,7 @@ export function initParticipantView() {
       } else {
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
         if (myParticipation && myParticipation.name) {
-          showWaitingView();
+          showStaticAmidaView();
         } else {
           showJoinView(eventData);
         }

@@ -1,4 +1,5 @@
 // js/api.js
+import * as state from './state.js'; // stateをインポート
 
 async function request(endpoint, method = 'GET', body = null, headers = {}) {
   const options = {
@@ -52,7 +53,16 @@ export const copyEvent = (eventId) => request(`/api/events/${eventId}/copy`, 'PO
 export const deleteEvent = (eventId) => request(`/api/events/${eventId}`, 'DELETE');
 export const startEvent = (eventId) => request(`/api/events/${eventId}/start`, 'POST');
 export const generateEventPrizeUploadUrl = (eventId, fileType, fileHash) => request(`/api/events/${eventId}/generate-upload-url`, 'POST', {fileType, fileHash});
-export const getPublicEventData = (eventId) => request(`/api/events/${eventId}/public`);
+
+export const getPublicEventData = (eventId) => {
+  const headers = {};
+  if (state.currentParticipantId && state.currentParticipantToken) {
+    headers['x-member-id'] = state.currentParticipantId;
+    headers['x-auth-token'] = state.currentParticipantToken;
+  }
+  return request(`/api/events/${eventId}/public`, 'GET', null, headers);
+};
+
 export const getPublicShareData = (eventId, participantName) => request(`/api/share/${eventId}/${encodeURIComponent(participantName)}`);
 export const joinEvent = (eventId, name, memberId) => request(`/api/events/${eventId}/join`, 'POST', {name, memberId});
 export const joinSlot = (eventId, memberId, token, slot) => request(`/api/events/${eventId}/join-slot`, 'POST', {memberId, slot}, {'x-auth-token': token});

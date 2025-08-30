@@ -47,12 +47,23 @@
       <button id="joinButton" disabled>この枠で参加する</button>
     </div>
   </div>
-  <div id="waitingMessage" style="display: none">
-    <p>参加登録しました！結果発表をお待ちください...</p>
+</div>
+
+<div id="staticAmidaView" class="view-container" style="display: none; text-align: center;">
+  <h3>参加登録済み</h3>
+  <p>イベント開始までお待ちください。自分の参加枠とあみだくじの線を確認できます。</p>
+  <div class="canvas-panzoom-container">
+    <div class="loading-mask" id="participant-loading-mask-static">あみだくじを生成中...</div>
+    <div class="panzoom-wrapper" id="participant-panzoom-wrapper-static">
+      <canvas id="participantCanvasStatic"></canvas>
+    </div>
+  </div>
+  <div class="controls" style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
     <button id="deleteParticipantWaitingButton" class="delete-btn">参加を取り消す</button>
     <button id="backToDashboardFromWaitingButton">ダッシュボードに戻る</button>
   </div>
 </div>
+
 <div id="resultSection" style="display: none">
   <h3><i data-lucide="<%= emojiToLucide('🎉') %>"></i> 結果発表 <i data-lucide="<%= emojiToLucide('🎉') %>"></i></h3>
   <div class="canvas-panzoom-container">

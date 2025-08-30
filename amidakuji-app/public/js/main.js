@@ -225,9 +225,9 @@ function initTronAnimation() {
   return tronAnimationAPI;
 }
 
-const {elements} = ui;
-
 async function initializeApp() {
+  ui.initUI();
+  
   loadSettings();
   applySettings();
   setupSettingsControls();
@@ -260,22 +260,21 @@ async function initializeApp() {
 
 function setupEventListeners() {
   initBroadcast();
-  const {elements} = ui;
 
   window.addEventListener('popstate', (e) => {
     router.navigateTo(window.location.pathname, false);
   });
 
-  if (elements.loginButton)
-    elements.loginButton.addEventListener('click', () => {
+  if (ui.elements.loginButton)
+    ui.elements.loginButton.addEventListener('click', () => {
       window.location.href = '/auth/google';
     });
-  if (elements.landingLoginButton)
-    elements.landingLoginButton.addEventListener('click', () => {
+  if (ui.elements.landingLoginButton)
+    ui.elements.landingLoginButton.addEventListener('click', () => {
       window.location.href = '/auth/google';
     });
-  if (elements.logoutButton)
-    elements.logoutButton.addEventListener('click', async () => {
+  if (ui.elements.logoutButton)
+    ui.elements.logoutButton.addEventListener('click', async () => {
       const isAdminPage = window.location.pathname.startsWith('/admin') || window.location.pathname === '/';
 
       if (isAdminPage) {
@@ -285,8 +284,8 @@ function setupEventListeners() {
         window.location.href = `/auth/logout?redirect_to=${encodeURIComponent(currentPath)}`;
       }
     });
-  if (elements.deleteAccountButton)
-    elements.deleteAccountButton.addEventListener('click', async () => {
+  if (ui.elements.deleteAccountButton)
+    ui.elements.deleteAccountButton.addEventListener('click', async () => {
       if (!confirm('本当にアカウントを削除しますか？関連する全てのデータが完全に削除され、元に戻すことはできません。')) return;
       try {
         await api.deleteUserAccount();
@@ -296,20 +295,20 @@ function setupEventListeners() {
         alert(error.error);
       }
     });
-  if (elements.requestAdminButton)
-    elements.requestAdminButton.addEventListener('click', async () => {
+  if (ui.elements.requestAdminButton)
+    ui.elements.requestAdminButton.addEventListener('click', async () => {
       if (!confirm('システム管理者権限を申請しますか？')) return;
       try {
         const result = await api.requestAdminAccess();
         alert(result.message);
-        elements.requestAdminButton.textContent = '申請中';
-        elements.requestAdminButton.disabled = true;
+        ui.elements.requestAdminButton.textContent = '申請中';
+        ui.elements.requestAdminButton.disabled = true;
       } catch (error) {
         alert(`エラー: ${error.error}`);
       }
     });
-  if (elements.stopImpersonatingButton)
-    elements.stopImpersonatingButton.addEventListener('click', async () => {
+  if (ui.elements.stopImpersonatingButton)
+    ui.elements.stopImpersonatingButton.addEventListener('click', async () => {
       try {
         await api.stopImpersonating();
         alert('成り代わりを解除しました。ページをリロードします。');
@@ -318,14 +317,14 @@ function setupEventListeners() {
         alert(error.error);
       }
     });
-  if (elements.adminDashboardButton) {
-    elements.adminDashboardButton.addEventListener('click', (e) => {
+  if (ui.elements.adminDashboardButton) {
+    ui.elements.adminDashboardButton.addEventListener('click', (e) => {
       router.navigateTo('/admin/dashboard');
     });
   }
 
-  if (elements.backToDashboardFromEventListButton) {
-    elements.backToDashboardFromEventListButton.addEventListener('click', async (e) => {
+  if (ui.elements.backToDashboardFromEventListButton) {
+    ui.elements.backToDashboardFromEventListButton.addEventListener('click', async (e) => {
       const button = e.currentTarget;
       const role = button.dataset.role;
       const groupId = button.dataset.groupId;
@@ -354,45 +353,45 @@ function setupEventListeners() {
     });
   }
 
-  if (elements.currentGroupName) {
-    elements.currentGroupName.addEventListener('click', (e) => {
+  if (ui.elements.currentGroupName) {
+    ui.elements.currentGroupName.addEventListener('click', (e) => {
       e.stopPropagation();
-      elements.groupDropdown.style.display = elements.groupDropdown.style.display === 'block' ? 'none' : 'block';
+      ui.elements.groupDropdown.style.display = ui.elements.groupDropdown.style.display === 'block' ? 'none' : 'block';
     });
   }
 
-  if (elements.switcherGroupList) {
-    elements.switcherGroupList.addEventListener('click', async (e) => {
+  if (ui.elements.switcherGroupList) {
+    ui.elements.switcherGroupList.addEventListener('click', async (e) => {
       if (e.target.tagName === 'BUTTON') {
         const {groupId} = e.target.dataset;
-        elements.groupDropdown.style.display = 'none';
+        ui.elements.groupDropdown.style.display = 'none';
         await router.navigateTo(`/admin/groups/${groupId}`);
       }
     });
   }
 
-  if (elements.switcherCreateGroup) {
-    elements.switcherCreateGroup.addEventListener('click', async () => {
-      elements.groupDropdown.style.display = 'none';
+  if (ui.elements.switcherCreateGroup) {
+    ui.elements.switcherCreateGroup.addEventListener('click', async () => {
+      ui.elements.groupDropdown.style.display = 'none';
       await router.navigateTo('/');
     });
   }
 
-  if (elements.closeSettingsModalButton) elements.closeSettingsModalButton.addEventListener('click', ui.closeSettingsModal);
-  if (elements.closePrizeMasterModalButton) elements.closePrizeMasterModalButton.addEventListener('click', ui.closePrizeMasterModal);
+  if (ui.elements.closeSettingsModalButton) ui.elements.closeSettingsModalButton.addEventListener('click', ui.closeSettingsModal);
+  if (ui.elements.closePrizeMasterModalButton) ui.elements.closePrizeMasterModalButton.addEventListener('click', ui.closePrizeMasterModal);
 
-  if (elements.closePasswordSetModal)
-    elements.closePasswordSetModal.addEventListener('click', () => {
-      if (elements.passwordSetModal) elements.passwordSetModal.style.display = 'none';
+  if (ui.elements.closePasswordSetModal)
+    ui.elements.closePasswordSetModal.addEventListener('click', () => {
+      if (ui.elements.passwordSetModal) ui.elements.passwordSetModal.style.display = 'none';
     });
-  if (elements.closeProfileModalButton) elements.closeProfileModalButton.addEventListener('click', ui.closeProfileEditModal);
-  if (elements.closePrizeMasterSelectModal) elements.closePrizeMasterSelectModal.addEventListener('click', ui.closePrizeMasterSelectModal);
-  if (elements.closeGroupPasswordModalButton) elements.closeGroupPasswordModalButton.addEventListener('click', ui.closeGroupPasswordModal);
+  if (ui.elements.closeProfileModalButton) ui.elements.closeProfileModalButton.addEventListener('click', ui.closeProfileEditModal);
+  if (ui.elements.closePrizeMasterSelectModal) ui.elements.closePrizeMasterSelectModal.addEventListener('click', ui.closePrizeMasterSelectModal);
+  if (ui.elements.closeGroupPasswordModalButton) ui.elements.closeGroupPasswordModalButton.addEventListener('click', ui.closeGroupPasswordModal);
 
-  if (elements.verifyPasswordButton)
-    elements.verifyPasswordButton.addEventListener('click', async () => {
-      const groupId = elements.verificationTargetGroupId.value;
-      const password = elements.groupPasswordVerifyInput.value;
+  if (ui.elements.verifyPasswordButton)
+    ui.elements.verifyPasswordButton.addEventListener('click', async () => {
+      const groupId = ui.elements.verificationTargetGroupId.value;
+      const password = ui.elements.groupPasswordVerifyInput.value;
       if (!password) return alert('合言葉を入力してください。');
       try {
         const result = await api.verifyGroupPassword(groupId, password);
@@ -409,13 +408,13 @@ function setupEventListeners() {
       }
     });
 
-  if (elements.customUrlInput)
-    elements.customUrlInput.addEventListener('keyup', () => {
-      if (elements.customUrlPreview) elements.customUrlPreview.textContent = elements.customUrlInput.value.trim();
+  if (ui.elements.customUrlInput)
+    ui.elements.customUrlInput.addEventListener('keyup', () => {
+      if (ui.elements.customUrlPreview) ui.elements.customUrlPreview.textContent = ui.elements.customUrlInput.value.trim();
     });
 
-  if (elements.backToDashboardButton)
-    elements.backToDashboardButton.addEventListener('click', async () => {
+  if (ui.elements.backToDashboardButton)
+    ui.elements.backToDashboardButton.addEventListener('click', async () => {
       if (state.currentGroupId) {
         await router.navigateTo(`/admin/groups/${state.currentGroupId}`);
       } else {
@@ -423,8 +422,8 @@ function setupEventListeners() {
       }
     });
 
-  if (elements.prizeMasterSelectList)
-    elements.prizeMasterSelectList.addEventListener('click', (e) => {
+  if (ui.elements.prizeMasterSelectList)
+    ui.elements.prizeMasterSelectList.addEventListener('click', (e) => {
       const item = e.target.closest('li');
       if (item) {
         item.classList.toggle('selected');
@@ -435,19 +434,19 @@ function setupEventListeners() {
 
   window.addEventListener('resize', ui.adjustBodyPadding);
   window.addEventListener('click', (event) => {
-    if (elements.groupSettingsModal && event.target == elements.groupSettingsModal) ui.closeSettingsModal();
-    if (elements.profileEditModal && event.target == elements.profileEditModal) ui.closeProfileEditModal();
-    if (elements.passwordSetModal && event.target == elements.passwordSetModal) elements.passwordSetModal.style.display = 'none';
-    if (elements.prizeMasterSelectModal && event.target == elements.prizeMasterSelectModal) ui.closePrizeMasterSelectModal();
-    if (elements.groupDropdown && elements.groupDropdown.style.display === 'block' && !elements.groupSwitcher.contains(event.target)) {
-      elements.groupDropdown.style.display = 'none';
+    if (ui.elements.groupSettingsModal && event.target == ui.elements.groupSettingsModal) ui.closeSettingsModal();
+    if (ui.elements.profileEditModal && event.target == ui.elements.profileEditModal) ui.closeProfileEditModal();
+    if (ui.elements.passwordSetModal && event.target == ui.elements.passwordSetModal) ui.elements.passwordSetModal.style.display = 'none';
+    if (ui.elements.prizeMasterSelectModal && event.target == ui.elements.prizeMasterSelectModal) ui.closePrizeMasterSelectModal();
+    if (ui.elements.groupDropdown && ui.elements.groupDropdown.style.display === 'block' && !ui.elements.groupSwitcher.contains(event.target)) {
+      ui.elements.groupDropdown.style.display = 'none';
     }
-    if (elements.prizeMasterModal && event.target == elements.prizeMasterModal) ui.closePrizeMasterModal();
-    if (elements.passwordResetRequestModal && event.target == elements.passwordResetRequestModal) ui.closePasswordResetRequestModal();
-    if (elements.memberEditModal && event.target == elements.memberEditModal) ui.closeMemberEditModal();
-    if (elements.bulkRegisterModal && event.target == elements.bulkRegisterModal) ui.closeBulkRegisterModal();
-    if (elements.addPrizeModal && event.target == elements.addPrizeModal) ui.closeAddPrizeModal();
-    if (elements.summaryModal && event.target == elements.summaryModal) ui.closeSummaryModal();
+    if (ui.elements.prizeMasterModal && event.target == ui.elements.prizeMasterModal) ui.closePrizeMasterModal();
+    if (ui.elements.passwordResetRequestModal && event.target == ui.elements.passwordResetRequestModal) ui.closePasswordResetRequestModal();
+    if (ui.elements.memberEditModal && event.target == ui.elements.memberEditModal) ui.closeMemberEditModal();
+    if (ui.elements.bulkRegisterModal && event.target == ui.elements.bulkRegisterModal) ui.closeBulkRegisterModal();
+    if (ui.elements.addPrizeModal && event.target == ui.elements.addPrizeModal) ui.closeAddPrizeModal();
+    if (ui.elements.summaryModal && event.target == ui.elements.summaryModal) ui.closeSummaryModal();
     const link = event.target.closest('a');
     if (link && link.href && link.target !== '_blank') {
       const url = new URL(link.href);
@@ -459,24 +458,30 @@ function setupEventListeners() {
   });
 }
 
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+// ★★★ ここからが修正点 ★★★
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 function setupHamburgerMenu() {
-  if (elements.hamburgerButton && elements.navMenu) {
-    elements.hamburgerButton.addEventListener('click', () => {
-      const isOpened = elements.hamburgerButton.classList.toggle('active');
-      elements.navMenu.classList.toggle('active');
-      elements.hamburgerButton.setAttribute('aria-expanded', isOpened);
+  if (ui.elements.hamburgerButton && ui.elements.navMenu) {
+    ui.elements.hamburgerButton.addEventListener('click', () => {
+      const isOpened = ui.elements.hamburgerButton.classList.toggle('active');
+      ui.elements.navMenu.classList.toggle('active');
+      ui.elements.hamburgerButton.setAttribute('aria-expanded', isOpened);
     });
 
-    elements.navMenu.addEventListener('click', (e) => {
+    ui.elements.navMenu.addEventListener('click', (e) => {
       const target = e.target.closest('button, a');
       if (target) {
-        elements.hamburgerButton.classList.remove('active');
-        elements.navMenu.classList.remove('active');
-        elements.hamburgerButton.setAttribute('aria-expanded', 'false');
+        ui.elements.hamburgerButton.classList.remove('active');
+        ui.elements.navMenu.classList.remove('active');
+        ui.elements.hamburgerButton.setAttribute('aria-expanded', 'false');
       }
     });
   }
 }
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+// ★★★ 修正はここまで ★★★
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
 function loadSettings() {
   const savedSettings = JSON.parse(localStorage.getItem('userSettings'));
