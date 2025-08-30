@@ -24,3 +24,20 @@ Content-Type: application/json
     ],
     "allowDoodleMode": false
 }
+### (ここから追記)
+### ---------------------------------
+### 【落書きモード】横線追加テスト
+# @name addDoodle
+
+POST http://localhost:3000/api/events/A5kTze3H4qkgu5qiUMug/doodle
+Content-Type: application/json
+x-auth-token: c73bd24ceee91d38339ea4288b828278
+
+{
+    "memberId": "f40e221db6e079dfbd18670170a97981",
+    "doodle": {
+        "fromIndex": 0,
+        "toIndex": 1,
+        "y": 100
+    }
+}
