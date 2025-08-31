@@ -7,10 +7,15 @@ import {getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight, getTargetH
 import {participantPanzoom} from '../animation/setup.js';
 import * as ui from '../ui.js';
 import {clientEmojiToLucide} from '../ui.js';
+// ▼▼▼ インポートを追加 ▼▼▼
+import {addFirestoreListener} from '../state.js';
+// ▲▲▲ ここまで ▲▲▲
 import {db} from '../main.js';
-import { processImage } from '../imageProcessor.js';
+import {processImage} from '../imageProcessor.js';
 
-let doodleListenerUnsubscribe = null;
+// ▼▼▼ この変数を削除 ▼▼▼
+// let doodleListenerUnsubscribe = null;
+// ▲▲▲ ここまで ▲▲▲
 let processedProfileIconFile = null;
 
 const elements = {
@@ -327,13 +332,15 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
   ui.showView('participantView');
   hideParticipantSubViews(true);
 
-  if (doodleListenerUnsubscribe) {
-    console.log('[DEBUG] 2. Unsubscribing from existing doodle listener.');
-    doodleListenerUnsubscribe();
-    doodleListenerUnsubscribe = null;
-  } else {
-    console.log('[DEBUG] 2. No existing doodle listener to unsubscribe from.');
-  }
+  // ▼▼▼ このブロックを削除 ▼▼▼
+  // if (doodleListenerUnsubscribe) {
+  //   console.log('[DEBUG] 2. Unsubscribing from existing doodle listener.');
+  //   doodleListenerUnsubscribe();
+  //   doodleListenerUnsubscribe = null;
+  // } else {
+  //   console.log('[DEBUG] 2. No existing doodle listener to unsubscribe from.');
+  // }
+  // ▲▲▲ ここまで ▲▲▲
 
   try {
     let eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
@@ -360,7 +367,8 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
         console.log(`%c[DEBUG] 7. SUCCESS: Firebase user found (uid: ${user.uid}). Setting up onSnapshot listener.`, 'color: green; font-weight: bold;');
         const eventRef = db.collection('events').doc(eventId);
 
-        doodleListenerUnsubscribe = eventRef.onSnapshot(
+        // ▼▼▼ onSnapshotの返り値（解除関数）を新しい管理機構に登録する ▼▼▼
+        const unsubscribe = eventRef.onSnapshot(
           async (doc) => {
             console.log('%c[DEBUG] 8. REALTIME UPDATE RECEIVED (onSnapshot fired)', 'color: blue; font-weight: bold;');
             if (!doc.exists) {
@@ -387,6 +395,7 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
             console.error('[DEBUG] 9. ERROR: Firestore onSnapshot listener failed:', error);
           }
         );
+        addFirestoreListener(unsubscribe);
       } else {
         console.error('%c[DEBUG] 7. FAILED: firebase.auth().currentUser was null or undefined. Listener NOT set up.', 'color: red; font-weight: bold;');
       }
@@ -844,20 +853,20 @@ export function initParticipantView() {
       const file = ui.elements.profileIconInput.files[0];
       if (file) {
         const saveButton = document.getElementById('saveProfileButton');
-        if(saveButton) saveButton.disabled = true;
-        
+        if (saveButton) saveButton.disabled = true;
+
         processedProfileIconFile = await processImage(file);
 
-        if(saveButton) saveButton.disabled = false;
-        
+        if (saveButton) saveButton.disabled = false;
+
         if (processedProfileIconFile) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                if (ui.elements.profileIconPreview) ui.elements.profileIconPreview.src = e.target.result;
-            };
-            reader.readAsDataURL(processedProfileIconFile);
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (ui.elements.profileIconPreview) ui.elements.profileIconPreview.src = e.target.result;
+          };
+          reader.readAsDataURL(processedProfileIconFile);
         } else {
-            ui.elements.profileIconInput.value = '';
+          ui.elements.profileIconInput.value = '';
         }
       }
     });
