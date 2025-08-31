@@ -200,12 +200,27 @@ exports.approvePasswordReset = async (req, res) => {
     const groupRef = firestore.collection('groups').doc(groupId);
     const groupDoc = await groupRef.get();
 
-    if (!groupDoc.exists || groupDoc.data().ownerId !== req.user.id) {
+    if (!groupDoc.exists) {
+      return res.status(404).json({error: 'グループが見つかりません。'});
+    }
+
+    // --- ▼▼▼ ここから修正 ▼▼▼ ---
+    const isOwner = groupDoc.data().ownerId === req.user.id;
+    const isSysAdmin = req.user.role === 'system_admin';
+
+    if (!isOwner && !isSysAdmin) {
       return res.status(403).json({error: '権限がありません。'});
     }
+    // --- ▲▲▲ ここまで修正 ▲▲▲ ---
 
     const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
     const requestRef = firestore.collection('passwordResetRequests').doc(requestId);
+
+    const memberDoc = await memberRef.get();
+    const requestDoc = await requestRef.get();
+    if (!memberDoc.exists || !requestDoc.exists) {
+      return res.status(404).json({error: '対象のメンバーまたはリセット依頼が見つかりません。'});
+    }
 
     const batch = firestore.batch();
     batch.update(memberRef, {password: null});
