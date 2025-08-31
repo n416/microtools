@@ -10,6 +10,11 @@ import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from '.
 import {loadAdminDashboardData} from './components/adminDashboard.js';
 // ▲▲▲ ここを修正 ▲▲▲
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
+import {db} from './main.js'; // ★ Firebaseインスタンスをインポート
+
+// ▼▼▼ この変数を router.js のトップレベル（import文の下あたり）に追加 ▼▼▼
+let broadcastDoodleListenerUnsubscribe = null;
+// ▲▲▲ ここまで ▲▲▲
 
 async function loadAdminDashboard() {
   try {
@@ -97,6 +102,7 @@ async function loadAndShowMemberManagement(groupId) {
     }
   }
 }
+
 export async function loadEventForEditing(eventId, viewToShow = 'eventEditView') {
   console.log(`[FRONTEND] loadEventForEditing called for eventId: ${eventId}, view: ${viewToShow}`);
   if (!eventId) {
@@ -118,7 +124,36 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
     state.setCurrentLotteryData(data);
     state.setCurrentEventId(eventId);
     state.setCurrentGroupId(data.groupId);
+    // ▼▼▼ ここからが修正点 ▼▼▼
+    // もし既存のリスナーがあれば、まず解除する
+    if (broadcastDoodleListenerUnsubscribe) {
+      broadcastDoodleListenerUnsubscribe();
+      broadcastDoodleListenerUnsubscribe = null;
+    }
 
+    // ブロードキャストビューを表示する場合、かつ落書きモードが許可されている場合のみ
+    // リアルタイム監視を開始する
+    if (viewToShow === 'broadcastView' && data.allowDoodleMode) {
+      console.log('[DEBUG] Setting up BROADCAST doodle listener...');
+      const eventRef = db.collection('events').doc(eventId);
+      broadcastDoodleListenerUnsubscribe = eventRef.onSnapshot(async (doc) => {
+        if (!doc.exists) return;
+        const updatedData = doc.data();
+        // 現在のデータと比較して、doodleに更新があった場合のみ再描画する
+        if (updatedData && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
+          console.log('[DEBUG] BROADCAST doodle data has changed. Redrawing canvas...');
+          state.currentLotteryData.doodles = updatedData.doodles || [];
+
+          const adminCanvas = document.getElementById('adminCanvas');
+          if (adminCanvas && adminCanvas.offsetParent !== null) {
+            // キャンバスが表示されているか確認
+            const ctx = adminCanvas.getContext('2d');
+            await prepareStepAnimation(ctx, true, false, true); // マスクなし、リサイズ扱いで再描画
+          }
+        }
+      });
+    }
+    
     ui.showView(viewToShow);
     console.log(`[FRONTEND] Switched to view: ${viewToShow}`);
 
