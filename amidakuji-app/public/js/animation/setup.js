@@ -145,8 +145,12 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMa
   await preloadIcons(allParticipantsWithNames);
   const VIRTUAL_HEIGHT = getTargetHeight(container);
 
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
+
   animator.tracers = allParticipantsWithNames.map((p) => {
-    const path = calculatePath(p.slot, state.currentLotteryData.lines, totalParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
+    // calculatePathに allLines を渡す
+    const path = calculatePath(p.slot, allLines, totalParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
     const isFinished = state.revealedPrizes.some((r) => r.participantName === p.name);
     const finalPoint = isFinished ? path[path.length - 1] : path[0];
     return {
@@ -160,7 +164,8 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMa
       celebrated: isFinished,
     };
   });
-
+  // ▲▲▲ ここまで ▲▲▲
+  
   animator.context = targetCtx;
   targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
   const isDarkMode = document.body.classList.contains('dark-mode');

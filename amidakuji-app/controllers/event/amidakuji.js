@@ -22,7 +22,9 @@ exports.startEvent = async (req, res) => {
       return res.status(400).json({error: 'イベントは既に開始されています。'});
     }
 
+    // ▼▼▼ doodlesを渡すように修正 ▼▼▼
     const results = calculateResults(eventData.participants, eventData.lines, eventData.prizes, eventData.doodles);
+    // ▲▲▲ ここまで修正 ▲▲▲
 
     await eventRef.update({status: 'started', results: results});
     res.status(200).json({message: 'イベントが開始されました。', results});
@@ -49,20 +51,16 @@ exports.regenerateLines = async (req, res) => {
       return res.status(400).json({error: '開始済みのイベントのあみだくじは変更できません。'});
     }
 
-    // 新しい線を生成
     const newLines = generateLines(eventData.participantCount);
-
-    // 新しい線に基づいて結果を再計算
     // ▼▼▼ doodlesを渡すように修正 ▼▼▼
     const newResults = calculateResults(eventData.participants, newLines, eventData.prizes, eventData.doodles);
+    // ▲▲▲ ここまで修正 ▲▲▲
 
-    // 線と結果の両方を更新
     await eventRef.update({
       lines: newLines,
-      results: newResults, // 結果も更新する
+      results: newResults,
     });
 
-    // クライアントにも両方の情報を返す
     res.status(200).json({
       message: 'あみだくじが再生成されました。',
       lines: newLines,
@@ -94,10 +92,10 @@ exports.shufflePrizes = async (req, res) => {
       return res.status(403).json({error: 'このイベントを操作する権限がありません。'});
     }
 
-    // 新しい景品リストで結果を再計算
+    // ▼▼▼ doodlesを渡すように修正 ▼▼▼
     const newResults = calculateResults(eventData.participants, eventData.lines, shuffledPrizes, eventData.doodles);
+    // ▲▲▲ ここまで修正 ▲▲▲
 
-    // 景品リストと結果の両方を更新
     await eventRef.update({prizes: shuffledPrizes, results: newResults});
 
     res.status(200).json({message: '景品がシャッフルされました。', prizes: shuffledPrizes, results: newResults});

@@ -1,5 +1,6 @@
 // amidakuji-app/controllers/event/public.js
 const {firestore} = require('../../utils/firestore');
+const { calculateResults } = require('../../utils/amidakuji'); // ★ calculateResults をインポート
 
 exports.getPublicShareData = async (req, res) => {
   try {
@@ -24,11 +25,14 @@ exports.getPublicShareData = async (req, res) => {
     let sanitizedParticipants = eventData.participants;
 
     if (eventData.status !== 'started') {
-      // イベントが開始されていない場合は、全ての景品をマスキング
       sanitizedPrizes = eventData.prizes.map(() => ({name: '？？？', imageUrl: null}));
     } else {
-      // イベント開始済みの場合は、従来通り1件だけ表示
-      singleResult = eventData.results ? {[decodedParticipantName]: eventData.results[decodedParticipantName]} : null;
+      // ▼▼▼ ここから修正 ▼▼▼
+      // サーバーに保存されている結果ではなく、doodleを含めて再計算する
+      const fullResults = calculateResults(eventData.participants, eventData.lines, eventData.prizes, eventData.doodles);
+      singleResult = fullResults ? {[decodedParticipantName]: fullResults[decodedParticipantName]} : null;
+      // ▲▲▲ ここまで修正 ▲▲▲
+
       if (!singleResult || !singleResult[decodedParticipantName]) {
         return res.status(404).json({error: '指定された参加者の結果が見つかりません。'});
       }
@@ -54,8 +58,9 @@ exports.getPublicShareData = async (req, res) => {
       participants: sanitizedParticipants,
       prizes: sanitizedPrizes,
       lines: eventData.lines,
+      doodles: eventData.doodles || [],
       status: eventData.status,
-      results: singleResult, // 開始前はnullになる
+      results: singleResult,
       groupId: eventData.groupId,
     };
 
