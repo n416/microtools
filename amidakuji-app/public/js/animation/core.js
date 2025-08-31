@@ -255,10 +255,13 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
   const numParticipants = state.currentLotteryData.participants.length;
 
   const finishedTracers = animator.tracers.filter((t) => t.isFinished);
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
   const newTracers = participantsToAnimate.map((p) => {
-    const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
+    const path = calculatePath(p.slot, allLines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
     return {name: p.name, color: p.color || '#333', path, pathIndex: 0, progress: 0, x: path[0].x, y: path[0].y, isFinished: false, celebrated: false};
   });
+  // ▲▲▲ ここまで ▲▲▲
 
   const uniqueFinishedTracers = finishedTracers.filter((t) => !namesToAnimate.includes(t.name));
   animator.tracers = [...uniqueFinishedTracers, ...newTracers];
@@ -362,9 +365,10 @@ export async function resetAnimation(onComplete = null) {
   const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
 
   await preloadIcons(allParticipantsWithNames);
-
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
   animator.tracers = allParticipantsWithNames.map((p) => {
-    const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
+    const path = calculatePath(p.slot, allLines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
     return {
       name: p.name,
       color: p.color || '#333',
@@ -376,6 +380,7 @@ export async function resetAnimation(onComplete = null) {
       celebrated: false,
     };
   });
+  // ▲▲▲ ここまで ▲▲▲ 
 
   animator.particles = [];
   animator.running = true;

@@ -13,6 +13,7 @@
   <% } %>
   <title>ダイナミックあみだくじ</title>
   <link rel="stylesheet" href="/style.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
 </head>
 
 <body>
@@ -104,6 +105,7 @@
   <%- include('partials/modals/_addPrizeModal.ejs') %>
   <%- include('partials/modals/_summaryModal.ejs') %>
   <%- include('partials/modals/_fillSlotsModal.ejs') %>
+  <%- include('partials/modals/_imageCropperModal.ejs') %>
 
   <div class="settings-fab" id="settingsFab" title="設定">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -139,6 +141,7 @@
   <script type="module" src="/js/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     // Your web app's Firebase configuration

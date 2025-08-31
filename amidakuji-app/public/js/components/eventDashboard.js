@@ -3,6 +3,7 @@ import * as state from '../state.js';
 import * as router from '../router.js';
 import * as ui from '../ui.js';
 import {openGroupSettingsFor} from './groupDashboard.js';
+import {processImage} from '../imageProcessor.js';
 
 // このコンポーネントが管理するDOM要素
 const elements = {
@@ -20,6 +21,8 @@ const elements = {
   closePasswordResetRequestModalButton: document.querySelector('#passwordResetRequestModal .close-button'),
   passwordResetRequestList: document.getElementById('passwordResetRequestList'),
 };
+
+let processedMasterPrizeFile = null;
 
 // イベントリストを描画する関数
 export function renderEventList(allEvents) {
@@ -169,21 +172,31 @@ export function initEventDashboard() {
       }
       if (e.target.id === 'goToPrizeMasterButton') {
         if (state.currentGroupId) {
+          processedMasterPrizeFile = null;
           const handlers = {
             onAddMaster: async () => {
               const name = ui.elements.addMasterPrizeNameInput.value.trim();
-              const file = ui.elements.addMasterPrizeImageInput.files[0];
-              if (!name || !file) return alert('賞品名と画像を選択してください');
+              if (!name || !processedMasterPrizeFile) {
+                return alert('賞品名と画像を選択してください');
+              }
               try {
                 ui.elements.addMasterPrizeButton.disabled = true;
-                const {signedUrl, imageUrl} = await api.generatePrizeMasterUploadUrl(state.currentGroupId, file.type);
-                await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
+                const {signedUrl, imageUrl} = await api.generatePrizeMasterUploadUrl(state.currentGroupId, processedMasterPrizeFile.type);
+                await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': processedMasterPrizeFile.type}, body: processedMasterPrizeFile});
                 await api.addPrizeMaster(state.currentGroupId, name, imageUrl);
                 alert('賞品マスターを追加しました。');
                 const masters = await api.getPrizeMasters(state.currentGroupId);
                 ui.renderPrizeMasterList(masters, false);
                 ui.elements.addMasterPrizeNameInput.value = '';
                 ui.elements.addMasterPrizeImageInput.value = '';
+                processedMasterPrizeFile = null;
+                if (ui.elements.addMasterPrizeImagePreview) {
+                  ui.elements.addMasterPrizeImagePreview.src = '';
+                  ui.elements.addMasterPrizeImagePreview.style.display = 'none';
+                }
+                if (ui.elements.addMasterPrizePlaceholder) {
+                  ui.elements.addMasterPrizePlaceholder.style.display = 'flex';
+                }
               } catch (error) {
                 alert(error.error);
               } finally {
@@ -234,6 +247,42 @@ export function initEventDashboard() {
           };
           openPasswordResetRequestModal(requests, handlers);
         }
+      }
+    });
+  }
+
+  if (ui.elements.addMasterPrizeImageInput) {
+    ui.elements.addMasterPrizeImageInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) {
+        processedMasterPrizeFile = null;
+        return;
+      }
+
+      const button = document.getElementById('addMasterPrizeButton');
+      const nameInput = document.getElementById('addMasterPrizeNameInput');
+      if (button) button.disabled = true;
+      if (nameInput) nameInput.disabled = true;
+
+      processedMasterPrizeFile = await processImage(file);
+
+      if (button) button.disabled = false;
+      if (nameInput) nameInput.disabled = false;
+
+      if (processedMasterPrizeFile) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (ui.elements.addMasterPrizeImagePreview) {
+            ui.elements.addMasterPrizeImagePreview.src = event.target.result;
+            ui.elements.addMasterPrizeImagePreview.style.display = 'block';
+          }
+          if (ui.elements.addMasterPrizePlaceholder) {
+            ui.elements.addMasterPrizePlaceholder.style.display = 'none';
+          }
+        };
+        reader.readAsDataURL(processedMasterPrizeFile);
+      } else {
+        e.target.value = '';
       }
     });
   }
