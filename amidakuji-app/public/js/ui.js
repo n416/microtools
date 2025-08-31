@@ -137,6 +137,26 @@ export function initUI() {
     deleteParticipantWaitingButton: document.getElementById('deleteParticipantWaitingButton'),
     backToDashboardFromWaitingButton: document.getElementById('backToDashboardFromWaitingButton'),
   };
+  // ▼▼▼ このブロックを initUI 関数の末尾に追加 ▼▼▼
+  const prizeImageInput = document.getElementById('addMasterPrizeImageInput');
+  const prizeImagePreview = document.getElementById('addMasterPrizeImagePreview');
+  const prizeImagePlaceholder = document.getElementById('addMasterPrizePlaceholder');
+
+  if (prizeImageInput && prizeImagePreview && prizeImagePlaceholder) {
+    prizeImageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          prizeImagePreview.src = event.target.result;
+          prizeImagePreview.style.display = 'block';
+          prizeImagePlaceholder.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+  // ▲▲▲ ここまで ▲▲▲
 }
 
 const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView', 'staticAmidaView'];
@@ -264,6 +284,21 @@ export function openSettingsModal(group, handlers) {
 
 export function openPrizeMasterModal(handlers) {
   if (!elements.prizeMasterModal) return;
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  // フォームをリセット
+  elements.addMasterPrizeNameInput.value = '';
+  elements.addMasterPrizeImageInput.value = '';
+  const preview = document.getElementById('addMasterPrizeImagePreview');
+  const placeholder = document.getElementById('addMasterPrizePlaceholder');
+  if (preview) {
+    preview.src = '';
+    preview.style.display = 'none';
+  }
+  if (placeholder) {
+    placeholder.style.display = 'flex';
+  }
+  // ▲▲▲ ここまで ▲▲▲
+
   elements.addMasterPrizeButton.onclick = handlers.onAddMaster;
   elements.prizeMasterList.onclick = (e) => {
     const button = e.target.closest('button.delete-btn');
