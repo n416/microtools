@@ -95,11 +95,35 @@ export function initBroadcast() {
   if (elements.broadcastView) {
     elements.broadcastView.addEventListener('click', async (e) => {
       if (e.target.id === 'regenerateLinesButton') {
-        if (!confirm('あみだくじのパターンを再生成しますか？')) return;
+        // ▼▼▼ ここから修正 ▼▼▼
+        const doodlesExist = state.currentLotteryData && state.currentLotteryData.doodles && state.currentLotteryData.doodles.length > 0;
+        let deleteDoodles = false;
+
+        if (doodlesExist) {
+          // ▼▼▼ ここから修正 ▼▼▼
+          const userChoice = await ui.showCustomConfirm('ユーザーによる落書きが追加されています。線を再生成する際に、これらの落書きをどうしますか？', ['落書きもリセットする', '落書きは残す']);
+
+          if (userChoice === '落書きもリセットする') {
+            deleteDoodles = true;
+          } else if (userChoice === '落書きは残す') {
+            deleteDoodles = false;
+          } else {
+            // ユーザーが「キャンセル」をクリックしたか、モーダル外をクリックした場合
+            return; // 処理を中断
+          }
+          // ▲▲▲ ここまで修正 ▲▲▲
+        } else {
+          if (!confirm('あみだくじのパターンを再生成しますか？')) return;
+        }
+
         try {
-          const result = await api.regenerateLines(state.currentEventId);
+          const result = await api.regenerateLines(state.currentEventId, deleteDoodles);
           state.currentLotteryData.lines = result.lines;
           state.currentLotteryData.results = result.results;
+          if (deleteDoodles) {
+            state.currentLotteryData.doodles = [];
+          }
+          // ▲▲▲ ここまで修正 ▲▲▲
 
           const ctx = elements.adminCanvas.getContext('2d');
 

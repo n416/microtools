@@ -53,9 +53,9 @@ export const copyEvent = (eventId) => request(`/api/events/${eventId}/copy`, 'PO
 export const deleteEvent = (eventId) => request(`/api/events/${eventId}`, 'DELETE');
 export const startEvent = (eventId) => request(`/api/events/${eventId}/start`, 'POST');
 export const generateEventPrizeUploadUrl = (eventId, fileType, fileHash) => request(`/api/events/${eventId}/generate-upload-url`, 'POST', {fileType, fileHash});
-export const addDoodle = (eventId, memberId, doodle) => request(`/api/events/${eventId}/doodle`, 'POST', { memberId, doodle }, { 'x-auth-token': state.currentParticipantToken });
+export const addDoodle = (eventId, memberId, doodle) => request(`/api/events/${eventId}/doodle`, 'POST', {memberId, doodle}, {'x-auth-token': state.currentParticipantToken});
 // ▼▼▼ ここから修正 ▼▼▼
-export const deleteDoodle = (eventId, memberId) => request(`/api/events/${eventId}/doodle`, 'DELETE', { memberId }, { 'x-auth-token': state.currentParticipantToken });
+export const deleteDoodle = (eventId, memberId) => request(`/api/events/${eventId}/doodle`, 'DELETE', {memberId}, {'x-auth-token': state.currentParticipantToken});
 // ▲▲▲ ここまで修正 ▲▲▲
 
 export const getPublicEventData = (eventId) => {
@@ -117,7 +117,7 @@ export const getMembers = (groupId) => request(`/api/groups/${groupId}/members`)
 export const addMember = (groupId, name) => request(`/api/groups/${groupId}/members`, 'POST', {name});
 export const updateMember = (groupId, memberId, data) => request(`/api/groups/${groupId}/members/${memberId}`, 'PUT', data);
 export const deleteMember = (groupId, memberId) => request(`/api/groups/${groupId}/members/${memberId}`, 'DELETE');
-export const regenerateLines = (eventId) => request(`/api/events/${eventId}/regenerate-lines`, 'POST');
+export const regenerateLines = (eventId, deleteDoodles = false) => request(`/api/events/${eventId}/regenerate-lines`, 'POST', {deleteDoodles});
 export const shufflePrizes = (eventId, shuffledPrizes) => request(`/api/events/${eventId}/shuffle-prizes`, 'POST', {shuffledPrizes});
 export const acknowledgeResult = (eventId, memberId, token) => request(`/api/events/${eventId}/acknowledge-result`, 'POST', {memberId}, {'x-auth-token': token});
 
