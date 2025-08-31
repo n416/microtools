@@ -11,6 +11,8 @@ import * as router from './router.js';
 import {initParticipantView} from './components/participantView.js';
 import {initBroadcast} from './components/broadcast.js';
 
+export const db = firebase.firestore();
+
 const settings = {
   animation: true,
   theme: 'auto',
@@ -18,8 +20,58 @@ const settings = {
 
 const darkModeMatcher = window.matchMedia('(prefers-color-scheme: dark)');
 let tronAnimationAPI = null;
+let appInitialized = false; // 初期化済みフラグ
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('[DEBUG] DOMContentLoaded: Firebase接続待機中...');
 
-document.addEventListener('DOMContentLoaded', initializeApp);
+  firebase.auth().onAuthStateChanged((user) => {
+    if (user && !appInitialized) {
+      appInitialized = true;
+      initializeApp();
+    }
+  });
+
+  firebase
+    .auth()
+    .signInAnonymously()
+    .catch((error) => {
+      console.error('%c[DEBUG] Firebase匿名認証に失敗しました。', 'color: red; font-weight: bold;', error);
+      document.body.innerHTML = '<div style="padding: 20px;"><h2>接続エラー</h2><p>アプリケーションの初期化に失敗しました。時間をおいて再度お試しください。</p></div>';
+    });
+});
+
+async function initializeApp() {
+  ui.initUI();
+
+  loadSettings();
+  applySettings();
+  setupSettingsControls();
+
+  initGroupDashboard();
+  initEventDashboard();
+  initMemberManagement();
+  initEventEdit();
+  initAdminDashboard();
+  initParticipantView();
+
+  setupEventListeners();
+  setupHamburgerMenu();
+  if (settings.animation) {
+    tronAnimationAPI = initTronAnimation();
+  }
+
+  const initialData = {
+    group: typeof initialGroupData !== 'undefined' ? initialGroupData : null,
+    event: typeof initialEventData !== 'undefined' ? initialEventData : null,
+  };
+
+  await router.navigateTo(window.location.pathname, false);
+
+  if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
+    await router.loadUserAndRedirect(state.currentUser.lastUsedGroupId);
+  }
+  lucide.createIcons();
+}
 
 function initTronAnimation() {
   if (tronAnimationAPI) return tronAnimationAPI;
@@ -225,39 +277,6 @@ function initTronAnimation() {
   return tronAnimationAPI;
 }
 
-async function initializeApp() {
-  ui.initUI();
-  
-  loadSettings();
-  applySettings();
-  setupSettingsControls();
-
-  initGroupDashboard();
-  initEventDashboard();
-  initMemberManagement();
-  initEventEdit();
-  initAdminDashboard();
-  initParticipantView();
-
-  setupEventListeners();
-  setupHamburgerMenu();
-  if (settings.animation) {
-    tronAnimationAPI = initTronAnimation();
-  }
-
-  const initialData = {
-    group: typeof initialGroupData !== 'undefined' ? initialGroupData : null,
-    event: typeof initialEventData !== 'undefined' ? initialEventData : null,
-  };
-
-  await router.navigateTo(window.location.pathname, false);
-
-  if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
-    await router.loadUserAndRedirect(state.currentUser.lastUsedGroupId);
-  }
-  lucide.createIcons();
-}
-
 function setupEventListeners() {
   initBroadcast();
 
@@ -458,9 +477,6 @@ function setupEventListeners() {
   });
 }
 
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-// ★★★ ここからが修正点 ★★★
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 function setupHamburgerMenu() {
   if (ui.elements.hamburgerButton && ui.elements.navMenu) {
     ui.elements.hamburgerButton.addEventListener('click', () => {
@@ -479,9 +495,6 @@ function setupHamburgerMenu() {
     });
   }
 }
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-// ★★★ 修正はここまで ★★★
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
 function loadSettings() {
   const savedSettings = JSON.parse(localStorage.getItem('userSettings'));

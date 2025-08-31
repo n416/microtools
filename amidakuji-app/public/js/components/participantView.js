@@ -7,6 +7,9 @@ import {getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight, getTargetH
 import {participantPanzoom} from '../animation/setup.js';
 import * as ui from '../ui.js';
 import {clientEmojiToLucide} from '../ui.js';
+import {db} from '../main.js'; // Firebaseインスタンスをインポート
+
+let doodleListenerUnsubscribe = null;
 
 const elements = {
   participantView: document.getElementById('participantView'),
@@ -315,11 +318,16 @@ export function renderOtherEvents(events, groupCustomUrl) {
   }
 }
 
-async function initializeParticipantView(eventId, isShare, sharedParticipantName) {
+export async function initializeParticipantView(eventId, isShare, sharedParticipantName) {
   state.setCurrentEventId(eventId);
 
   ui.showView('participantView');
   hideParticipantSubViews(true);
+
+  if (doodleListenerUnsubscribe) {
+    doodleListenerUnsubscribe();
+    doodleListenerUnsubscribe = null;
+  }
 
   try {
     let eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
@@ -332,6 +340,35 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
     }
 
     state.setCurrentLotteryData(eventData);
+
+    if (eventData.allowDoodleMode) {
+      const user = firebase.auth().currentUser;
+
+      if (user) {
+        const eventRef = db.collection('events').doc(eventId);
+
+        doodleListenerUnsubscribe = eventRef.onSnapshot(
+          async (doc) => {
+            if (!doc.exists) {
+              return;
+            }
+            const updatedData = doc.data();
+            if (updatedData && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
+              state.currentLotteryData.doodles = updatedData.doodles || [];
+
+              const staticCanvas = document.getElementById('participantCanvasStatic');
+              if (staticCanvas && staticCanvas.offsetParent !== null) {
+                const ctx = staticCanvas.getContext('2d');
+                const storedState = participantPanzoom ? {pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale()} : null;
+                await prepareStepAnimation(ctx, true, false, false, storedState);
+              }
+            } else {
+            }
+          },
+          (error) => {}
+        );
+      }
+    }
 
     if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
 
@@ -370,11 +407,19 @@ async function initializeParticipantView(eventId, isShare, sharedParticipantName
     } else if (eventData.status === 'started') {
       await showResultsView(eventData, state.currentParticipantName, false);
     } else {
-      const myParticipation = state.currentParticipantId ? eventData.participants.find((p) => p.memberId === state.currentParticipantId) : null;
-      if (myParticipation && myParticipation.name) {
-        await showStaticAmidaView();
+      if (!state.currentParticipantId) {
+        // 未ログインなら、名前入力画面を表示
+        showNameEntryView();
       } else {
-        showJoinView(eventData);
+        // ログイン済みの場合、次へ進む
+        const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
+        if (myParticipation && myParticipation.name) {
+          // 既に参加枠を選んでいれば、待機画面を表示
+          await showStaticAmidaView();
+        } else {
+          // ログイン済みだが、まだ参加枠を選んでいなければ、参加画面を表示
+          showJoinView(eventData);
+        }
       }
     }
   } catch (error) {
@@ -533,7 +578,6 @@ export function initParticipantView() {
 
     if (doodleModePanBtn && doodleModeDrawBtn && doodleModeEraseBtn) {
       const btns = [doodleModePanBtn, doodleModeDrawBtn, doodleModeEraseBtn];
-      // ▼▼▼ ここから修正 ▼▼▼
       const panzoomWrapper = staticCanvas.parentElement;
       const switchMode = (tool) => {
         state.setDoodleTool(tool);
@@ -550,7 +594,6 @@ export function initParticipantView() {
           redrawCanvas();
         }
       };
-      // ▲▲▲ ここまで修正 ▲▲▲
       doodleModePanBtn.addEventListener('click', () => switchMode('pan'));
       doodleModeDrawBtn.addEventListener('click', () => switchMode('draw'));
       doodleModeEraseBtn.addEventListener('click', () => switchMode('erase'));

@@ -1,9 +1,7 @@
 const {Firestore} = require('@google-cloud/firestore');
 const {Storage} = require('@google-cloud/storage');
 
-const firestoreOptions = {
-  databaseId: 'amida',
-};
+const firestoreOptions = {};
 const storageOptions = {};
 
 // ローカル環境の場合のみ、サービスアカウントキーのファイルパスを指定する

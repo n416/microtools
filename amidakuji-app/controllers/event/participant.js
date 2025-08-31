@@ -32,7 +32,7 @@ exports.addDoodle = async (req, res) => {
       if (!memberDoc.exists || memberDoc.data().deleteToken !== token) {
         throw {status: 403, message: '認証に失敗しました。'};
       }
-      
+
       // Event status validation
       if (!eventData.allowDoodleMode) {
         throw {status: 403, message: 'このイベントでは落書きモードが許可されていません。'};
@@ -45,15 +45,21 @@ exports.addDoodle = async (req, res) => {
 
       // ▼▼▼ ここから修正 ▼▼▼
       // ユーザーが以前に描いた線をフィルタリングして除外
-      const otherDoodles = existingDoodles.filter(d => d.memberId !== memberId);
-      
-      // 近接チェック
+      const otherDoodles = existingDoodles.filter((d) => d.memberId !== memberId);
+
+      // 新しい線にタイムスタンプを付与
+      const newDoodle = {...doodle, memberId, createdAt: new Date()};
+
+      // 近接チェックの対象に、他のユーザーの線と、システムが生成した線を含める
       const allLines = [...(eventData.lines || []), ...otherDoodles];
-      const isTooClose = allLines.some(line => {
-        if (line.fromIndex === doodle.fromIndex || line.toIndex === doodle.fromIndex || line.fromIndex === doodle.toIndex) {
-            if (Math.abs(line.y - doodle.y) < 15) {
-                return true;
-            }
+      const isTooClose = allLines.some((line) => {
+        // 同じ、または隣接する縦線区間かをチェック
+        if (line.fromIndex === newDoodle.fromIndex || line.toIndex === newDoodle.fromIndex || line.fromIndex === newDoodle.toIndex) {
+          // Y座標が近すぎないかチェック
+          if (Math.abs(line.y - newDoodle.y) < 15) {
+            // 垂直マージンを15に設定
+            return true;
+          }
         }
         return false;
       });
@@ -62,20 +68,18 @@ exports.addDoodle = async (req, res) => {
         throw {status: 400, message: '他の線に近すぎるため、線を引けません。'};
       }
 
-      // 新しい線にタイムスタンプを付与して追加
-      const newDoodle = { ...doodle, memberId, createdAt: new Date() };
+      // 更新後のdoodles配列を作成
       const updatedDoodles = [...otherDoodles, newDoodle];
-      
-      transaction.update(eventRef, { doodles: updatedDoodles });
+
+      transaction.update(eventRef, {doodles: updatedDoodles});
       // ▲▲▲ ここまで修正 ▲▲▲
     });
 
-    res.status(200).json({ message: '線を追加しました。' });
-
+    res.status(200).json({message: '線を追加しました。'});
   } catch (error) {
     console.error('Error adding doodle:', error);
     if (error.status) {
-        return res.status(error.status).json({error: error.message});
+      return res.status(error.status).json({error: error.message});
     }
     res.status(500).json({error: '線の追加処理中にエラーが発生しました。'});
   }
@@ -83,19 +87,19 @@ exports.addDoodle = async (req, res) => {
 
 exports.deleteDoodle = async (req, res) => {
   try {
-    const { eventId } = req.params;
-    const { memberId } = req.body;
+    const {eventId} = req.params;
+    const {memberId} = req.body;
     const token = req.headers['x-auth-token'];
 
     if (!memberId || !token) {
-      return res.status(400).json({ error: '必要な情報が不足しています。' });
+      return res.status(400).json({error: '必要な情報が不足しています。'});
     }
 
     const eventRef = firestore.collection('events').doc(eventId);
     const eventDoc = await eventRef.get();
 
     if (!eventDoc.exists) {
-      return res.status(404).json({ error: 'イベントが見つかりません。' });
+      return res.status(404).json({error: 'イベントが見つかりません。'});
     }
     const eventData = eventDoc.data();
     const groupId = eventData.groupId;
@@ -103,29 +107,28 @@ exports.deleteDoodle = async (req, res) => {
     const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
     const memberDoc = await memberRef.get();
     if (!memberDoc.exists || memberDoc.data().deleteToken !== token) {
-      return res.status(403).json({ error: '認証に失敗しました。' });
+      return res.status(403).json({error: '認証に失敗しました。'});
     }
 
     if (eventData.status !== 'pending') {
-      return res.status(403).json({ error: 'このイベントは既に開始されているか終了しています。' });
+      return res.status(403).json({error: 'このイベントは既に開始されているか終了しています。'});
     }
 
     const doodles = eventData.doodles || [];
-    const doodleToDelete = doodles.find(d => d.memberId === memberId);
+    const doodleToDelete = doodles.find((d) => d.memberId === memberId);
 
     if (!doodleToDelete) {
-      return res.status(404).json({ error: '削除する線が見つかりません。' });
+      return res.status(404).json({error: '削除する線が見つかりません。'});
     }
 
     await eventRef.update({
-      doodles: FieldValue.arrayRemove(doodleToDelete)
+      doodles: FieldValue.arrayRemove(doodleToDelete),
     });
 
-    res.status(200).json({ message: '線を削除しました。' });
-
+    res.status(200).json({message: '線を削除しました。'});
   } catch (error) {
     console.error('Error deleting doodle:', error);
-    res.status(500).json({ error: '線の削除処理中にエラーが発生しました。' });
+    res.status(500).json({error: '線の削除処理中にエラーが発生しました。'});
   }
 };
 
@@ -372,33 +375,33 @@ exports.deleteParticipant = async (req, res) => {
     const participantIndex = newParticipants.findIndex((p) => p.deleteToken === deleteToken);
 
     if (participantIndex !== -1) {
-        memberIdToDelete = newParticipants[participantIndex].memberId;
-        newParticipants[participantIndex].name = null;
-        newParticipants[participantIndex].deleteToken = null;
-        newParticipants[participantIndex].memberId = null;
-        newParticipants[participantIndex].iconUrl = null;
+      memberIdToDelete = newParticipants[participantIndex].memberId;
+      newParticipants[participantIndex].name = null;
+      newParticipants[participantIndex].deleteToken = null;
+      newParticipants[participantIndex].memberId = null;
+      newParticipants[participantIndex].iconUrl = null;
     } else {
-        const membersSnapshot = await firestore.collection('groups').doc(eventData.groupId).collection('members').where('deleteToken', '==', deleteToken).get();
-        if (membersSnapshot.empty) {
-            return res.status(404).json({error: '指定された参加者情報が見つかりません。'});
-        }
-        memberIdToDelete = membersSnapshot.docs[0].id;
-        const participantIdx = newParticipants.findIndex((p) => p.memberId === memberIdToDelete);
+      const membersSnapshot = await firestore.collection('groups').doc(eventData.groupId).collection('members').where('deleteToken', '==', deleteToken).get();
+      if (membersSnapshot.empty) {
+        return res.status(404).json({error: '指定された参加者情報が見つかりません。'});
+      }
+      memberIdToDelete = membersSnapshot.docs[0].id;
+      const participantIdx = newParticipants.findIndex((p) => p.memberId === memberIdToDelete);
 
-        if (participantIdx === -1) {
-            return res.status(404).json({error: 'イベントに参加していません。'});
-        }
-        newParticipants[participantIdx].name = null;
-        newParticipants[participantIdx].memberId = null;
-        newParticipants[participantIdx].iconUrl = null;
+      if (participantIdx === -1) {
+        return res.status(404).json({error: 'イベントに参加していません。'});
+      }
+      newParticipants[participantIdx].name = null;
+      newParticipants[participantIdx].memberId = null;
+      newParticipants[participantIdx].iconUrl = null;
     }
 
-    const updatePayload = { participants: newParticipants };
+    const updatePayload = {participants: newParticipants};
 
     if (memberIdToDelete && eventData.doodles && eventData.doodles.length > 0) {
-        updatePayload.doodles = eventData.doodles.filter(doodle => doodle.memberId !== memberIdToDelete);
+      updatePayload.doodles = eventData.doodles.filter((doodle) => doodle.memberId !== memberIdToDelete);
     }
-    
+
     await eventRef.update(updatePayload);
 
     res.status(200).json({message: '参加情報が削除されました。'});
