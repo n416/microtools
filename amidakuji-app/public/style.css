@@ -2153,3 +2153,19 @@ body.dark-mode .display-preview li {
   background-color: #3a3a3a; /* 背景を少し明るいグレーに */
   border: 1px solid #555; /* 輪郭を明確にするための枠線を追加 */
 }
+/* --- 画像編集モーダル --- */
+.modal-content.large {
+  max-width: 80vw; /* 横幅を広げる */
+}
+.cropper-container {
+  width: 100%;
+  height: 60vh; /* 高さを確保 */
+  background-color: #f0f0f0;
+  margin-bottom: 20px;
+}
+.cropper-container img {
+  max-width: 100%;
+}
+body.dark-mode .cropper-container {
+  background-color: #1a1a1a;
+}

@@ -1,0 +1,13 @@
+<div id="imageCropperModal" class="modal" style="display: none;">
+  <div class="modal-content large">
+    <span class="close-button" id="cancelCropButton"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
+    <h3>画像の編集</h3>
+    <p>画像をドラッグして位置を調整し、ホイールで拡大・縮小してください。</p>
+    <div class="cropper-container">
+      <img id="cropperImage" src="" />
+    </div>
+    <div class="modal-actions">
+      <button id="confirmCropButton" class="primary-action">決定</button>
+    </div>
+  </div>
+</div>

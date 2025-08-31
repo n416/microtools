@@ -136,21 +136,20 @@ export function initUI() {
     participantCanvasStatic: document.getElementById('participantCanvasStatic'),
     deleteParticipantWaitingButton: document.getElementById('deleteParticipantWaitingButton'),
     backToDashboardFromWaitingButton: document.getElementById('backToDashboardFromWaitingButton'),
+    addMasterPrizeImagePreview: document.getElementById('addMasterPrizeImagePreview'),
+    addMasterPrizePlaceholder: document.getElementById('addMasterPrizePlaceholder'),
   };
   // ▼▼▼ このブロックを initUI 関数の末尾に追加 ▼▼▼
-  const prizeImageInput = document.getElementById('addMasterPrizeImageInput');
-  const prizeImagePreview = document.getElementById('addMasterPrizeImagePreview');
-  const prizeImagePlaceholder = document.getElementById('addMasterPrizePlaceholder');
 
-  if (prizeImageInput && prizeImagePreview && prizeImagePlaceholder) {
-    prizeImageInput.addEventListener('change', (e) => {
+  if (elements.prizeImageInput && elements.prizeImagePreview && elements.prizeImagePlaceholder) {
+    elements.prizeImageInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          prizeImagePreview.src = event.target.result;
-          prizeImagePreview.style.display = 'block';
-          prizeImagePlaceholder.style.display = 'none';
+          elements.prizeImagePreview.src = event.target.result;
+          elements.prizeImagePreview.style.display = 'block';
+          elements.prizeImagePlaceholder.style.display = 'none';
         };
         reader.readAsDataURL(file);
       }

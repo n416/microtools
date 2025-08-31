@@ -295,8 +295,11 @@ export async function showAllTracersInstantly() {
     state.setRevealedPrizes(allRevealedPrizes);
   }
 
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
+
   animator.tracers = allParticipantsWithNames.map((p) => {
-    const path = calculatePath(p.slot, state.currentLotteryData.lines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
+    const path = calculatePath(p.slot, allLines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
     const finalPoint = path[path.length - 1];
     return {
       name: p.name,
@@ -309,6 +312,7 @@ export async function showAllTracersInstantly() {
       celebrated: true,
     };
   });
+  // ▲▲▲ ここまで ▲▲▲
 
   targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
   const isDarkMode = document.body.classList.contains('dark-mode');

@@ -36,8 +36,10 @@ function generateLines(numParticipants) {
   return lines;
 }
 
-function calculateResults(participants, lines, prizes) {
+function calculateResults(participants, lines, prizes, doodles = []) { // doodles引数を追加
   const results = {};
+  const allLines = [...(lines || []), ...(doodles || [])]; // システム線と落書き線を結合
+
   for (let i = 0; i < participants.length; i++) {
     let currentPath = i;
     const sortedLines = [...lines].sort((a, b) => a.y - b.y);

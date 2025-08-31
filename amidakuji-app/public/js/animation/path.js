@@ -53,12 +53,13 @@ export function getVirtualWidth(numParticipants, containerWidth) {
   return Math.max(containerWidth, calculatedWidth);
 }
 
-export function calculatePath(startIdx, lines, numParticipants, containerWidth, containerHeight, container) {
+// ▼▼▼ lines引数を allLines にリネーム ▼▼▼
+export function calculatePath(startIdx, allLines, numParticipants, containerWidth, containerHeight, container) {
   const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, containerWidth);
   const path = [];
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
-  const sortedLines = [...lines].sort((a, b) => a.y - b.y);
-
+  // ▼▼▼ allLines を使うように修正 ▼▼▼
+  const sortedLines = [...allLines].sort((a, b) => a.y - b.y);
   const nameAreaHeight = getNameAreaHeight(container);
   const prizeAreaHeight = calculatePrizeAreaHeight(state.currentLotteryData?.prizes);
   const lineTopY = nameAreaHeight;
