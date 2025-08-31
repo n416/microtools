@@ -46,27 +46,31 @@ function updatePrizePreview() {
     return acc;
   }, {});
 
-  let previewHTML = '';
+  let previewItemsHTML = '';
 
-  if (displayPrizeName && displayPrizeCount) {
-    previewHTML = Object.entries(prizeSummary)
-      .map(([name, count]) => `<li>${name}: ${count}個</li>`)
-      .join('');
-  } else if (!displayPrizeName && displayPrizeCount) {
-    previewHTML = Object.entries(prizeSummary)
-      .map(([name, count]) => `<li>？？？: ${count}個</li>`)
-      .join('');
-  } else if (displayPrizeName && !displayPrizeCount) {
-    previewHTML = Object.keys(prizeSummary)
-      .map((name) => `<li>${name}</li>`)
-      .join('');
+  if (state.prizes.length === 0) {
+    previewItemsHTML = '<li>景品を登録してください</li>';
   } else {
-    // !displayPrizeName && !displayPrizeCount
-    const totalCount = state.prizes.length;
-    previewHTML = `<li>合計景品数: ${totalCount}個</li>`;
+    if (displayPrizeName && displayPrizeCount) {
+      previewItemsHTML = Object.entries(prizeSummary)
+        .map(([name, count]) => `<li>${name}: ${count}個</li>`)
+        .join('');
+    } else if (!displayPrizeName && displayPrizeCount) {
+      previewItemsHTML = Object.entries(prizeSummary)
+        .map(([name, count]) => `<li>？？？: ${count}個</li>`)
+        .join('');
+    } else if (displayPrizeName && !displayPrizeCount) {
+      previewItemsHTML = Object.keys(prizeSummary)
+        .map((name) => `<li>${name}</li>`)
+        .join('');
+    } else {
+      const totalCount = state.prizes.length;
+      previewItemsHTML = `<li>合計景品数: ${totalCount}個</li>`;
+    }
   }
 
-  elements.prizeDisplayPreview.innerHTML = previewHTML || '<li>景品を登録するとプレビューが表示されます</li>';
+  // 参加者画面と同じHTML構造（ulのみ）でプレビューを生成
+  elements.prizeDisplayPreview.innerHTML = `<ul>${previewItemsHTML}</ul>`;
 }
 
 export function renderEventForEditing(data) {

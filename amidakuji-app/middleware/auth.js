@@ -3,16 +3,18 @@
 const {firestore} = require('../utils/firestore');
 
 function ensureAuthenticated(req, res, next) {
-  // ローカル開発環境の場合、認証をバイパスしてテストユーザーを注入する
-  if (process.env.NODE_ENV !== 'production') {
+  // --- ▼▼▼ ここから修正 ▼▼▼ ---
+  // ローカル開発環境、かつ、.envでテストモードが有効な場合のみ認証をバイパスする
+  if (process.env.NODE_ENV !== 'production' && process.env.DEV_TEST_MODE === 'true') {
     req.user = {
       id: process.env.DEV_TEST_USER_ID,
-      name: process.env.DEV_TEST_USER_NAME,
-      email: process.env.DEV_TEST_USER_EMAIL,
-      role: process.env.DEV_TEST_USER_ROLE,
+      name: process.env.DEV_TEST_USER_NAME || 'Test User',
+      email: process.env.DEV_TEST_USER_EMAIL || 'dev@example.com',
+      role: process.env.DEV_TEST_USER_ROLE || 'system_admin'
     };
     return next();
   }
+  // --- ▲▲▲ ここまで修正 ▲▲▲ ---
 
   if (req.isAuthenticated()) {
     return next();
