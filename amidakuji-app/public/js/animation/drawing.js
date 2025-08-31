@@ -17,7 +17,7 @@ export function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes 
   const container = targetCtx.canvas.closest('.canvas-panzoom-container');
   if (!container) return;
   const panzoomElement = targetCtx.canvas.parentElement;
-  const {participants, prizes, lines} = data;
+  const {participants, prizes, lines, doodles} = data; // doodles を受け取る
   const numParticipants = participants.length;
   const containerWidth = container.clientWidth || 800;
   const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, containerWidth);
@@ -90,30 +90,35 @@ export function drawLotteryBase(targetCtx, data, lineColor = '#ccc', hidePrizes 
     targetCtx.lineTo(x, lineBottomY);
     targetCtx.stroke();
   }
-  if (lines) {
+
+  const allLines = [...(lines || []), ...(doodles || [])]; // doodlesを結合
+
+  if (allLines.length > 0) {
     const amidaDrawableHeight = lineBottomY - lineTopY;
     const sourceLineRange = 330 - 70;
-    lines.forEach((line) => {
+    allLines.forEach((line) => {
       if (sourceLineRange <= 0) return;
       const startX = participantSpacing * (line.fromIndex + 1);
       const endX = participantSpacing * (line.toIndex + 1);
       const lineY = lineTopY + ((line.y - 70) / sourceLineRange) * amidaDrawableHeight;
+
+      if (line.memberId) {
+        // doodleの場合
+        const participant = participants.find((p) => p.memberId === line.memberId);
+        targetCtx.strokeStyle = participant ? participant.color : '#ff00ff';
+        targetCtx.lineWidth = 3;
+      } else {
+        // 通常の線
+        targetCtx.strokeStyle = lineColor;
+        targetCtx.lineWidth = 1.5;
+      }
+
       targetCtx.beginPath();
       targetCtx.moveTo(startX, lineY);
       targetCtx.lineTo(endX, lineY);
       targetCtx.stroke();
     });
   }
-
-  // ▼▼▼ ここから修正 ▼▼▼
-  if (data.doodles && data.doodles.length > 0) {
-    data.doodles.forEach((doodle) => {
-      const participant = data.participants.find((p) => p.memberId === doodle.memberId);
-      const color = participant ? participant.color : '#ff00ff'; // Fallback color
-      drawDoodleLine(targetCtx, doodle, color, false); // false for solid line
-    });
-  }
-  // ▲▲▲ ここまで修正 ▲▲▲
 }
 
 function drawDoodleLine(targetCtx, doodle, color, isDashed = true) {
@@ -231,7 +236,6 @@ export function drawRevealedPrizes(targetCtx) {
     const imageTextGap = 15;
     let prizeTextY;
 
-    // This block handles the prize reveal animation (scaling effect)
     const REVEAL_DURATION = 15;
     let scale = 1.0;
     if (result.revealProgress < REVEAL_DURATION) {
