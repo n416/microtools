@@ -2,12 +2,20 @@
   <div class="modal-content">
     <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
     <h3>賞品マスター管理</h3>
-    <div class="input-group">
-      <label for="addMasterPrizeNameInput" class="visually-hidden">新しい賞品名</label>
-      <input type="text" id="addMasterPrizeNameInput" placeholder="新しい賞品名" />
-      <label for="addMasterPrizeImageInput" class="visually-hidden">賞品画像ファイル</label>
-      <input type="file" id="addMasterPrizeImageInput" accept="image/*" />
-      <div class="modal-actions">
+
+    <div class="prize-master-form">
+      <div class="prize-master-image-dropzone">
+        <label for="addMasterPrizeImageInput">
+          <img id="addMasterPrizeImagePreview" src="" alt="プレビュー" style="display: none;">
+          <div id="addMasterPrizePlaceholder">
+            <i data-lucide="image-plus"></i>
+            <span>クリックして画像を選択</span>
+          </div>
+        </label>
+        <input type="file" id="addMasterPrizeImageInput" accept="image/*" class="visually-hidden" />
+      </div>
+      <div class="prize-master-inputs">
+        <input type="text" id="addMasterPrizeNameInput" placeholder="新しい賞品名" />
         <button id="addMasterPrizeButton" class="primary-action">マスターに追加</button>
       </div>
     </div>

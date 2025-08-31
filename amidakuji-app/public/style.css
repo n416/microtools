@@ -2047,3 +2047,109 @@ body.dark-mode .input-group.checkbox-group label::before {
   opacity: 0.75;
   background-color: #5a6268;
 }
+
+/* --- 賞品マスターモーダルの新デザイン --- */
+.prize-master-form {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.prize-master-image-dropzone {
+  width: 150px;
+  height: 150px;
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  overflow: hidden; /* 画像がはみ出さないように */
+  flex-shrink: 0;
+}
+.prize-master-image-dropzone:hover {
+  border-color: var(--primary-color);
+}
+.prize-master-image-dropzone label {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+#addMasterPrizeImagePreview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#addMasterPrizePlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #888;
+}
+.prize-master-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.prize-master-inputs input,
+.prize-master-inputs button {
+  width: 100%;
+}
+
+/* --- イベント編集画面 プレビュー改善 --- */
+.display-preview {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 8px;
+  background-color: var(--light-bg-color);
+  border: 1px solid var(--border-color); /* 枠線を点線から実線に変更 */
+}
+
+.display-preview h5 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: var(--text-color);
+  text-align: center;
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+/* 参加者画面のスタイルをプレビューに適用 */
+.display-preview ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.display-preview li {
+  background-color: var(--white-color);
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 1px 3px var(--shadow-color); /* 影を少し調整 */
+  font-weight: bold;
+  font-size: 14px;
+}
+
+/* ダークモード対応 */
+body.dark-mode .display-preview {
+  background-color: rgba(255, 255, 255, 0.05); /* ダークモード用の背景色 */
+}
+/* --- イベント編集画面 プレビュー ダークモード対応修正 --- */
+body.dark-mode .display-preview li {
+  background-color: #3a3a3a; /* 背景を少し明るいグレーに */
+  border: 1px solid #555; /* 輪郭を明確にするための枠線を追加 */
+}
