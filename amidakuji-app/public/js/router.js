@@ -1,3 +1,4 @@
+import {clearAllFirestoreListeners, addFirestoreListener} from './state.js';
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
@@ -6,27 +7,175 @@ import {renderGroupList} from './components/groupDashboard.js';
 import {renderEventList, showPasswordResetNotification} from './components/eventDashboard.js';
 import {renderMemberList} from './components/memberManagement.js';
 import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
-// ▼▼▼ ここを修正 ▼▼▼
 import {loadAdminDashboardData} from './components/adminDashboard.js';
-// ▲▲▲ ここを修正 ▲▲▲
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
-import {db} from './main.js'; // ★ Firebaseインスタンスをインポート
-
-// ▼▼▼ この変数を router.js のトップレベル（import文の下あたり）に追加 ▼▼▼
-let broadcastDoodleListenerUnsubscribe = null;
-// ▲▲▲ ここまで ▲▲▲
+import {db} from './main.js';
 
 async function loadAdminDashboard() {
   try {
-    // ▼▼▼ ここを修正 ▼▼▼
     await loadAdminDashboardData();
-    // ▲▲▲ ここを修正 ▲▲▲
   } catch (error) {
     console.error('管理ダッシュボードの読み込みに失敗:', error);
   }
 }
 
+async function handleRouting(initialData) {
+  const path = window.location.pathname;
+
+  const user = await api.checkGoogleAuthState().catch(() => null);
+  state.setCurrentUser(user);
+
+  const publicRoutesToHideHeader = ['/g/', '/share/', '/events/'];
+  const isPublicPage = publicRoutesToHideHeader.some((route) => path.startsWith(route));
+
+  if (!user && (isPublicPage || path.startsWith('/groups/'))) {
+    ui.setMainHeaderVisibility(false);
+  } else {
+    ui.setMainHeaderVisibility(true);
+    ui.updateAuthUI(user);
+  }
+
+  state.loadParticipantState();
+
+  if (user) {
+    const adminMatch = path.match(/\/admin/);
+    const adminGroupDashboardMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)$/);
+    const adminMemberManagementMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)\/members$/);
+    const adminEventEditMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/edit$/);
+    const adminNewEventMatch = path.match(/^\/admin\/group\/([a-zA-Z0-9]+)\/event\/new$/);
+    const adminEventBroadcastMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/broadcast$/);
+
+    const eventEditMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/edit$/);
+    const newEventMatch = path.match(/^\/group\/([a-zA-Z0-9]+)\/event\/new$/);
+    const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)$/);
+    const eventBroadcastMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/broadcast$/);
+
+    if (path === '/') {
+      ui.showView('groupDashboard');
+      const groups = await api.getGroups();
+      state.setAllUserGroups(groups);
+      renderGroupList(groups);
+      ui.updateGroupSwitcher();
+      return;
+    }
+
+    if (adminGroupDashboardMatch) {
+      const groupId = adminGroupDashboardMatch[1];
+      await loadAndShowGroupEvents(groupId);
+      await api.updateLastGroup(groupId);
+      return;
+    }
+
+    if (adminMemberManagementMatch) {
+      const groupId = adminMemberManagementMatch[1];
+      await loadAndShowMemberManagement(groupId);
+      return;
+    }
+
+    if (groupDashboardMatch) {
+      const groupId = groupDashboardMatch[1];
+      await initializeGroupEventListView(groupId, initialData ? initialData.group : null, false);
+      return;
+    }
+
+    if (adminEventEditMatch) {
+      const eventId = adminEventEditMatch[1];
+      await loadEventForEditing(eventId, 'eventEditView');
+      return;
+    }
+
+    if (eventEditMatch) {
+      const eventId = eventEditMatch[1];
+      await loadEventForEditing(eventId, 'eventEditView');
+      return;
+    }
+
+    if (adminEventBroadcastMatch) {
+      const eventId = adminEventBroadcastMatch[1];
+      await loadAndShowBroadcast(eventId);
+      return;
+    }
+
+    if (eventBroadcastMatch) {
+      const eventId = eventBroadcastMatch[1];
+      await loadAndShowBroadcast(eventId);
+      return;
+    }
+
+    if (adminNewEventMatch) {
+      const groupId = adminNewEventMatch[1];
+      await loadAndShowEventForm(groupId);
+      return;
+    }
+
+    if (newEventMatch) {
+      const groupId = newEventMatch[1];
+      await loadAndShowEventForm(groupId);
+      return;
+    }
+    if (adminMatch && user.role === 'system_admin' && !user.isImpersonating) {
+      ui.showView('adminDashboard');
+      return 'loadAdminDashboard';
+    }
+  }
+
+  if (path === '/admin/dashboard') {
+    ui.showView('adminDashboard');
+    return 'loadAdminDashboard';
+  }
+
+  const participantDashboardMatch = path.match(/^\/g\/(.+?)\/dashboard\/?$/);
+  if (participantDashboardMatch) {
+    await initializeParticipantDashboardView(participantDashboardMatch[1], true);
+    return;
+  }
+
+  const shareMatch = path.match(/^\/share\/([a-zA-Z0-9]+)\/(.+)/);
+  if (shareMatch) {
+    const [, eventId, participantName] = shareMatch;
+    await initializeParticipantView(eventId, true, decodeURIComponent(participantName));
+    return;
+  }
+
+  const eventMatch = path.match(/^\/events\/([a-zA-Z0-9]+)/) || path.match(/^\/g\/.+?\/([a-zA-Z0-9]+)/);
+  if (eventMatch) {
+    const eventId = eventMatch[1] || eventMatch[2];
+    await initializeParticipantView(eventId, false, null);
+    return;
+  }
+
+  const customUrlMatch = path.match(/^\/g\/(.+?)\/?$/);
+  if (customUrlMatch) {
+    if (state.currentParticipantId) {
+      await initializeParticipantDashboardView(customUrlMatch[1], true);
+    } else {
+      await initializeGroupEventListView(customUrlMatch[1], initialData ? initialData.group : null, true);
+    }
+    return;
+  }
+
+  const groupIdMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)\/?$/);
+  if (groupIdMatch) {
+    if (state.currentParticipantId) {
+      await initializeParticipantDashboardView(groupIdMatch[1], false);
+    } else {
+      await initializeGroupEventListView(groupIdMatch[1], initialData ? initialData.group : null, false);
+    }
+    return;
+  }
+
+  if (user && path !== '/') {
+    ui.showView('groupDashboard');
+  } else if (!user && path === '/') {
+    ui.showView('landingView');
+  }
+
+  ui.adjustBodyPadding();
+}
+
 export async function navigateTo(path, pushState = true) {
+  clearAllFirestoreListeners();
+
   if (pushState && window.location.pathname !== path) {
     history.pushState({path}, '', path);
   }
@@ -124,36 +273,28 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
     state.setCurrentLotteryData(data);
     state.setCurrentEventId(eventId);
     state.setCurrentGroupId(data.groupId);
-    // ▼▼▼ ここからが修正点 ▼▼▼
-    // もし既存のリスナーがあれば、まず解除する
-    if (broadcastDoodleListenerUnsubscribe) {
-      broadcastDoodleListenerUnsubscribe();
-      broadcastDoodleListenerUnsubscribe = null;
-    }
 
-    // ブロードキャストビューを表示する場合、かつ落書きモードが許可されている場合のみ
-    // リアルタイム監視を開始する
     if (viewToShow === 'broadcastView' && data.allowDoodleMode) {
       console.log('[DEBUG] Setting up BROADCAST doodle listener...');
       const eventRef = db.collection('events').doc(eventId);
-      broadcastDoodleListenerUnsubscribe = eventRef.onSnapshot(async (doc) => {
+
+      const unsubscribe = eventRef.onSnapshot(async (doc) => {
         if (!doc.exists) return;
         const updatedData = doc.data();
-        // 現在のデータと比較して、doodleに更新があった場合のみ再描画する
         if (updatedData && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
           console.log('[DEBUG] BROADCAST doodle data has changed. Redrawing canvas...');
           state.currentLotteryData.doodles = updatedData.doodles || [];
 
           const adminCanvas = document.getElementById('adminCanvas');
           if (adminCanvas && adminCanvas.offsetParent !== null) {
-            // キャンバスが表示されているか確認
             const ctx = adminCanvas.getContext('2d');
-            await prepareStepAnimation(ctx, true, false, true); // マスクなし、リサイズ扱いで再描画
+            await prepareStepAnimation(ctx, true, false, true);
           }
         }
       });
+      addFirestoreListener(unsubscribe);
     }
-    
+
     ui.showView(viewToShow);
     console.log(`[FRONTEND] Switched to view: ${viewToShow}`);
 
@@ -188,7 +329,6 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
     if (viewToShow === 'eventEditView') {
       renderEventForEditing(data);
     } else if (viewToShow === 'broadcastView') {
-      // broadcastViewに属する要素をここで再取得する
       const adminControls = document.getElementById('adminControls');
       const startEventButton = document.getElementById('startEventButton');
       const broadcastControls = document.querySelector('.broadcast-controls');
@@ -444,159 +584,6 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
   }
 }
 
-export async function handleRouting(initialData) {
-  const path = window.location.pathname;
-
-  const user = await api.checkGoogleAuthState().catch(() => null);
-  state.setCurrentUser(user);
-
-  const publicRoutesToHideHeader = ['/g/', '/share/', '/events/'];
-  const isPublicPage = publicRoutesToHideHeader.some((route) => path.startsWith(route));
-
-  if (!user && (isPublicPage || path.startsWith('/groups/'))) {
-    ui.setMainHeaderVisibility(false);
-  } else {
-    ui.setMainHeaderVisibility(true);
-    ui.updateAuthUI(user);
-  }
-
-  state.loadParticipantState();
-
-  if (user) {
-    const adminMatch = path.match(/\/admin/);
-    const adminGroupDashboardMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)$/);
-    const adminMemberManagementMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)\/members$/);
-    const adminEventEditMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/edit$/);
-    const adminNewEventMatch = path.match(/^\/admin\/group\/([a-zA-Z0-9]+)\/event\/new$/);
-    const adminEventBroadcastMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/broadcast$/);
-
-    const eventEditMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/edit$/);
-    const newEventMatch = path.match(/^\/group\/([a-zA-Z0-9]+)\/event\/new$/);
-    const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)$/);
-    const eventBroadcastMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/broadcast$/);
-
-    if (path === '/') {
-      ui.showView('groupDashboard');
-      const groups = await api.getGroups();
-      state.setAllUserGroups(groups);
-      renderGroupList(groups);
-      ui.updateGroupSwitcher();
-      return;
-    }
-
-    if (adminGroupDashboardMatch) {
-      const groupId = adminGroupDashboardMatch[1];
-      await loadAndShowGroupEvents(groupId);
-      await api.updateLastGroup(groupId);
-      return;
-    }
-
-    if (adminMemberManagementMatch) {
-      const groupId = adminMemberManagementMatch[1];
-      await loadAndShowMemberManagement(groupId);
-      return;
-    }
-
-    if (groupDashboardMatch) {
-      const groupId = groupDashboardMatch[1];
-      await initializeGroupEventListView(groupId, initialData ? initialData.group : null, false);
-      return;
-    }
-
-    if (adminEventEditMatch) {
-      const eventId = adminEventEditMatch[1];
-      await loadEventForEditing(eventId, 'eventEditView');
-      return;
-    }
-
-    if (eventEditMatch) {
-      const eventId = eventEditMatch[1];
-      await loadEventForEditing(eventId, 'eventEditView');
-      return;
-    }
-
-    if (adminEventBroadcastMatch) {
-      const eventId = adminEventBroadcastMatch[1];
-      await loadAndShowBroadcast(eventId);
-      return;
-    }
-
-    if (eventBroadcastMatch) {
-      const eventId = eventBroadcastMatch[1];
-      await loadAndShowBroadcast(eventId);
-      return;
-    }
-
-    if (adminNewEventMatch) {
-      const groupId = adminNewEventMatch[1];
-      await loadAndShowEventForm(groupId);
-      return;
-    }
-
-    if (newEventMatch) {
-      const groupId = newEventMatch[1];
-      await loadAndShowEventForm(groupId);
-      return;
-    }
-    if (adminMatch && user.role === 'system_admin' && !user.isImpersonating) {
-      ui.showView('adminDashboard');
-      return 'loadAdminDashboard';
-    }
-  }
-
-  if (path === '/admin/dashboard') {
-    ui.showView('adminDashboard');
-    return 'loadAdminDashboard';
-  }
-
-  const participantDashboardMatch = path.match(/^\/g\/(.+?)\/dashboard\/?$/);
-  if (participantDashboardMatch) {
-    await initializeParticipantDashboardView(participantDashboardMatch[1], true);
-    return;
-  }
-
-  const shareMatch = path.match(/^\/share\/([a-zA-Z0-9]+)\/(.+)/);
-  if (shareMatch) {
-    const [, eventId, participantName] = shareMatch;
-    await initializeParticipantView(eventId, true, decodeURIComponent(participantName));
-    return;
-  }
-
-  const eventMatch = path.match(/^\/events\/([a-zA-Z0-9]+)/) || path.match(/^\/g\/.+?\/([a-zA-Z0-9]+)/);
-  if (eventMatch) {
-    const eventId = eventMatch[1] || eventMatch[2];
-    await initializeParticipantView(eventId, false, null);
-    return;
-  }
-
-  const customUrlMatch = path.match(/^\/g\/(.+?)\/?$/);
-  if (customUrlMatch) {
-    if (state.currentParticipantId) {
-      await initializeParticipantDashboardView(customUrlMatch[1], true);
-    } else {
-      await initializeGroupEventListView(customUrlMatch[1], initialData ? initialData.group : null, true);
-    }
-    return;
-  }
-
-  const groupIdMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)\/?$/);
-  if (groupIdMatch) {
-    if (state.currentParticipantId) {
-      await initializeParticipantDashboardView(groupIdMatch[1], false);
-    } else {
-      await initializeGroupEventListView(groupIdMatch[1], initialData ? initialData.group : null, false);
-    }
-    return;
-  }
-
-  if (user && path !== '/') {
-    ui.showView('groupDashboard');
-  } else if (!user && path === '/') {
-    ui.showView('landingView');
-  }
-
-  ui.adjustBodyPadding();
-}
 export async function loadUserAndRedirect(lastUsedGroupId) {
   try {
     const groups = await api.getGroups();

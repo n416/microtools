@@ -1,5 +1,7 @@
 // js/state.js
 
+export let activeFirestoreListeners = [];
+
 export let allUserGroups = [];
 export let prizes = [];
 export let currentLotteryData = null;
@@ -17,6 +19,25 @@ export let revealedPrizes = [];
 export let previewDoodle = null;
 export let doodleTool = 'pan'; // 'pan', 'draw', 'erase'
 export let hoverDoodle = null;
+
+/**
+ * アクティブなFirestoreリスナーの解除関数を登録します。
+ * @param {function} unsubscribeFunc onSnapshotが返す解除関数
+ */
+export function addFirestoreListener(unsubscribeFunc) {
+  if (typeof unsubscribeFunc === 'function') {
+    activeFirestoreListeners.push(unsubscribeFunc);
+  }
+}
+
+/**
+ * 登録されているすべてのFirestoreリスナーを解除し、管理配列をリセットします。
+ */
+export function clearAllFirestoreListeners() {
+  console.log(`[DEBUG] Clearing ${activeFirestoreListeners.length} active listeners.`);
+  activeFirestoreListeners.forEach((unsubscribe) => unsubscribe());
+  activeFirestoreListeners = [];
+}
 
 export function setAllUserGroups(groups) {
   allUserGroups = groups;
