@@ -9,7 +9,7 @@ async function setupSecrets() {
   }
 
   const client = new SecretManagerServiceClient();
-  const projectId = 'amida-468218'; // ご自身のプロジェクトID
+  const projectId = 'amidakuji-app-native'; // ご自身のプロジェクトID
 
   const secrets = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'SESSION_SECRET', 'GCS_BUCKET_NAME'];
 

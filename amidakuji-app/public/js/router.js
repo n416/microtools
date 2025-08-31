@@ -9,7 +9,7 @@ import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from '.
 // ▼▼▼ ここを修正 ▼▼▼
 import {loadAdminDashboardData} from './components/adminDashboard.js';
 // ▲▲▲ ここを修正 ▲▲▲
-import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents} from './components/participantView.js';
+import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
 
 async function loadAdminDashboard() {
   try {
@@ -311,95 +311,6 @@ export async function verifyAndLogin(eventId, memberId, password, slot = null) {
     alert(errorMessage);
     if (error.error) {
       await handlePasswordError(memberId, state.currentGroupId);
-    }
-  }
-}
-
-async function initializeParticipantView(eventId, isShare, sharedParticipantName) {
-  console.log(`[FRONTEND LOG] initializeParticipantView started for event: ${eventId}`);
-  state.setCurrentEventId(eventId);
-
-  ui.showView('participantView');
-  hideParticipantSubViews(true);
-
-  try {
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★★★ ここからが修正点 ★★★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    let eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
-
-    state.setCurrentGroupId(eventData.groupId);
-    state.loadParticipantState();
-
-    if (!isShare && state.currentParticipantId) {
-      console.log('[FRONTEND LOG] Re-fetching event data with authentication headers.');
-      eventData = await api.getPublicEventData(eventId);
-    }
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★★★ 修正はここまで ★★★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
-    console.log('[FRONTEND LOG] Fetched eventData from API:', eventData);
-
-    state.setCurrentLotteryData(eventData);
-
-    if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
-
-    if (ui.elements.backToGroupEventListLink) {
-      if (isShare) {
-        ui.elements.backToGroupEventListLink.style.display = 'none';
-      } else {
-        try {
-          const groupData = await api.getGroup(eventData.groupId);
-          if (groupData) {
-            if (state.currentParticipantId && groupData.customUrl) {
-              ui.elements.backToGroupEventListLink.href = `/g/${groupData.customUrl}/dashboard`;
-              ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のダッシュボードに戻る`;
-            } else {
-              const backUrl = groupData.customUrl ? `/g/${groupData.customUrl}` : `/groups/${groupData.id}`;
-              ui.elements.backToGroupEventListLink.href = backUrl;
-              ui.elements.backToGroupEventListLink.textContent = `← ${groupData.name}のイベント一覧に戻る`;
-            }
-            ui.elements.backToGroupEventListLink.style.display = 'inline-block';
-          } else {
-            ui.elements.backToGroupEventListLink.style.display = 'none';
-          }
-        } catch (groupError) {
-          console.error('Failed to get group info for back link:', groupError);
-          ui.elements.backToGroupEventListLink.style.display = 'none';
-        }
-      }
-    }
-
-    if (isShare) {
-      console.log('[FRONTEND LOG] Share view logic started.');
-      if (eventData.status === 'started') {
-        await showResultsView(eventData, sharedParticipantName, true);
-      } else {
-        await showStaticAmidaView();
-      }
-    } else if (eventData.status === 'started') {
-      console.log('[FRONTEND LOG] Event has started, showing results for everyone.');
-      await showResultsView(eventData, state.currentParticipantName, false);
-    } else {
-      // イベントがまだ開始されていない場合
-      const myParticipation = state.currentParticipantId ? eventData.participants.find((p) => p.memberId === state.currentParticipantId) : null;
-      if (myParticipation && myParticipation.name) {
-        console.log('[FRONTEND LOG] Event not started, but user has joined. Showing static amidakuji.');
-        await showStaticAmidaView();
-        console.log('[FRONTEND LOG] Static amidakuji rendered.');
-      } else {
-        console.log('[FRONTEND LOG] Event not started, user has NOT joined. Showing join view.');
-        showJoinView(eventData);
-      }
-    }
-  } catch (error) {
-    console.error('Error in initializeParticipantView:', error);
-    if (error.requiresPassword) {
-      state.setLastFailedAction(() => initializeParticipantView(eventId, isShare, sharedParticipantName));
-      ui.showGroupPasswordModal(error.groupId, error.groupName);
-    } else {
-      if (ui.elements.participantView) ui.elements.participantView.innerHTML = `<div class="view-container"><p class="error-message">${error.error || error.message}</p></div>`;
     }
   }
 }
