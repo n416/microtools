@@ -36,13 +36,13 @@ function generateLines(numParticipants) {
   return lines;
 }
 
-function calculateResults(participants, lines, prizes, doodles = []) { // doodles引数を追加
+function calculateResults(participants, lines, prizes, doodles = []) {
   const results = {};
   const allLines = [...(lines || []), ...(doodles || [])]; // システム線と落書き線を結合
 
   for (let i = 0; i < participants.length; i++) {
     let currentPath = i;
-    const sortedLines = [...lines].sort((a, b) => a.y - b.y);
+    const sortedLines = [...allLines].sort((a, b) => a.y - b.y); // 結合した線でソート
 
     sortedLines.forEach((line) => {
       if (line.fromIndex === currentPath) {
