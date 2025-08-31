@@ -5,6 +5,7 @@
   --danger-hover-color: #c82333;
   --light-bg-color: #f4f7f6;
   --white-color: #fff;
+  --white-color-rgb: 255, 255, 255; /* <--- 追加 */
   --text-color: #333;
   --border-color: #ddd;
   --shadow-color: rgba(0, 0, 0, 0.08);
@@ -647,7 +648,7 @@ button:disabled {
 .modal {
   display: none;
   position: fixed;
-  z-index: 1050;
+  z-index: 3000; /* 修正: 1050 -> 3000 */
   left: 0;
   top: 0;
   width: 100%;
@@ -1501,6 +1502,7 @@ body.dark-mode {
   --light-bg-color: #121212;
   --white-color: #1e1e1e;
   --text-color: #dcdcdc;
+  --white-color-rgb: 30, 30, 30; /* <--- 追加 */
   --border-color: #444;
   --shadow-color: rgba(255, 255, 255, 0.08);
   --notification-bg-color: #001933;
@@ -1969,6 +1971,10 @@ body.dark-mode .input-group.checkbox-group label::before {
   margin: 0;
   padding: 0;
 }
+/* フルスクリーン時に「戻る」ボタンを非表示にする */
+#broadcastView.fullscreen-active #backToDashboardButton {
+  display: none;
+}
 
 /* フルスクリーン時にヘッダーの余白を再設定 */
 #broadcastView.fullscreen-active .broadcast-header {
@@ -1979,7 +1985,15 @@ body.dark-mode .input-group.checkbox-group label::before {
   width: 100%;
   box-sizing: border-box;
   padding-right: 68px;
+  /* background: linear-gradient... この行を削除しました */
 }
+
+/* ▼▼▼ このルールを新しく追加してください ▼▼▼ */
+/* フルスクリーン時にフローティングコントロールがヘッダーと重ならないように下に移動 */
+#broadcastView.fullscreen-active .floating-controls {
+  top: 70px; /* ヘッダーの高さ分、下にずらす */
+}
+/* ▲▲▲ ここまで追加 ▲▲▲ */
 
 #toggleFullscreenButton {
   margin-left: auto;

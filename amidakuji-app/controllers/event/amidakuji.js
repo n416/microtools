@@ -37,6 +37,7 @@ exports.startEvent = async (req, res) => {
 exports.regenerateLines = async (req, res) => {
   try {
     const {eventId} = req.params;
+    const {deleteDoodles} = req.body;
     const eventRef = firestore.collection('events').doc(eventId);
     const doc = await eventRef.get();
 
@@ -52,14 +53,19 @@ exports.regenerateLines = async (req, res) => {
     }
 
     const newLines = generateLines(eventData.participantCount);
-    // ▼▼▼ doodlesを渡すように修正 ▼▼▼
-    const newResults = calculateResults(eventData.participants, newLines, eventData.prizes, eventData.doodles);
-    // ▲▲▲ ここまで修正 ▲▲▲
+    const doodlesForCalculation = deleteDoodles ? [] : eventData.doodles;
+    const newResults = calculateResults(eventData.participants, newLines, eventData.prizes, doodlesForCalculation);
 
-    await eventRef.update({
+    const updatePayload = {
       lines: newLines,
       results: newResults,
-    });
+    };
+
+    if (deleteDoodles) {
+      updatePayload.doodles = [];
+    }
+
+    await eventRef.update(updatePayload);
 
     res.status(200).json({
       message: 'あみだくじが再生成されました。',

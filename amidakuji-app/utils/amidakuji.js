@@ -15,23 +15,25 @@ function generateLines(numParticipants) {
     const startNode = Math.floor(Math.random() * (numParticipants - 1));
     const endNode = startNode + 1;
     const y = Math.floor(Math.random() * drawableHeight) + topMargin;
+    // ▼▼▼ ここから修正 ▼▼▼
+    // チェック対象に、既に生成済みの線と、引数で渡された既存の線（落書き）の両方を含める
+    const allCurrentLines = [...lines, ...existingLines];
 
-    // 新しい線が、既存の線と「垂直方向」または「水平方向」に近すぎないかをチェック
-    const isTooClose = lines.some((line) => {
-      // 1. 垂直方向のチェック：同じ区間、または隣接する区間に近すぎる線がないか
+    const isTooClose = allCurrentLines.some((line) => {
+      // 同じ、または隣接する縦線区間かをチェック
       if (line.fromIndex === startNode || line.toIndex === startNode || line.fromIndex === endNode) {
+        // Y座標が近すぎないかチェック
         if (Math.abs(line.y - y) < 15) {
-          // 垂直マージンを少し広めに確保
           return true;
         }
       }
-
       return false;
     });
 
     if (!isTooClose) {
       lines.push({fromIndex: startNode, toIndex: endNode, y: y});
     }
+    // ▲▲▲ ここまで修正 ▲▲▲
   }
   return lines;
 }
