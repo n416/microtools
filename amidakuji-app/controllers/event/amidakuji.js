@@ -22,7 +22,7 @@ exports.startEvent = async (req, res) => {
       return res.status(400).json({error: 'イベントは既に開始されています。'});
     }
 
-    const results = calculateResults(eventData.participants, eventData.lines, eventData.prizes);
+    const results = calculateResults(eventData.participants, eventData.lines, eventData.prizes, eventData.doodles);
 
     await eventRef.update({status: 'started', results: results});
     res.status(200).json({message: 'イベントが開始されました。', results});
@@ -51,8 +51,10 @@ exports.regenerateLines = async (req, res) => {
 
     // 新しい線を生成
     const newLines = generateLines(eventData.participantCount);
+
     // 新しい線に基づいて結果を再計算
-    const newResults = calculateResults(eventData.participants, newLines, eventData.prizes);
+    // ▼▼▼ doodlesを渡すように修正 ▼▼▼
+    const newResults = calculateResults(eventData.participants, newLines, eventData.prizes, eventData.doodles);
 
     // 線と結果の両方を更新
     await eventRef.update({
@@ -93,7 +95,7 @@ exports.shufflePrizes = async (req, res) => {
     }
 
     // 新しい景品リストで結果を再計算
-    const newResults = calculateResults(eventData.participants, eventData.lines, shuffledPrizes);
+    const newResults = calculateResults(eventData.participants, eventData.lines, shuffledPrizes, eventData.doodles);
 
     // 景品リストと結果の両方を更新
     await eventRef.update({prizes: shuffledPrizes, results: newResults});

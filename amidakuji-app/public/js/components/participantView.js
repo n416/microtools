@@ -7,9 +7,11 @@ import {getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight, getTargetH
 import {participantPanzoom} from '../animation/setup.js';
 import * as ui from '../ui.js';
 import {clientEmojiToLucide} from '../ui.js';
-import {db} from '../main.js'; // Firebaseインスタンスをインポート
+import {db} from '../main.js';
+import { processImage } from '../imageProcessor.js';
 
 let doodleListenerUnsubscribe = null;
+let processedProfileIconFile = null;
 
 const elements = {
   participantView: document.getElementById('participantView'),
@@ -319,41 +321,55 @@ export function renderOtherEvents(events, groupCustomUrl) {
 }
 
 export async function initializeParticipantView(eventId, isShare, sharedParticipantName) {
+  console.log(`[DEBUG] 1. initializeParticipantView CALLED for event: ${eventId}`);
   state.setCurrentEventId(eventId);
 
   ui.showView('participantView');
   hideParticipantSubViews(true);
 
   if (doodleListenerUnsubscribe) {
+    console.log('[DEBUG] 2. Unsubscribing from existing doodle listener.');
     doodleListenerUnsubscribe();
     doodleListenerUnsubscribe = null;
+  } else {
+    console.log('[DEBUG] 2. No existing doodle listener to unsubscribe from.');
   }
 
   try {
     let eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
+    console.log('[DEBUG] 3. Fetched initial event data.');
 
     state.setCurrentGroupId(eventData.groupId);
     state.loadParticipantState();
 
     if (!isShare && state.currentParticipantId) {
+      console.log('[DEBUG] 4. Re-fetching event data with auth headers.');
       eventData = await api.getPublicEventData(eventId);
     }
 
     state.setCurrentLotteryData(eventData);
 
+    console.log('[DEBUG] 5. Checking conditions for setting up doodle listener...');
+    console.log(`   - eventData.allowDoodleMode: ${eventData.allowDoodleMode} (type: ${typeof eventData.allowDoodleMode})`);
+
     if (eventData.allowDoodleMode) {
+      console.log('[DEBUG] 6. allowDoodleMode is true. Checking Firebase auth state...');
       const user = firebase.auth().currentUser;
 
       if (user) {
+        console.log(`%c[DEBUG] 7. SUCCESS: Firebase user found (uid: ${user.uid}). Setting up onSnapshot listener.`, 'color: green; font-weight: bold;');
         const eventRef = db.collection('events').doc(eventId);
 
         doodleListenerUnsubscribe = eventRef.onSnapshot(
           async (doc) => {
+            console.log('%c[DEBUG] 8. REALTIME UPDATE RECEIVED (onSnapshot fired)', 'color: blue; font-weight: bold;');
             if (!doc.exists) {
+              console.log('[DEBUG]   - Document no longer exists.');
               return;
             }
             const updatedData = doc.data();
             if (updatedData && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
+              console.log('[DEBUG]   - Doodle data has changed. Redrawing canvas...');
               state.currentLotteryData.doodles = updatedData.doodles || [];
 
               const staticCanvas = document.getElementById('participantCanvasStatic');
@@ -361,13 +377,21 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
                 const ctx = staticCanvas.getContext('2d');
                 const storedState = participantPanzoom ? {pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale()} : null;
                 await prepareStepAnimation(ctx, true, false, false, storedState);
+                console.log('[DEBUG]   - Canvas redraw complete.');
               }
             } else {
+              console.log('[DEBUG]   - No changes detected in doodle data.');
             }
           },
-          (error) => {}
+          (error) => {
+            console.error('[DEBUG] 9. ERROR: Firestore onSnapshot listener failed:', error);
+          }
         );
+      } else {
+        console.error('%c[DEBUG] 7. FAILED: firebase.auth().currentUser was null or undefined. Listener NOT set up.', 'color: red; font-weight: bold;');
       }
+    } else {
+      console.log('[DEBUG] 6. allowDoodleMode is false or undefined. Skipping listener setup.');
     }
 
     if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
@@ -408,16 +432,12 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
       await showResultsView(eventData, state.currentParticipantName, false);
     } else {
       if (!state.currentParticipantId) {
-        // 未ログインなら、名前入力画面を表示
         showNameEntryView();
       } else {
-        // ログイン済みの場合、次へ進む
         const myParticipation = eventData.participants.find((p) => p.memberId === state.currentParticipantId);
         if (myParticipation && myParticipation.name) {
-          // 既に参加枠を選んでいれば、待機画面を表示
           await showStaticAmidaView();
         } else {
-          // ログイン済みだが、まだ参加枠を選んでいなければ、参加画面を表示
           showJoinView(eventData);
         }
       }
@@ -447,35 +467,29 @@ export function initParticipantView() {
         drawDoodlePreview(ctx, state.previewDoodle);
       }
     };
-
     staticCanvas.addEventListener('mousemove', (e) => {
       if (!state.currentLotteryData || !state.currentLotteryData.allowDoodleMode || state.doodleTool !== 'draw' || 'ontouchstart' in window) {
         return;
       }
-
       const canvas = e.target;
       const rect = canvas.getBoundingClientRect();
       const pan = participantPanzoom.getPan();
       const scale = participantPanzoom.getScale();
       const x = (e.clientX - rect.left - pan.x) / scale;
       const y = (e.clientY - rect.top - pan.y) / scale;
-
       const {participants, prizes} = state.currentLotteryData;
       const numParticipants = participants.length;
       const container = canvas.closest('.canvas-panzoom-container');
       const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, container.clientWidth);
       const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
-
       const nameAreaHeight = getNameAreaHeight(container);
       const prizeAreaHeight = calculatePrizeAreaHeight(prizes);
       const lineTopY = nameAreaHeight;
       const lineBottomY = getTargetHeight(container) - prizeAreaHeight;
       const amidaDrawableHeight = lineBottomY - lineTopY;
-
       const topMargin = 70;
       const bottomMargin = 330;
       const sourceLineRange = bottomMargin - topMargin;
-
       if (y < lineTopY || y > lineBottomY) {
         if (state.hoverDoodle) {
           state.setHoverDoodle(null);
@@ -483,7 +497,6 @@ export function initParticipantView() {
         }
         return;
       }
-
       let fromIndex = -1;
       for (let i = 0; i < numParticipants - 1; i++) {
         const startX = participantSpacing * (i + 1);
@@ -493,7 +506,6 @@ export function initParticipantView() {
           break;
         }
       }
-
       if (fromIndex === -1) {
         if (state.hoverDoodle) {
           state.setHoverDoodle(null);
@@ -501,40 +513,32 @@ export function initParticipantView() {
         }
         return;
       }
-
       const relativeY = y - lineTopY;
       const originalY = (relativeY / amidaDrawableHeight) * sourceLineRange + topMargin;
-
       state.setHoverDoodle({fromIndex, toIndex: fromIndex + 1, y: originalY});
       redrawCanvas();
     });
-
     staticCanvas.addEventListener('mouseleave', () => {
       if (state.hoverDoodle) {
         state.setHoverDoodle(null);
         redrawCanvas();
       }
     });
-
     staticCanvas.addEventListener('click', async (e) => {
       if (!state.currentLotteryData || !state.currentLotteryData.allowDoodleMode) {
         return;
       }
-
       const doodleControls = document.getElementById('doodleControls');
       const setControlsDisabled = (disabled) => {
         if (doodleControls) {
           doodleControls.querySelectorAll('button').forEach((btn) => (btn.disabled = disabled));
         }
       };
-
       if (state.doodleTool === 'draw') {
         const doodleData = state.hoverDoodle;
         if (!doodleData) return;
-
         state.setPreviewDoodle(doodleData);
         setControlsDisabled(true);
-
         try {
           await api.addDoodle(state.currentEventId, state.currentParticipantId, doodleData);
           state.currentLotteryData.doodles = state.currentLotteryData.doodles.filter((d) => d.memberId !== state.currentParticipantId);
@@ -553,9 +557,7 @@ export function initParticipantView() {
         }
       } else if (state.doodleTool === 'erase') {
         const myDoodle = state.currentLotteryData.doodles.find((d) => d.memberId === state.currentParticipantId);
-
         if (!myDoodle && !state.previewDoodle) return;
-
         setControlsDisabled(true);
         try {
           if (myDoodle) {
@@ -571,11 +573,9 @@ export function initParticipantView() {
         }
       }
     });
-
     const doodleModePanBtn = document.getElementById('doodleModePan');
     const doodleModeDrawBtn = document.getElementById('doodleModeDraw');
     const doodleModeEraseBtn = document.getElementById('doodleModeErase');
-
     if (doodleModePanBtn && doodleModeDrawBtn && doodleModeEraseBtn) {
       const btns = [doodleModePanBtn, doodleModeDrawBtn, doodleModeEraseBtn];
       const panzoomWrapper = staticCanvas.parentElement;
@@ -588,7 +588,6 @@ export function initParticipantView() {
         panzoomWrapper.style.cursor = tool === 'pan' ? 'grab' : 'crosshair';
         btns.forEach((btn) => btn.classList.remove('active'));
         document.getElementById(`doodleMode${tool.charAt(0).toUpperCase() + tool.slice(1)}`).classList.add('active');
-
         if (state.hoverDoodle) {
           state.setHoverDoodle(null);
           redrawCanvas();
@@ -743,6 +742,7 @@ export function initParticipantView() {
         await router.navigateTo('/');
       }
     });
+
   if (elements.participantLogoutButton)
     elements.participantLogoutButton.addEventListener('click', async () => {
       try {
@@ -754,6 +754,7 @@ export function initParticipantView() {
         window.location.reload();
       }
     });
+
   if (elements.deleteMyAccountButton)
     elements.deleteMyAccountButton.addEventListener('click', async () => {
       if (!confirm('本当にこのグループからあなたのアカウントを削除しますか？\nこの操作は元に戻せません。')) return;
@@ -766,6 +767,7 @@ export function initParticipantView() {
         alert(`削除エラー: ${error.error}`);
       }
     });
+
   if (elements.slotList)
     elements.slotList.addEventListener('click', (e) => {
       const target = e.target.closest('.slot.available');
@@ -775,6 +777,7 @@ export function initParticipantView() {
       state.setSelectedSlot(parseInt(target.dataset.slot, 10));
       if (elements.joinButton) elements.joinButton.disabled = false;
     });
+
   if (elements.joinButton)
     elements.joinButton.addEventListener('click', async () => {
       if (state.selectedSlot === null) return alert('参加枠を選択してください。');
@@ -788,7 +791,9 @@ export function initParticipantView() {
         elements.joinButton.disabled = false;
       }
     });
+
   if (elements.shareButton) elements.shareButton.addEventListener('click', handleShareResult);
+
   if (elements.deleteParticipantWaitingButton)
     elements.deleteParticipantWaitingButton.addEventListener('click', async () => {
       if (!confirm('このイベントへの参加を取り消しますか？')) return;
@@ -801,24 +806,23 @@ export function initParticipantView() {
       }
     });
 
-  if (elements.editProfileButton)
+  if (elements.editProfileButton) {
     elements.editProfileButton.addEventListener('click', async () => {
       try {
         const memberData = await api.getMemberDetails(state.currentGroupId, state.currentParticipantId);
+        processedProfileIconFile = null;
         ui.openProfileEditModal(memberData, {
           onSave: async () => {
             ui.elements.saveProfileButton.disabled = true;
             try {
               let newIconUrl = null;
-              const file = ui.elements.profileIconInput.files[0];
-              if (file) {
-                const {signedUrl, iconUrl} = await api.generateUploadUrl(state.currentParticipantId, file.type, state.currentGroupId, state.currentParticipantToken);
-                await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
+              if (processedProfileIconFile) {
+                const {signedUrl, iconUrl} = await api.generateUploadUrl(state.currentParticipantId, processedProfileIconFile.type, state.currentGroupId, state.currentParticipantToken);
+                await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': processedProfileIconFile.type}, body: processedProfileIconFile});
                 newIconUrl = iconUrl;
               }
               const profileData = {color: ui.elements.profileColorInput.value};
               if (newIconUrl) profileData.iconUrl = newIconUrl;
-
               await api.updateProfile(state.currentParticipantId, profileData, state.currentGroupId, state.currentParticipantToken);
               alert('プロフィールを保存しました。');
               ui.closeProfileEditModal();
@@ -833,17 +837,31 @@ export function initParticipantView() {
         alert(error.error);
       }
     });
-  if (ui.elements.profileIconInput)
-    ui.elements.profileIconInput.addEventListener('change', () => {
+  }
+
+  if (ui.elements.profileIconInput) {
+    ui.elements.profileIconInput.addEventListener('change', async () => {
       const file = ui.elements.profileIconInput.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (ui.elements.profileIconPreview) ui.elements.profileIconPreview.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+        const saveButton = document.getElementById('saveProfileButton');
+        if(saveButton) saveButton.disabled = true;
+        
+        processedProfileIconFile = await processImage(file);
+
+        if(saveButton) saveButton.disabled = false;
+        
+        if (processedProfileIconFile) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (ui.elements.profileIconPreview) ui.elements.profileIconPreview.src = e.target.result;
+            };
+            reader.readAsDataURL(processedProfileIconFile);
+        } else {
+            ui.elements.profileIconInput.value = '';
+        }
       }
     });
+  }
 
   if (elements.acknowledgeButton) {
     elements.acknowledgeButton.addEventListener('click', async () => {
@@ -864,7 +882,6 @@ export function initParticipantView() {
   if (elements.showAcknowledgedEventsCheckbox) {
     elements.showAcknowledgedEventsCheckbox.addEventListener('change', () => {
       localStorage.setItem('showAcknowledgedEvents', elements.showAcknowledgedEventsCheckbox.checked);
-
       if (state.participantEventList && state.currentGroupData) {
         renderOtherEvents(state.participantEventList, state.currentGroupData.customUrl);
       }
