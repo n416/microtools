@@ -36,6 +36,7 @@ exports.createEvent = async (req, res) => {
       displayPrizeCount: !!displayPrizeCount,
       allowDoodleMode: typeof allowDoodleMode === 'boolean' ? allowDoodleMode : false,
       createdAt: new Date(),
+      lastModifiedAt: new Date(), // ★ 修正点: 追加
       ownerId: req.user.id,
       status: 'pending',
     };
@@ -134,6 +135,7 @@ exports.updateEvent = async (req, res) => {
       displayPrizeName: !!displayPrizeName,
       displayPrizeCount: !!displayPrizeCount,
       allowDoodleMode: typeof allowDoodleMode === 'boolean' ? allowDoodleMode : eventData.allowDoodleMode || false,
+      lastModifiedAt: new Date(), // ★ 修正点: 追加
     };
 
     if (participantCount !== eventData.participantCount) {
@@ -214,6 +216,7 @@ exports.copyEvent = async (req, res) => {
     const newEventData = {
       ...originalEvent,
       createdAt: new Date(),
+      lastModifiedAt: new Date(), // ★ 修正点: 追加
       status: 'pending',
       participants: initialParticipants,
       ownerId: req.user.id,
