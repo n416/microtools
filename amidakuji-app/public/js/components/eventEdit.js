@@ -3,6 +3,8 @@ import * as state from '../state.js';
 import * as router from '../router.js';
 import * as ui from '../ui.js';
 import {processImage} from '../imageProcessor.js';
+// ▼▼▼ インポートを追加 ▼▼▼
+import {prepareStepAnimation} from '../animation.js';
 
 const elements = {
   eventEditView: document.getElementById('eventEditView'),
@@ -33,9 +35,25 @@ const elements = {
   displayPrizeCount: document.getElementById('displayPrizeCount'),
   allowDoodleModeCheckbox: document.getElementById('allowDoodleModeCheckbox'),
   prizeDisplayPreview: document.getElementById('prizeDisplayPreview'),
+  // ▼▼▼ ここから追加 ▼▼▼
+  showFillSlotsModalButton: document.getElementById('showFillSlotsModalButton'),
+  regenerateLinesButton: document.getElementById('regenerateLinesButton'),
+  shufflePrizesBroadcastButton: document.getElementById('shufflePrizesBroadcastButton'),
+  eventEditPreviewCanvas: document.getElementById('eventEditPreviewCanvas'),
+  goToBroadcastViewButton: document.getElementById('goToBroadcastViewButton'),
+  fillSlotsModal: document.getElementById('fillSlotsModal'),
+  unjoinedMemberList: document.getElementById('unjoinedMemberList'),
+  emptySlotCount: document.getElementById('emptySlotCount'),
+  selectMembersButton: document.getElementById('selectMembersButton'),
+  selectedMemberList: document.getElementById('selectedMemberList'),
+  confirmFillSlotsButton: document.getElementById('confirmFillSlotsButton'),
+  // ▲▲▲ ここまで追加 ▲▲▲
 };
 
 let processedNewPrizeFile = null;
+// ▼▼▼ ここから追加 ▼▼▼
+let selectedAssignments = [];
+// ▲▲▲ ここまで追加 ▲▲▲
 
 function updatePrizePreview() {
   if (!elements.prizeDisplayPreview) return;
@@ -70,7 +88,17 @@ function updatePrizePreview() {
   elements.prizeDisplayPreview.innerHTML = `<ul>${previewItemsHTML}</ul>`;
 }
 
-export function renderEventForEditing(data) {
+// ▼▼▼ ここから追加 ▼▼▼
+async function drawPreviewCanvas() {
+  if (elements.eventEditPreviewCanvas && state.currentLotteryData) {
+    const ctx = elements.eventEditPreviewCanvas.getContext('2d');
+    // `prepareStepAnimation` を `hidePrizes=true` と `showMask=false` で呼び出す
+    await prepareStepAnimation(ctx, true, false, true);
+  }
+}
+// ▲▲▲ ここまで追加 ▲▲▲
+
+export async function renderEventForEditing(data) {
   elements.eventNameInput.value = data.eventName || '';
   state.setPrizes(data.prizes || []);
   if (elements.displayPrizeName) {
@@ -83,6 +111,13 @@ export function renderEventForEditing(data) {
     elements.allowDoodleModeCheckbox.checked = data.allowDoodleMode || false;
   }
   elements.createEventButton.textContent = 'この内容でイベントを保存';
+  // ▼▼▼ ここから追加 ▼▼▼
+  if (elements.goToBroadcastViewButton) {
+    elements.goToBroadcastViewButton.href = `/admin/event/${state.currentEventId}/broadcast`;
+    elements.goToBroadcastViewButton.style.display = 'inline-flex';
+  }
+  await drawPreviewCanvas();
+  // ▲▲▲ ここまで追加 ▲▲▲
   const savedMode = localStorage.getItem('prizeViewMode') || 'card';
   const prizeCardContainer = document.getElementById('prizeCardListContainer');
   const prizeListContainer = document.getElementById('prizeListModeContainer');
@@ -104,6 +139,7 @@ export function renderEventForEditing(data) {
   updatePrizePreview();
 }
 
+// ... (renderPrizeCardList, renderPrizeListMode, open/close modals functions are unchanged) ...
 export function renderPrizeCardList() {
   if (!elements.prizeCardListContainer) return;
   elements.prizeCardListContainer.innerHTML = '';
@@ -724,5 +760,141 @@ export function initEventEdit() {
     }
     if (elements.closePrizeBulkAddModalButton) elements.closePrizeBulkAddModalButton.addEventListener('click', closePrizeBulkAddModal);
     if (elements.cancelBulkAddButton) elements.cancelBulkAddButton.addEventListener('click', closePrizeBulkAddModal);
+    // ▼▼▼ ここから追加 ▼▼▼
+    if (elements.goToBroadcastViewButton) {
+      elements.goToBroadcastViewButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        router.navigateTo(elements.goToBroadcastViewButton.getAttribute('href'));
+      });
+    }
+
+    if (elements.regenerateLinesButton) {
+      elements.regenerateLinesButton.addEventListener('click', async (e) => {
+        const doodlesExist = state.currentLotteryData && state.currentLotteryData.doodles && state.currentLotteryData.doodles.length > 0;
+        let deleteDoodles = false;
+
+        if (doodlesExist) {
+          const userChoice = await ui.showCustomConfirm('ユーザーによる落書きが追加されています。線を再生成する際に、これらの落書きをどうしますか？', ['落書きもリセットする', '落書きは残す']);
+          if (userChoice === '落書きもリセットする') {
+            deleteDoodles = true;
+          } else if (userChoice === '落書きは残す') {
+            deleteDoodles = false;
+          } else {
+            return;
+          }
+        } else {
+          if (!confirm('あみだくじのパターンを再生成しますか？')) return;
+        }
+
+        try {
+          const result = await api.regenerateLines(state.currentEventId, deleteDoodles);
+          state.currentLotteryData.lines = result.lines;
+          state.currentLotteryData.results = result.results;
+          if (deleteDoodles) {
+            state.currentLotteryData.doodles = [];
+          }
+          await drawPreviewCanvas();
+          alert('あみだくじを再生成しました。');
+        } catch (error) {
+          alert(`エラー: ${error.error || '再生成に失敗しました。'}`);
+        }
+      });
+    }
+
+    if (elements.shufflePrizesBroadcastButton) {
+      elements.shufflePrizesBroadcastButton.addEventListener('click', async (e) => {
+        if (!confirm('景品の並び順をランダムに入れ替えますか？\nこの操作はデータベースに保存され、元に戻せません。')) return;
+
+        try {
+          const shuffledPrizes = [...state.currentLotteryData.prizes];
+          for (let i = shuffledPrizes.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledPrizes[i], shuffledPrizes[j]] = [shuffledPrizes[j], shuffledPrizes[i]];
+          }
+
+          const result = await api.shufflePrizes(state.currentEventId, shuffledPrizes);
+
+          state.currentLotteryData.prizes = result.prizes;
+          state.currentLotteryData.results = result.results;
+
+          state.setPrizes(result.prizes);
+          renderPrizeCardList();
+          renderPrizeListMode();
+
+          await drawPreviewCanvas();
+          alert('景品をシャッフルし、結果を保存しました。');
+        } catch (error) {
+          alert(`エラー: ${error.error || '景品のシャッフルに失敗しました。'}`);
+        }
+      });
+    }
+
+    if (elements.showFillSlotsModalButton) {
+      elements.showFillSlotsModalButton.addEventListener('click', async () => {
+        elements.fillSlotsModal.style.display = 'block';
+        document.getElementById('fillSlotsStep1').style.display = 'block';
+        document.getElementById('fillSlotsStep2').style.display = 'none';
+        elements.unjoinedMemberList.innerHTML = '<li>読み込み中...</li>';
+
+        try {
+          const unjoinedMembers = await api.getUnjoinedMembers(state.currentGroupId, state.currentEventId);
+          const emptySlots = state.currentLotteryData.participants.filter((p) => p.name === null).length;
+          elements.emptySlotCount.textContent = emptySlots;
+
+          if (unjoinedMembers.length > 0) {
+            elements.unjoinedMemberList.innerHTML = unjoinedMembers.map((m) => `<li class="item-list-item">${m.name}</li>`).join('');
+            elements.selectMembersButton.disabled = false;
+          } else {
+            elements.unjoinedMemberList.innerHTML = '<li>対象メンバーがいません。</li>';
+            elements.selectMembersButton.disabled = true;
+          }
+        } catch (error) {
+          elements.unjoinedMemberList.innerHTML = `<li class="error-message">${error.error}</li>`;
+        }
+      });
+    }
+
+    if (elements.fillSlotsModal) {
+      elements.fillSlotsModal.querySelector('.close-button').addEventListener('click', () => {
+        elements.fillSlotsModal.style.display = 'none';
+      });
+    }
+
+    if (elements.selectMembersButton) {
+      elements.selectMembersButton.addEventListener('click', async () => {
+        const unjoinedMembers = await api.getUnjoinedMembers(state.currentGroupId, state.currentEventId);
+        const emptySlots = state.currentLotteryData.participants.filter((p) => p.name === null).length;
+
+        if (unjoinedMembers.length < emptySlots) {
+          alert('空き枠数に対して、未参加のアクティブメンバーが不足しています。');
+          selectedAssignments = [...unjoinedMembers];
+        } else {
+          const shuffled = unjoinedMembers.sort(() => 0.5 - Math.random());
+          selectedAssignments = shuffled.slice(0, emptySlots);
+        }
+
+        elements.selectedMemberList.innerHTML = selectedAssignments.map((m) => `<li class="item-list-item">${m.name}</li>`).join('');
+        document.getElementById('fillSlotsStep1').style.display = 'none';
+        document.getElementById('fillSlotsStep2').style.display = 'block';
+      });
+    }
+
+    if (elements.confirmFillSlotsButton) {
+      elements.confirmFillSlotsButton.addEventListener('click', async () => {
+        try {
+          const result = await api.fillSlots(
+            state.currentEventId,
+            selectedAssignments.map((m) => ({id: m.id, name: m.name}))
+          );
+          elements.fillSlotsModal.style.display = 'none';
+          alert('参加枠を更新しました。');
+          state.currentLotteryData.participants = result.participants;
+          await drawPreviewCanvas();
+        } catch (error) {
+          alert(`エラー: ${error.error}`);
+        }
+      });
+    }
+    // ▲▲▲ ここまで追加 ▲▲▲
   }
 }

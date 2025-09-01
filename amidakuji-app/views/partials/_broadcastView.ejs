@@ -5,9 +5,8 @@
 <div class="broadcast-layout">
   <p class="event-url-display">イベントURL: <a id="broadcastEventUrl" href="#" target="_blank">読み込み中...</a></p>
   <div class="canvas-panzoom-container">
-    <div id="adminControls" class="floating-controls">
-      <button id="startEventButton" class="primary-action"><i data-lucide="<%= emojiToLucide('🎉') %>"></i> イベント開始</button>
-      <button id="showFillSlotsModalButton"><i data-lucide="<%= emojiToLucide('👥') %>"></i> 参加枠を埋める</button>
+    <div id="adminControls" class="floating-controls" style="justify-content: center; width: 100%; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+      <button id="startEventButton" class="primary-action" style="font-size: 1.5em; padding: 15px 30px;"><i data-lucide="<%= emojiToLucide('🎉') %>"></i> イベント開始！</button>
     </div>
     <div class="loading-mask" id="admin-loading-mask">あみだくじを生成中...</div>
     <div class="panzoom-wrapper" id="admin-panzoom-wrapper">
@@ -19,18 +18,16 @@
     <h4>コントロールパネル</h4>
     <div class="broadcast-controls">
       <div class="control-group">
-        <h5>再生・進行</h5>
+        <h5>全体進行</h5>
         <button id="animateAllButton">全結果を再生</button>
         <button id="advanceLineByLineButton">一段ずつ進む</button>
       </div>
       <div class="control-group">
         <h5>あみだくじ操作</h5>
-        <button id="regenerateLinesButton"><i data-lucide="<%= emojiToLucide('🔄') %>"></i> 線を再生成</button>
-        <button id="shufflePrizesBroadcastButton"><i data-lucide="<%= emojiToLucide('🎁') %>"></i> 景品シャッフル</button>
         <button id="glimpseButton">景品チラ見せ</button>
       </div>
       <div class="control-group">
-        <h5>個別表示</h5>
+        <h5>個別演出</h5>
         <label for="highlightUserSelect">特定ユーザー:</label>
         <select id="highlightUserSelect"></select>
         <button id="highlightUserButton">選択した人を表示</button>

@@ -13,8 +13,10 @@ const elements = {
   animateAllButton: document.getElementById('animateAllButton'),
   advanceLineByLineButton: document.getElementById('advanceLineByLineButton'),
   revealRandomButton: document.getElementById('revealRandomButton'),
-  regenerateLinesButton: document.getElementById('regenerateLinesButton'),
-  shufflePrizesBroadcastButton: document.getElementById('shufflePrizesBroadcastButton'),
+  // ▼▼▼ ここから削除 ▼▼▼
+  // regenerateLinesButton: document.getElementById('regenerateLinesButton'),
+  // shufflePrizesBroadcastButton: document.getElementById('shufflePrizesBroadcastButton'),
+  // ▲▲▲ ここまで削除 ▲▲▲
   glimpseButton: document.getElementById('glimpseButton'),
   highlightUserSelect: document.getElementById('highlightUserSelect'),
   highlightUserButton: document.getElementById('highlightUserButton'),
@@ -22,13 +24,15 @@ const elements = {
   openSidebarButton: document.getElementById('openSidebarButton'),
   broadcastSidebar: document.getElementById('broadcastSidebar'),
   closeSidebarButton: document.getElementById('closeSidebarButton'),
-  showFillSlotsModalButton: document.getElementById('showFillSlotsModalButton'),
-  fillSlotsModal: document.getElementById('fillSlotsModal'),
-  unjoinedMemberList: document.getElementById('unjoinedMemberList'),
-  emptySlotCount: document.getElementById('emptySlotCount'),
-  selectMembersButton: document.getElementById('selectMembersButton'),
-  selectedMemberList: document.getElementById('selectedMemberList'),
-  confirmFillSlotsButton: document.getElementById('confirmFillSlotsButton'),
+  // ▼▼▼ ここから削除 ▼▼▼
+  // showFillSlotsModalButton: document.getElementById('showFillSlotsModalButton'),
+  // fillSlotsModal: document.getElementById('fillSlotsModal'),
+  // unjoinedMemberList: document.getElementById('unjoinedMemberList'),
+  // emptySlotCount: document.getElementById('emptySlotCount'),
+  // selectMembersButton: document.getElementById('selectMembersButton'),
+  // selectedMemberList: document.getElementById('selectedMemberList'),
+  // confirmFillSlotsButton: document.getElementById('confirmFillSlotsButton'),
+  // ▲▲▲ ここまで削除 ▲▲▲
 };
 
 function setBroadcastControlsDisabled(disabled) {
@@ -45,7 +49,9 @@ export function initBroadcast() {
       try {
         await api.startEvent(state.currentEventId);
         alert('イベントを開始しました！');
-        await router.navigateTo(`/admin/event/${state.currentEventId}/broadcast`);
+        // ▼▼▼ ここを修正 ▼▼▼
+        await router.loadEventForEditing(state.currentEventId, 'broadcastView');
+        // ▲▲▲ ここまで修正 ▲▲▲
       } catch (error) {
         alert(`エラー: ${error.error}`);
       }
@@ -92,79 +98,7 @@ export function initBroadcast() {
     });
   }
 
-  if (elements.broadcastView) {
-    elements.broadcastView.addEventListener('click', async (e) => {
-      if (e.target.id === 'regenerateLinesButton') {
-        // ▼▼▼ ここから修正 ▼▼▼
-        const doodlesExist = state.currentLotteryData && state.currentLotteryData.doodles && state.currentLotteryData.doodles.length > 0;
-        let deleteDoodles = false;
-
-        if (doodlesExist) {
-          // ▼▼▼ ここから修正 ▼▼▼
-          const userChoice = await ui.showCustomConfirm('ユーザーによる落書きが追加されています。線を再生成する際に、これらの落書きをどうしますか？', ['落書きもリセットする', '落書きは残す']);
-
-          if (userChoice === '落書きもリセットする') {
-            deleteDoodles = true;
-          } else if (userChoice === '落書きは残す') {
-            deleteDoodles = false;
-          } else {
-            // ユーザーが「キャンセル」をクリックしたか、モーダル外をクリックした場合
-            return; // 処理を中断
-          }
-          // ▲▲▲ ここまで修正 ▲▲▲
-        } else {
-          if (!confirm('あみだくじのパターンを再生成しますか？')) return;
-        }
-
-        try {
-          const result = await api.regenerateLines(state.currentEventId, deleteDoodles);
-          state.currentLotteryData.lines = result.lines;
-          state.currentLotteryData.results = result.results;
-          if (deleteDoodles) {
-            state.currentLotteryData.doodles = [];
-          }
-          // ▲▲▲ ここまで修正 ▲▲▲
-
-          const ctx = elements.adminCanvas.getContext('2d');
-
-          if (elements.advanceLineByLineButton) elements.advanceLineByLineButton.disabled = false;
-          if (elements.revealRandomButton) elements.revealRandomButton.disabled = false;
-          if (elements.highlightUserButton) elements.highlightUserButton.disabled = false;
-          if (elements.animateAllButton) elements.animateAllButton.disabled = false;
-
-          const hide = true;
-          await prepareStepAnimation(ctx, hide);
-          alert('あみだくじを再生成しました。');
-        } catch (error) {
-          alert(`エラー: ${error.error || '再生成に失敗しました。'}`);
-        }
-      }
-      if (e.target.id === 'shufflePrizesBroadcastButton') {
-        if (!confirm('景品の並び順をランダムに入れ替えますか？\nこの操作はデータベースに保存され、元に戻せません。')) return;
-
-        try {
-          const shuffledPrizes = [...state.currentLotteryData.prizes];
-          for (let i = shuffledPrizes.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffledPrizes[i], shuffledPrizes[j]] = [shuffledPrizes[j], shuffledPrizes[i]];
-          }
-
-          const result = await api.shufflePrizes(state.currentEventId, shuffledPrizes);
-
-          state.currentLotteryData.prizes = result.prizes;
-          state.currentLotteryData.results = result.results;
-
-          const ctx = elements.adminCanvas.getContext('2d');
-          const hide = true;
-          await prepareStepAnimation(ctx, hide);
-
-          alert('景品をシャッフルし、結果を保存しました。');
-        } catch (error) {
-          alert(`エラー: ${error.error || '景品のシャッフルに失敗しました。'}`);
-        }
-      }
-    });
-  }
+  // ▼▼▼ broadcastViewのイベントリスナー（線の再生成など）をごっそり削除 ▼▼▼
 
   // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
   // ★★★ ここからが修正点 ★★★
@@ -220,73 +154,7 @@ export function initBroadcast() {
       }
     });
 
-  let selectedAssignments = [];
-
-  if (elements.showFillSlotsModalButton) {
-    elements.showFillSlotsModalButton.addEventListener('click', async () => {
-      elements.fillSlotsModal.style.display = 'block';
-      document.getElementById('fillSlotsStep1').style.display = 'block';
-      document.getElementById('fillSlotsStep2').style.display = 'none';
-      elements.unjoinedMemberList.innerHTML = '<li>読み込み中...</li>';
-
-      try {
-        const unjoinedMembers = await api.getUnjoinedMembers(state.currentGroupId, state.currentEventId);
-        const emptySlots = state.currentLotteryData.participants.filter((p) => p.name === null).length;
-        elements.emptySlotCount.textContent = emptySlots;
-
-        if (unjoinedMembers.length > 0) {
-          elements.unjoinedMemberList.innerHTML = unjoinedMembers.map((m) => `<li class="item-list-item">${m.name}</li>`).join('');
-          elements.selectMembersButton.disabled = false;
-        } else {
-          elements.unjoinedMemberList.innerHTML = '<li>対象メンバーがいません。</li>';
-          elements.selectMembersButton.disabled = true;
-        }
-      } catch (error) {
-        elements.unjoinedMemberList.innerHTML = `<li class="error-message">${error.error}</li>`;
-      }
-    });
-  }
-
-  if (elements.fillSlotsModal) {
-    elements.fillSlotsModal.querySelector('.close-button').addEventListener('click', () => {
-      elements.fillSlotsModal.style.display = 'none';
-    });
-  }
-
-  if (elements.selectMembersButton) {
-    elements.selectMembersButton.addEventListener('click', async () => {
-      const unjoinedMembers = await api.getUnjoinedMembers(state.currentGroupId, state.currentEventId);
-      const emptySlots = state.currentLotteryData.participants.filter((p) => p.name === null).length;
-
-      if (unjoinedMembers.length < emptySlots) {
-        alert('空き枠数に対して、未参加のアクティブメンバーが不足しています。');
-        selectedAssignments = [...unjoinedMembers];
-      } else {
-        const shuffled = unjoinedMembers.sort(() => 0.5 - Math.random());
-        selectedAssignments = shuffled.slice(0, emptySlots);
-      }
-
-      elements.selectedMemberList.innerHTML = selectedAssignments.map((m) => `<li class="item-list-item">${m.name}</li>`).join('');
-      document.getElementById('fillSlotsStep1').style.display = 'none';
-      document.getElementById('fillSlotsStep2').style.display = 'block';
-    });
-  }
-
-  if (elements.confirmFillSlotsButton) {
-    elements.confirmFillSlotsButton.addEventListener('click', async () => {
-      try {
-        await api.fillSlots(
-          state.currentEventId,
-          selectedAssignments.map((m) => ({id: m.id, name: m.name}))
-        );
-        elements.fillSlotsModal.style.display = 'none';
-        alert('参加枠を更新しました。');
-        await router.loadEventForEditing(state.currentEventId, 'broadcastView');
-      } catch (error) {
-        alert(`エラー: ${error.error}`);
-      }
-    });
-  }
+  // ▼▼▼ 参加枠を埋める関連の処理をごっそり削除 ▼▼▼
 
   if (elements.openSidebarButton && elements.broadcastSidebar) {
     const overlay = document.createElement('div');
