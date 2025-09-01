@@ -53,7 +53,7 @@ const elements = {
   finalPrepAccordionContent: document.getElementById('finalPrepAccordionContent'),
   saveEventFromOverlayButton: document.getElementById('saveEventFromOverlayButton'),
   accordionOverlay: document.querySelector('.accordion-overlay'),
-  viewModeSwitcher: document.querySelector('.view-mode-switcher')
+  viewModeSwitcher: document.querySelector('.view-mode-switcher'),
 };
 
 let processedNewPrizeFile = null;
@@ -244,6 +244,10 @@ export async function renderEventForEditing(data) {
     prizeListContainer.style.display = 'none';
     renderPrizeCardList();
   }
+  if (elements.viewModeSwitcher) {
+    elements.viewModeSwitcher.dataset.activeMode = savedMode;
+  }
+
   updatePrizePreview();
 
   if (isStarted) {
