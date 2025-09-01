@@ -1,5 +1,6 @@
 runtime: nodejs20
-
+automatic_scaling:
+  min_instances: 1
 handlers:
   # 静的ファイル（CSS, JavaScriptなど）の配信設定
   - url: /(.*\.(css|js|png|gif|svg))$
@@ -10,5 +11,4 @@ handlers:
   - url: /.*
     script: auto
     secure: always
-
 # env_variables: のセクションをまるごと削除する

@@ -1,5 +1,5 @@
 <div class="event-header">
-  <button id="backToGroupsButton"><i data-lucide="<%= emojiToLucide('←') %>"></i> グループ一覧に戻る</button>
+  <button id="backToGroupsButton"><i data-lucide="<%= emojiToLucide('←') %>"></i> グループダッシュボードに戻る</button>
 </div>
 <h3>イベント新規作成・編集</h3>
 <div class="controls">
@@ -52,23 +52,33 @@
     </div>
   </div>
 
-  <div class="settings-section">
-    <h4>5. 最終準備</h4>
-    <p>あみだくじの状態をプレビューし、必要に応じて調整します。</p>
-    <div class="input-group">
-      <button id="showFillSlotsModalButton"><i data-lucide="users"></i> 参加枠を埋める</button>
-      <button id="regenerateLinesButton"><i data-lucide="refresh-cw"></i> 線を再生成</button>
-      <button id="shufflePrizesBroadcastButton"><i data-lucide="gift"></i> 景品シャッフル</button>
-    </div>
-    <div class="canvas-panzoom-container" style="margin-top: 15px;">
-      <div class="panzoom-wrapper">
-        <canvas id="eventEditPreviewCanvas"></canvas>
+  <div class="settings-section" id="createEventButtonContainer">
+    <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
+  </div>
+
+  <div class="settings-section accordion-item" id="finalPrepAccordion">
+    <button class="accordion-header" id="finalPrepAccordionHeader" disabled aria-expanded="false">
+      <h4>5. 最終準備と配信</h4>
+      <i class="accordion-icon" data-lucide="chevron-down"></i>
+    </button>
+    <div class="accordion-content" id="finalPrepAccordionContent">
+      <div class="accordion-overlay" style="display: none;">
+        <button id="saveEventFromOverlayButton" class="primary-action">イベントを保存してください</button>
+      </div>
+      <p>あみだくじの状態をプレビューし、必要に応じて調整します。</p>
+      <div class="input-group">
+        <button id="showFillSlotsModalButton"><i data-lucide="users"></i> 参加枠を埋める</button>
+        <button id="regenerateLinesButton"><i data-lucide="refresh-cw"></i> 線を再生成</button>
+        <button id="shufflePrizesBroadcastButton"><i data-lucide="gift"></i> 景品シャッフル</button>
+      </div>
+      <div class="canvas-panzoom-container" style="margin-top: 15px;">
+        <div class="panzoom-wrapper">
+          <canvas id="eventEditPreviewCanvas"></canvas>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top: 20px;">
+        <a href="#" id="goToBroadcastViewButton" class="button" style="display: none;">配信画面へ進む <i data-lucide="arrow-right"></i></a>
       </div>
     </div>
-  </div>
-  <div class="settings-section">
-    <h4>6. 作成・配信</h4>
-    <button id="createEventButton" class="primary-action">この内容でイベントを保存</button>
-    <a href="#" id="goToBroadcastViewButton" class="button" style="display: none;">配信画面へ進む <i data-lucide="arrow-right"></i></a>
   </div>
 </div>

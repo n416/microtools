@@ -36,6 +36,8 @@ async function startServer() {
   const session = require('express-session');
   const passport = require('passport');
   const {emojiToLucide, emojiMap} = require('./utils/emoji-map'); // ★ emoji-mapをインポート
+  const {firestore} = require('./utils/firestore');
+  const {FirestoreStore} = require('@google-cloud/connect-firestore');
 
   // Passport設定の読み込み
   require('./config/passport')(passport);
@@ -57,15 +59,21 @@ async function startServer() {
   app.use(express.static(path.join(__dirname, 'public')));
   app.use(express.json());
 
-  // セッションとPassportのミドルウェア
+  // ▼▼▼ 今ある session の設定を、丸ごとこれに置き換える ▼▼▼
   app.use(
     session({
-      secret: process.env.SESSION_SECRET, // Secret Managerから取得した値が使われる
+      store: new FirestoreStore({
+        dataset: firestore,
+        collection: 'sessions',
+      }),
+      secret: process.env.SESSION_SECRET,
       resave: false,
       saveUninitialized: true,
-      cookie: {secure: process.env.NODE_ENV === 'production'},
+      cookie: {secure: process.env.NODE_ENV === 'production', maxAge: 14 * 24 * 60 * 60 * 1000}, // 2週間
     })
   );
+  // ▲▲▲ ここまで ▲▲▲
+
   app.use(passport.initialize());
   app.use(passport.session());
 
