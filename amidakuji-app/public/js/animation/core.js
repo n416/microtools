@@ -198,17 +198,26 @@ function animationLoop() {
   });
   const isRevealingPrizes = state.revealedPrizes.some((p) => p.revealProgress < 15);
   const particlesRemaining = animator.particles.length > 0;
+
+  // ▼▼▼ ここからが修正箇所です ▼▼▼
+  // アニメーションが完了したかどうかを判定
   if (allTracersFinished && !isRevealingPrizes && !particlesRemaining) {
+    // animator.running フラグをチェックし、一度だけ onComplete を呼び出すようにする
     if (animator.running) {
-      animator.running = false;
+      console.log('%c[DEBUG] Animation finished. Calling onComplete callback.', 'color: green; font-weight: bold;');
+      animator.running = false; // ループを停止
       if (animator.onComplete) {
         animator.onComplete();
-        animator.onComplete = null;
+        animator.onComplete = null; // 複数回呼ばれないようにクリア
       }
     }
-  } else {
-    animationFrameId = requestAnimationFrame(animationLoop);
+    // ループを止める
+    return;
   }
+
+  // アニメーションが続く場合は次のフレームを要求
+  animationFrameId = requestAnimationFrame(animationLoop);
+  // ▲▲▲ ここまでが修正箇所です ▲▲▲
 }
 
 export async function startAnimation(targetCtx, userNames = [], onComplete = null, panToName = null) {

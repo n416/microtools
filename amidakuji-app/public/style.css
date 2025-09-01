@@ -2216,3 +2216,42 @@ body.dark-mode .cropper-container {
 body.dark-mode #adminControls #glimpseButton {
   background-color: rgba(var(--white-color-rgb, 30, 30, 30), 0.7);
 }
+#broadcastResultsContainer {
+  max-height: 40vh; /* 画面の高さの40%を上限とする */
+  display: flex; /* h5とulを縦に並べるため */
+  flex-direction: column;
+}
+
+#broadcastResultsContainer h5 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0; /* タイトルは縮まないようにする */
+}
+
+#broadcastResultsList {
+  overflow-y: auto; /* リストが長くなったらスクロールバーを表示 */
+  padding-right: 10px;
+  margin: 0;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+}
+
+#broadcastResultsList .item-list-item {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  padding: 10px;
+}
+
+#broadcastResultsList .result-prize-image {
+  width: 100px;
+  height: 100px;
+  margin-right: 10px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
