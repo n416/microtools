@@ -2,7 +2,6 @@ import * as api from '../api.js';
 import * as state from '../state.js';
 import * as router from '../router.js';
 import {prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, startAnimation, fadePrizes} from '../animation.js';
-
 import * as ui from '../ui.js';
 
 const elements = {
@@ -13,10 +12,6 @@ const elements = {
   animateAllButton: document.getElementById('animateAllButton'),
   advanceLineByLineButton: document.getElementById('advanceLineByLineButton'),
   revealRandomButton: document.getElementById('revealRandomButton'),
-  // ▼▼▼ ここから削除 ▼▼▼
-  // regenerateLinesButton: document.getElementById('regenerateLinesButton'),
-  // shufflePrizesBroadcastButton: document.getElementById('shufflePrizesBroadcastButton'),
-  // ▲▲▲ ここまで削除 ▲▲▲
   glimpseButton: document.getElementById('glimpseButton'),
   highlightUserSelect: document.getElementById('highlightUserSelect'),
   highlightUserButton: document.getElementById('highlightUserButton'),
@@ -24,15 +19,6 @@ const elements = {
   openSidebarButton: document.getElementById('openSidebarButton'),
   broadcastSidebar: document.getElementById('broadcastSidebar'),
   closeSidebarButton: document.getElementById('closeSidebarButton'),
-  // ▼▼▼ ここから削除 ▼▼▼
-  // showFillSlotsModalButton: document.getElementById('showFillSlotsModalButton'),
-  // fillSlotsModal: document.getElementById('fillSlotsModal'),
-  // unjoinedMemberList: document.getElementById('unjoinedMemberList'),
-  // emptySlotCount: document.getElementById('emptySlotCount'),
-  // selectMembersButton: document.getElementById('selectMembersButton'),
-  // selectedMemberList: document.getElementById('selectedMemberList'),
-  // confirmFillSlotsButton: document.getElementById('confirmFillSlotsButton'),
-  // ▲▲▲ ここまで削除 ▲▲▲
 };
 
 function setBroadcastControlsDisabled(disabled) {
@@ -49,13 +35,12 @@ export function initBroadcast() {
       try {
         await api.startEvent(state.currentEventId);
         alert('イベントを開始しました！');
-        // ▼▼▼ ここを修正 ▼▼▼
         await router.loadEventForEditing(state.currentEventId, 'broadcastView');
-        // ▲▲▲ ここまで修正 ▲▲▲
       } catch (error) {
         alert(`エラー: ${error.error}`);
       }
     });
+
   if (elements.animateAllButton) {
     elements.animateAllButton.addEventListener('click', async () => {
       setBroadcastControlsDisabled(true);
@@ -98,15 +83,10 @@ export function initBroadcast() {
     });
   }
 
-  // ▼▼▼ broadcastViewのイベントリスナー（線の再生成など）をごっそり削除 ▼▼▼
-
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-  // ★★★ ここからが修正点 ★★★
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
   if (elements.glimpseButton) {
     const canvas = elements.adminCanvas;
     const ctx = canvas.getContext('2d');
-    let isGlimpsing = false; // Flag to track button press state
+    let isGlimpsing = false;
 
     const showPrizes = () => {
       if (isGlimpsing) return;
@@ -120,10 +100,12 @@ export function initBroadcast() {
       fadePrizes(ctx, false);
     };
 
+    // マウス操作
     elements.glimpseButton.addEventListener('mousedown', showPrizes);
     elements.glimpseButton.addEventListener('mouseup', hidePrizes);
     elements.glimpseButton.addEventListener('mouseleave', hidePrizes);
 
+    // タッチ操作
     elements.glimpseButton.addEventListener('touchstart', (e) => {
       e.preventDefault();
       showPrizes();
@@ -133,9 +115,6 @@ export function initBroadcast() {
       hidePrizes();
     });
   }
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
-  // ★★★ 修正はここまで ★★★
-  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
   if (elements.highlightUserButton)
     elements.highlightUserButton.addEventListener('click', async () => {
@@ -153,8 +132,6 @@ export function initBroadcast() {
         );
       }
     });
-
-  // ▼▼▼ 参加枠を埋める関連の処理をごっそり削除 ▼▼▼
 
   if (elements.openSidebarButton && elements.broadcastSidebar) {
     const overlay = document.createElement('div');

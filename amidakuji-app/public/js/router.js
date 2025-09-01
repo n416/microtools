@@ -253,36 +253,28 @@ async function loadAndShowMemberManagement(groupId) {
 }
 
 export async function loadEventForEditing(eventId, viewToShow = 'eventEditView') {
-  console.log(`[FRONTEND] loadEventForEditing called for eventId: ${eventId}, view: ${viewToShow}`);
   if (!eventId) {
-    console.error('[FRONTEND] eventId is missing. Aborting.');
     return;
   }
   try {
     if (state.allUserGroups.length === 0) {
-      console.log('[FRONTEND] User groups not in state, fetching...');
       const groups = await api.getGroups();
       state.setAllUserGroups(groups);
-      console.log('[FRONTEND] User groups fetched and set.');
     }
 
-    console.log(`[FRONTEND] 1. Calling api.getEvent for eventId: ${eventId}`);
     const data = await api.getEvent(eventId);
-    console.log('[FRONTEND] 2. Received event data from API:', data);
 
     state.setCurrentLotteryData(data);
     state.setCurrentEventId(eventId);
     state.setCurrentGroupId(data.groupId);
 
     if (data.allowDoodleMode) {
-      console.log(`[DEBUG] Setting up REALTIME doodle listener for view: ${viewToShow}...`);
       const eventRef = db.collection('events').doc(eventId);
 
       const unsubscribe = eventRef.onSnapshot(async (doc) => {
         if (!doc.exists) return;
         const updatedData = doc.data();
         if (updatedData && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
-          console.log(`[DEBUG] Doodle data changed for ${viewToShow}. Redrawing...`);
           state.currentLotteryData.doodles = updatedData.doodles || [];
 
           let targetCanvas = null;
@@ -303,24 +295,18 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
     }
 
     ui.showView(viewToShow);
-    console.log(`[FRONTEND] Switched to view: ${viewToShow}`);
 
     let parentGroup = state.allUserGroups.find((g) => g.id === data.groupId);
-    console.log(`[FRONTEND] 3. Searching for parentGroup in state.allUserGroups (User's own groups). Found:`, parentGroup);
 
     if (!parentGroup) {
-      console.log('[FRONTEND] 4. parentGroup not found in state. Attempting to fetch it directly via API.');
       try {
         parentGroup = await api.getGroup(data.groupId);
-        console.log('[FRONTEND] 5. Successfully fetched parentGroup from API:', parentGroup);
       } catch (groupError) {
-        console.error(`[FRONTEND] Could not fetch parent group ${data.groupId}`, groupError);
+        console.error(`Could not fetch parent group ${data.groupId}`, groupError);
         parentGroup = null;
       }
     }
     const url = parentGroup && parentGroup.customUrl ? `${window.location.origin}/g/${parentGroup.customUrl}/${eventId}` : `${window.location.origin}/events/${eventId}`;
-
-    console.log('[FRONTEND] 6. Final constructed URL:', url);
 
     if (ui.elements.currentEventUrl) {
       ui.elements.currentEventUrl.textContent = url;
@@ -331,25 +317,13 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       ui.elements.broadcastEventUrl.href = url;
     }
 
-    if (ui.elements.eventIdInput) ui.elements.eventIdInput.value = eventId;
-
     if (viewToShow === 'eventEditView') {
       renderEventForEditing(data);
     } else if (viewToShow === 'broadcastView') {
       const adminControls = document.getElementById('adminControls');
-      const startEventButton = document.getElementById('startEventButton');
-      const broadcastControls = document.querySelector('.broadcast-controls');
-      const animateAllButton = document.getElementById('animateAllButton');
       const highlightUserSelect = document.getElementById('highlightUserSelect');
-      const highlightUserButton = document.getElementById('highlightUserButton');
       const adminCanvas = document.getElementById('adminCanvas');
-      const glimpseButton = document.getElementById('glimpseButton'); // ★ 修正点: glimpseButtonを取得
-
-      const hidePrizes = true;
-
-      console.log('[FRONTEND] Configuring broadcast view...');
-
-      if (broadcastControls) broadcastControls.style.display = 'flex';
+      const openSidebarButton = document.getElementById('openSidebarButton');
 
       if (adminCanvas) adminCanvas.style.display = 'block';
 
@@ -359,28 +333,13 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       }
 
       const isPending = data.status === 'pending';
-      console.log(`[FRONTEND LOG] Event status is: ${data.status} (isPending: ${isPending})`);
 
       if (adminControls) adminControls.style.display = isPending ? 'flex' : 'none';
+      if (openSidebarButton) openSidebarButton.style.display = isPending ? 'none' : 'flex';
 
-      if (animateAllButton) animateAllButton.closest('.control-group').style.display = isPending ? 'none' : 'flex';
-      if (highlightUserButton) highlightUserButton.closest('.control-group').style.display = isPending ? 'none' : 'flex';
-
-      // ▼▼▼ ここから修正 ▼▼▼
-      if (glimpseButton) {
-        glimpseButton.closest('.control-group').style.display = isPending ? 'flex' : 'none';
-      }
-      // ▲▲▲ ここまで修正 ▲▲▲
-
-      console.log('[FRONTEND] 7. Preparing animation step...');
-      if (!adminCanvas) {
-        console.error('[FRONTEND][FATAL] adminCanvas is null or undefined before getContext!');
-        alert('エラー：描画エリアの初期化に失敗しました。');
-        return;
-      }
+      const hidePrizes = true;
       const ctx = adminCanvas.getContext('2d');
       await prepareStepAnimation(ctx, hidePrizes);
-      console.log('[FRONTEND] 8. Animation step prepared.');
     }
   } catch (error) {
     console.error('イベントの読み込み中にAPIエラーが発生しました:', error);
