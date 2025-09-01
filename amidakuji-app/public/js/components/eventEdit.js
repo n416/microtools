@@ -88,7 +88,7 @@ function hideSaveOverlay() {
 }
 
 async function handleSaveEvent(eventId) {
-  const buttonToAnimate = elements.saveEventFromOverlayButton;
+  const buttonToAnimate = elements.createEventButton;
   buttonToAnimate.disabled = true;
   buttonToAnimate.textContent = '保存中...';
 
@@ -144,7 +144,7 @@ async function handleSaveEvent(eventId) {
     alert(error.error || 'イベントの保存に失敗しました。');
   } finally {
     buttonToAnimate.disabled = false;
-    buttonToAnimate.textContent = 'イベントを保存してください';
+    buttonToAnimate.textContent = 'イベント名を保存する';
   }
 }
 
@@ -189,6 +189,7 @@ async function drawPreviewCanvas() {
 }
 
 export async function renderEventForEditing(data) {
+  const isStarted = data.status === 'started';
   elements.eventNameInput.value = data.eventName || '';
   state.setPrizes(data.prizes || []);
 
@@ -240,6 +241,19 @@ export async function renderEventForEditing(data) {
     renderPrizeCardList();
   }
   updatePrizePreview();
+
+  if (isStarted) {
+    // Disable all inputs except title
+    const inputs = elements.eventEditView.querySelectorAll('input, button, textarea, select');
+    inputs.forEach((input) => {
+      if (input.id !== 'eventNameInput' && input.id !== 'createEventButton') {
+        input.disabled = true;
+      }
+    });
+    elements.createEventButton.textContent = 'イベント名を保存する';
+    elements.createEventButton.style.display = 'block'; // Ensure save button is visible
+    elements.createEventButtonContainer.style.display = 'block';
+  }
 }
 
 export function renderPrizeCardList() {
