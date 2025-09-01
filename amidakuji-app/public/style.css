@@ -2255,3 +2255,93 @@ body.dark-mode #adminControls #glimpseButton {
   object-fit: cover;
   flex-shrink: 0;
 }
+
+/* --- アコーディオンUIのスタイル --- */
+.accordion-item {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.accordion-header {
+  background-color: var(--light-bg-color);
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 15px 20px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 16px;
+  transition: background-color 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.accordion-header:hover {
+  background-color: var(--shadow-color);
+}
+
+.accordion-header:disabled {
+  background-color: #f0f0f0;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.accordion-header h4 {
+  margin: 0;
+  font-size: 1em;
+}
+
+.accordion-icon {
+  transition: transform 0.3s ease;
+}
+
+.accordion-header[aria-expanded='true'] .accordion-icon {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  padding: 20px;
+  background-color: var(--white-color);
+  display: none;
+  border-top: 1px solid var(--border-color);
+}
+
+.accordion-content {
+  padding: 20px;
+  background-color: var(--white-color);
+  display: none;
+  border-top: 1px solid var(--border-color);
+  position: relative; /* オーバーレイの基準点 */
+}
+
+.accordion-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+body.dark-mode .accordion-overlay {
+  background-color: rgba(30, 30, 30, 0.8);
+}
+
+.accordion-header:disabled {
+  color: #999;
+  cursor: not-allowed;
+  background-color: #f9f9f9;
+}
+
+body.dark-mode .accordion-header:disabled {
+  color: #777;
+  background-color: #2a2a2a;
+}

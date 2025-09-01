@@ -142,8 +142,6 @@ export function initUI() {
     customConfirmMessage: document.getElementById('customConfirmMessage'),
     customConfirmButtons: document.getElementById('customConfirmButtons'),
   };
-  // ▼▼▼ このブロックを initUI 関数の末尾に追加 ▼▼▼
-
   if (elements.prizeImageInput && elements.prizeImagePreview && elements.prizeImagePlaceholder) {
     elements.prizeImageInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -158,7 +156,6 @@ export function initUI() {
       }
     });
   }
-  // ▲▲▲ ここまで ▲▲▲
 }
 
 const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView', 'staticAmidaView'];
@@ -286,8 +283,6 @@ export function openSettingsModal(group, handlers) {
 
 export function openPrizeMasterModal(handlers) {
   if (!elements.prizeMasterModal) return;
-  // ▼▼▼ ここからが修正点 ▼▼▼
-  // フォームをリセット
   elements.addMasterPrizeNameInput.value = '';
   elements.addMasterPrizeImageInput.value = '';
   const preview = document.getElementById('addMasterPrizeImagePreview');
@@ -299,7 +294,6 @@ export function openPrizeMasterModal(handlers) {
   if (placeholder) {
     placeholder.style.display = 'flex';
   }
-  // ▲▲▲ ここまで ▲▲▲
 
   elements.addMasterPrizeButton.onclick = handlers.onAddMaster;
   elements.prizeMasterList.onclick = (e) => {
@@ -406,20 +400,23 @@ export function resetEventCreationForm() {
     elements.prizeListModeContainer.innerHTML = '';
   }
   if (elements.eventNameInput) elements.eventNameInput.value = '';
-  if (elements.createEventButton) elements.createEventButton.textContent = 'この内容でイベントを作成';
-  if (elements.adminCanvas) {
-    const ctx = elements.adminCanvas.getContext('2d');
-    ctx.clearRect(0, 0, elements.adminCanvas.width, elements.adminCanvas.height);
-    elements.adminCanvas.style.display = 'none';
+
+  if (elements.createEventButton) {
+    elements.createEventButton.textContent = 'この内容でイベントを作成';
   }
+
+  const eventEditPreviewCanvas = document.getElementById('eventEditPreviewCanvas');
+  if (eventEditPreviewCanvas) {
+    const ctx = eventEditPreviewCanvas.getContext('2d');
+    ctx.clearRect(0, 0, eventEditPreviewCanvas.width, eventEditPreviewCanvas.height);
+  }
+
   if (elements.currentEventUrl) {
     elements.currentEventUrl.textContent = '（イベント作成後に表示されます）';
     elements.currentEventUrl.href = '#';
   }
   state.setCurrentEventId(null);
   state.setCurrentLotteryData(null);
-  if (elements.adminControls) elements.adminControls.style.display = 'none';
-  if (elements.broadcastControls) elements.broadcastControls.style.display = 'none';
 }
 
 export async function buildNewPrizesWithDataPreservation(newNames) {
@@ -439,12 +436,6 @@ export async function buildNewPrizesWithDataPreservation(newNames) {
   });
   return newPrizes;
 }
-/**
- * カスタムの確認モーダルを表示します。
- * @param {string} message - モーダルに表示するメッセージ。
- * @param {Array<string>} buttons - ボタンのテキスト配列 (例: ['はい', 'いいえ'])。
- * @returns {Promise<string|null>} ユーザーがクリックしたボタンのテキストを解決するPromise。キャンセル時はnullを返す。
- */
 export function showCustomConfirm(message, buttons) {
   return new Promise((resolve) => {
     const modal = elements.customConfirmModal;
@@ -452,16 +443,14 @@ export function showCustomConfirm(message, buttons) {
     const buttonsEl = elements.customConfirmButtons;
 
     if (!modal || !messageEl || !buttonsEl) {
-      // カスタムモーダルが見つからない場合のフォールバック
       const result = window.confirm(message);
       resolve(result ? buttons[0] : null);
       return;
     }
 
     messageEl.textContent = message;
-    buttonsEl.innerHTML = ''; // 既存のボタンをクリア
+    buttonsEl.innerHTML = '';
 
-    // イベントリスナーを一度クリーンアップするための関数
     let cleanup = () => {};
 
     const outsideClickListener = (e) => {
@@ -476,11 +465,10 @@ export function showCustomConfirm(message, buttons) {
       modal.removeEventListener('click', outsideClickListener);
     };
 
-    // 選択肢のボタンを作成
     buttons.forEach((btnText, index) => {
       const button = document.createElement('button');
       button.textContent = btnText;
-      button.className = index === 0 ? 'primary-action' : 'secondary-btn'; // 最初のボタンを主要アクションとする
+      button.className = index === 0 ? 'primary-action' : 'secondary-btn';
       button.onclick = () => {
         cleanup();
         resolve(btnText);
@@ -488,13 +476,12 @@ export function showCustomConfirm(message, buttons) {
       buttonsEl.appendChild(button);
     });
 
-    // キャンセルボタンを作成
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'キャンセル';
     cancelBtn.className = 'secondary-btn';
     cancelBtn.onclick = () => {
       cleanup();
-      resolve(null); // キャンセル時はnullを返す
+      resolve(null);
     };
     buttonsEl.appendChild(cancelBtn);
 

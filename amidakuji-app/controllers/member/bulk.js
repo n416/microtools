@@ -5,24 +5,36 @@ const {normalizeName} = require('../../utils/text');
 const kuromoji = require('kuromoji');
 const Levenshtein = require('levenshtein');
 
-const tokenizerPromise = new Promise((resolve, reject) => {
-  console.log('Kuromojiの辞書を読み込んでいます...');
-  kuromoji.builder({dicPath: 'node_modules/kuromoji/dict'}).build((err, tokenizer) => {
-    if (err) {
-      console.error('❌ Kuromojiの初期化に失敗しました:', err);
-      return reject(err);
+let tokenizer = null; // 辞書をここに保存
+
+// 辞書が必要になった時に、初めて呼び出すための関数
+function getTokenizer() {
+  return new Promise((resolve, reject) => {
+    // もし、もう辞書を読んでいたら、それをすぐに返す
+    if (tokenizer) {
+      return resolve(tokenizer);
     }
-    console.log('✅ Kuromojiの辞書準備が完了しました。');
-    resolve(tokenizer);
+
+    // 初めての時だけ、重たい辞書を読み込む
+    console.log('Kuromojiの辞書を初めて読み込んでいます...');
+    kuromoji.builder({dicPath: 'node_modules/kuromoji/dict'}).build((err, newTokenizer) => {
+      if (err) {
+        console.error('❌ Kuromojiの初期化に失敗しました:', err);
+        return reject(err);
+      }
+      console.log('✅ Kuromojiの辞書準備が完了しました。');
+      tokenizer = newTokenizer; // 読み込んだ辞書を保存しておく
+      resolve(tokenizer);
+    });
   });
-});
+}
 
 const getReading = async (text) => {
   try {
-    const tokenizer = await tokenizerPromise;
-    if (!tokenizer) throw new Error('Tokenizer is not available.');
+    const tokenizerInstance = await getTokenizer(); // 直接 "tokenizerPromise" を見るのをやめて、この新しい関数を呼ぶ
+    if (!tokenizerInstance) throw new Error('Tokenizer is not available.');
 
-    const tokens = tokenizer.tokenize(text);
+    const tokens = tokenizerInstance.tokenize(text);
     const reading = tokens.map((token) => token.reading || token.surface_form).join('');
     return reading;
   } catch (error) {
