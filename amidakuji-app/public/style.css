@@ -2183,3 +2183,36 @@ body.dark-mode .display-preview li {
 body.dark-mode .cropper-container {
   background-color: #1a1a1a;
 }
+
+#adminControls {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column; /* ボタンを縦に並べる */
+  gap: 15px; /* ボタンの間隔 */
+  align-items: center;
+  width: 90%;
+  max-width: 400px;
+}
+
+#adminControls #startEventButton {
+  font-size: 1.5em;
+  padding: 15px 30px;
+  width: 100%;
+}
+
+#adminControls #glimpseButton {
+  width: 100%;
+  padding: 12px 20px;
+  background-color: rgba(var(--white-color-rgb, 255, 255, 255), 0.8);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-mode #adminControls #glimpseButton {
+  background-color: rgba(var(--white-color-rgb, 30, 30, 30), 0.7);
+}
