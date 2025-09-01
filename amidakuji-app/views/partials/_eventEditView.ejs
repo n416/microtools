@@ -4,15 +4,20 @@
 <h3>イベント新規作成・編集</h3>
 <div class="controls">
   <div class="settings-section">
-    <h4>1. イベント情報</h4>
+    <h4>1.
+      イベント情報</h4>
     <div class="input-group">
       <label for="eventNameInput">イベント名:</label>
       <input type="text" id="eventNameInput" placeholder="（例: 忘年会2025）" />
     </div>
+    <div id="createEventButtonContainer" style="margin-top: 15px;">
+      <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
+    </div>
     <p>現在のイベントURL: <a id="currentEventUrl" href="#" target="_blank">（未作成または未読み込み）</a></p>
   </div>
   <div class="settings-section">
-    <h4>2. 景品</h4>
+    <h4>2.
+      景品</h4>
     <div class="prize-controls-header">
       <div class="input-group prize-main-controls">
         <button id="openAddPrizeModalButton" class="primary-action"><i data-lucide="<%= emojiToLucide('＋') %>"></i> 追加</button>
@@ -23,13 +28,15 @@
       <div class="view-mode-switcher">
         <button id="viewModeCard" class="view-mode-btn active" data-mode="card">カード表示</button>
         <button id="viewModeList" class="view-mode-btn" data-mode="list">リスト表示</button>
+
       </div>
     </div>
     <ul id="prizeCardListContainer" class="prize-card-list"></ul>
     <div id="prizeListModeContainer" style="display: none;"></div>
   </div>
   <div class="settings-section">
-    <h4>3. 公開設定</h4>
+    <h4>3.
+      公開設定</h4>
     <p>参加者が参加枠を選ぶ画面で、どこまで景品情報を表示するか設定します。</p>
     <div class="input-group checkbox-group">
       <input type="checkbox" id="displayPrizeName" checked />
@@ -45,20 +52,18 @@
     </div>
   </div>
   <div class="settings-section">
-    <h4>4. インタラクティブ設定</h4>
+    <h4>4.
+      インタラクティブ設定</h4>
     <div class="input-group checkbox-group">
       <input type="checkbox" id="allowDoodleModeCheckbox" />
       <label for="allowDoodleModeCheckbox">落書きモードを許可する</label>
     </div>
   </div>
 
-  <div class="settings-section" id="createEventButtonContainer">
-    <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
-  </div>
-
   <div class="settings-section accordion-item" id="finalPrepAccordion">
     <button class="accordion-header" id="finalPrepAccordionHeader" disabled aria-expanded="false">
-      <h4>5. 最終準備と配信</h4>
+      <h4>5.
+        最終準備と配信</h4>
       <i class="accordion-icon" data-lucide="chevron-down"></i>
     </button>
     <div class="accordion-content" id="finalPrepAccordionContent">
@@ -71,6 +76,7 @@
         <button id="regenerateLinesButton"><i data-lucide="refresh-cw"></i> 線を再生成</button>
         <button id="shufflePrizesBroadcastButton"><i data-lucide="gift"></i> 景品シャッフル</button>
       </div>
+
       <div class="canvas-panzoom-container" style="margin-top: 15px;">
         <div class="panzoom-wrapper">
           <canvas id="eventEditPreviewCanvas"></canvas>

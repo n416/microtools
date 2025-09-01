@@ -51,6 +51,8 @@ export function renderEventList(allEvents) {
     const itemClass = state.currentUser ? 'item-list-item list-item-link' : 'item-list-item';
     li.className = itemClass;
 
+    const editButtonCaption = event.status === 'started' ? '確認' : '編集';
+
     li.innerHTML = `
         <span class="event-info">
           <strong>${eventName}</strong>
@@ -59,7 +61,7 @@ export function renderEventList(allEvents) {
           <span class="event-status">${filledSlots} / ${event.participantCount} 名参加</span>
         </span>
         <div class="item-buttons">
-            <button class="edit-event-btn" data-event-id="${event.id}">編集</button>
+            <button class="edit-event-btn" data-event-id="${event.id}">${editButtonCaption}</button>
             <button class="start-event-btn" data-event-id="${event.id}">実施</button>
             <button class="copy-event-btn" data-event-id="${event.id}">コピー</button>
             <button class="delete-btn delete-event-btn" data-event-id="${event.id}">削除</button>
