@@ -1650,31 +1650,66 @@ body.dark-mode {
   gap: 10px;
   margin-bottom: 15px;
 }
-
 .view-mode-switcher {
   display: flex;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  overflow: hidden;
+  background-color: #f0f0f0; /* コンテナの背景色 */
+  border-radius: 8px; /* 角を丸くする */
+  padding: 3px;
+  position: relative;
 }
 
 .view-mode-btn {
-  background-color: transparent;
-  color: var(--text-color);
+  background: transparent;
+  color: #aaa; /* 未選択時の文字を薄いグレーに */
   border: none;
-  padding: 8px 16px;
+  padding: 6px 14px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: color 0.3s ease;
+  z-index: 1; /* スライド背景より手前に表示 */
+  flex: 1; /* 均等な幅にする */
+  text-align: center;
+  font-weight: 500;
 }
 
 .view-mode-btn.active {
-  background-color: var(--primary-color);
-  color: white;
-  font-weight: bold;
+  color: white; /* 選択中の文字を白に */
+  font-weight: 600;
 }
 
 .view-mode-btn:not(.active):hover {
-  background-color: var(--shadow-color);
+  background-color: transparent; /* ホバーエフェクトを削除 */
+}
+
+.view-mode-switcher::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  height: calc(100% - 6px);
+  width: calc(50% - 3px);
+  background-color: var(--primary-color);
+  border-radius: 6px;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: 0;
+}
+
+.view-mode-switcher[data-active-mode='list']::before {
+  transform: translateX(100%);
+}
+
+.view-mode-switcher[data-active-mode='list']::before {
+  transform: translateX(100%); /* 「リスト表示」がアクティブな時に背景を右にスライド */
+}
+
+/* ダークモード対応 */
+body.dark-mode .view-mode-switcher {
+  background-color: #343a40;
+}
+body.dark-mode .view-mode-btn {
+  color: #adb5bd !important;
+}
+body.dark-mode .view-mode-btn.active {
+  color: #fff !important;
 }
 
 .prize-list-table {
