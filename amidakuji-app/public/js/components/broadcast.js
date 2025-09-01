@@ -2,6 +2,7 @@ import * as api from '../api.js';
 import * as state from '../state.js';
 import * as router from '../router.js';
 import {prepareStepAnimation, resetAnimation, advanceLineByLine, isAnimationRunning, startAnimation, fadePrizes} from '../animation.js';
+
 import * as ui from '../ui.js';
 
 const elements = {
@@ -19,7 +20,17 @@ const elements = {
   openSidebarButton: document.getElementById('openSidebarButton'),
   broadcastSidebar: document.getElementById('broadcastSidebar'),
   closeSidebarButton: document.getElementById('closeSidebarButton'),
+  broadcastResultsContainer: document.getElementById('broadcastResultsContainer'),
+  broadcastResultsList: document.getElementById('broadcastResultsList'),
 };
+
+// --- ログ出力 ---
+console.log('[DEBUG] Checking broadcast DOM elements:', {
+  broadcastResultsContainer: !!elements.broadcastResultsContainer,
+  broadcastResultsList: !!elements.broadcastResultsList,
+  adminCanvas: !!elements.adminCanvas,
+});
+// --- ログ出力ここまで ---
 
 function setBroadcastControlsDisabled(disabled) {
   const controls = document.querySelectorAll('#broadcastSidebar button, #broadcastSidebar select');
@@ -28,7 +39,49 @@ function setBroadcastControlsDisabled(disabled) {
   });
 }
 
+/** リアルタイム結果リストを描画・更新する関数 */
+/** リアルタイム結果リストを描画・更新する関数 */
+function renderBroadcastResults() {
+  const container = elements.adminCanvas.closest('.canvas-panzoom-container');
+
+  // フルスクリーンではない、かつ、結果が1件以上ある場合のみ表示
+  if (container && !container.classList.contains('fullscreen-mode') && state.revealedPrizes.length > 0) {
+    elements.broadcastResultsContainer.style.display = 'block'; // block に変更
+    elements.broadcastResultsList.innerHTML = '';
+
+    state.revealedPrizes.forEach((result) => {
+      if (!result.participantName) return;
+
+      const prize = result.prize;
+      const prizeName = typeof prize === 'object' ? prize.name : prize;
+      const prizeImageUrl = typeof prize === 'object' ? prize.imageUrl : null;
+
+      let imageHtml = '';
+      if (prizeImageUrl) {
+        imageHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image">`;
+      }
+
+      const li = document.createElement('li');
+      li.className = 'item-list-item';
+      li.innerHTML = `${imageHtml}<span>${result.participantName} → ${prizeName}</span>`;
+      elements.broadcastResultsList.appendChild(li);
+    });
+
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  } else {
+    elements.broadcastResultsContainer.style.display = 'none';
+  }
+}
+
 export function initBroadcast() {
+  const onAnimationComplete = () => {
+    console.log('%c[DEBUG] onAnimationComplete triggered from initBroadcast.', 'color: blue; font-weight: bold;');
+    setBroadcastControlsDisabled(false);
+    renderBroadcastResults();
+  };
+
   if (elements.startEventButton)
     elements.startEventButton.addEventListener('click', async () => {
       if (!confirm('イベントを開始しますか？\n開始後は新規参加ができなくなります。')) return;
@@ -44,9 +97,7 @@ export function initBroadcast() {
   if (elements.animateAllButton) {
     elements.animateAllButton.addEventListener('click', async () => {
       setBroadcastControlsDisabled(true);
-      await resetAnimation(() => {
-        setBroadcastControlsDisabled(false);
-      });
+      await resetAnimation(onAnimationComplete);
     });
   }
 
@@ -72,14 +123,7 @@ export function initBroadcast() {
       const ctx = elements.adminCanvas.getContext('2d');
       elements.highlightUserSelect.value = randomParticipant.name;
       setBroadcastControlsDisabled(true);
-      await startAnimation(
-        ctx,
-        [randomParticipant.name],
-        () => {
-          setBroadcastControlsDisabled(false);
-        },
-        randomParticipant.name
-      );
+      await startAnimation(ctx, [randomParticipant.name], onAnimationComplete, randomParticipant.name);
     });
   }
 
@@ -100,12 +144,10 @@ export function initBroadcast() {
       fadePrizes(ctx, false);
     };
 
-    // マウス操作
     elements.glimpseButton.addEventListener('mousedown', showPrizes);
     elements.glimpseButton.addEventListener('mouseup', hidePrizes);
     elements.glimpseButton.addEventListener('mouseleave', hidePrizes);
 
-    // タッチ操作
     elements.glimpseButton.addEventListener('touchstart', (e) => {
       e.preventDefault();
       showPrizes();
@@ -122,14 +164,7 @@ export function initBroadcast() {
       if (elements.highlightUserSelect.value) {
         const ctx = elements.adminCanvas.getContext('2d');
         setBroadcastControlsDisabled(true);
-        await startAnimation(
-          ctx,
-          [elements.highlightUserSelect.value],
-          () => {
-            setBroadcastControlsDisabled(false);
-          },
-          elements.highlightUserSelect.value
-        );
+        await startAnimation(ctx, [elements.highlightUserSelect.value], onAnimationComplete, elements.highlightUserSelect.value);
       }
     });
 
@@ -164,8 +199,11 @@ export function initBroadcast() {
         setTimeout(() => {
           const hidePrizes = state.currentLotteryData?.displayMode === 'private';
           prepareStepAnimation(elements.adminCanvas.getContext('2d'), hidePrizes, false, true);
+          renderBroadcastResults();
         }, 300);
       }
     });
   }
+
+  renderBroadcastResults();
 }
