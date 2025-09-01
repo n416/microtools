@@ -107,17 +107,14 @@ exports.updateEvent = async (req, res) => {
     const urlsToDelete = [...oldImageUrls].filter((url) => !newImageUrls.has(url));
 
     for (const urlToDelete of urlsToDelete) {
-      const querySnapshot = await firestore
-        .collection('events')
-        .where(
-          'prizes',
-          'array-contains-any',
-          prizes.filter((p) => p.imageUrl === urlToDelete).map((p) => ({name: p.name, imageUrl: p.imageUrl}))
-        )
-        .limit(1)
-        .get();
+      const oldPrizesWithUrl = eventData.prizes.filter((p) => p.imageUrl === urlToDelete);
+      if (oldPrizesWithUrl.length === 0) continue;
 
-      if (querySnapshot.empty) {
+      const querySnapshot = await firestore.collection('events').where('prizes', 'array-contains-any', oldPrizesWithUrl).limit(2).get();
+
+      const otherDocs = querySnapshot.docs.filter((doc) => doc.id !== eventId);
+
+      if (otherDocs.length === 0) {
         try {
           const fileName = urlToDelete.split(`${bucket.name}/`)[1]?.split('?')[0];
           if (fileName && fileName.startsWith('shared_images/')) {
@@ -146,7 +143,9 @@ exports.updateEvent = async (req, res) => {
         deleteToken: null,
       }));
       updateData.participants = newParticipants;
-      updateData.lines = generateLines(participantCount);
+      // ▼▼▼ ここを修正 ▼▼▼
+      updateData.lines = generateLines(participantCount, eventData.doodles || []);
+      // ▲▲▲ ここまで修正 ▲▲▲
     }
 
     await eventRef.update(updateData);
