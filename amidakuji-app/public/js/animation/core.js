@@ -1,7 +1,9 @@
 import * as state from '../state.js';
 import {calculatePath, getTargetHeight, getVirtualWidth, calculateClientSideResults} from './path.js';
 import {drawLotteryBase, drawRevealedPrizes, drawTracerPath, drawTracerIcon} from './drawing.js';
-import {initializePanzoom, preloadIcons, preloadPrizeImages} from './setup.js';
+// ▼▼▼ この行を修正 ▼▼▼
+import {initializePanzoom, preloadIcons, preloadPrizeImages, adminPanzoom, participantPanzoom} from './setup.js';
+// ▲▲▲ ここまで修正 ▲▲▲
 import {createSparks, celebrate, Particle} from './effects.js';
 
 export const animator = {
@@ -14,6 +16,10 @@ export const animator = {
   context: null,
   lastContainerWidth: 0,
   lastContainerHeight: 0,
+  get panzoom() {
+    if (!this.context) return null;
+    return this.context.canvas.id === 'adminCanvas' ? adminPanzoom : participantPanzoom;
+  },
 };
 
 let animationFrameId;
