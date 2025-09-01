@@ -53,6 +53,7 @@ const elements = {
   finalPrepAccordionContent: document.getElementById('finalPrepAccordionContent'),
   saveEventFromOverlayButton: document.getElementById('saveEventFromOverlayButton'),
   accordionOverlay: document.querySelector('.accordion-overlay'),
+  viewModeSwitcher: document.querySelector('.view-mode-switcher')
 };
 
 let processedNewPrizeFile = null;
@@ -87,8 +88,7 @@ function hideSaveOverlay() {
   }
 }
 
-async function handleSaveEvent(eventId) {
-  const buttonToAnimate = elements.createEventButton;
+async function handleSaveEvent(eventId, buttonToAnimate, isStartedEvent) {
   buttonToAnimate.disabled = true;
   buttonToAnimate.textContent = '保存中...';
 
@@ -144,7 +144,11 @@ async function handleSaveEvent(eventId) {
     alert(error.error || 'イベントの保存に失敗しました。');
   } finally {
     buttonToAnimate.disabled = false;
-    buttonToAnimate.textContent = 'イベント名を保存する';
+    if (isStartedEvent) {
+      buttonToAnimate.textContent = 'イベント名を保存する';
+    } else {
+      buttonToAnimate.textContent = 'イベントを保存してください';
+    }
   }
 }
 
@@ -246,13 +250,24 @@ export async function renderEventForEditing(data) {
     // Disable all inputs except title
     const inputs = elements.eventEditView.querySelectorAll('input, button, textarea, select');
     inputs.forEach((input) => {
-      if (input.id !== 'eventNameInput' && input.id !== 'createEventButton') {
+      if (input.id !== 'eventNameInput' && input.id !== 'createEventButton' && input.id !== 'backToGroupsButton') {
         input.disabled = true;
       }
     });
     elements.createEventButton.textContent = 'イベント名を保存する';
     elements.createEventButton.style.display = 'block'; // Ensure save button is visible
     elements.createEventButtonContainer.style.display = 'block';
+  } else {
+    // Re-enable all inputs for non-started events
+    const inputs = elements.eventEditView.querySelectorAll('input, button, textarea, select');
+    inputs.forEach((input) => {
+      input.disabled = false;
+    });
+    elements.createEventButton.textContent = 'この内容でイベントを作成';
+    if (!state.currentEventId) {
+      // Only show for new events
+      elements.createEventButtonContainer.style.display = 'block';
+    }
   }
 }
 
@@ -508,6 +523,9 @@ export function initEventEdit() {
         renderPrizeCardList();
       }
       localStorage.setItem('prizeViewMode', mode);
+      if (elements.viewModeSwitcher) {
+        elements.viewModeSwitcher.dataset.activeMode = mode;
+      }
     };
 
     if (viewModeCardBtn && viewModeListBtn) {
@@ -764,7 +782,7 @@ export function initEventEdit() {
       elements.createEventButton.addEventListener('click', async () => {
         const isUpdate = !!state.currentEventId;
         if (isUpdate) {
-          await handleSaveEvent(state.currentEventId);
+          await handleSaveEvent(state.currentEventId, elements.createEventButton, state.currentLotteryData.status === 'started');
           return;
         }
 
@@ -805,7 +823,7 @@ export function initEventEdit() {
       });
     }
     if (elements.saveEventFromOverlayButton) {
-      elements.saveEventFromOverlayButton.addEventListener('click', () => handleSaveEvent(state.currentEventId));
+      elements.saveEventFromOverlayButton.addEventListener('click', () => handleSaveEvent(state.currentEventId, elements.saveEventFromOverlayButton, false));
     }
     if (elements.openAddPrizeModalButton) {
       elements.openAddPrizeModalButton.addEventListener('click', openAddPrizeModal);
