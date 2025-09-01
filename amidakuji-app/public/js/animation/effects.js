@@ -46,9 +46,23 @@ export function createSparks(x, y, color) {
 }
 
 export function celebrate(originX, color) {
+  // ▼▼▼ ここから修正 ▼▼▼
   const container = animator.context.canvas.closest('.canvas-panzoom-container');
   if (!container) return;
+
+  const panzoom = animator.panzoom;
+  if (!panzoom) return;
+
   const rect = container.getBoundingClientRect();
-  const x = (rect.left + originX) / window.innerWidth;
-  // confetti({particleCount: 100, spread: 70, origin: {x: x, y: 0.8}, colors: [color, '#ffffff']});
+  const scale = panzoom.getScale();
+  const pan = panzoom.getPan();
+
+  // 仮想キャンバス上の座標を画面上の座標に変換
+  const screenX = rect.left + originX * scale + pan.x;
+
+  // 画面上の座標をビューポートの割合(0~1)に正規化
+  const x = screenX / window.innerWidth;
+
+  confetti({particleCount: 100, spread: 70, origin: {x: x, y: 0.8}, colors: [color, '#ffffff']});
+  // ▲▲▲ ここまで修正 ▲▲▲
 }
