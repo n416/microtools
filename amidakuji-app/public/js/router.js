@@ -274,21 +274,28 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
     state.setCurrentEventId(eventId);
     state.setCurrentGroupId(data.groupId);
 
-    if (viewToShow === 'broadcastView' && data.allowDoodleMode) {
-      console.log('[DEBUG] Setting up BROADCAST doodle listener...');
+    if (data.allowDoodleMode) {
+      console.log(`[DEBUG] Setting up REALTIME doodle listener for view: ${viewToShow}...`);
       const eventRef = db.collection('events').doc(eventId);
 
       const unsubscribe = eventRef.onSnapshot(async (doc) => {
         if (!doc.exists) return;
         const updatedData = doc.data();
         if (updatedData && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
-          console.log('[DEBUG] BROADCAST doodle data has changed. Redrawing canvas...');
+          console.log(`[DEBUG] Doodle data changed for ${viewToShow}. Redrawing...`);
           state.currentLotteryData.doodles = updatedData.doodles || [];
 
-          const adminCanvas = document.getElementById('adminCanvas');
-          if (adminCanvas && adminCanvas.offsetParent !== null) {
-            const ctx = adminCanvas.getContext('2d');
-            await prepareStepAnimation(ctx, true, false, true);
+          let targetCanvas = null;
+          if (viewToShow === 'broadcastView') {
+            targetCanvas = document.getElementById('adminCanvas');
+          } else if (viewToShow === 'eventEditView') {
+            targetCanvas = document.getElementById('eventEditPreviewCanvas');
+          }
+
+          if (targetCanvas && targetCanvas.offsetParent !== null) {
+            const ctx = targetCanvas.getContext('2d');
+            const hidePrizes = viewToShow !== 'broadcastView';
+            await prepareStepAnimation(ctx, hidePrizes, false, true);
           }
         }
       });
@@ -333,12 +340,10 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       const startEventButton = document.getElementById('startEventButton');
       const broadcastControls = document.querySelector('.broadcast-controls');
       const animateAllButton = document.getElementById('animateAllButton');
-      const advanceLineByLineButton = document.getElementById('advanceLineByLineButton');
       const highlightUserSelect = document.getElementById('highlightUserSelect');
       const highlightUserButton = document.getElementById('highlightUserButton');
-      const revealRandomButton = document.getElementById('revealRandomButton');
-      const regenerateLinesButton = document.getElementById('regenerateLinesButton');
       const adminCanvas = document.getElementById('adminCanvas');
+      const glimpseButton = document.getElementById('glimpseButton'); // ★ 修正点: glimpseButtonを取得
 
       const hidePrizes = true;
 
@@ -356,19 +361,16 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
       const isPending = data.status === 'pending';
       console.log(`[FRONTEND LOG] Event status is: ${data.status} (isPending: ${isPending})`);
 
-      console.log('[FRONTEND LOG] Checking button elements:', {
-        adminControls: !!adminControls,
-        startEventButton: !!startEventButton,
-        animateAllButton: !!animateAllButton,
-        regenerateLinesButton: !!regenerateLinesButton,
-        highlightUserButton: !!highlightUserButton,
-      });
-
       if (adminControls) adminControls.style.display = isPending ? 'flex' : 'none';
 
       if (animateAllButton) animateAllButton.closest('.control-group').style.display = isPending ? 'none' : 'flex';
-      if (regenerateLinesButton) regenerateLinesButton.closest('.control-group').style.display = isPending ? 'flex' : 'none';
       if (highlightUserButton) highlightUserButton.closest('.control-group').style.display = isPending ? 'none' : 'flex';
+
+      // ▼▼▼ ここから修正 ▼▼▼
+      if (glimpseButton) {
+        glimpseButton.closest('.control-group').style.display = isPending ? 'flex' : 'none';
+      }
+      // ▲▲▲ ここまで修正 ▲▲▲
 
       console.log('[FRONTEND] 7. Preparing animation step...');
       if (!adminCanvas) {

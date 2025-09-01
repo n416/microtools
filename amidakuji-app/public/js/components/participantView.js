@@ -7,15 +7,10 @@ import {getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight, getTargetH
 import {participantPanzoom} from '../animation/setup.js';
 import * as ui from '../ui.js';
 import {clientEmojiToLucide} from '../ui.js';
-// ▼▼▼ インポートを追加 ▼▼▼
 import {addFirestoreListener} from '../state.js';
-// ▲▲▲ ここまで ▲▲▲
 import {db} from '../main.js';
 import {processImage} from '../imageProcessor.js';
 
-// ▼▼▼ この変数を削除 ▼▼▼
-// let doodleListenerUnsubscribe = null;
-// ▲▲▲ ここまで ▲▲▲
 let processedProfileIconFile = null;
 
 const elements = {
@@ -332,16 +327,6 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
   ui.showView('participantView');
   hideParticipantSubViews(true);
 
-  // ▼▼▼ このブロックを削除 ▼▼▼
-  // if (doodleListenerUnsubscribe) {
-  //   console.log('[DEBUG] 2. Unsubscribing from existing doodle listener.');
-  //   doodleListenerUnsubscribe();
-  //   doodleListenerUnsubscribe = null;
-  // } else {
-  //   console.log('[DEBUG] 2. No existing doodle listener to unsubscribe from.');
-  // }
-  // ▲▲▲ ここまで ▲▲▲
-
   try {
     let eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
     console.log('[DEBUG] 3. Fetched initial event data.');
@@ -356,52 +341,81 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
 
     state.setCurrentLotteryData(eventData);
 
-    console.log('[DEBUG] 5. Checking conditions for setting up doodle listener...');
-    console.log(`   - eventData.allowDoodleMode: ${eventData.allowDoodleMode} (type: ${typeof eventData.allowDoodleMode})`);
+    // ▼▼▼ ここから修正 ▼▼▼
+    if (!isShare) {
+      console.log(`[DEBUG] Setting up REALTIME listener for view...`);
+      const eventRef = db.collection('events').doc(eventId);
 
-    if (eventData.allowDoodleMode) {
-      console.log('[DEBUG] 6. allowDoodleMode is true. Checking Firebase auth state...');
-      const user = firebase.auth().currentUser;
-
-      if (user) {
-        console.log(`%c[DEBUG] 7. SUCCESS: Firebase user found (uid: ${user.uid}). Setting up onSnapshot listener.`, 'color: green; font-weight: bold;');
-        const eventRef = db.collection('events').doc(eventId);
-
-        // ▼▼▼ onSnapshotの返り値（解除関数）を新しい管理機構に登録する ▼▼▼
-        const unsubscribe = eventRef.onSnapshot(
-          async (doc) => {
-            console.log('%c[DEBUG] 8. REALTIME UPDATE RECEIVED (onSnapshot fired)', 'color: blue; font-weight: bold;');
-            if (!doc.exists) {
-              console.log('[DEBUG]   - Document no longer exists.');
-              return;
-            }
-            const updatedData = doc.data();
-            if (updatedData && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
-              console.log('[DEBUG]   - Doodle data has changed. Redrawing canvas...');
-              state.currentLotteryData.doodles = updatedData.doodles || [];
-
-              const staticCanvas = document.getElementById('participantCanvasStatic');
-              if (staticCanvas && staticCanvas.offsetParent !== null) {
-                const ctx = staticCanvas.getContext('2d');
-                const storedState = participantPanzoom ? {pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale()} : null;
-                await prepareStepAnimation(ctx, true, false, false, storedState);
-                console.log('[DEBUG]   - Canvas redraw complete.');
-              }
-            } else {
-              console.log('[DEBUG]   - No changes detected in doodle data.');
-            }
-          },
-          (error) => {
-            console.error('[DEBUG] 9. ERROR: Firestore onSnapshot listener failed:', error);
+      const unsubscribe = eventRef.onSnapshot(
+        async (doc) => {
+          console.log('%c[DEBUG] REALTIME UPDATE RECEIVED (onSnapshot fired)', 'color: blue; font-weight: bold;');
+          if (!doc.exists) {
+            console.log('[DEBUG] Document no longer exists.');
+            return;
           }
-        );
-        addFirestoreListener(unsubscribe);
-      } else {
-        console.error('%c[DEBUG] 7. FAILED: firebase.auth().currentUser was null or undefined. Listener NOT set up.', 'color: red; font-weight: bold;');
-      }
-    } else {
-      console.log('[DEBUG] 6. allowDoodleMode is false or undefined. Skipping listener setup.');
+          const updatedData = doc.data();
+
+          if (updatedData.status === 'started' && state.currentLotteryData.status === 'pending') {
+            console.log('[DEBUG] Event has started! Transitioning to results view.');
+            ui.showToast('イベントが開始されました！結果発表です！', 3000);
+            state.setCurrentLotteryData(updatedData);
+            await showResultsView(updatedData, state.currentParticipantName, false);
+            return;
+          }
+
+          const remoteTimestampMs = updatedData.lastModifiedAt ? updatedData.lastModifiedAt.toMillis() : 0;
+
+          let localTimestampMs = 0;
+          const localLastModified = state.currentLotteryData?.lastModifiedAt;
+
+          if (localLastModified) {
+            if (typeof localLastModified.toMillis === 'function') {
+              localTimestampMs = localLastModified.toMillis();
+            } else if (localLastModified._seconds !== undefined) {
+              localTimestampMs = new Date(localLastModified._seconds * 1000).getTime();
+            } else {
+              localTimestampMs = new Date(localLastModified).getTime();
+            }
+          }
+
+          console.log(`[DEBUG] Update Check: Remote=${remoteTimestampMs}, Local=${localTimestampMs}, Needs Refresh=${remoteTimestampMs > localTimestampMs}`);
+
+          if (localTimestampMs > 0 && remoteTimestampMs > localTimestampMs) {
+            console.log('[DEBUG] Structural change detected! Reloading view.');
+            ui.showToast('管理者がイベントを更新しました。画面を再読み込みします。', 4000);
+
+            unsubscribe();
+
+            setTimeout(() => {
+              initializeParticipantView(state.currentEventId, false, null);
+            }, 3000);
+            return;
+          }
+
+          state.currentLotteryData.lastModifiedAt = updatedData.lastModifiedAt;
+
+          if (updatedData.doodles && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
+            console.log('[DEBUG] Doodle data has changed. Redrawing canvas...');
+            state.currentLotteryData.doodles = updatedData.doodles || [];
+
+            const staticCanvas = document.getElementById('participantCanvasStatic');
+            if (staticCanvas && staticCanvas.offsetParent !== null) {
+              const ctx = staticCanvas.getContext('2d');
+              const storedState = participantPanzoom ? {pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale()} : null;
+              await prepareStepAnimation(ctx, true, false, false, storedState);
+              console.log('[DEBUG] Canvas redraw complete.');
+            }
+          } else {
+            console.log('[DEBUG] No structural or doodle changes detected.');
+          }
+        },
+        (error) => {
+          console.error('[DEBUG] Firestore onSnapshot listener failed:', error);
+        }
+      );
+      addFirestoreListener(unsubscribe);
     }
+    // ▲▲▲ ここまで修正 ▲▲▲
 
     if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
 

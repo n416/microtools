@@ -496,7 +496,7 @@ exports.fillSlots = async (req, res) => {
       }
     }
 
-    await eventRef.update({participants: updatedParticipants});
+    await eventRef.update({participants: updatedParticipants, lastModifiedAt: new Date()}); // ★ 修正点: lastModifiedAtを追加
 
     res.status(200).json({message: '参加枠を更新しました。', participants: updatedParticipants});
   } catch (error) {
