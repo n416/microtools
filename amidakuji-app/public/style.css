@@ -225,7 +225,9 @@ h4 {
   display: flex;
   gap: 10px;
   align-items: center;
-  margin-bottom: 15px;
+}
+.input-group + .input-group{
+margin-top: 10px;
 }
 .input-group.checkbox-group {
   margin-bottom: 20px;
@@ -240,8 +242,7 @@ h4 {
 .url-preview {
   font-size: 12px;
   color: #6c757d;
-  margin-top: -10px;
-  margin-bottom: 15px;
+  margin-top: 5px;
   padding-left: 90px;
 }
 .url-preview code {
@@ -339,6 +340,18 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .item-list-item {
+    flex-direction: column;
+  }
+  .list-item-link::after {
+    content: "click" !important;
+    margin-top: -2rem;
+    margin-right: auto !important;
+    margin-left:0 !important;
+  }
 }
 .item-list-item:hover {
   border-color: var(--primary-color);
@@ -713,7 +726,7 @@ button:disabled {
   max-width: 700px;
 }
 #prizeMasterSelectModal {
-  z-index: 1060;
+  z-index: 3060;
 }
 #prizeMasterSelectList {
   max-height: 40vh;
@@ -1187,6 +1200,7 @@ input:checked + .slider:before {
 .prize-main-controls {
   justify-content: flex-start;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 #summaryModal ul {
@@ -1656,6 +1670,7 @@ body.dark-mode {
   border-radius: 8px; /* 角を丸くする */
   padding: 3px;
   position: relative;
+  margin-left: auto;
 }
 
 .view-mode-btn {
