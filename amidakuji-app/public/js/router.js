@@ -268,32 +268,6 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView')
     state.setCurrentEventId(eventId);
     state.setCurrentGroupId(data.groupId);
 
-    if (data.allowDoodleMode) {
-      const eventRef = db.collection('events').doc(eventId);
-
-      const unsubscribe = eventRef.onSnapshot(async (doc) => {
-        if (!doc.exists) return;
-        const updatedData = doc.data();
-        if (updatedData && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
-          state.currentLotteryData.doodles = updatedData.doodles || [];
-
-          let targetCanvas = null;
-          if (viewToShow === 'broadcastView') {
-            targetCanvas = document.getElementById('adminCanvas');
-          } else if (viewToShow === 'eventEditView') {
-            targetCanvas = document.getElementById('eventEditPreviewCanvas');
-          }
-
-          if (targetCanvas && targetCanvas.offsetParent !== null) {
-            const ctx = targetCanvas.getContext('2d');
-            const hidePrizes = viewToShow !== 'broadcastView';
-            await prepareStepAnimation(ctx, hidePrizes, false, true);
-          }
-        }
-      });
-      addFirestoreListener(unsubscribe);
-    }
-
     ui.showView(viewToShow);
 
     let parentGroup = state.allUserGroups.find((g) => g.id === data.groupId);
@@ -354,6 +328,7 @@ async function loadAndShowBroadcast(eventId) {
 async function loadAndShowEventForm(groupId) {
   state.setCurrentGroupId(groupId);
   ui.resetEventCreationForm();
+  await renderEventForEditing({}); // フォームの表示をリセット
   ui.showView('eventEditView');
 }
 
