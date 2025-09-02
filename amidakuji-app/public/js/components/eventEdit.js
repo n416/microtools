@@ -76,10 +76,19 @@ function setDirty(dirty) {
 }
 
 function showSaveOverlay() {
+  // アコーディオンヘッダーを無効化
   elements.finalPrepAccordionHeader.disabled = true;
+
+  // アコーディオンを開く
+  elements.finalPrepAccordionHeader.setAttribute('aria-expanded', 'true');
+  elements.finalPrepAccordionContent.style.display = 'block';
+
+  // オーバーレイを表示
   if (elements.accordionOverlay) {
     elements.accordionOverlay.style.display = 'flex';
   }
+
+  // リアルタイムリスナーをクリア
   clearAllFirestoreListeners();
 }
 
