@@ -1,0 +1,83 @@
+.event-url-display {
+  font-size: 14px;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.prize-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.save-load-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+#currentEventUrl {
+  font-weight: bold;
+  color: var(--danger-color);
+}
+
+.prize-master-image {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.member-list-item .member-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-grow: 1;
+}
+
+.member-list-item .label {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: bold;
+  color: white;
+}
+
+.member-list-item .label.admin {
+  background-color: var(--primary-color);
+}
+
+.member-list-item .label.user {
+  background-color: #6c757d;
+}
+
+.member-list-item.inactive {
+  opacity: 0.5;
+  background-color: var(--shadow-color);
+}
+
+.member-list-item.inactive:hover {
+  opacity: 0.7;
+}
+
+.profile-icon-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.profile-icon-container img {
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+}
+
+.profile-icon-container label.button {
+  display: inline-block;
+  padding: 8px 12px;
+  cursor: pointer;
+  background-color: #6c757d;
+  color: white;
+  border-radius: 4px;
+  font-size: 14px;
+}

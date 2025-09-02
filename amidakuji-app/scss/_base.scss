@@ -1,0 +1,370 @@
+:root {
+  --primary-color: #007bff;
+  --primary-hover-color: #0056b3;
+  --danger-color: #dc3545;
+  --danger-hover-color: #c82333;
+  --light-bg-color: #f4f7f6;
+  --white-color: #fff;
+  --white-color-rgb: 255, 255, 255; /* <--- 追加 */
+  --text-color: #333;
+  --border-color: #ddd;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --admin-color: #ffc107;
+  --approve-color: #28a745;
+  --approve-hover-color: #218838;
+  --notification-bg-color: #fffbe6;
+  --notification-border-color: #ffe58f;
+  --notification-text-color: #8a6d3b;
+  /* ★ここを追加★ Lucideアイコンの線の太さを設定 */
+  --lucide-stroke-width: 1; /* 初期値は2。1.5や1.25などに変更すると細くなります */
+}
+
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hirino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+  color: var(--text-color);
+  margin: 0;
+  transition: background-color 0.5s ease;
+  background-color: var(--light-bg-color);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: #4a4a4a;
+  font-weight: 300;
+}
+
+.main-header h1 {
+  font-size: 24px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+#hamburger-button span {
+  width: 2rem;
+  height: 0.25rem;
+  background: var(--text-color);
+  border-radius: 10px;
+  transition: all 0.3s linear;
+  position: relative;
+  transform-origin: 1px;
+}
+
+#hamburger-button.active span:nth-child(1) {
+  transform: rotate(45deg);
+}
+
+#hamburger-button.active span:nth-child(2) {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+#hamburger-button.active span:nth-child(3) {
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 768px) {
+  .main-header h1 {
+    font-size: 20px;
+  }
+
+  #hamburger-button {
+    display: flex;
+  }
+
+  #nav-menu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--white-color);
+    z-index: 1005;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #nav-menu > * {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  #nav-menu.active {
+    display: flex;
+  }
+
+  .auth-controls {
+    flex-direction: column;
+    width: 100%;
+    margin-top: 20px;
+    align-items: center;
+  }
+
+  .auth-controls > * {
+    width: 80%;
+    max-width: 300px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  #groupSwitcher {
+    width: 80%;
+    max-width: 300px;
+  }
+
+  #currentGroupName {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.url-preview code {
+  background-color: #e9ecef;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+#settings li .delete-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.list-item-link > span {
+  flex-grow: 1;
+  cursor: pointer;
+}
+
+.list-header h3 {
+  margin: 0;
+}
+
+#settings h4 {
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 5px;
+  margin-top: 0;
+}
+
+#participantManagementList li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#participantManagementList span {
+  flex-grow: 1;
+}
+
+#prizeDisplay ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin-bottom: 30px;
+}
+
+#prizeDisplay li {
+  background-color: var(--white-color);
+  padding: 10px 20px;
+  border-radius: 20px;
+  box-shadow: 0 2px 5px var(--shadow-color);
+  font-weight: bold;
+}
+
+.dropdown-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notification-banner p {
+  margin: 0;
+}
+
+#potentialMatchTab li {
+  border: 1px solid var(--border-color);
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+#summaryModal ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+#summaryModal li {
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.settings-panel h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 15px;
+}
+
+body.light-mode .settings-fab {
+  background-color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode .settings-fab:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+body.light-mode .settings-panel {
+  background-color: rgba(248, 248, 248, 0.75);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+body.light-mode .radio-group {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode .radio-group input[type='radio']:checked + label {
+  color: white;
+}
+
+body.light-mode {
+  --primary-color: #007bff;
+  --primary-hover-color: #0056b3;
+  --danger-color: #dc3545;
+  --danger-hover-color: #c82333;
+  --light-bg-color: #f4f7f6;
+  --white-color: #fff;
+  --text-color: #333;
+  --border-color: #ddd;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --notification-bg-color: #fffbe6;
+  --notification-border-color: #ffe58f;
+  --notification-text-color: #8a6d3b
+}
+
+h1,
+  h2,
+  h3,
+  h4 {
+    color: #4a4a4a;
+  }
+
+.url-preview code {
+    background-color: #e9ecef;
+    color: #212529;
+  }
+
+body.dark-mode {
+  --primary-color: #0d84ff;
+  --primary-color-rgb: 13, 132, 255;
+  --primary-hover-color: #3b9aff;
+  --danger-color: #e5484d;
+  --danger-hover-color: #ff5c5c;
+  --light-bg-color: #121212;
+  --white-color: #1e1e1e;
+  --text-color: #dcdcdc;
+  --white-color-rgb: 30, 30, 30; /* <--- 追加 */
+  --border-color: #444;
+  --shadow-color: rgba(255, 255, 255, 0.08);
+  --notification-bg-color: #001933;
+  --notification-border-color: #665600;
+  --notification-text-color: #f0e68c
+}
+
+h1,
+  h2,
+  h3,
+  h4 {
+    color: #e0e0e0;
+  }
+
+.url-preview code {
+    background-color: #333;
+    color: #e0e0e0;
+  }
+
+a,
+  a:link,
+  #backToGroupEventListLink {
+    color: var(--primary-color);
+  }
+
+body.dark-mode .view-mode-switcher {
+  background-color: #343a40;
+}
+
+body.dark-mode .view-mode-btn {
+  color: #adb5bd !important;
+}
+
+body.dark-mode .view-mode-btn.active {
+  color: #fff !important;
+}
+
+body.light-mode .input-group.checkbox-group label::before {
+  background-color: var(--white-color);
+}
+
+body.dark-mode .input-group.checkbox-group label::before {
+  background-color: #333;
+}
+
+.broadcast-sidebar h4 {
+  margin: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  font-size: 16px;
+}
+
+.display-preview .item-list li {
+  background-color: #fff;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.display-preview ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.display-preview li {
+  background-color: var(--white-color);
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 1px 3px var(--shadow-color); /* 影を少し調整 */
+  font-weight: bold;
+  font-size: 14px;
+}
+
+body.dark-mode .display-preview {
+  background-color: rgba(255, 255, 255, 0.05); /* ダークモード用の背景色 */
+}
+
+body.dark-mode .display-preview li {
+  background-color: #3a3a3a; /* 背景を少し明るいグレーに */
+  border: 1px solid #555; /* 輪郭を明確にするための枠線を追加 */
+}
+
+body.dark-mode .cropper-container {
+  background-color: #1a1a1a;
+}
+
+body.dark-mode #adminControls #glimpseButton {
+  background-color: rgba(var(--white-color-rgb, 30, 30, 30), 0.7);
+}
