@@ -1,0 +1,168 @@
+#adminCanvas,
+#participantCanvas {
+  border: none;
+  background-color: transparent;
+  box-shadow: none;
+  width: auto;
+  height: 400px;
+}
+
+#adminControls {
+  margin-bottom: 10px;
+}
+
+.broadcast-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 2005;
+  gap: 10px;
+}
+
+.floating-controls {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 10;
+  display: flex;
+  gap: 10px;
+}
+
+.broadcast-sidebar {
+  background-color: var(--white-color);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  transition: transform 0.3s ease-in-out;
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 85%;
+  max-width: 300px;
+  transform: translateX(100%);
+  z-index: 2030;
+  padding-top: 20px;
+  overflow-y: auto;
+}
+
+.broadcast-sidebar.is-open {
+  transform: translateX(0);
+  box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
+}
+
+.broadcast-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.broadcast-controls .control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.broadcast-controls .control-group h5 {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  color: var(--text-color);
+  opacity: 0.7;
+  font-weight: bold;
+}
+
+.broadcast-controls .control-group button,
+.broadcast-controls .control-group select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.broadcast-sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 2025;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.broadcast-sidebar-overlay.is-visible {
+  opacity: 0;
+  pointer-events: auto;
+}
+
+#broadcastView.fullscreen-active .broadcast-header {
+  position: fixed !important;
+  top: 0;
+  padding: 10px 20px;
+  border-radius: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 68px;
+  /* background: linear-gradient... この行を削除しました */
+}
+
+#broadcastView.fullscreen-active .floating-controls {
+  top: 70px; /* ヘッダーの高さ分、下にずらす */
+}
+
+#toggleFullscreenButton {
+  margin-left: auto;
+}
+
+#adminControls {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column; /* ボタンを縦に並べる */
+  gap: 15px; /* ボタンの間隔 */
+  align-items: center;
+  width: 90%;
+  max-width: 400px;
+}
+
+#adminControls #startEventButton {
+  font-size: 1.5em;
+  padding: 15px 30px;
+  width: 100%;
+}
+
+#adminControls #glimpseButton {
+  width: 100%;
+  padding: 12px 20px;
+  background-color: rgba(var(--white-color-rgb, 255, 255, 255), 0.8);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid var(--border-color);
+  color: var(--text-color); /* Add this line */
+}
+
+/* フルスクリーン時にビュー全体の幅制限を解除 */
+#broadcastView.fullscreen-active {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+/* フルスクリーン時に「戻る」ボタンを非表示にする */
+#broadcastView.fullscreen-active #backToDashboardButton {
+  display: none;
+}
+
+/* ▼▼▼ このルールを新しく追加してください ▼▼▼ */
+/* フルスクリーン時にフローティングコントロールがヘッダーと重ならないように下に移動 */
+#broadcastView.fullscreen-active .floating-controls {
+  top: 70px; /* ヘッダーの高さ分、下にずらす */
+}

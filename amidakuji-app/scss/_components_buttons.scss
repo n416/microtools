@@ -1,0 +1,292 @@
+#adminDashboardButton {
+  background-color: var(--admin-color);
+  color: #333;
+  padding: 8px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  border: none;
+  font-weight: bold;
+}
+
+#hamburger-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1010;
+  height: 2rem;
+  width: 2rem;
+  display: none;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+@media (max-width: 768px) {
+  .main-header h1 {
+    font-size: 20px;
+  }
+
+  #hamburger-button {
+    display: flex;
+  }
+
+  #nav-menu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--white-color);
+    z-index: 1005;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #nav-menu > * {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  #nav-menu.active {
+    display: flex;
+  }
+
+  .auth-controls {
+    flex-direction: column;
+    width: 100%;
+    margin-top: 20px;
+    align-items: center;
+  }
+
+  .auth-controls > * {
+    width: 80%;
+    max-width: 300px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  #groupSwitcher {
+    width: 80%;
+    max-width: 300px;
+  }
+
+  #currentGroupName {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  baseline-source: last;
+  gap: 5px;
+  background-color: var(--primary-color);
+  color: white;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+button:hover {
+  background-color: var(--primary-hover-color);
+}
+
+button.primary-action {
+  font-weight: bold;
+}
+
+button:disabled {
+  background-color: #a0a0a0;
+  cursor: not-allowed;
+}
+
+.delete-btn {
+  background-color: var(--danger-color) !important;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: var(--danger-hover-color) !important;
+}
+
+.item-list-item .item-buttons .impersonate-btn {
+  background-color: var(--admin-color);
+  color: #333;
+}
+
+#backToGroupsButton,
+#backToDashboardFromMembersButton {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+#switcherCreateGroup {
+  border-top: 1px solid var(--border-color);
+  margin-top: 5px;
+  padding-top: 10px;
+  color: var(--primary-color);
+}
+
+.modal-actions .secondary-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+}
+
+.modal-actions .secondary-btn:hover {
+  background-color: #5a6268;
+}
+
+.secondary-btn {
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 1.5px solid var(--primary-color);
+  padding: 8px 16px;
+  font-weight: bold;
+}
+
+.secondary-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.secondary-btn.danger {
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+  background-color: transparent;
+}
+
+.secondary-btn.danger:hover {
+  background-color: #fbe9eb !important;
+  color: var(--danger-hover-color);
+}
+
+.secondary-btn {
+  width: 100%;
+  max-width: 300px;
+}
+
+@media (max-width: 600px) {
+  .dashboard-secondary-actions {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .secondary-btn {
+    width: 100%;
+    max-width: 350px;
+  }
+}
+
+#finalizeBulkButton {
+  margin-top: 20px;
+}
+
+.prize-card .delete-btn {
+  padding: 6px;
+  font-size: 12px;
+  flex-grow: 1;
+}
+
+#goToCreateEventViewButton {
+  margin-left: auto;
+}
+
+.secondary-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+.secondary-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+.secondary-btn.danger:hover {
+    background-color: rgba(229, 72, 77, 0.1);
+  }
+
+.error-actions .button.primary-action {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.view-mode-btn {
+  background: transparent;
+  color: #aaa; /* 未選択時の文字を薄いグレーに */
+  border: none;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  z-index: 1; /* スライド背景より手前に表示 */
+  flex: 1; /* 均等な幅にする */
+  text-align: center;
+  font-weight: 500;
+}
+
+.view-mode-btn.active {
+  color: white; /* 選択中の文字を白に */
+  font-weight: 600;
+}
+
+.view-mode-btn:not(.active):hover {
+  background-color: transparent; /* ホバーエフェクトを削除 */
+}
+
+.floating-fab {
+  display: flex;
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  border-radius: 0;
+  background-color: var(--primary-color);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: none;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 2015;
+  bottom: 0;
+  right: 21px;
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.floating-fab:hover {
+  background-color: var(--primary-hover-color);
+}
+
+.close-sidebar-btn {
+  display: block;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text-color);
+  opacity: 0.6;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.close-sidebar-btn:hover {
+  opacity: 0.8;
+}
+
+#broadcastView.fullscreen-active .floating-fab {
+  position: fixed !important;
+  top: 0;
+  right: 0;
+}

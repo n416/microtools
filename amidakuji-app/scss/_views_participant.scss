@@ -1,0 +1,113 @@
+#participantView {
+  text-align: center;
+}
+
+#slotList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.join-form {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+  max-width: 400px;
+  margin: 0 auto 20px;
+}
+
+.join-form input {
+  text-align: center;
+}
+
+#waitingMessage {
+  font-size: 1.2em;
+  color: #28a745;
+  background-color: #e9f7ef;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #a3e0b7;
+}
+
+#resultSection {
+  overflow-x: auto;
+}
+
+.participant-dashboard {
+  text-align: center;
+}
+
+.dashboard-main-action {
+  margin: 20px 0 30px;
+}
+
+.dashboard-main-action .primary-action.large {
+  padding: 15px 20px;
+  font-size: 1.2em;
+  font-weight: bold;
+  width: 80%;
+  max-width: 300px;
+  box-shadow: none;
+  height: auto;
+  line-height: 1.4;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+.dashboard-secondary-actions {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.setting-group-title {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #333;
+  padding-bottom: 0;
+  border-bottom: none;
+  text-align: center;
+}
+
+.setting-group-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+@media (max-width: 600px) {
+  .dashboard-secondary-actions {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .secondary-btn {
+    width: 100%;
+    max-width: 350px;
+  }
+}
+
+#waitingMessage {
+    background-color: #1c2e23;
+    border-color: #2f4f3a;
+    color: #6ee391;
+  }
+
+.doodle-mode-switcher .doodle-mode-btn {
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.doodle-mode-switcher .doodle-mode-btn:not(.active) {
+  background-color: #6c757d; /* 非アクティブ時の背景色をグレーに */
+  opacity: 0.5; /* 半透明にする */
+}
+
+.doodle-mode-switcher .doodle-mode-btn:not(.active):hover {
+  opacity: 0.75;
+  background-color: #5a6268;
+}
