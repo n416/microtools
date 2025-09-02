@@ -1,0 +1,135 @@
+@media (max-width: 768px) {
+  .main-header h1 {
+    font-size: 20px;
+  }
+
+  #hamburger-button {
+    display: flex;
+  }
+
+  #nav-menu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--white-color);
+    z-index: 1005;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #nav-menu > * {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  #nav-menu.active {
+    display: flex;
+  }
+
+  .auth-controls {
+    flex-direction: column;
+    width: 100%;
+    margin-top: 20px;
+    align-items: center;
+  }
+
+  .auth-controls > * {
+    width: 80%;
+    max-width: 300px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  #groupSwitcher {
+    width: 80%;
+    max-width: 300px;
+  }
+
+  #currentGroupName {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+#groupSwitcher {
+  position: relative;
+}
+
+#currentGroupName {
+  background-color: #f8f9fa;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  min-width: 150px;
+  text-align: left;
+  padding-right: 30px;
+  position: relative;
+}
+
+#currentGroupName::after {
+  content: '▼';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: white;
+  min-width: 200px;
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.dropdown-content button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  color: var(--text-color);
+  padding: 10px;
+  border: none;
+}
+
+.dropdown-content button:hover {
+  background-color: #f1f1f1;
+}
+
+.dropdown-content button.active {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+#currentGroupName {
+    background-color: #f8f9fa;
+  }
+
+.dropdown-content {
+    background-color: white;
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  }
+
+.dropdown-content button:hover {
+    background-color: #f1f1f1;
+  }
+
+.dark-mode #currentGroupName {
+  background-color: #2a2a2a;
+}
+
+.dark-mode .dropdown-content {
+  background-color: #333;
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.5);
+}
+
+.dark-mode .dropdown-content button:hover {
+  background-color: #444;
+}

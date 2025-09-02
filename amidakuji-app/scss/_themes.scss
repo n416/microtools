@@ -1,0 +1,122 @@
+/* ライトモードのスタイル */
+body.light-mode {
+  .settings-fab {
+    background-color: rgba(255, 255, 255, 0.7);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #333;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .settings-fab:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+  }
+
+  .settings-panel {
+    background-color: rgba(248, 248, 248, 0.75);
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  }
+
+  .radio-group {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  .radio-group input[type='radio']:checked + label {
+    color: white;
+  }
+}
+
+/* ダークモードのスタイル */
+body.dark-mode {
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: #e0e0e0;
+  }
+
+  .url-preview code {
+    background-color: #333;
+    color: #e0e0e0;
+  }
+
+  .main-header,
+  .controls,
+  .modal-content {
+    box-shadow: none;
+    border: 1px solid var(--border-color);
+  }
+  .list-item-link::after {
+    color: #666;
+  }
+  .item-list-item:hover {
+    box-shadow: none;
+  }
+  .slot.available {
+    background-color: transparent;
+    border-color: var(--primary-color);
+  }
+  .slot.available:hover {
+    background-color: rgba(13, 132, 255, 0.1);
+  }
+  .slot.taken {
+    background-color: #333;
+    color: #888;
+  }
+  .slot.selected {
+    box-shadow: 0 0 8px rgba(13, 132, 255, 0.6);
+    color: var(--primary-color);
+  }
+  #waitingMessage {
+    background-color: #1c2e23;
+    border-color: #2f4f3a;
+    color: #6ee391;
+  }
+  .modal-content {
+    background-color: #2a2a2a;
+    border-color: #555;
+  }
+  .close-button {
+    color: #888;
+  }
+  .close-button:hover,
+  .close-button:focus {
+    color: #eee;
+  }
+  .prize-master-item.selectable.selected {
+    background-color: rgba(var(--primary-color-rgb, 13, 132, 255), 0.2);
+  }
+  .secondary-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  .secondary-btn.danger:hover {
+    background-color: rgba(229, 72, 77, 0.1);
+  }
+  a,
+  a:link,
+  #backToGroupEventListLink {
+    color: var(--primary-color);
+  }
+  .view-mode-switcher {
+    background-color: #343a40;
+  }
+  .view-mode-btn {
+    color: #adb5bd !important;
+  }
+  .view-mode-btn.active {
+    color: #fff !important;
+  }
+  .display-preview {
+    background-color: rgba(255, 255, 255, 0.05); /* ダークモード用の背景色 */
+  }
+  .display-preview li {
+    background-color: #3a3a3a; /* 背景を少し明るいグレーに */
+    border: 1px solid #555; /* 輪郭を明確にするための枠線を追加 */
+  }
+  .cropper-container {
+    background-color: #1a1a1a;
+  }
+  #adminControls #glimpseButton {
+    background-color: rgba(var(--white-color-rgb, 30, 30, 30), 0.7);
+  }
+}

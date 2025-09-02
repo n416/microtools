@@ -1,0 +1,11 @@
+.notification-banner {
+  background-color: var(--notification-bg-color);
+  border: 1px solid var(--notification-border-color);
+  color: var(--notification-text-color);
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
