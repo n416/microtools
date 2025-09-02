@@ -10,6 +10,9 @@
       <label for="eventNameInput">イベント名:</label>
       <input type="text" id="eventNameInput" placeholder="（例: 忘年会2025）" />
     </div>
+    <div id="saveStartedEventContainer" style="display: none; margin-top: 15px;">
+      <button id="saveStartedEventButton" class="primary-action">イベント名を保存する</button>
+    </div>
     <p>現在のイベントURL: <a id="currentEventUrl" href="#" target="_blank">（未作成または未読み込み）</a></p>
   </div>
   <div class="settings-section">
@@ -57,7 +60,7 @@
     </div>
   </div>
 
-  <div id="createEventButtonContainer" style="margin-top: 15px;">
+  <div class="settings-section" id="createEventButtonContainer">
     <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
   </div>
 

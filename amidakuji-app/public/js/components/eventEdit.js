@@ -16,6 +16,8 @@ const elements = {
   prizeListModeContainer: document.getElementById('prizeListModeContainer'),
   createEventButton: document.getElementById('createEventButton'),
   createEventButtonContainer: document.getElementById('createEventButtonContainer'),
+  saveStartedEventContainer: document.getElementById('saveStartedEventContainer'),
+  saveStartedEventButton: document.getElementById('saveStartedEventButton'),
   openAddPrizeModalButton: document.getElementById('openAddPrizeModalButton'),
   showSummaryButton: document.getElementById('showSummaryButton'),
   addPrizeModal: document.getElementById('addPrizeModal'),
@@ -62,7 +64,9 @@ let isAccordionListenerAttached = false;
 let isDirty = false;
 
 function setDirty(dirty) {
+  // Only set dirty flag if we are editing an existing event
   if (!state.currentEventId) return;
+
   isDirty = dirty;
   if (dirty) {
     showSaveOverlay();
@@ -139,7 +143,7 @@ async function handleSaveEvent(eventId, buttonToAnimate, isStartedEvent) {
     state.setCurrentLotteryData(updatedData);
     state.setPrizes(updatedData.prizes || []);
     await drawPreviewCanvas();
-    setDirty(false);
+    setDirty(false); // Reset dirty flag after successful save
   } catch (error) {
     alert(error.error || 'イベントの保存に失敗しました。');
   } finally {
@@ -197,21 +201,55 @@ export async function renderEventForEditing(data) {
   elements.eventNameInput.value = data.eventName || '';
   state.setPrizes(data.prizes || []);
 
+  // --- Visibility and State Control ---
+  // Reset all containers first
+  elements.createEventButtonContainer.style.display = 'none';
+  if (elements.saveStartedEventContainer) {
+    elements.saveStartedEventContainer.style.display = 'none';
+  }
+
+  // Set opacity to 1 to ensure it's visible if display is set to block
+  elements.createEventButtonContainer.style.opacity = '1';
+
   if (state.currentEventId) {
-    // 編集モード
-    elements.createEventButtonContainer.style.display = 'none';
+    // Editing an existing event
     elements.finalPrepAccordionHeader.disabled = false;
     elements.finalPrepAccordionHeader.setAttribute('aria-expanded', 'true');
     elements.finalPrepAccordionContent.style.display = 'block';
     await drawPreviewCanvas();
   } else {
-    // 新規作成モード
-    elements.createEventButtonContainer.style.display = 'block';
+    // Creating a new event
     elements.finalPrepAccordionHeader.disabled = true;
     elements.finalPrepAccordionHeader.setAttribute('aria-expanded', 'false');
     elements.finalPrepAccordionContent.style.display = 'none';
   }
 
+  // --- Form Controls (Disable/Enable) and Button Visibility ---
+  if (isStarted) {
+    // EVENT IS FINISHED
+    elements.saveStartedEventContainer.style.display = 'block';
+    const inputs = elements.eventEditView.querySelectorAll('input, button, textarea, select');
+    inputs.forEach((input) => {
+      const allowedIds = ['eventNameInput', 'saveStartedEventButton', 'backToGroupsButton'];
+      if (!allowedIds.includes(input.id)) {
+        input.disabled = true;
+      }
+    });
+  } else {
+    // EVENT IS NEW OR ONGOING
+    const inputs = elements.eventEditView.querySelectorAll('input, button, textarea, select');
+    inputs.forEach((input) => {
+      input.disabled = false;
+    });
+
+    if (!state.currentEventId) {
+      // It's a NEW event
+      elements.createEventButtonContainer.style.display = 'block';
+      elements.createEventButton.textContent = 'この内容でイベントを作成';
+    }
+  }
+
+  // --- Other UI Updates ---
   if (elements.displayPrizeName) {
     elements.displayPrizeName.checked = data.hasOwnProperty('displayPrizeName') ? data.displayPrizeName : true;
   }
@@ -249,30 +287,6 @@ export async function renderEventForEditing(data) {
   }
 
   updatePrizePreview();
-
-  if (isStarted) {
-    // Disable all inputs except title
-    const inputs = elements.eventEditView.querySelectorAll('input, button, textarea, select');
-    inputs.forEach((input) => {
-      if (input.id !== 'eventNameInput' && input.id !== 'createEventButton' && input.id !== 'backToGroupsButton') {
-        input.disabled = true;
-      }
-    });
-    elements.createEventButton.textContent = 'イベント名を保存する';
-    elements.createEventButton.style.display = 'block'; // Ensure save button is visible
-    elements.createEventButtonContainer.style.display = 'block';
-  } else {
-    // Re-enable all inputs for non-started events
-    const inputs = elements.eventEditView.querySelectorAll('input, button, textarea, select');
-    inputs.forEach((input) => {
-      input.disabled = false;
-    });
-    elements.createEventButton.textContent = 'この内容でイベントを作成';
-    if (!state.currentEventId) {
-      // Only show for new events
-      elements.createEventButtonContainer.style.display = 'block';
-    }
-  }
 }
 
 export function renderPrizeCardList() {
@@ -784,12 +798,6 @@ export function initEventEdit() {
     }
     if (elements.createEventButton) {
       elements.createEventButton.addEventListener('click', async () => {
-        const isUpdate = !!state.currentEventId;
-        if (isUpdate) {
-          await handleSaveEvent(state.currentEventId, elements.createEventButton, state.currentLotteryData.status === 'started');
-          return;
-        }
-
         const participantCount = state.prizes.length;
         if (participantCount < 2) return alert('景品は2つ以上設定してください。');
 
@@ -807,6 +815,7 @@ export function initEventEdit() {
           };
           const newEvent = await api.createEvent(initialEventData);
           state.setCurrentEventId(newEvent.id);
+          setDirty(false); // Reset dirty flag after successful creation
 
           elements.createEventButtonContainer.style.transition = 'opacity 0.5s';
           elements.createEventButtonContainer.style.opacity = '0';
@@ -825,6 +834,9 @@ export function initEventEdit() {
           elements.createEventButton.textContent = 'この内容でイベントを作成';
         }
       });
+    }
+    if (elements.saveStartedEventButton) {
+      elements.saveStartedEventButton.addEventListener('click', () => handleSaveEvent(state.currentEventId, elements.saveStartedEventButton, true));
     }
     if (elements.saveEventFromOverlayButton) {
       elements.saveEventFromOverlayButton.addEventListener('click', () => handleSaveEvent(state.currentEventId, elements.saveEventFromOverlayButton, false));
