@@ -7,6 +7,7 @@
   <div class="canvas-panzoom-container">
     <div id="adminControls" class="floating-controls" style="justify-content: center; width: 100%; top: 50%; left: 50%; transform: translate(-50%, -50%);">
       <button id="startEventButton" class="primary-action" style="font-size: 1.5em; padding: 15px 30px;"><i data-lucide="<%= emojiToLucide('🎉') %>"></i> イベント開始！</button>
+      <button id="glimpseButton">景品チラ見せ</button>
     </div>
     <div class="loading-mask" id="admin-loading-mask">あみだくじを生成中...</div>
     <div class="panzoom-wrapper" id="admin-panzoom-wrapper">
@@ -14,7 +15,8 @@
     </div>
   </div>
 
-  <div id="broadcastResultsContainer" class="controls" style="display: none; width: 100%; margin-top: 20px;">
+  <div id="broadcastResultsContainer" class="controls" style="display: none;
+width: 100%; margin-top: 20px;">
     <ul id="broadcastResultsList" class="item-list"></ul>
   </div>
   <aside id="broadcastSidebar" class="broadcast-sidebar">
@@ -28,7 +30,6 @@
       </div>
       <div class="control-group">
         <h5>あみだくじ操作</h5>
-        <button id="glimpseButton">景品チラ見せ</button>
       </div>
       <div class="control-group">
         <h5>個別演出</h5>
@@ -44,6 +45,7 @@
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <line x1="4" y1="21" x2="4" y2="14"></line>
     <line x1="4" y1="10" x2="4" y2="3"></line>
+
     <line x1="12" y1="21" x2="12" y2="12"></line>
     <line x1="12" y1="8" x2="12" y2="3"></line>
     <line x1="20" y1="21" x2="20" y2="16"></line>
