@@ -226,8 +226,8 @@ h4 {
   gap: 10px;
   align-items: center;
 }
-.input-group + .input-group{
-margin-top: 10px;
+.input-group + .input-group {
+  margin-top: 10px;
 }
 .input-group.checkbox-group {
   margin-bottom: 20px;
@@ -238,6 +238,7 @@ margin-top: 10px;
 .input-group label {
   font-size: 14px;
   min-width: 80px;
+  flex-shrink: 0;
 }
 .url-preview {
   font-size: 12px;
@@ -347,10 +348,10 @@ button:disabled {
     flex-direction: column;
   }
   .list-item-link::after {
-    content: "click" !important;
+    content: 'click' !important;
     margin-top: -2rem;
     margin-right: auto !important;
-    margin-left:0 !important;
+    margin-left: 0 !important;
   }
 }
 .item-list-item:hover {
@@ -1789,6 +1790,7 @@ body.dark-mode .view-mode-btn.active {
   position: relative;
   display: inline-flex;
   align-items: center;
+  padding-left: 90px; /* label幅80px + gap10px */
 }
 
 .input-group.checkbox-group input[type='checkbox'] {
@@ -2261,6 +2263,7 @@ body.dark-mode .cropper-container {
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   border: 1px solid var(--border-color);
+  color: var(--text-color); /* Add this line */
 }
 
 body.dark-mode #adminControls #glimpseButton {

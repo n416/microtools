@@ -14,15 +14,18 @@
     <p class="url-preview">
       <code>/g/<span id="customUrlPreview"></span></code>
     </p>
-    <div class="input-group">
+    <div
+class="input-group">
       <label for="groupPasswordInput">合言葉:</label>
       <input type="password" id="groupPasswordInput" placeholder="新規設定・変更時のみ入力" />
-      <button id="deletePasswordButton" class="delete-btn" style="display: none;">合言葉を削除</button>
     </div>
     <div class="input-group checkbox-group">
       <input type="checkbox" id="noIndexCheckbox" />
       <label for="noIndexCheckbox">検索エンジンに表示しない</label>
     </div>
-    <button id="saveGroupSettingsButton" class="primary-action">設定を保存</button>
+    <div class="modal-actions">
+      <button id="deletePasswordButton" class="delete-btn action-left" style="display: none;">合言葉を削除</button>
+      <button id="saveGroupSettingsButton" class="primary-action">設定を保存</button>
+    </div>
   </div>
 </div>
