@@ -143,6 +143,7 @@ h4 {
 #nav-menu {
   display: flex;
   align-items: center;
+  gap: 15px;
 }
 
 @media (max-width: 768px) {
@@ -1790,6 +1791,9 @@ body.dark-mode .view-mode-btn.active {
   position: relative;
   display: inline-flex;
   align-items: center;
+}
+
+#groupSettingsModal .input-group.checkbox-group {
   padding-left: 90px; /* label幅80px + gap10px */
 }
 
