@@ -2273,132 +2273,24 @@ body.dark-mode .cropper-container {
 body.dark-mode #adminControls #glimpseButton {
   background-color: rgba(var(--white-color-rgb, 30, 30, 30), 0.7);
 }
-#broadcastResultsContainer {
-  max-height: 40vh; /* 画面の高さの40%を上限とする */
-  display: flex; /* h5とulを縦に並べるため */
-  flex-direction: column;
-}
-
-#broadcastResultsContainer h5 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0; /* タイトルは縮まないようにする */
-}
-
-#broadcastResultsList {
-  overflow-y: auto; /* リストが長くなったらスクロールバーを表示 */
-  padding-right: 10px;
-  margin: 0;
-  border-top: 1px solid var(--border-color);
-  padding-top: 10px;
-}
-
-#broadcastResultsList .item-list-item {
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  padding: 10px;
-}
-
-#broadcastResultsList .result-prize-image {
-  width: 100px;
-  height: 100px;
-  margin-right: 10px;
-  border-radius: 4px;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-/* --- アコーディオンUIのスタイル --- */
-.accordion-item {
+.final-prep-content-wrapper {
+  position: relative;
   border: 1px solid var(--border-color);
+  padding: 20px;
   border-radius: 8px;
-  margin-bottom: 15px;
-  overflow: hidden;
 }
-
-.accordion-header {
-  background-color: var(--light-bg-color);
-  color: var(--text-color);
-  cursor: pointer;
-  padding: 15px 20px;
-  width: 100%;
-  border: none;
-  text-align: left;
-  outline: none;
-  font-size: 16px;
-  transition: background-color 0.2s;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.accordion-header:hover {
-  background-color: var(--shadow-color);
-}
-
-.accordion-header:disabled {
-  background-color: #f0f0f0;
-  color: #aaa;
-  cursor: not-allowed;
-}
-
-.accordion-header h4 {
-  margin: 0;
-  font-size: 1em;
-}
-
-.accordion-icon {
-  transition: transform 0.3s ease;
-}
-
-.accordion-header[aria-expanded='true'] .accordion-icon {
-  transform: rotate(180deg);
-}
-
-.accordion-content {
-  padding: 20px;
-  background-color: var(--white-color);
-  display: none;
-  border-top: 1px solid var(--border-color);
-}
-
-.accordion-content {
-  padding: 20px;
-  background-color: var(--white-color);
-  display: none;
-  border-top: 1px solid var(--border-color);
-  position: relative; /* オーバーレイの基準点 */
-}
-
-.accordion-overlay {
+.final-prep-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(var(--white-color-rgb), 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
-}
-
-body.dark-mode .accordion-overlay {
-  background-color: rgba(30, 30, 30, 0.8);
-}
-
-.accordion-header:disabled {
-  color: #999;
-  cursor: not-allowed;
-  background-color: #f9f9f9;
-}
-
-body.dark-mode .accordion-header:disabled {
-  color: #777;
-  background-color: #2a2a2a;
-}
+  border-radius: 8px;
+ }

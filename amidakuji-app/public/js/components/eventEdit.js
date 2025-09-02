@@ -50,58 +50,30 @@ const elements = {
   selectMembersButton: document.getElementById('selectMembersButton'),
   selectedMemberList: document.getElementById('selectedMemberList'),
   confirmFillSlotsButton: document.getElementById('confirmFillSlotsButton'),
-  finalPrepAccordion: document.getElementById('finalPrepAccordion'),
-  finalPrepAccordionHeader: document.getElementById('finalPrepAccordionHeader'),
-  finalPrepAccordionContent: document.getElementById('finalPrepAccordionContent'),
-  saveEventFromOverlayButton: document.getElementById('saveEventFromOverlayButton'),
-  accordionOverlay: document.querySelector('.accordion-overlay'),
+  finalPrepSection: document.getElementById('finalPrepSection'),
+  finalPrepOverlay: document.querySelector('.final-prep-overlay'),
+  saveForPreviewButton: document.getElementById('saveForPreviewButton'),
   viewModeSwitcher: document.querySelector('.view-mode-switcher'),
 };
 
 let processedNewPrizeFile = null;
 let selectedAssignments = [];
-let isAccordionListenerAttached = false;
 let isDirty = false;
 
 function setDirty(dirty) {
-  // Only set dirty flag if we are editing an existing event
-  if (!state.currentEventId) return;
+  if (!state.currentEventId) return; // Don't set dirty for new events
 
   isDirty = dirty;
+  if (elements.finalPrepOverlay) {
+    elements.finalPrepOverlay.style.display = dirty ? 'flex' : 'none';
+  }
+
   if (dirty) {
-    showSaveOverlay();
-  } else {
-    hideSaveOverlay();
+    clearAllFirestoreListeners();
   }
 }
 
-function showSaveOverlay() {
-  // アコーディオンヘッダーを無効化
-  elements.finalPrepAccordionHeader.disabled = true;
-
-  // アコーディオンを開く
-  elements.finalPrepAccordionHeader.setAttribute('aria-expanded', 'true');
-  elements.finalPrepAccordionContent.style.display = 'block';
-
-  // オーバーレイを表示
-  if (elements.accordionOverlay) {
-    elements.accordionOverlay.style.display = 'flex';
-  }
-
-  // リアルタイムリスナーをクリア
-  clearAllFirestoreListeners();
-}
-
-function hideSaveOverlay() {
-  if (state.currentEventId) {
-    elements.finalPrepAccordionHeader.disabled = false;
-  }
-  if (elements.accordionOverlay) {
-    elements.accordionOverlay.style.display = 'none';
-  }
-}
-
-async function handleSaveEvent(eventId, buttonToAnimate, isStartedEvent) {
+async function handleSaveEvent(eventId, buttonToAnimate, isStartedEvent = false) {
   buttonToAnimate.disabled = true;
   buttonToAnimate.textContent = '保存中...';
 
@@ -153,15 +125,12 @@ async function handleSaveEvent(eventId, buttonToAnimate, isStartedEvent) {
     state.setPrizes(updatedData.prizes || []);
     await drawPreviewCanvas();
     setDirty(false); // Reset dirty flag after successful save
+    attachRealtimeDoodleListener(); // Re-attach listener after save
   } catch (error) {
     alert(error.error || 'イベントの保存に失敗しました。');
   } finally {
     buttonToAnimate.disabled = false;
-    if (isStartedEvent) {
-      buttonToAnimate.textContent = 'イベント名を保存する';
-    } else {
-      buttonToAnimate.textContent = 'イベントを保存してください';
-    }
+    buttonToAnimate.textContent = isStartedEvent ? 'イベント名を保存する' : '変更を保存してプレビューを更新';
   }
 }
 
@@ -211,26 +180,22 @@ export async function renderEventForEditing(data) {
   state.setPrizes(data.prizes || []);
 
   // --- Visibility and State Control ---
-  // Reset all containers first
   elements.createEventButtonContainer.style.display = 'none';
-  if (elements.saveStartedEventContainer) {
-    elements.saveStartedEventContainer.style.display = 'none';
-  }
+  elements.saveStartedEventContainer.style.display = 'none';
+  elements.finalPrepSection.style.display = 'none';
 
   // Set opacity to 1 to ensure it's visible if display is set to block
   elements.createEventButtonContainer.style.opacity = '1';
 
   if (state.currentEventId) {
     // Editing an existing event
-    elements.finalPrepAccordionHeader.disabled = false;
-    elements.finalPrepAccordionHeader.setAttribute('aria-expanded', 'true');
-    elements.finalPrepAccordionContent.style.display = 'block';
+    elements.finalPrepSection.style.display = 'block';
     await drawPreviewCanvas();
+    setDirty(false); // Ensure overlay is hidden on initial load
+    attachRealtimeDoodleListener();
   } else {
     // Creating a new event
-    elements.finalPrepAccordionHeader.disabled = true;
-    elements.finalPrepAccordionHeader.setAttribute('aria-expanded', 'false');
-    elements.finalPrepAccordionContent.style.display = 'none';
+    elements.createEventButtonContainer.style.display = 'block';
   }
 
   // --- Form Controls (Disable/Enable) and Button Visibility ---
@@ -250,12 +215,6 @@ export async function renderEventForEditing(data) {
     inputs.forEach((input) => {
       input.disabled = false;
     });
-
-    if (!state.currentEventId) {
-      // It's a NEW event
-      elements.createEventButtonContainer.style.display = 'block';
-      elements.createEventButton.textContent = 'この内容でイベントを作成';
-    }
   }
 
   // --- Other UI Updates ---
@@ -490,33 +449,21 @@ export function closePrizeBulkAddModal() {
   if (elements.prizeBulkAddModal) elements.prizeBulkAddModal.style.display = 'none';
 }
 
-async function attachAccordionListener() {
-  if (isAccordionListenerAttached) return;
-
-  elements.finalPrepAccordionHeader.addEventListener('click', async () => {
-    const isExpanded = elements.finalPrepAccordionHeader.getAttribute('aria-expanded') === 'true';
-    elements.finalPrepAccordionHeader.setAttribute('aria-expanded', !isExpanded);
-    elements.finalPrepAccordionContent.style.display = isExpanded ? 'none' : 'block';
-
-    if (!isExpanded) {
-      await drawPreviewCanvas();
-      if (state.currentEventId && state.currentLotteryData.allowDoodleMode) {
-        const eventRef = db.collection('events').doc(state.currentEventId);
-        const unsubscribe = eventRef.onSnapshot(async (doc) => {
-          if (!doc.exists) return;
-          const updatedData = doc.data();
-          if (updatedData && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
-            state.currentLotteryData.doodles = updatedData.doodles || [];
-            if (elements.eventEditPreviewCanvas && elements.eventEditPreviewCanvas.offsetParent !== null) {
-              await drawPreviewCanvas();
-            }
-          }
-        });
-        addFirestoreListener(unsubscribe);
+function attachRealtimeDoodleListener() {
+  if (state.currentEventId && state.currentLotteryData.allowDoodleMode) {
+    const eventRef = db.collection('events').doc(state.currentEventId);
+    const unsubscribe = eventRef.onSnapshot(async (doc) => {
+      if (!doc.exists) return;
+      const updatedData = doc.data();
+      if (updatedData && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
+        state.currentLotteryData.doodles = updatedData.doodles || [];
+        if (elements.eventEditPreviewCanvas && elements.eventEditPreviewCanvas.offsetParent !== null) {
+          await drawPreviewCanvas();
+        }
       }
-    }
-  });
-  isAccordionListenerAttached = true;
+    });
+    addFirestoreListener(unsubscribe);
+  }
 }
 
 export function initEventEdit() {
@@ -824,7 +771,6 @@ export function initEventEdit() {
           };
           const newEvent = await api.createEvent(initialEventData);
           state.setCurrentEventId(newEvent.id);
-          setDirty(false); // Reset dirty flag after successful creation
 
           elements.createEventButtonContainer.style.transition = 'opacity 0.5s';
           elements.createEventButtonContainer.style.opacity = '0';
@@ -832,8 +778,8 @@ export function initEventEdit() {
             elements.createEventButtonContainer.style.display = 'none';
             const eventData = await api.getEvent(newEvent.id);
             state.setCurrentLotteryData(eventData);
-            elements.finalPrepAccordionHeader.disabled = false;
-            elements.finalPrepAccordionHeader.click();
+            // Re-render the view in "edit" mode
+            await renderEventForEditing(eventData);
           }, 500);
 
           history.pushState(null, '', `/admin/event/${newEvent.id}/edit`);
@@ -847,8 +793,8 @@ export function initEventEdit() {
     if (elements.saveStartedEventButton) {
       elements.saveStartedEventButton.addEventListener('click', () => handleSaveEvent(state.currentEventId, elements.saveStartedEventButton, true));
     }
-    if (elements.saveEventFromOverlayButton) {
-      elements.saveEventFromOverlayButton.addEventListener('click', () => handleSaveEvent(state.currentEventId, elements.saveEventFromOverlayButton, false));
+    if (elements.saveForPreviewButton) {
+      elements.saveForPreviewButton.addEventListener('click', () => handleSaveEvent(state.currentEventId, elements.saveForPreviewButton, false));
     }
     if (elements.openAddPrizeModalButton) {
       elements.openAddPrizeModalButton.addEventListener('click', openAddPrizeModal);
@@ -1066,6 +1012,5 @@ export function initEventEdit() {
         }
       });
     }
-    attachAccordionListener();
   }
 }
