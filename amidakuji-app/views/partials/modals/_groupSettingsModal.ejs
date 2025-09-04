@@ -1,31 +1,32 @@
 <div id="groupSettingsModal" class="modal" style="display: none">
   <div class="modal-content">
     <span class="close-button"><i data-lucide="<%= emojiToLucide('×') %>"></i></span>
-    <h3>グループ設定</h3>
-    <input type="hidden" id="settingsGroupId" />
-    <div class="input-group">
-      <label for="groupNameEditInput">グループ名:</label>
-      <input type="text" id="groupNameEditInput" placeholder="グループ名" />
-    </div>
-    <div class="input-group">
-      <label for="customUrlInput">カスタムURL:</label>
-      <input type="text" id="customUrlInput" placeholder="例: my-event-2025" />
-    </div>
-    <p class="url-preview">
-      <code>/g/<span id="customUrlPreview"></span></code>
-    </p>
-    <div
-class="input-group">
-      <label for="groupPasswordInput">合言葉:</label>
-      <input type="password" id="groupPasswordInput" placeholder="新規設定・変更時のみ入力" />
-    </div>
-    <div class="input-group checkbox-group">
-      <input type="checkbox" id="noIndexCheckbox" />
-      <label for="noIndexCheckbox">検索エンジンに表示しない</label>
-    </div>
-    <div class="modal-actions">
-      <button id="deletePasswordButton" class="delete-btn action-left" style="display: none;">合言葉を削除</button>
-      <button id="saveGroupSettingsButton" class="primary-action">設定を保存</button>
-    </div>
+    <form onsubmit="return false;">
+      <h3>グループ設定</h3>
+      <input type="hidden" id="settingsGroupId" />
+      <div class.input-group">
+        <label for="groupNameEditInput">グループ名:</label>
+        <input type="text" id="groupNameEditInput" placeholder="グループ名" autocomplete="off" />
+      </div>
+      <div class="input-group">
+        <label for="customUrlInput">カスタムURL:</label>
+        <input type="text" id="customUrlInput" placeholder="例: my-event-2025" autocomplete="off" />
+      </div>
+      <p class="url-preview">
+        <code>/g/<span id="customUrlPreview"></span></code>
+      </p>
+      <div class="input-group">
+        <label for="groupPasswordInput">合言葉:</label>
+        <input type="password" id="groupPasswordInput" placeholder="新規設定・変更時のみ入力" autocomplete="current-password" />
+      </div>
+      <div class="input-group checkbox-group">
+        <input type="checkbox" id="noIndexCheckbox" />
+        <label for="noIndexCheckbox">検索エンジンに表示しない</label>
+      </div>
+      <div class="modal-actions">
+        <button id="deletePasswordButton" class="delete-btn action-left" style="display: none;">合言葉を削除</button>
+        <button id="saveGroupSettingsButton" class="primary-action">設定を保存</button>
+      </div>
+    </form>
   </div>
 </div>
