@@ -787,6 +787,22 @@ button:disabled {
   background-color: rgba(229, 72, 77, 0.1);
 }
 
+.item-list-item .item-buttons .reset-tutorial-btn {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 4px 10px;
+  font-size: 12px;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+.item-list-item .item-buttons .reset-tutorial-btn:hover {
+  opacity: 1;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: transparent;
+}
+
 .error-actions .button.primary-action {
   background-color: var(--primary-color);
   color: white;
@@ -1260,6 +1276,31 @@ input[type=color] {
 
 .item-list-item:hover {
   box-shadow: none;
+}
+
+.tutorial-status-icon {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  position: relative;
+  transition: all 0.3s ease;
+}
+.tutorial-status-icon.completed {
+  background-color: var(--approve-color);
+  border-color: var(--approve-color);
+}
+.tutorial-status-icon.completed::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 3px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--white-color);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .slot {

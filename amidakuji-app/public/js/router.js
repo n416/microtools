@@ -11,6 +11,76 @@ import {loadAdminDashboardData} from './components/adminDashboard.js';
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
 import {db} from './main.js';
 
+// ▼▼▼ 以前の修正で欠落していた関数群 ▼▼▼
+
+/**
+ * イベントに参加、またはログインします。
+ * @param {string} eventId - イベントID
+ * @param {string} name - ユーザー名
+ * @param {string|null} memberId - メンバーID（任意）
+ */
+export async function handleLoginOrRegister(eventId, name, memberId = null) {
+  try {
+    const result = await api.joinEvent(eventId, name, memberId);
+    state.saveParticipantState(result.token, result.memberId, result.name);
+    await navigateTo(window.location.pathname, false); // 現在のビューを再読み込み
+  } catch (error) {
+    if (error.requiresPassword) {
+      const password = prompt(`「${name}」さんの合言葉を入力してください:`);
+      if (password) {
+        await verifyAndLogin(eventId, error.memberId, password);
+      }
+    } else {
+      alert(error.error || '参加処理に失敗しました。');
+    }
+  }
+}
+
+/**
+ * グループのダッシュボードにログインします。
+ * @param {string} groupId - グループID
+ * @param {string} name - ユーザー名
+ * @param {string|null} memberId - メンバーID（任意）
+ */
+export async function handleParticipantLogin(groupId, name, memberId = null) {
+  try {
+    const result = await api.loginOrRegisterToGroup(groupId, name, memberId);
+    state.saveParticipantState(result.token, result.memberId, result.name);
+    const group = await api.getGroup(groupId);
+    const backUrl = group.customUrl ? `/g/${group.customUrl}/dashboard` : `/groups/${groupId}`;
+    await navigateTo(backUrl);
+  } catch (error) {
+    if (error.requiresPassword) {
+      const password = prompt(`「${name}」さんの合言葉を入力してください:`);
+      if (password) {
+        // パスワード認証を試みます
+        await verifyAndLogin(null, error.memberId, password);
+      }
+    } else {
+      alert(error.error || 'ログイン処理に失敗しました。');
+    }
+  }
+}
+
+/**
+ * 合言葉を検証してログインします。
+ * @param {string|null} eventId - イベントID（任意）
+ * @param {string} memberId - メンバーID
+ * @param {string} password - 合言葉
+ */
+export async function verifyAndLogin(eventId, memberId, password) {
+  try {
+    // slotが選択されていない状態でのログインを想定
+    const result = await api.verifyPasswordAndJoin(eventId, memberId, password, state.selectedSlot);
+    state.saveParticipantState(result.token, result.memberId, result.name);
+    await navigateTo(window.location.pathname, false); // 現在のビューを再読み込み
+  } catch (error) {
+    alert(error.error || '認証に失敗しました。');
+  }
+}
+
+// ▲▲▲ ここまでが追加された関数群です ▲▲▲
+
 // ヘルパー関数をhandleRoutingの前に定義し直し、参照エラーを解決
 async function loadAndShowGroupEvents(groupId) {
   const groupData = await api.getGroup(groupId).catch(() => null);
@@ -341,7 +411,7 @@ async function handleRouting(initialData) {
 
 export async function navigateTo(path, pushState = true) {
   clearAllFirestoreListeners();
-  ui.showGlobalLoadingMask(); // ★★★ ロード画面を表示 ★★★
+  ui.showGlobalLoadingMask();
 
   try {
     const currentPath = window.location.pathname + window.location.search;
@@ -360,7 +430,7 @@ export async function navigateTo(path, pushState = true) {
     // ここでユーザー向けのエラー表示をすることも可能です
   } finally {
     // 描画が完了するのを少し待ってからロード画面を非表示にする
-    setTimeout(() => ui.hideGlobalLoadingMask(), 100); // ★★★ ロード画面を非表示 ★★★
+    setTimeout(() => ui.hideGlobalLoadingMask(), 100);
   }
 }
 
@@ -445,5 +515,33 @@ export async function loadUserAndRedirect(lastUsedGroupId) {
   } catch (error) {
     console.error(error);
     ui.showView('groupDashboard');
+  }
+}
+
+async function initializeParticipantDashboardView(customUrlOrGroupId, isCustomUrl = true) {
+  try {
+    const groupData = isCustomUrl ? await api.getGroupByCustomUrl(customUrlOrGroupId) : await api.getGroup(customUrlOrGroupId);
+    const events = await api.getPublicEventsForGroup(groupData.id);
+
+    state.setCurrentGroupId(groupData.id);
+    state.setCurrentGroupData(groupData);
+    state.setParticipantEventList(events);
+    state.loadParticipantState();
+
+    const showAcknowledgedCheckbox = document.getElementById('showAcknowledgedEvents');
+    if (showAcknowledgedCheckbox) {
+      const savedPreference = localStorage.getItem('showAcknowledgedEvents');
+      showAcknowledgedCheckbox.checked = savedPreference === 'true';
+    }
+
+    showUserDashboardView(groupData, events);
+  } catch (error) {
+    console.error('Failed to initialize participant dashboard:', error);
+    if (error.requiresPassword) {
+      state.setLastFailedAction(() => initializeParticipantDashboardView(customUrlOrGroupId, isCustomUrl));
+      ui.showGroupPasswordModal(error.groupId, error.groupName);
+    } else {
+      alert(error.error || 'ダッシュボードの表示に失敗しました。');
+    }
   }
 }
