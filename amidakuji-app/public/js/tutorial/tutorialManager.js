@@ -199,7 +199,7 @@
         }
       }
     } catch (error) {
-      console.error('[TUTORIAL_LOG] An error occurred, aborting.', error);
+      console.wran('[TUTORIAL_LOG] An error occurred, aborting.', error);
       if (dialogEl) dialogEl.style.display = 'none';
       if (highlightEl) highlightEl.style.display = 'none';
       if (focusBorderEl) focusBorderEl.style.display = 'none';
