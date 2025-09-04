@@ -16,6 +16,9 @@
 
   let isInitialized = false;
   let state = null;
+  let router = null; // routerを受け取る変数を追加
+  let ui = null;     // uiを受け取る変数を追加
+  let returnUrl = null; // 戻り先URLを保存する変数を追加
 
   window.runTutorials = async function () {
     if (activeTutorialState.isDialogVisible || !isInitialized) return;
@@ -60,6 +63,8 @@
   function initializeManager(dependencies) {
     if (isInitialized) return;
     state = dependencies.state;
+    router = dependencies.router; // routerを保存
+    ui = dependencies.ui;         // uiを保存
     createBaseElements();
     setupGlobalListeners();
     isInitialized = true;
@@ -68,6 +73,10 @@
   if (!window.tutorialManager) {
     window.tutorialManager = {
       init: initializeManager,
+      // 外部から戻り先URLを設定する関数を追加
+      setReturnUrl: function (url) {
+        returnUrl = url;
+      },
     };
   }
 
@@ -192,18 +201,30 @@
           continue;
         }
         const result = await showDialog(story, subStep, currentViewId);
-        if (!result.ok) return;
+        if (!result.ok) {
+          returnUrl = null; // キャンセルされたら戻り先URLをリセット
+          return;
+        }
         if (subStep.complete === true) {
           markTutorialAsCompleted(story.id);
+          // ▼▼▼ チュートリアル完了時の処理を追加 ▼▼▼
+          if (story.returnOnComplete && returnUrl && router) {
+            const urlToReturn = returnUrl;
+            returnUrl = null; // 次回のためにリセット
+            ui.showToast('チュートリアル完了！元の画面に戻ります。', 2000);
+            setTimeout(() => router.navigateTo(urlToReturn), 1500);
+          }
+          // ▲▲▲ ここまで ▲▲▲
           return;
         }
       }
     } catch (error) {
-      console.wran('[TUTORIAL_LOG] An error occurred, aborting.', error);
+      console.warn('[TUTORIAL_LOG] Tutorial aborted as expected:', error.message);
       if (dialogEl) dialogEl.style.display = 'none';
       if (highlightEl) highlightEl.style.display = 'none';
       if (focusBorderEl) focusBorderEl.style.display = 'none';
       activeTutorialState.isDialogVisible = false;
+      returnUrl = null; // エラー時も戻り先URLをリセット
     }
   }
 
@@ -313,19 +334,19 @@
           alertTriggered = true;
           originalAlert(message);
         };
-
+        
+        // ▼▼▼ ここからが今回の修正点です ▼▼▼
         clickHandler = () => {
-          setTimeout(() => {
-            window.alert = originalAlert;
-            if (alertTriggered) {
-              alert('チュートリアルを続行できませんでした。最初のステップからやり直します。');
-              closeDialog({ok: false});
-              startTutorialSteps(story, currentViewId);
-            } else {
-              closeDialog({ok: true});
-            }
-          }, 0);
+          window.alert = originalAlert;
+          if (alertTriggered) {
+            alert('チュートリアルを続行できませんでした。最初のステップからやり直します。');
+            closeDialog({ok: false});
+            startTutorialSteps(story, currentViewId);
+          } else {
+            closeDialog({ok: true});
+          }
         };
+        // ▲▲▲ ここまでが修正点です ▲▲▲
         clickTarget.addEventListener('click', clickHandler, {once: true});
       } else if (inputSelector) {
         const inputEl = await waitForElement(inputSelector);
