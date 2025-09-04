@@ -249,6 +249,7 @@ async function handleRouting(initialData) {
   } else {
     ui.setMainHeaderVisibility(true);
     ui.updateAuthUI(user);
+    ui.updateTutorialDropdown(); // ★★★ この行を追加 ★★★
   }
 
   state.loadParticipantState();
