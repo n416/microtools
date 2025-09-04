@@ -12,29 +12,47 @@
     focusTargetEl: null,
     resizeTimeout: null,
     navigatingFromTutorial: false,
+    activeStoryId: null, // 現在アクティブなストーリーID
+    activeViewId: null, // チュートリアルが開始されたビューのID
   };
 
   let isInitialized = false;
   let state = null;
   let router = null; // routerを受け取る変数を追加
-  let ui = null;     // uiを受け取る変数を追加
+  let ui = null; // uiを受け取る変数を追加
   let returnUrl = null; // 戻り先URLを保存する変数を追加
 
   window.runTutorials = async function () {
-    if (activeTutorialState.isDialogVisible || !isInitialized) return;
+    if (!isInitialized) return;
+
+    const activeView = document.querySelector('.view-container[style*="display: block"]');
+    const currentViewId = activeView ? activeView.id : null;
+
+    // ダイアログ表示中にビューが変わったら、強制的にダイアログを閉じて状態をリセット
+    if (activeTutorialState.isDialogVisible && currentViewId !== activeTutorialState.activeViewId) {
+      console.warn(`[TUTORIAL_LOG] View changed while dialog was visible. Force closing tutorial.`);
+      if (dialogEl) dialogEl.style.display = 'none';
+      if (highlightEl) highlightEl.style.display = 'none';
+      if (focusBorderEl) focusBorderEl.style.display = 'none';
+      Object.assign(activeTutorialState, {
+        isDialogVisible: false,
+        targetEl: null,
+        focusTargetEl: null,
+        activeStoryId: null,
+        activeViewId: null,
+      });
+    }
+
+    if (activeTutorialState.isDialogVisible || !window.tutorials || !Array.isArray(window.tutorials)) return;
 
     if (activeTutorialState.navigatingFromTutorial) {
       activeTutorialState.navigatingFromTutorial = false;
     }
 
-    if (!window.tutorials || !Array.isArray(window.tutorials)) return;
-
     const searchParams = new URLSearchParams(window.location.search);
     const forcedTutorialId = searchParams.get('forceTutorial');
 
-    const activeView = document.querySelector('.view-container[style*="display: block"]');
-    if (!activeView) return;
-    const currentViewId = activeView.id;
+    if (!currentViewId) return;
 
     if (forcedTutorialId) {
       const storyToForce = window.tutorials.find((s) => s.id === forcedTutorialId);
@@ -64,7 +82,7 @@
     if (isInitialized) return;
     state = dependencies.state;
     router = dependencies.router; // routerを保存
-    ui = dependencies.ui;         // uiを保存
+    ui = dependencies.ui; // uiを保存
     createBaseElements();
     setupGlobalListeners();
     isInitialized = true;
@@ -180,6 +198,9 @@
       return;
     }
 
+    activeTutorialState.activeStoryId = story.id;
+    activeTutorialState.activeViewId = currentViewId;
+
     let startIndex = 0;
     for (let i = 0; i < pageStep.subSteps.length; i++) {
       const subStep = pageStep.subSteps[i];
@@ -219,17 +240,30 @@
         }
       }
     } catch (error) {
-      console.warn('[TUTORIAL_LOG] Tutorial aborted as expected:', error.message);
+      // エラーを警告に変更し、状態をリセット
+      console.warn('[TUTORIAL_LOG] Tutorial aborted:', error.message);
       if (dialogEl) dialogEl.style.display = 'none';
       if (highlightEl) highlightEl.style.display = 'none';
       if (focusBorderEl) focusBorderEl.style.display = 'none';
-      activeTutorialState.isDialogVisible = false;
-      returnUrl = null; // エラー時も戻り先URLをリセット
+      Object.assign(activeTutorialState, {
+        isDialogVisible: false,
+        targetEl: null,
+        focusTargetEl: null,
+        activeStoryId: null,
+        activeViewId: null,
+      });
+      returnUrl = null;
     }
   }
 
   function showDialog(story, subStep, currentViewId) {
     return new Promise(async (resolve, reject) => {
+      const activeView = document.querySelector('.view-container[style*="display: block"]');
+      if (!activeView || activeView.id !== activeTutorialState.activeViewId) {
+        reject(new Error(`View changed from "${activeTutorialState.activeViewId}" to "${activeView ? activeView.id : 'null'}". Aborting.`));
+        return;
+      }
+
       const highlightSelector = subStep.highlightSelector;
       const clickSelector = subStep.waitForClickOn;
       const inputSelector = subStep.waitForInputOn;
@@ -316,6 +350,10 @@
         activeTutorialState.isDialogVisible = false;
         activeTutorialState.targetEl = null;
         activeTutorialState.focusTargetEl = null;
+        if (!result.ok || subStep.complete) {
+          activeTutorialState.activeStoryId = null;
+          activeTutorialState.activeViewId = null;
+        }
         resolve(result);
       };
 
@@ -334,8 +372,7 @@
           alertTriggered = true;
           originalAlert(message);
         };
-        
-        // ▼▼▼ ここからが今回の修正点です ▼▼▼
+
         clickHandler = () => {
           window.alert = originalAlert;
           if (alertTriggered) {
@@ -346,7 +383,6 @@
             closeDialog({ok: true});
           }
         };
-        // ▲▲▲ ここまでが修正点です ▲▲▲
         clickTarget.addEventListener('click', clickHandler, {once: true});
       } else if (inputSelector) {
         const inputEl = await waitForElement(inputSelector);

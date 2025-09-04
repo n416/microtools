@@ -13,7 +13,7 @@ const emojiMap = new Map([
   ['？', 'image-off'],
   ['▼', 'chevron-down'],
   ['🖼️', 'images'],
-  ['❓', 'message-circle-question-mark'], 
+  ['❓', 'message-circle-question-mark'],
 ]);
 
 // module.exportsオブジェクトを置き換えるのではなく、プロパティとして追加する

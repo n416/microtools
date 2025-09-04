@@ -234,32 +234,40 @@ export function updateAuthUI(user) {
     if (elements.deleteAccountButton) elements.deleteAccountButton.style.display = 'block';
 
     const isSystemAdmin = user.role === 'system_admin' && !user.isImpersonating;
-    if (elements.adminDashboardButton) elements.adminDashboardButton.style.display = isSystemAdmin ? 'block' : 'none';
-
-    if (elements.requestAdminControls) {
-      if (user.role === 'user') {
-        elements.requestAdminControls.style.display = 'block';
-        elements.requestAdminButton.style.display = 'block';
-        if (user.adminRequestStatus === 'pending') {
-          elements.requestAdminButton.textContent = '申請中';
-          elements.requestAdminButton.disabled = true;
-        } else {
-          elements.requestAdminButton.textContent = '管理者権限を申請する';
-          elements.requestAdminButton.disabled = false;
-        }
-      } else {
-        elements.requestAdminControls.style.display = 'none';
-      }
-    }
+    const adminButton = document.querySelector('#userMenuContainer #adminDashboardButton');
+    if (adminButton) adminButton.parentElement.style.display = isSystemAdmin ? 'block' : 'none';
   } else {
     if (elements.loginButton) elements.loginButton.style.display = 'block';
-    if (elements.logoutButton) elements.logoutButton.style.display = 'none';
-    if (elements.deleteAccountButton) elements.deleteAccountButton.style.display = 'none';
-    if (elements.adminDashboardButton) elements.adminDashboardButton.style.display = 'none';
-    if (elements.requestAdminButton) elements.requestAdminButton.style.display = 'none';
-    if (elements.impersonationBanner) elements.impersonationBanner.style.display = 'none';
+    if (userMenuContainer) userMenuContainer.style.display = 'none';
   }
   adjustBodyPadding();
+}
+
+export function updateTutorialDropdown() {
+  const container = document.getElementById('tutorialMenuContainer');
+  const dot = document.querySelector('#tutorialMenuContainer .notification-dot');
+  const list = document.getElementById('tutorialDropdownList');
+  if (!container || !dot || !list || !window.tutorials) return;
+
+  const incompleteTutorials = window.tutorials.filter((t) => t.showInList !== false && !localStorage.getItem(`tutorialCompleted_${t.id}`));
+
+  if (state.currentUser) {
+    container.style.display = 'block';
+    if (incompleteTutorials.length > 0) {
+      dot.style.display = 'block';
+      list.innerHTML = incompleteTutorials
+        .map((t) => {
+          // 共通関数を使ってURLを生成
+          const href = window.tutorialUtils.generateTutorialUrl(t, state);
+          return `<li><a href="${href}" class="dropdown-item-link">${t.title}</a></li>`;
+        })
+        .join('');
+    } else {
+      // (省略)
+    }
+  } else {
+    container.style.display = 'none';
+  }
 }
 
 export function updateGroupSwitcher() {

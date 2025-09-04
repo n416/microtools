@@ -358,9 +358,35 @@ function setupEventListeners() {
     });
   if (ui.elements.adminDashboardButton) {
     ui.elements.adminDashboardButton.addEventListener('click', (e) => {
+      // 親の<li>のクリックイベントが発火しないようにする
+      e.stopPropagation();
+      document.querySelector('#userMenuContainer .dropdown-content').style.display = 'none';
       router.navigateTo('/admin/dashboard');
     });
   }
+
+  // ▼▼▼ このブロックを新しく追加 ▼▼▼
+  document.addEventListener('click', (e) => {
+    // ドロップダウン以外の場所をクリックしたら、すべてのドロップダウンを閉じる
+    if (!e.target.closest('.header-dropdown')) {
+      document.querySelectorAll('.header-dropdown .dropdown-content').forEach((el) => (el.style.display = 'none'));
+    }
+  });
+
+  document.querySelectorAll('.header-dropdown').forEach((dropdown) => {
+    const button = dropdown.querySelector('.header-icon-button');
+    const content = dropdown.querySelector('.dropdown-content');
+
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // 他のドロップダウンを閉じる
+      document.querySelectorAll('.header-dropdown .dropdown-content').forEach((el) => {
+        if (el !== content) el.style.display = 'none';
+      });
+      // 現在のドロップダウンの表示を切り替える
+      content.style.display = content.style.display === 'block' ? 'none' : 'block';
+    });
+  });
 
   if (ui.elements.currentGroupName) {
     ui.elements.currentGroupName.addEventListener('click', (e) => {
