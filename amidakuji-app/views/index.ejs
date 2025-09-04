@@ -54,6 +54,7 @@
           <button id="switcherCreateGroup"><i data-lucide="<%= emojiToLucide('＋') %>"></i> 新規グループを作成</button>
         </div>
       </div>
+      <a href="/tutorials" class="button">チュートリアル</a>
       <div class="auth-controls">
         <button id="loginButton">Googleでログイン</button>
         <button id="logoutButton" style="display: none">ログアウト</button>
@@ -90,6 +91,9 @@
   </div>
   <div id="participantView" class="view-container" style="display: none">
     <%- include('partials/_participantView.ejs') %>
+  </div>
+  <div id="tutorialListView" class="view-container" style="display: none">
+    <%- include('partials/_tutorialListView.ejs') %>
   </div>
 
   <%- include('partials/modals/_groupSettingsModal.ejs') %>
@@ -138,6 +142,9 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="/js/tutorial/tutorialData.js"></script>
+  <script src="/js/tutorial/tutorialManager.js"></script>
+  <script src="/js/tutorial/tutorialList.js"></script>
   <script type="module" src="/js/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="https://unpkg.com/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>

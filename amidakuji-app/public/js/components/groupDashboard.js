@@ -129,7 +129,10 @@ export function initGroupDashboard() {
             try {
               await api.deleteGroup(groupId);
               alert('グループを削除しました。');
-              await router.loadUserAndRedirect();
+              // ★★★ ここからが修正点 ★★★
+              // 遷移先を新しい固定URLに変更
+              await router.navigateTo('/admin/groups');
+              // ★★★ ここまでが修正点 ★★★
             } catch (error) {
               alert(error.error || 'グループの削除に失敗しました。');
             }

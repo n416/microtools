@@ -158,7 +158,7 @@ export function initUI() {
   }
 }
 
-const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView', 'staticAmidaView'];
+const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView', 'staticAmidaView', 'tutorialListView'];
 
 export function adjustBodyPadding() {
   let totalOffset = 0;
@@ -187,6 +187,14 @@ export function showView(viewToShowId) {
   });
   stopAnimation();
   adjustBodyPadding();
+
+  // ★★★ 修正点: setTimeoutをrequestAnimationFrameに変更 ★★★
+  if (window.runTutorials) {
+    // 画面の描画が完了した後にチュートリアルが実行されることを保証する
+    requestAnimationFrame(() => {
+      window.runTutorials();
+    });
+  }
 }
 
 export function updateAuthUI(user) {
