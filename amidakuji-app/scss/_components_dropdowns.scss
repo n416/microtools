@@ -133,3 +133,86 @@
 .dark-mode .dropdown-content button:hover {
   background-color: #444;
 }
+/* ... 既存のコード ... */
+.dark-mode .dropdown-content button:hover {
+  background-color: #444;
+}
+
+// ▼▼▼ ここからが今回の修正点です ▼▼▼
+.header-dropdown {
+  position: relative;
+
+  & .dropdown-content {
+    padding: 0;
+    min-width: 180px;
+    top: 52px; // ヘッダーの高さに応じて調整
+    right: 0;
+
+    & ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    & li button, & a.dropdown-item-link {
+      width: 100%;
+      text-align: left;
+      background: none;
+      color: var(--text-color);
+      padding: 12px 16px;
+      border: none;
+      border-bottom: 1px solid var(--border-color);
+      display: block; // aタグのため
+      text-decoration: none; // aタグのため
+      font-size: 14px;
+    }
+     & li:last-child button, & a.dropdown-item-link {
+      border-bottom: none;
+    }
+
+    & li button:hover, & a.dropdown-item-link:hover {
+      background-color: var(--shadow-color);
+    }
+  }
+}
+
+.button.header-icon-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--text-color);
+  padding: 4px 12px;
+  border-radius: 4px;
+  height: 52px;
+  position: relative; // 通知ドットのため
+  
+  &:hover {
+    background-color: var(--shadow-color);
+  }
+
+  & span {
+    font-size: 10px;
+  }
+
+  & .dropdown-arrow {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2.5;
+  }
+}
+
+.notification-dot {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--danger-color);
+  border-radius: 50%;
+  border: 1px solid var(--white-color);
+}
+// ▲▲▲ ここまでが修正点です ▲▲▲

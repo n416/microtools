@@ -34,6 +34,7 @@
   <% } %>
   <div id="canvas-container">
     <canvas id="grid-canvas"></canvas>
+
     <canvas id="animation-canvas"></canvas>
   </div>
   <% if (typeof user !== 'undefined' && user && user.isImpersonating) { %>
@@ -50,30 +51,68 @@
       <span></span>
     </button>
     <div id="nav-menu">
-      <div id="groupSwitcher" style="display: none">
-        <button id="currentGroupName"></button>
-        <div id="groupDropdown" class="dropdown-content">
-          <ul id="switcherGroupList"></ul>
-          <button id="switcherCreateGroup"><i data-lucide="<%= emojiToLucide('＋') %>"></i> 新規グループを作成</button>
+      <%# ▼▼▼ ここから全体構造を変更 ▼▼▼ %>
+      <%
+        let homeUrl = "/";
+        if (typeof user !== 'undefined' && user && user.id) {
+          if (user.lastUsedGroupId) {
+            homeUrl = `/admin/groups/${user.lastUsedGroupId}`;
+          } else {
+            homeUrl = "/admin/groups";
+          }
+        }
+      %>
+      <a href="<%= homeUrl %>" class="button header-icon-button" id="homeButton" title="ホーム"><i data-lucide="home"></i><span>ホーム</span></a>
+
+      <div class="header-dropdown" id="userMenuContainer">
+        <button class="button header-icon-button" id="userMenuButton">
+          <i data-lucide="user-circle"></i>
+          <span>ユーザー</span>
+          <i data-lucide="<%= emojiToLucide('▼') %>" class="dropdown-arrow"></i>
+        </button>
+        <div class="dropdown-content">
+          <ul>
+            <% if (typeof user !== 'undefined' && user && user.role === 'system_admin' && !user.isImpersonating) { %>
+
+            <li><button id="adminDashboardButton">システム管理</button></li>
+            <% } %>
+            <li><button id="logoutButton">ログアウト</button></li>
+            <li><button id="deleteAccountButton" class="delete-btn">アカウント削除</button></li>
+          </ul>
         </div>
       </div>
 
-      <%# ▼▼▼ ここからが今回の修正点です ▼▼▼ %>
-      <% if (typeof user !== 'undefined' && user) { %>
-      <a href="/tutorials" class="button help-link"><i class="icon-thick" data-lucide="<%= emojiToLucide('❓') %>"></i><span>チュートリアル</span></a>
-      <% } %>
-      <%# ▲▲▲ ここまでが修正点です ▲▲▲ %>
+      <div class="header-dropdown" id="tutorialMenuContainer" style="display: none;">
+        <button class="button header-icon-button" id="tutorialMenuButton">
+
+          <i data-lucide="help-circle"></i>
+          <span>チュートリアル</span>
+          <i data-lucide="<%= emojiToLucide('▼') %>" class="dropdown-arrow"></i>
+          <span class="notification-dot" style="display: none;"></span>
+        </button>
+        <div class="dropdown-content">
+          <ul id="tutorialDropdownList"></ul>
+          <a href="/tutorials" class="dropdown-item-link" id="viewAllTutorialsLink">すべて表示</a>
+        </div>
+      </div>
+
+      <div id="groupSwitcher" style="display: none">
+
+        <button id="currentGroupName"></button>
+        <div id="groupDropdown" class="dropdown-content">
+          <ul id="switcherGroupList"></ul>
+          <button id="switcherCreateGroup"><i data-lucide="＋"></i> 新規グループを作成</button>
+        </div>
+      </div>
+
       <div class="auth-controls">
         <button id="loginButton">Googleでログイン</button>
-        <button id="logoutButton" style="display: none">ログアウト</button>
-        <button id="deleteAccountButton" style="display: none" class="delete-btn">アカウント削除</button>
-        <% if (typeof user !== 'undefined' && user && user.role === 'system_admin' && !user.isImpersonating) { %>
-        <button id="adminDashboardButton">システム管理</button>
-        <% } %>
       </div>
+      <%# ▲▲▲ ここまで全体構造を変更 ▲▲▲ %>
     </div>
   </header>
   <div id="landingView" class="view-container" style="display: none;">
+
     <%- include('partials/_landingView.ejs') %>
   </div>
   <div id="groupDashboard" class="view-container" style="display: none">
@@ -95,7 +134,8 @@
     <%- include('partials/_eventEditView.ejs') %>
   </div>
   <div id="broadcastView" class="view-container" style="display: none">
-    <%- include('partials/_broadcastView.ejs') %>
+    <%- include('partials/_broadcastView.ejs') 
+%>
   </div>
   <div id="participantView" class="view-container" style="display: none">
     <%- include('partials/_participantView.ejs') %>
@@ -121,7 +161,8 @@
   <%- include('partials/modals/_customConfirmModal.ejs') %>
   <div class="settings-fab" id="settingsFab" title="設定">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.82l-.15-.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1 0-2.82l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.82l-.15-.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 
+2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1 0-2.82l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
       <circle cx="12" cy="12" r="3"></circle>
     </svg>
   </div>
@@ -133,6 +174,7 @@
         <input type="checkbox" id="animationToggle">
         <span class="slider round"></span>
       </label>
+
     </div>
     <div class="setting-item theme-switcher">
       <label>テーマ</label>
@@ -146,14 +188,16 @@
       </div>
     </div>
   </div>
-  <% if (typeof error === 'undefined' || !error) { %>
+  <% if 
+(typeof error === 'undefined' || !error) { %>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="/js/tutorial/tutorialData.js"></script>
+  <script src="/js/tutorial/tutorialUtils.js"></script>
   <script src="/js/tutorial/tutorialManager.js"></script>
   <script src="/js/tutorial/tutorialList.js"></script>
-  <script type="module" src="/js/main.js"></script>
+  / <script type="module" src="/js/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="https://unpkg.com/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
@@ -165,12 +209,12 @@
       authDomain: "amidakuji-app-native.firebaseapp.com",
       projectId: "amidakuji-app-native",
       // 注意: Cloud StorageのURLを v8 SDK 向けに .appspot.com に修正しています
+
       storageBucket: "amidakuji-app-native.appspot.com",
       messagingSenderId: "482453338621",
       appId: "1:482453338621:web:5e268f146a8d778f4e0194",
       measurementId: "G-K205CFXBDE"
     };
-
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
   </script>
