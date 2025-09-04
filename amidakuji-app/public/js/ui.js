@@ -9,6 +9,22 @@ export function clientEmojiToLucide(emoji) {
 
 export let elements = {};
 
+// ▼▼▼ ここから追加 ▼▼▼
+export function showGlobalLoadingMask(message = '読み込み中...') {
+  if (elements.globalLoadingMask) {
+    const p = elements.globalLoadingMask.querySelector('p');
+    if (p) p.textContent = message;
+    elements.globalLoadingMask.style.display = 'flex';
+  }
+}
+
+export function hideGlobalLoadingMask() {
+  if (elements.globalLoadingMask) {
+    elements.globalLoadingMask.style.display = 'none';
+  }
+}
+// ▲▲▲ ここまで追加 ▲▲▲
+
 export function showToast(message, duration = 3000) {
   const toastId = `toast-${Date.now()}`;
   const toast = document.createElement('div');

@@ -86,7 +86,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
       state.setAllUserGroups(groups);
     }
 
-    const data = eventData || await api.getEvent(eventId);
+    const data = eventData || (await api.getEvent(eventId));
 
     state.setCurrentLotteryData(data);
     state.setCurrentEventId(eventId);
@@ -143,7 +143,6 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
     // 最後にビュー全体の表示を切り替え、チュートリアルを起動します
     ui.showView(viewToShow);
     // ▲▲▲ ここまでが修正点です ▲▲▲
-
   } catch (error) {
     console.error('イベントの読み込み中にAPIエラーが発生しました:', error);
     alert(error.error || 'イベントの読み込みに失敗しました。');
@@ -342,17 +341,26 @@ async function handleRouting(initialData) {
 
 export async function navigateTo(path, pushState = true) {
   clearAllFirestoreListeners();
+  ui.showGlobalLoadingMask(); // ★★★ ロード画面を表示 ★★★
 
-  const currentPath = window.location.pathname + window.location.search;
-  if (pushState && currentPath !== path) {
-    history.pushState({path}, '', path);
-  }
-  const action = await handleRouting({
-    group: window.history.state?.groupData,
-    event: window.history.state?.eventData,
-  });
-  if (action === 'loadAdminDashboard') {
-    await loadAdminDashboard();
+  try {
+    const currentPath = window.location.pathname + window.location.search;
+    if (pushState && currentPath !== path) {
+      history.pushState({path}, '', path);
+    }
+    const action = await handleRouting({
+      group: window.history.state?.groupData,
+      event: window.history.state?.eventData,
+    });
+    if (action === 'loadAdminDashboard') {
+      await loadAdminDashboard();
+    }
+  } catch (error) {
+    console.error('ページ遷移中にエラーが発生しました:', error);
+    // ここでユーザー向けのエラー表示をすることも可能です
+  } finally {
+    // 描画が完了するのを少し待ってからロード画面を非表示にする
+    setTimeout(() => ui.hideGlobalLoadingMask(), 100); // ★★★ ロード画面を非表示 ★★★
   }
 }
 

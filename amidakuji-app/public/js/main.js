@@ -53,7 +53,7 @@ async function initializeApp() {
     window.tutorialManager.init({state});
   }
   if (window.tutorialList && typeof window.tutorialList.init === 'function') {
-    window.tutorialList.init({state, router});
+    window.tutorialList.init({state, router, ui});
   }
   // ★★★ ここまでが修正点 ★★★
 
