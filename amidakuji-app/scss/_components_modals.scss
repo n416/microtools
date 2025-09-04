@@ -12,10 +12,12 @@
 }
 
 .modal-content {
-  background-color: #fefefe;
+  // ★★★ ここからが修正点 ★★★
+  background-color: var(--white-color); // #fefefe から変数に変更
+  border: 1px solid var(--border-color);  // #888 から変数を変更
+  // ★★★ ここまでが修正点 ★★★
   margin: 10% auto;
   padding: 30px;
-  border: 1px solid #888;
   width: 90%;
   max-width: 500px;
   border-radius: 8px;
@@ -67,33 +69,7 @@
   margin-right: auto;
 }
 
-.main-header,
-  .controls,
-  .modal-content {
-    box-shadow: 0 4px 12px var(--shadow-color);
-    border: 1px solid var(--border-color);
-  }
-
-.main-header,
-  .controls,
-  .modal-content {
-    box-shadow: none;
-    border: 1px solid var(--border-color);
-  }
-
-.modal-content {
-    background-color: #2a2a2a;
-    border-color: #555;
-  }
-
-.close-button {
-    color: #888;
-  }
-
-.close-button:hover,
-  .close-button:focus {
-    color: #eee;
-  }
+// ★★★ 修正点: 不要な重複スタイルを削除しました ★★★
 
 .prize-master-image-dropzone {
   width: 150px;

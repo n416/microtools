@@ -197,21 +197,16 @@ input:checked + .slider:before {
   }
 }
 
+// ★★★ ここからが修正点 ★★★
 input,
-  select,
-  textarea {
-    background-color: #fff;
-    color: #333;
-    border-color: #ddd;
-  }
+select,
+textarea {
+  background-color: var(--white-color);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+// ★★★ ここまでが修正点 (不要な重複ルールも削除) ★★★
 
-input,
-  select,
-  textarea {
-    background-color: #2a2a2a;
-    color: #dcdcdc;
-    border-color: #555;
-  }
 
 .input-group.checkbox-group {
   position: relative;

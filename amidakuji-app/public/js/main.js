@@ -22,7 +22,11 @@ const darkModeMatcher = window.matchMedia('(prefers-color-scheme: dark)');
 let tronAnimationAPI = null;
 let appInitialized = false; // 初期化済みフラグ
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[DEBUG] DOMContentLoaded: Firebase接続待機中...');
+  // ★★★ 修正点: DOMContentLoadedでチュートリアルマネージャーを初期化 ★★★
+  if (window.tutorialManager && typeof window.tutorialManager.init === 'function') {
+    // 依存性を渡して初期化
+    window.tutorialManager.init({state});
+  }
 
   firebase.auth().onAuthStateChanged((user) => {
     if (user && !appInitialized) {
@@ -42,6 +46,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initializeApp() {
   ui.initUI();
+
+  // ★★★ ここからが修正点 ★★★
+  // tutorialManagerとtutorialListの両方に依存性を注入
+  if (window.tutorialManager && typeof window.tutorialManager.init === 'function') {
+    window.tutorialManager.init({state});
+  }
+  if (window.tutorialList && typeof window.tutorialList.init === 'function') {
+    window.tutorialList.init({state, router});
+  }
+  // ★★★ ここまでが修正点 ★★★
 
   loadSettings();
   applySettings();
@@ -65,7 +79,10 @@ async function initializeApp() {
     event: typeof initialEventData !== 'undefined' ? initialEventData : null,
   };
 
-  await router.navigateTo(window.location.pathname, false);
+  // ▼▼▼ ここから修正 ▼▼▼
+  // URLのクエリパラメータも含めて画面遷移関数を呼び出すように修正
+  await router.navigateTo(window.location.pathname + window.location.search, false);
+  // ▲▲▲ ここまで修正 ▲▲▲
 
   if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
     await router.loadUserAndRedirect(state.currentUser.lastUsedGroupId);
@@ -280,9 +297,12 @@ function initTronAnimation() {
 function setupEventListeners() {
   initBroadcast();
 
+  // ▼▼▼ ここから修正 ▼▼▼
   window.addEventListener('popstate', (e) => {
-    router.navigateTo(window.location.pathname, false);
+    // URLのクエリパラメータも含めて画面遷移関数を呼び出すように修正
+    router.navigateTo(window.location.pathname + window.location.search, false);
   });
+  // ▲▲▲ ここまで修正 ▲▲▲
 
   if (ui.elements.loginButton)
     ui.elements.loginButton.addEventListener('click', () => {
@@ -392,7 +412,7 @@ function setupEventListeners() {
   if (ui.elements.switcherCreateGroup) {
     ui.elements.switcherCreateGroup.addEventListener('click', async () => {
       ui.elements.groupDropdown.style.display = 'none';
-      await router.navigateTo('/');
+      await router.navigateTo('/admin/groups');
     });
   }
 
@@ -471,7 +491,10 @@ function setupEventListeners() {
       const url = new URL(link.href);
       if (url.origin === window.location.origin) {
         event.preventDefault();
-        router.navigateTo(url.pathname);
+        // ▼▼▼ ここから修正 ▼▼▼
+        // url.pathname のみでなく、検索クエリ(search)も含めて画面遷移するように修正
+        router.navigateTo(url.pathname + url.search);
+        // ▲▲▲ ここまで修正 ▲▲▲
       }
     }
   });

@@ -299,15 +299,12 @@ export function renderPrizeCardList() {
     nameInput.value = prizeName;
     nameInput.className = 'prize-card-name-input';
     nameInput.dataset.index = index;
-    nameInput.addEventListener('change', (event) => {
+    // ★★★ 修正点: 'change'を'input'に変更 ★★★
+    nameInput.addEventListener('input', (event) => {
       const updatedIndex = parseInt(event.target.dataset.index, 10);
       const newName = event.target.value.trim();
-      if (newName) {
-        state.prizes[updatedIndex].name = newName;
-        if (state.currentEventId) setDirty(true);
-      } else {
-        event.target.value = prizeName;
-      }
+      state.prizes[updatedIndex].name = newName;
+      if (state.currentEventId) setDirty(true);
       updatePrizePreview();
     });
     infoContainer.appendChild(nameInput);
@@ -469,7 +466,8 @@ function attachRealtimeDoodleListener() {
 export function initEventEdit() {
   if (elements.eventEditView) {
     const dirtyCheckListener = () => setDirty(true);
-    elements.eventNameInput.addEventListener('change', dirtyCheckListener);
+    // ★★★ 修正点: 'change'を'input'に変更 ★★★
+    elements.eventNameInput.addEventListener('input', dirtyCheckListener);
     elements.displayPrizeName.addEventListener('change', dirtyCheckListener);
     elements.displayPrizeCount.addEventListener('change', dirtyCheckListener);
     elements.allowDoodleModeCheckbox.addEventListener('change', dirtyCheckListener);
