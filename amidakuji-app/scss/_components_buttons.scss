@@ -204,26 +204,50 @@ button:disabled {
     background-color: rgba(229, 72, 77, 0.1);
   }
 
-  // ▼▼▼ ここからが今回の修正点です ▼▼▼
-  // チュートリアルリスト内のボタンに特化したスタイルを追記
-  .item-list-item .item-buttons .reset-tutorial-btn {
-    background-color: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 4px 10px;
-    font-size: 12px;
-    opacity: 0.6;
-    transition: all 0.2s ease;
+// チュートリアルリスト内のボタンに特化したスタイルを追記
+.item-list-item .item-buttons .reset-tutorial-btn {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  font-size: 12px;
+  opacity: 0.6;
+  transition: all 0.2s ease;
 
-    &:hover {
-      opacity: 1;
-      border-color: var(--primary-color);
-      color: var(--primary-color);
-      background-color: transparent;
+  &:hover {
+    opacity: 1;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: transparent;
+  }
+}
+
+a.button.help-link {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  padding: 8px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 4px;
+
+  &:hover {
+    background-color: var(--shadow-color);
+  }
+
+  // このアイコンだけ太さを上書き
+  .icon-thick {
+    stroke-width: 2;
+  }
+
+  // スマホ表示ではアイコンのみにする
+  @media (max-width: 768px) {
+    & span {
+      display: none;
     }
   }
-  // ▲▲▲ ここまでが修正点です ▲▲▲
-
+}
 .error-actions .button.primary-action {
   background-color: var(--primary-color);
   color: white;

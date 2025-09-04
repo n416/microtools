@@ -362,36 +362,6 @@ function setupEventListeners() {
     });
   }
 
-  if (ui.elements.backToDashboardFromEventListButton) {
-    ui.elements.backToDashboardFromEventListButton.addEventListener('click', async (e) => {
-      const button = e.currentTarget;
-      const role = button.dataset.role;
-      const groupId = button.dataset.groupId;
-
-      if (!groupId) {
-        console.error('No groupId found on dashboard button, cannot switch view.');
-        await router.navigateTo('/');
-        return;
-      }
-
-      if (role === 'admin') {
-        await router.navigateTo(`/admin/groups/${groupId}`);
-      } else {
-        try {
-          const group = await api.getGroup(groupId);
-          if (group && group.customUrl) {
-            await router.navigateTo(`/g/${group.customUrl}/dashboard`);
-          } else {
-            await router.navigateTo(`/groups/${groupId}`);
-          }
-        } catch (error) {
-          console.error('Failed to get group info for navigation:', error);
-          await router.navigateTo('/');
-        }
-      }
-    });
-  }
-
   if (ui.elements.currentGroupName) {
     ui.elements.currentGroupName.addEventListener('click', (e) => {
       e.stopPropagation();

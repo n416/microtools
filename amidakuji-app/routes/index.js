@@ -64,6 +64,27 @@ router.get('/g/:customUrl/dashboard', async (req, res) => {
   }
 });
 
+// ▼▼▼ ここからが今回の修正点です ▼▼▼
+router.get('/groups/:groupId/dashboard', async (req, res) => {
+  try {
+    const {groupId} = req.params;
+    const groupDoc = await firestore.collection('groups').doc(groupId).get();
+
+    if (!groupDoc.exists) {
+      return res.status(404).render('index', {user: req.user, ogpData: {}, noIndex: true, groupData: null});
+    }
+
+    const groupData = {id: groupDoc.id, ...groupDoc.data()};
+    const noIndex = groupData.noIndex || false;
+
+    res.render('index', {user: req.user, ogpData: {}, noIndex, groupData: JSON.stringify(groupData), eventData: null});
+  } catch (error) {
+    console.error('Participant dashboard routing error:', error);
+    res.status(500).render('index', {user: req.user, ogpData: {}, noIndex: false, groupData: null, eventData: null});
+  }
+});
+// ▲▲▲ ここまでが修正点です ▲▲▲
+
 router.get('/admin/groups/:groupId', ensureAuthenticated, async (req, res) => {
   try {
     const {groupId} = req.params;

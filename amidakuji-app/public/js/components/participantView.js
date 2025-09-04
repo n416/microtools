@@ -223,10 +223,18 @@ export function showResultsView(eventData, targetName, isShareView) {
     } else {
       if (elements.myResult) elements.myResult.innerHTML = '<b>全結果を表示します</b>';
     }
+    // ▼▼▼ ここから修正 ▼▼▼
+    const isParticipant = !!(state.currentParticipantId && eventData.participants.some(p => p.memberId === state.currentParticipantId));
+
     if (!isShareView) {
-      if (elements.shareButton) elements.shareButton.style.display = 'inline-flex';
-      if (elements.backToControlPanelFromResultButton) elements.backToControlPanelFromResultButton.style.display = 'block';
+      if (elements.shareButton) {
+        elements.shareButton.style.display = isParticipant ? 'inline-flex' : 'none';
+      }
+      if (elements.backToControlPanelFromResultButton) {
+        elements.backToControlPanelFromResultButton.style.display = 'block';
+      }
     }
+    // ▲▲▲ ここまで修正 ▲▲▲
     if (eventData.results) {
       renderAllResults(eventData.results, isShareView, state.currentParticipantName);
     }
@@ -698,20 +706,34 @@ export function initParticipantView() {
       }
     });
 
+  // ▼▼▼ ここから修正 ▼▼▼
   if (elements.backToControlPanelFromResultButton)
     elements.backToControlPanelFromResultButton.addEventListener('click', async () => {
       try {
+        const isParticipant = !!(state.currentParticipantId && state.currentLotteryData.participants.some(p => p.memberId === state.currentParticipantId));
         const group = await api.getGroup(state.currentGroupId);
-        if (group && group.customUrl) {
-          await router.navigateTo(`/g/${group.customUrl}/dashboard`);
+        
+        if (isParticipant) {
+          // 参加者はダッシュボードへ
+          if (group && group.customUrl) {
+            await router.navigateTo(`/g/${group.customUrl}/dashboard`);
+          } else {
+            await router.navigateTo(`/groups/${state.currentGroupId}`);
+          }
         } else {
-          await router.navigateTo('/');
+          // 未参加者はイベント一覧へ
+          if (group && group.customUrl) {
+            await router.navigateTo(`/g/${group.customUrl}`);
+          } else {
+            await router.navigateTo(`/groups/${state.currentGroupId}`);
+          }
         }
       } catch (error) {
         console.error('Failed to get group info for navigation:', error);
         await router.navigateTo('/');
       }
     });
+  // ▲▲▲ ここまで修正 ▲▲▲
 
   if (elements.setPasswordButton)
     elements.setPasswordButton.addEventListener('click', async () => {

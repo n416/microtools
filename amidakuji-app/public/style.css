@@ -195,15 +195,6 @@ h4 {
   border-bottom: 1px solid var(--border-color);
 }
 
-.settings-panel h4 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-top: 0;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 15px;
-}
-
 body.light-mode .settings-fab {
   background-color: rgba(255, 255, 255, 0.7);
   border-color: rgba(0, 0, 0, 0.1);
@@ -375,7 +366,7 @@ body.dark-mode #adminControls #glimpseButton {
 }
 
 .main-header {
-  display: flex;
+  display: none;
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
@@ -387,6 +378,10 @@ body.dark-mode #adminControls #glimpseButton {
   top: 0;
   left: 0;
   z-index: 1000;
+}
+
+.main-header.visible {
+  display: flex;
 }
 
 .auth-controls {
@@ -790,7 +785,6 @@ button:disabled {
 .item-list-item .item-buttons .reset-tutorial-btn {
   background-color: transparent;
   border: 1px solid var(--border-color);
-  color: var(--text-color);
   padding: 4px 10px;
   font-size: 12px;
   opacity: 0.6;
@@ -801,6 +795,29 @@ button:disabled {
   border-color: var(--primary-color);
   color: var(--primary-color);
   background-color: transparent;
+}
+
+a.button.help-link {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  padding: 8px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 4px;
+}
+a.button.help-link:hover {
+  background-color: var(--shadow-color);
+}
+a.button.help-link .icon-thick {
+  stroke-width: 2;
+}
+@media (max-width: 768px) {
+  a.button.help-link span {
+    display: none;
+  }
 }
 
 .error-actions .button.primary-action {
@@ -2465,6 +2482,34 @@ body.dark-mode #adminControls #glimpseButton {
   transform: translateY(10px);
   pointer-events: none;
   transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.settings-panel h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+.settings-panel h4:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.setting-item a.tutorial-link-panel {
+  display: flex;
+  width: 100%;
+  text-decoration: none;
+  justify-content: center;
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+.setting-item a.tutorial-link-panel:hover {
+  background-color: var(--shadow-color);
+  border-color: var(--primary-color);
 }
 
 .settings-panel.visible {

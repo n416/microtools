@@ -178,7 +178,8 @@ const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'e
 
 export function adjustBodyPadding() {
   let totalOffset = 0;
-  if (elements.mainHeader && getComputedStyle(elements.mainHeader).display !== 'none') {
+  if (elements.mainHeader && elements.mainHeader.classList.contains('visible')) {
+    // .visibleクラスの有無で高さを計算
     totalOffset += elements.mainHeader.offsetHeight;
   }
   if (elements.impersonationBanner && getComputedStyle(elements.impersonationBanner).display !== 'none') {
@@ -189,7 +190,12 @@ export function adjustBodyPadding() {
 
 export function setMainHeaderVisibility(visible) {
   if (elements.mainHeader) {
-    elements.mainHeader.style.display = visible ? 'flex' : 'none';
+    // styleを直接変更する代わりにクラスを付け外しする
+    if (visible) {
+      elements.mainHeader.classList.add('visible');
+    } else {
+      elements.mainHeader.classList.remove('visible');
+    }
   }
   adjustBodyPadding();
 }
