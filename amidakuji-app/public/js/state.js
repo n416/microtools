@@ -34,7 +34,7 @@ export function addFirestoreListener(unsubscribeFunc) {
  * 登録されているすべてのFirestoreリスナーを解除し、管理配列をリセットします。
  */
 export function clearAllFirestoreListeners() {
-  console.log(`[DEBUG] Clearing ${activeFirestoreListeners.length} active listeners.`);
+  // console.log(`[DEBUG] Clearing ${activeFirestoreListeners.length} active listeners.`);
   activeFirestoreListeners.forEach((unsubscribe) => unsubscribe());
   activeFirestoreListeners = [];
 }

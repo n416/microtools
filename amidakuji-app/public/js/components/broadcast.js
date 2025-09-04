@@ -25,11 +25,13 @@ const elements = {
 };
 
 // --- ログ出力 ---
+/*
 console.log('[DEBUG] Checking broadcast DOM elements:', {
   broadcastResultsContainer: !!elements.broadcastResultsContainer,
   broadcastResultsList: !!elements.broadcastResultsList,
   adminCanvas: !!elements.adminCanvas,
 });
+*/
 // --- ログ出力ここまで ---
 
 function setBroadcastControlsDisabled(disabled) {
