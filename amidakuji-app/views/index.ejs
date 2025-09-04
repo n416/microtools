@@ -57,7 +57,12 @@
           <button id="switcherCreateGroup"><i data-lucide="<%= emojiToLucide('＋') %>"></i> 新規グループを作成</button>
         </div>
       </div>
-      <a href="/tutorials" class="button">チュートリアル</a>
+
+      <%# ▼▼▼ ここからが今回の修正点です ▼▼▼ %>
+      <% if (typeof user !== 'undefined' && user) { %>
+      <a href="/tutorials" class="button help-link"><i class="icon-thick" data-lucide="<%= emojiToLucide('❓') %>"></i><span>チュートリアル</span></a>
+      <% } %>
+      <%# ▲▲▲ ここまでが修正点です ▲▲▲ %>
       <div class="auth-controls">
         <button id="loginButton">Googleでログイン</button>
         <button id="logoutButton" style="display: none">ログアウト</button>
