@@ -21,7 +21,7 @@
 }
 
 body {
-  font-family: 'Helvetica Neue', Arial, 'Hirino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+  font-family: "Helvetica Neue", Arial, "Hirino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
   color: var(--text-color);
   margin: 0;
   transition: background-color 0.5s ease;
@@ -225,7 +225,7 @@ body.light-mode .radio-group {
   background-color: rgba(0, 0, 0, 0.05);
 }
 
-body.light-mode .radio-group input[type='radio']:checked + label {
+body.light-mode .radio-group input[type=radio]:checked + label {
   color: white;
 }
 
@@ -241,7 +241,7 @@ body.light-mode {
   --shadow-color: rgba(0, 0, 0, 0.08);
   --notification-bg-color: #fffbe6;
   --notification-border-color: #ffe58f;
-  --notification-text-color: #8a6d3b;
+  --notification-text-color: #8a6d3b ;
 }
 
 h1,
@@ -270,14 +270,7 @@ body.dark-mode {
   --shadow-color: rgba(255, 255, 255, 0.08);
   --notification-bg-color: #001933;
   --notification-border-color: #665600;
-  --notification-text-color: #f0e68c;
-}
-
-h1,
-h2,
-h3,
-h4 {
-  color: #e0e0e0;
+  --notification-text-color: #f0e68c ;
 }
 
 .url-preview code {
@@ -790,14 +783,6 @@ button:disabled {
   margin-left: auto;
 }
 
-.secondary-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.secondary-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 .secondary-btn.danger:hover {
   background-color: rgba(229, 72, 77, 0.1);
 }
@@ -912,9 +897,9 @@ button:disabled {
   padding-left: 90px;
 }
 
-input[type='text'],
-input[type='number'],
-input[type='password'],
+input[type=text],
+input[type=number],
+input[type=password],
 select,
 button,
 textarea {
@@ -926,9 +911,9 @@ textarea {
   box-sizing: border-box;
 }
 
-input[type='text'],
-input[type='number'],
-input[type='password'],
+input[type=text],
+input[type=number],
+input[type=password],
 select,
 textarea {
   flex-grow: 1;
@@ -964,7 +949,7 @@ textarea {
 
 .slider:before {
   position: absolute;
-  content: '';
+  content: "";
   height: 18px;
   width: 18px;
   left: 3px;
@@ -1038,11 +1023,11 @@ input:checked + .slider:before {
   text-align: center;
 }
 
-.radio-group input[type='radio'] {
+.radio-group input[type=radio] {
   display: none;
 }
 
-.radio-group input[type='radio']:checked + label {
+.radio-group input[type=radio]:checked + label {
   background-color: var(--primary-color);
   color: white;
   font-weight: 600;
@@ -1077,17 +1062,9 @@ input:checked + .slider:before {
 input,
 select,
 textarea {
-  background-color: #fff;
-  color: #333;
-  border-color: #ddd;
-}
-
-input,
-select,
-textarea {
-  background-color: #2a2a2a;
-  color: #dcdcdc;
-  border-color: #555;
+  background-color: var(--white-color);
+  color: var(--text-color);
+  border-color: var(--border-color);
 }
 
 .input-group.checkbox-group {
@@ -1100,7 +1077,7 @@ textarea {
   padding-left: 90px; /* label幅80px + gap10px */
 }
 
-.input-group.checkbox-group input[type='checkbox'] {
+.input-group.checkbox-group input[type=checkbox] {
   opacity: 0;
   position: absolute;
   width: 1px;
@@ -1115,7 +1092,7 @@ textarea {
 }
 
 .input-group.checkbox-group label::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 50%;
@@ -1128,13 +1105,13 @@ textarea {
   transition: all 0.2s ease;
 }
 
-.input-group.checkbox-group input[type='checkbox']:checked + label::before {
+.input-group.checkbox-group input[type=checkbox]:checked + label::before {
   background-color: var(--primary-color);
   border-color: var(--primary-color);
 }
 
 .input-group.checkbox-group label::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 7px;
   top: 50%;
@@ -1147,7 +1124,7 @@ textarea {
   transition: opacity 0.2s ease;
 }
 
-.input-group.checkbox-group input[type='checkbox']:checked + label::after {
+.input-group.checkbox-group input[type=checkbox]:checked + label::after {
   opacity: 1;
 }
 
@@ -1168,12 +1145,12 @@ textarea {
   width: 100%;
 }
 
-input[type='checkbox'] {
+input[type=checkbox] {
   height: auto;
   margin-right: 5px;
 }
 
-input[type='color'] {
+input[type=color] {
   padding: 2px;
   height: 30px;
   width: 40px;
@@ -1205,7 +1182,7 @@ input[type='color'] {
     flex-direction: column;
   }
   .list-item-link::after {
-    content: 'click' !important;
+    content: "click" !important;
     margin-top: -2rem;
     margin-right: auto !important;
     margin-left: 0 !important;
@@ -1217,7 +1194,7 @@ input[type='color'] {
 }
 
 .list-item-link::after {
-  content: '>';
+  content: ">";
   font-weight: bold;
   color: #ccc;
   margin-left: 10px;
@@ -1448,10 +1425,10 @@ input[type='color'] {
 }
 
 .modal-content {
-  background-color: #fefefe;
+  background-color: var(--white-color);
+  border: 1px solid var(--border-color);
   margin: 10% auto;
   padding: 30px;
-  border: 1px solid #888;
   width: 90%;
   max-width: 500px;
   border-radius: 8px;
@@ -1500,34 +1477,6 @@ input[type='color'] {
 
 .modal-actions .action-left {
   margin-right: auto;
-}
-
-.main-header,
-.controls,
-.modal-content {
-  box-shadow: 0 4px 12px var(--shadow-color);
-  border: 1px solid var(--border-color);
-}
-
-.main-header,
-.controls,
-.modal-content {
-  box-shadow: none;
-  border: 1px solid var(--border-color);
-}
-
-.modal-content {
-  background-color: #2a2a2a;
-  border-color: #555;
-}
-
-.close-button {
-  color: #888;
-}
-
-.close-button:hover,
-.close-button:focus {
-  color: #eee;
 }
 
 .prize-master-image-dropzone {
@@ -1662,7 +1611,7 @@ input[type='color'] {
 }
 
 #currentGroupName::after {
-  content: '▼';
+  content: "▼";
   position: absolute;
   right: 10px;
   top: 50%;
@@ -2148,7 +2097,7 @@ input[type='color'] {
 }
 
 .view-mode-switcher::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 3px;
   left: 3px;
@@ -2160,11 +2109,11 @@ input[type='color'] {
   z-index: 0;
 }
 
-.view-mode-switcher[data-active-mode='list']::before {
+.view-mode-switcher[data-active-mode=list]::before {
   transform: translateX(100%);
 }
 
-.view-mode-switcher[data-active-mode='list']::before {
+.view-mode-switcher[data-active-mode=list]::before {
   transform: translateX(100%); /* 「リスト表示」がアクティブな時に背景を右にスライド */
 }
 
@@ -2186,8 +2135,8 @@ input[type='color'] {
   font-weight: bold;
 }
 
-.prize-list-table input[type='text'],
-.prize-list-table input[type='number'] {
+.prize-list-table input[type=text],
+.prize-list-table input[type=number] {
   width: 100%;
   box-sizing: border-box;
   height: 38px;
@@ -2329,7 +2278,7 @@ body.light-mode .settings-panel {
 body.light-mode .radio-group {
   background-color: rgba(0, 0, 0, 0.05);
 }
-body.light-mode .radio-group input[type='radio']:checked + label {
+body.light-mode .radio-group input[type=radio]:checked + label {
   color: white;
 }
 
@@ -2530,7 +2479,7 @@ body.dark-mode #adminControls #glimpseButton {
 
 .setting-item .slider:before {
   position: absolute;
-  content: '';
+  content: "";
   height: 20px;
   width: 20px;
   left: 3px;

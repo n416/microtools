@@ -22,12 +22,17 @@ exports.startEvent = async (req, res) => {
       return res.status(400).json({error: 'イベントは既に開始されています。'});
     }
 
-    // ▼▼▼ doodlesを渡すように修正 ▼▼▼
     const results = calculateResults(eventData.participants, eventData.lines, eventData.prizes, eventData.doodles);
-    // ▲▲▲ ここまで修正 ▲▲▲
 
     await eventRef.update({status: 'started', results: results});
-    res.status(200).json({message: 'イベントが開始されました。', results});
+
+    // ▼▼▼ ここからが今回の修正点です ▼▼▼
+    // 更新後のドキュメントを再取得して、最新のイベントデータとしてクライアントに返します。
+    const updatedDoc = await eventRef.get();
+    const updatedEventData = {id: updatedDoc.id, ...updatedDoc.data()};
+
+    res.status(200).json({message: 'イベントが開始されました。', event: updatedEventData});
+    // ▲▲▲ ここまでが修正点です ▲▲▲
   } catch (error) {
     console.error('Error starting event:', error);
     res.status(500).json({error: 'イベントの開始に失敗しました。'});
@@ -98,9 +103,7 @@ exports.shufflePrizes = async (req, res) => {
       return res.status(403).json({error: 'このイベントを操作する権限がありません。'});
     }
 
-    // ▼▼▼ doodlesを渡すように修正 ▼▼▼
     const newResults = calculateResults(eventData.participants, eventData.lines, shuffledPrizes, eventData.doodles);
-    // ▲▲▲ ここまで修正 ▲▲▲
 
     await eventRef.update({prizes: shuffledPrizes, results: newResults});
 
