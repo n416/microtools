@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ★★★ 修正点: DOMContentLoadedでチュートリアルマネージャーを初期化 ★★★
   if (window.tutorialManager && typeof window.tutorialManager.init === 'function') {
     // 依存性を渡して初期化
-    window.tutorialManager.init({state});
+    window.tutorialManager.init({state, router, ui});
   }
 
   firebase.auth().onAuthStateChanged((user) => {
@@ -50,7 +50,7 @@ async function initializeApp() {
   // ★★★ ここからが修正点 ★★★
   // tutorialManagerとtutorialListの両方に依存性を注入
   if (window.tutorialManager && typeof window.tutorialManager.init === 'function') {
-    window.tutorialManager.init({state});
+    window.tutorialManager.init({state, router, ui});
   }
   if (window.tutorialList && typeof window.tutorialList.init === 'function') {
     window.tutorialList.init({state, router, ui});

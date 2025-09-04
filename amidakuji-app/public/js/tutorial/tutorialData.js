@@ -31,6 +31,7 @@ window.tutorials = [
     id: '02-navigate-to-event-creation',
     title: 'イベントを作成してみよう',
     description: '基本操作',
+    returnOnComplete: true, // この行を追加
     steps: [
       {
         type: 'page',
@@ -51,6 +52,7 @@ window.tutorials = [
     id: '03-create-prizes',
     title: '景品を設定する',
     description: 'イベント管理',
+    returnOnComplete: true, // この行を追加
     steps: [
       {
         type: 'page',
@@ -112,6 +114,7 @@ window.tutorials = [
     title: 'イベントの変更を保存',
     description: 'イベント管理',
     showInList: false,
+    returnOnComplete: true, // この行を追加
     steps: [
       {
         type: 'page',
@@ -141,6 +144,7 @@ window.tutorials = [
     id: '05-manage-members',
     title: 'メンバーを管理する',
     description: 'イベント管理',
+    returnOnComplete: true, // この行を追加
     steps: [
       {
         type: 'page',
