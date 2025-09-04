@@ -19,7 +19,7 @@
 }
 
 .main-header {
-  display: flex;
+  display: none; // ★★★ この行を追加 ★★★
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
@@ -32,6 +32,12 @@
   left: 0;
   z-index: 1000;
 }
+
+// ▼▼▼ このブロックを新しく追加 ▼▼▼
+.main-header.visible {
+  display: flex;
+}
+// ▲▲▲ ここまで ▲▲▲
 
 .auth-controls {
   display: flex;

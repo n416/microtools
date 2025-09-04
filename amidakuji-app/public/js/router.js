@@ -11,8 +11,6 @@ import {loadAdminDashboardData} from './components/adminDashboard.js';
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
 import {db} from './main.js';
 
-// ▼▼▼ 以前の修正で欠落していた関数群 ▼▼▼
-
 /**
  * イベントに参加、またはログインします。
  * @param {string} eventId - イベントID
@@ -78,8 +76,6 @@ export async function verifyAndLogin(eventId, memberId, password) {
     alert(error.error || '認証に失敗しました。');
   }
 }
-
-// ▲▲▲ ここまでが追加された関数群です ▲▲▲
 
 // ヘルパー関数をhandleRoutingの前に定義し直し、参照エラーを解決
 async function loadAndShowGroupEvents(groupId) {
@@ -360,6 +356,12 @@ async function handleRouting(initialData) {
     return 'loadAdminDashboard';
   }
 
+  const participantDashboardByIdMatch = path.match(/^\/groups\/(.+?)\/dashboard\/?$/);
+  if (participantDashboardByIdMatch) {
+    await initializeParticipantDashboardView(participantDashboardByIdMatch[1], false);
+    return;
+  }
+
   const participantDashboardMatch = path.match(/^\/g\/(.+?)\/dashboard\/?$/);
   if (participantDashboardMatch) {
     await initializeParticipantDashboardView(participantDashboardMatch[1], true);
@@ -463,8 +465,35 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
     } else {
       backToDashboardFromEventListButton.textContent = 'ダッシュボードに戻る';
       backToDashboardFromEventListButton.dataset.role = 'dashboard';
+      if (groupData.customUrl) {
+        backToDashboardFromEventListButton.dataset.url = `/g/${groupData.customUrl}/dashboard`;
+      } else {
+        backToDashboardFromEventListButton.dataset.url = `/groups/${groupData.id}/dashboard`;
+      }
     }
     backToDashboardFromEventListButton.style.display = 'block';
+    // ▼▼▼ ここからが今回の修正点です ▼▼▼
+    // 既存のリスナーを解除し、新しいリスナーを設定する
+    const newButton = backToDashboardFromEventListButton.cloneNode(true);
+    backToDashboardFromEventListButton.parentNode.replaceChild(newButton, backToDashboardFromEventListButton);
+    ui.elements.backToDashboardFromEventListButton = newButton; // ui.elementsも更新
+
+    newButton.addEventListener('click', async (e) => {
+      const button = e.currentTarget;
+      const role = button.dataset.role;
+      const groupId = button.dataset.groupId;
+      const url = button.dataset.url;
+
+      if (role === 'admin' && groupId) {
+        await navigateTo(`/admin/groups/${groupId}`);
+      } else if (url) {
+        await navigateTo(url);
+      } else {
+        console.error('No valid navigation target found for dashboard button.');
+        await navigateTo('/');
+      }
+    });
+    // ▲▲▲ ここまでが修正点です ▲▲▲
   } else {
     backToDashboardFromEventListButton.style.display = 'none';
   }
