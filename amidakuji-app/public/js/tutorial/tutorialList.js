@@ -4,6 +4,7 @@
   let containerEl = null;
   let state = null; // モジュール内変数として依存性を保持
   let router = null; // モジュール内変数として依存性を保持
+  let ui = null; // ★★★ uiオブジェクトを保持する変数を追加 ★★★
   let isInitialized = false; // イベントリスナーの重複登録を防ぐフラグ
 
   const viewToUrlMap = {
@@ -16,6 +17,7 @@
     init: function (dependencies) {
       state = dependencies.state;
       router = dependencies.router;
+      ui = dependencies.ui; // ★★★ 渡されたuiオブジェクトを保存 ★★★
     },
 
     renderView: function () {
@@ -99,12 +101,19 @@
 
         if (link) {
           e.preventDefault();
-          router.navigateTo(link.getAttribute('href'));
+          setTimeout(() => {
+            router.navigateTo(link.getAttribute('href'));
+          }, 0);
         } else if (button) {
-          localStorage.removeItem(`tutorialCompleted_${tutorialId}`);
-          const checkbox = parentLi.querySelector('input[type="checkbox"]');
-          if (checkbox) checkbox.checked = false;
-          alert(`「${parentLi.querySelector('.tutorial-link').textContent}」の進捗をリセットしました。`);
+          setTimeout(() => {
+            localStorage.removeItem(`tutorialCompleted_${tutorialId}`);
+            const checkbox = parentLi.querySelector('input[type="checkbox"]');
+            if (checkbox) checkbox.checked = false;
+            // ▼▼▼ ここからが今回の修正点です ▼▼▼
+            // alert()を、アプリケーション独自の通知機能ui.showToast()に置き換えます。
+            ui.showToast(`「${parentLi.querySelector('.tutorial-link').textContent}」の進捗をリセットしました。`);
+            // ▲▲▲ ここまでが修正点です ▲▲▲
+          }, 0);
         }
       });
     },
