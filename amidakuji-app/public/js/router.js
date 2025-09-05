@@ -159,7 +159,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
       ui.elements.broadcastEventUrl.textContent = url;
       ui.elements.broadcastEventUrl.href = url;
     }
-
+    ui.showView(viewToShow);
     if (viewToShow === 'eventEditView') {
       renderEventForEditing(data);
     } else if (viewToShow === 'broadcastView') {
@@ -185,7 +185,6 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
       await prepareStepAnimation(ctx, hidePrizes);
     }
 
-    ui.showView(viewToShow);
   } catch (error) {
     console.error('イベントの読み込み中にAPIエラーが発生しました:', error);
     alert(error.error || 'イベントの読み込みに失敗しました。');
