@@ -112,9 +112,39 @@ exports.deleteMember = async (req, res) => {
     }
 
     const memberRef = groupRef.collection('members').doc(memberId);
-    await memberRef.delete();
 
-    res.status(200).json({message: 'メンバーを削除しました。'});
+    // ▼▼▼ ここから修正 ▼▼▼
+    const batch = firestore.batch();
+
+    // 関連する開催前イベントから参加情報を削除
+    const eventsSnapshot = await firestore.collection('events').where('groupId', '==', groupId).where('status', '==', 'pending').get();
+
+    eventsSnapshot.forEach((doc) => {
+      const eventData = doc.data();
+      const participants = eventData.participants;
+      let needsUpdate = false;
+
+      const newParticipants = participants.map((p) => {
+        if (p.memberId === memberId) {
+          needsUpdate = true;
+          // 参加情報をリセットして空き枠に戻す
+          return {...p, name: null, memberId: null, iconUrl: null, color: null};
+        }
+        return p;
+      });
+
+      if (needsUpdate) {
+        batch.update(doc.ref, {participants: newParticipants});
+      }
+    });
+
+    // メンバーを削除
+    batch.delete(memberRef);
+
+    await batch.commit();
+    // ▲▲▲ ここまで修正 ▲▲▲
+
+    res.status(200).json({message: 'メンバーを削除し、関連するイベント参加情報を更新しました。'});
   } catch (error) {
     console.error('Error deleting member:', error);
     res.status(500).json({error: 'メンバーの削除に失敗しました。'});

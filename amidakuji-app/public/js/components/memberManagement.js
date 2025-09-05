@@ -1,7 +1,7 @@
 import * as api from '../api.js';
 import * as state from '../state.js';
 import * as ui from '../ui.js';
-import * as router from '../router.js'; // この行を追記
+import * as router from '../router.js';
 
 const elements = {
   memberManagementView: document.getElementById('memberManagementView'),
@@ -11,6 +11,7 @@ const elements = {
   memberSearchInput: document.getElementById('memberSearchInput'),
   memberList: document.getElementById('memberList'),
   bulkRegisterButton: document.getElementById('bulkRegisterButton'),
+  cleanupEventsButton: document.getElementById('cleanupEventsButton'), // ★ 追加
   memberEditModal: document.getElementById('memberEditModal'),
   closeMemberEditModalButton: document.querySelector('#memberEditModal .close-button'),
   memberIdInput: document.getElementById('memberIdInput'),
@@ -195,7 +196,7 @@ export function initMemberManagement() {
             if (!newName) return alert('名前は必須です。');
 
             try {
-              await api.updateMember(state.currentGroupId, memberId, { name: newName, color: newColor });
+              await api.updateMember(state.currentGroupId, memberId, {name: newName, color: newColor});
               closeMemberEditModal();
               const updatedMembers = await api.getMembers(state.currentGroupId);
               renderMemberList(updatedMembers);
@@ -228,6 +229,21 @@ export function initMemberManagement() {
         openBulkRegisterModal();
       }
     });
+
+    // ★★★ ここからが修正点 ★★★
+    if (elements.cleanupEventsButton) {
+      elements.cleanupEventsButton.addEventListener('click', async () => {
+        if (!confirm('過去に削除されたメンバーの参加情報を、開催前のイベントから一括で削除します。よろしいですか？')) return;
+
+        try {
+          const result = await api.cleanupEvents(state.currentGroupId);
+          alert(result.message);
+        } catch (error) {
+          alert(error.error || '処理に失敗しました。');
+        }
+      });
+    }
+    // ★★★ ここまで ★★★
   }
 
   if (elements.closeMemberEditModalButton) {
@@ -262,12 +278,12 @@ export function initMemberManagement() {
 
       const resolutions = [];
       document.querySelectorAll('#newRegistrationTab li').forEach((li) => {
-        resolutions.push({ inputName: li.textContent.match(/"(.*?)"/)[1], action: 'create' });
+        resolutions.push({inputName: li.textContent.match(/"(.*?)"/)[1], action: 'create'});
       });
       document.querySelectorAll('#potentialMatchTab li').forEach((li) => {
         const inputName = li.dataset.inputName;
         const action = li.querySelector('input[type="radio"]:checked').value;
-        resolutions.push({ inputName, action });
+        resolutions.push({inputName, action});
       });
 
       try {
