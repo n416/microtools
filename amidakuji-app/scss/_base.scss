@@ -1,25 +1,30 @@
+/* amidakuji-app/scss/_base.scss */
+
 * {
     box-sizing: border-box;
 }
 :root {
   --primary-color: #007bff;
   --primary-hover-color: #0056b3;
-  --danger-color: #dc3545;
-  --danger-hover-color: #c82333;
+  /* ▼▼▼ ここから修正 ▼▼▼ */
+  --danger-color: #d9534f; /* 少し落ち着いた赤に変更 */
+  --danger-hover-color: #c9302c; /* hover色も調整 */
+  /* ▲▲▲ ここまで修正 ▲▲▲ */
   --light-bg-color: #f4f7f6;
   --white-color: #fff;
-  --white-color-rgb: 255, 255, 255; /* <--- 追加 */
+  --white-color-rgb: 255, 255, 255;
   --text-color: #333;
   --border-color: #ddd;
   --shadow-color: rgba(0, 0, 0, 0.08);
-  --admin-color: #ffc107;
+  /* ▼▼▼ ここから修正 ▼▼▼ */
+  --admin-color: #f0ad4e; /* 少し落ち着いたオレンジに変更 */
+  /* ▲▲▲ ここまで修正 ▲▲▲ */
   --approve-color: #28a745;
   --approve-hover-color: #218838;
   --notification-bg-color: #fffbe6;
   --notification-border-color: #ffe58f;
   --notification-text-color: #8a6d3b;
-  /* ★ここを追加★ Lucideアイコンの線の太さを設定 */
-  --lucide-stroke-width: 1; /* 初期値は2。1.5や1.25などに変更すると細くなります */
+  --lucide-stroke-width: 1;
 }
 
 body {
@@ -51,7 +56,7 @@ h4 {
   border-radius: 10px;
   transition: all 0.3s linear;
   position: relative;
-  transform-origin: 1px;
+  transform-origin: -1px;
 }
 
 #hamburger-button.active span:nth-child(1) {
@@ -112,11 +117,6 @@ h4 {
     max-width: 300px;
     text-align: center;
     justify-content: center;
-  }
-
-  #groupSwitcher {
-    width: 80%;
-    max-width: 300px;
   }
 
   #currentGroupName {

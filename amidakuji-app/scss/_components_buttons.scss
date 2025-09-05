@@ -1,11 +1,19 @@
 #adminDashboardButton {
-  background-color: var(--admin-color);
-  color: #333;
+  background-color: transparent; /* 背景を透明に */
+  border: 1px solid var(--admin-color); /* 枠線で色を表現 */
+  color: var(--admin-color); /* 文字色をテーマカラーに */
   padding: 8px 12px;
-  border-radius: 4px;
-  text-decoration: none;
+  border-radius: 0px;
   border: none;
+  border-bottom: 1px solid var(--border-color);  text-decoration: none;
   font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+
+#adminDashboardButton:hover {
+  background-color: var(--admin-color); /* ホバー時に背景色を塗る */
+  color: #fff; /* ホバー時に文字色を白に */
 }
 
 #hamburger-button {
@@ -69,8 +77,6 @@
   }
 
   #groupSwitcher {
-    width: 80%;
-    max-width: 300px;
   }
 
   #currentGroupName {
@@ -108,12 +114,25 @@ button:disabled {
 
 .delete-btn {
   background-color: var(--danger-color) !important;
-  color: white;
+  color: white !important; 
 }
 
 .delete-btn:hover {
   background-color: var(--danger-hover-color) !important;
 }
+/* ▼▼▼ ユーザーメニュー内のアカウント削除ボタンのスタイルを上書き ▼▼▼ */
+.header-dropdown .delete-btn {
+  background: none !important;
+  color: var(--danger-color) !important;
+  border: none !important;
+  font-weight: normal;
+  justify-content: flex-start;
+}
+
+.header-dropdown .delete-btn:hover {
+  background-color: var(--shadow-color) !important;
+}
+/* ▲▲▲ ここまで修正 ▲▲▲ */
 
 .item-list-item .item-buttons .impersonate-btn {
   background-color: var(--admin-color);
