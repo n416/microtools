@@ -1,6 +1,9 @@
 // amidakuji-app/utils/emoji-map.js
 
 const emojiMap = new Map([
+  ['🏠', 'home'],
+  ['👤', 'user-circle'],
+  ['❔', 'help-circle'],
   ['⚙️', 'settings'],
   ['🏆', 'trophy'],
   ['👥', 'users'],

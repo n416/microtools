@@ -38,7 +38,12 @@
       const tutorialsToShow = window.tutorials.filter((t) => t.showInList !== false);
 
       const groupedTutorials = tutorialsToShow.reduce((acc, tutorial) => {
-        // (省略)
+        const group = tutorial.description || 'その他';
+        if (!acc[group]) {
+          acc[group] = [];
+        }
+        acc[group].push(tutorial);
+        return acc;
       }, {});
 
       let html = '';
@@ -66,7 +71,7 @@
       }
       containerEl.innerHTML = html;
     },
-    
+
     attachEventListeners: function () {
       containerEl.addEventListener('click', (e) => {
         const link = e.target.closest('a.tutorial-link');

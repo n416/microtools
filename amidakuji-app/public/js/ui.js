@@ -249,34 +249,37 @@ export function updateTutorialDropdown() {
   const list = document.getElementById('tutorialDropdownList');
   if (!container || !dot || !list || !window.tutorials) return;
 
-  const incompleteTutorials = window.tutorials.filter((t) => t.showInList !== false && !localStorage.getItem(`tutorialCompleted_${t.id}`));
+  // ▼▼▼ ここからが修正箇所です ▼▼▼
+  const allTutorials = window.tutorials.filter((t) => t.showInList !== false);
+  const hasIncompleteTutorials = allTutorials.some((t) => !localStorage.getItem(`tutorialCompleted_${t.id}`));
 
   if (state.currentUser) {
-    container.style.display = 'block';
-    if (incompleteTutorials.length > 0) {
-      dot.style.display = 'block';
-      list.innerHTML = incompleteTutorials
-        .map((t) => {
-          // 共通関数を使ってURLを生成
-          const href = window.tutorialUtils.generateTutorialUrl(t, state);
-          return `<li><a href="${href}" class="dropdown-item-link">${t.title}</a></li>`;
-        })
-        .join('');
-    } else {
-      // (省略)
-    }
+    container.style.display = 'flex';
+    dot.style.display = hasIncompleteTutorials ? 'flex' : 'none';
+
+    list.innerHTML = allTutorials
+      .map((t) => {
+        const isCompleted = localStorage.getItem(`tutorialCompleted_${t.id}`) === 'true';
+        const href = window.tutorialUtils.generateTutorialUrl(t, state);
+        const dotHtml = isCompleted ? '' : '<span class="notification-dot"></span>';
+        return `<li><a href="${href}" class="dropdown-item-link">${t.title}${dotHtml}</a></li>`;
+      })
+      .join('');
   } else {
     container.style.display = 'none';
   }
 }
-
 export function updateGroupSwitcher() {
-  if (!elements.groupSwitcher || !elements.currentGroupName || !elements.switcherGroupList) return;
+  // ▼▼▼ この行を修正 ▼▼▼
+  const groupSwitcherContainer = document.querySelector('.group-switcher-container');
+  if (!groupSwitcherContainer || !elements.currentGroupName || !elements.switcherGroupList) return;
 
   if (state.allUserGroups.length > 0) {
-    elements.groupSwitcher.style.display = 'block';
+    // ▼▼▼ この行を修正 ▼▼▼
+    groupSwitcherContainer.style.display = 'flex';
   } else {
-    elements.groupSwitcher.style.display = 'none';
+    // ▼▼▼ この行を修正 ▼▼▼
+    groupSwitcherContainer.style.display = 'none';
   }
 
   const currentGroup = state.allUserGroups.find((g) => g.id === state.currentGroupId);
