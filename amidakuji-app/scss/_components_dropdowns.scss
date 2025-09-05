@@ -24,11 +24,16 @@
   #nav-menu > * {
     width: 100%;
     display: flex;
-    justify-content: center;
+    justify-content: left;
+    flex-direction: column;
+    box-sizing: border-box;
   }
 
   #nav-menu.active {
     display: flex;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 0;
   }
 
   .auth-controls {
@@ -46,8 +51,6 @@
   }
 
   #groupSwitcher {
-    width: 80%;
-    max-width: 300px;
   }
 
   #currentGroupName {
@@ -97,6 +100,7 @@
   color: var(--text-color);
   padding: 10px;
   border: none;
+  justify-content: left;
 }
 
 .dropdown-content button:hover {
@@ -138,7 +142,6 @@
   background-color: #444;
 }
 
-// ▼▼▼ ここからが今回の修正点です ▼▼▼
 .header-dropdown {
   position: relative;
 
@@ -152,6 +155,10 @@
       list-style: none;
       padding: 0;
       margin: 0;
+      & li{
+        border: none;
+        border-bottom: 1px solid var(--border-color);
+      }
     }
 
     & li button, & a.dropdown-item-link {
@@ -161,10 +168,15 @@
       color: var(--text-color);
       padding: 12px 16px;
       border: none;
+      border-radius: 0;
       border-bottom: 1px solid var(--border-color);
       display: block; // aタグのため
       text-decoration: none; // aタグのため
       font-size: 14px;
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
      & li:last-child button, & a.dropdown-item-link {
       border-bottom: none;
@@ -185,10 +197,10 @@
   background: none;
   border: none;
   color: var(--text-color);
-  padding: 4px 12px;
+  padding: 4px 12px 12px; // 矢印のスペースを確保するために下のpaddingを調整
   border-radius: 4px;
   height: 52px;
-  position: relative; // 通知ドットのため
+  position: relative;
   
   &:hover {
     background-color: var(--shadow-color);
@@ -199,6 +211,8 @@
   }
 
   & .dropdown-arrow {
+    position: absolute; // 通常のレイアウトから切り離す
+    bottom: 2px;       // ボタンの下部に配置
     width: 12px;
     height: 12px;
     stroke-width: 2.5;
@@ -215,4 +229,116 @@
   border-radius: 50%;
   border: 1px solid var(--white-color);
 }
-// ▲▲▲ ここまでが修正点です ▲▲▲
+
+// ドロップダウンリスト内の通知ドットにだけ適用されるようにセレクタを修正
+.header-dropdown .dropdown-content a.dropdown-item-link .notification-dot {
+  position: static; /* positionをリセットしてflexレイアウトに従わせる */
+  flex-shrink: 0;   /* 縮まないようにする */
+  margin-left: 10px; /* テキストとの間に余白を追加 */
+}
+
+.group-switcher-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-switcher-label {
+  font-size: 10px;
+  color: var(--text-color);
+  opacity: 0.7;
+  font-weight: 500;
+  margin-bottom: -10px;
+  z-index: 1;
+  display: inline-block;
+  background-color: var(--white-color);
+  margin-left: 10px;
+  align-self: flex-start;
+}
+
+#homeButton {
+  text-decoration-line:none;
+padding: 8px 12px;
+}
+
+@media (max-width: 768px) {
+  .group-switcher-container {
+    width: 90%;
+  }
+  
+  #currentGroupName {
+    display: none; // PC用のスイッチャーボタンは非表示
+  }
+
+  #groupSwitcher .dropdown-content {
+    position: static;
+    display: block;
+    background: none;
+    box-shadow: none;
+    min-width: unset;
+    width: 100%;
+    padding: 0;
+  }
+
+  #groupSwitcher ul {
+    background-color: var(--white-color);
+  }
+  
+  #switcherCreateGroup {
+    box-sizing: content-box;
+    margin-top: 0px;
+    border:none;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    padding: 10px 20px;
+    justify-content: left;
+    color: var(--text-color);
+    font-size: 1rem;
+  }
+  .button.header-icon-button {
+    box-sizing: content-box;
+    flex-direction: row !important;
+    justify-content: left;
+    gap: 20px;
+    position: relative;
+    padding: 10px 20px;
+    border-radius: 0;
+
+    
+  }
+  .button.header-icon-button .dropdown-arrow {
+    left: calc(100% - 3em);
+    bottom: calc(50% - 0.5em);
+}
+  .button.header-icon-button {
+    border-bottom: 1px solid var(--border-color);
+    height: 2rem;
+  }
+  .group-switcher-label{
+    display: none;
+  }
+  #switcherGroupList {
+    display: none;
+  }
+  .button.header-icon-button span{
+    font-size: 1rem;
+  }
+  #homeButton {
+    min-height: 60px;
+    padding: 10px 20px;
+  }
+  .header-dropdown .dropdown-content li:last-child button, .header-dropdown .dropdown-content a.dropdown-item-link {
+    border-bottom: 1px solid var(--border-color);
+    height: 60px;
+  }
+
+  .header-dropdown .dropdown-content ul li {
+    margin-left: 25px;
+    height: 60px;
+    & button{
+      height: 100%;
+      border-top: none;
+    }
+  }
+  
+}

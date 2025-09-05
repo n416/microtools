@@ -1,4 +1,5 @@
 @charset "UTF-8";
+/* amidakuji-app/scss/_base.scss */
 * {
   box-sizing: border-box;
 }
@@ -6,22 +7,25 @@
 :root {
   --primary-color: #007bff;
   --primary-hover-color: #0056b3;
-  --danger-color: #dc3545;
-  --danger-hover-color: #c82333;
+  /* ▼▼▼ ここから修正 ▼▼▼ */
+  --danger-color: #d9534f; /* 少し落ち着いた赤に変更 */
+  --danger-hover-color: #c9302c; /* hover色も調整 */
+  /* ▲▲▲ ここまで修正 ▲▲▲ */
   --light-bg-color: #f4f7f6;
   --white-color: #fff;
-  --white-color-rgb: 255, 255, 255; /* <--- 追加 */
+  --white-color-rgb: 255, 255, 255;
   --text-color: #333;
   --border-color: #ddd;
   --shadow-color: rgba(0, 0, 0, 0.08);
-  --admin-color: #ffc107;
+  /* ▼▼▼ ここから修正 ▼▼▼ */
+  --admin-color: #f0ad4e; /* 少し落ち着いたオレンジに変更 */
+  /* ▲▲▲ ここまで修正 ▲▲▲ */
   --approve-color: #28a745;
   --approve-hover-color: #218838;
   --notification-bg-color: #fffbe6;
   --notification-border-color: #ffe58f;
   --notification-text-color: #8a6d3b;
-  /* ★ここを追加★ Lucideアイコンの線の太さを設定 */
-  --lucide-stroke-width: 1; /* 初期値は2。1.5や1.25などに変更すると細くなります */
+  --lucide-stroke-width: 1;
 }
 
 body {
@@ -53,7 +57,7 @@ h4 {
   border-radius: 10px;
   transition: all 0.3s linear;
   position: relative;
-  transform-origin: 1px;
+  transform-origin: -1px;
 }
 
 #hamburger-button.active span:nth-child(1) {
@@ -108,10 +112,6 @@ h4 {
     max-width: 300px;
     text-align: center;
     justify-content: center;
-  }
-  #groupSwitcher {
-    width: 80%;
-    max-width: 300px;
   }
   #currentGroupName {
     width: 100%;
@@ -373,7 +373,7 @@ body.dark-mode #adminControls #glimpseButton {
   display: none;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
+  padding: 10px 10px 8px;
   background-color: var(--white-color);
   box-shadow: 0 2px 5px var(--shadow-color);
   width: 100%;
@@ -413,17 +413,29 @@ body.dark-mode #adminControls #glimpseButton {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
-    background-color: var(--white-color);
+    height: 100vh; /* 画面全体の高さに */
+    background-color: rgba(var(--white-color-rgb), 0.85); /* 半透明の背景 */
+    backdrop-filter: blur(10px); /* 背景をぼかす */
+    -webkit-backdrop-filter: blur(10px);
     z-index: 1005;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start; /* 上から配置 */
     align-items: center;
+    padding-top: 80px; /* ヘッダーの高さ分、下にずらす */
+    gap: 20px;
   }
-  #nav-menu > * {
+  #nav-menu .header-dropdown .dropdown-content {
+    position: static;
+    display: block;
+    background: none;
+    box-shadow: none;
+    min-width: unset;
     width: 100%;
-    display: flex;
-    justify-content: center;
+    padding: 0;
+  }
+  #nav-menu .header-dropdown ul {
+    background-color: var(--white-color);
+    border-radius: 8px;
   }
   #nav-menu.active {
     display: flex;
@@ -435,14 +447,12 @@ body.dark-mode #adminControls #glimpseButton {
     align-items: center;
   }
   .auth-controls > * {
-    width: 80%;
-    max-width: 300px;
+    width: 100%;
     text-align: center;
     justify-content: center;
   }
   #groupSwitcher {
-    width: 80%;
-    max-width: 300px;
+    width: 100%;
   }
   #currentGroupName {
     width: 100%;
@@ -591,13 +601,21 @@ body.dark-mode #adminControls #glimpseButton {
 }
 
 #adminDashboardButton {
-  background-color: var(--admin-color);
-  color: #333;
+  background-color: transparent; /* 背景を透明に */
+  border: 1px solid var(--admin-color); /* 枠線で色を表現 */
+  color: var(--admin-color); /* 文字色をテーマカラーに */
   padding: 8px 12px;
-  border-radius: 4px;
-  text-decoration: none;
+  border-radius: 0px;
   border: none;
+  border-bottom: 1px solid var(--border-color);
+  text-decoration: none;
   font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+#adminDashboardButton:hover {
+  background-color: var(--admin-color); /* ホバー時に背景色を塗る */
+  color: #fff; /* ホバー時に文字色を白に */
 }
 
 #hamburger-button {
@@ -653,10 +671,6 @@ body.dark-mode #adminControls #glimpseButton {
     text-align: center;
     justify-content: center;
   }
-  #groupSwitcher {
-    width: 80%;
-    max-width: 300px;
-  }
   #currentGroupName {
     width: 100%;
     justify-content: center;
@@ -691,13 +705,27 @@ button:disabled {
 
 .delete-btn {
   background-color: var(--danger-color) !important;
-  color: white;
+  color: white !important;
 }
 
 .delete-btn:hover {
   background-color: var(--danger-hover-color) !important;
 }
 
+/* ▼▼▼ ユーザーメニュー内のアカウント削除ボタンのスタイルを上書き ▼▼▼ */
+.header-dropdown .delete-btn {
+  background: none !important;
+  color: var(--danger-color) !important;
+  border: none !important;
+  font-weight: normal;
+  justify-content: flex-start;
+}
+
+.header-dropdown .delete-btn:hover {
+  background-color: var(--shadow-color) !important;
+}
+
+/* ▲▲▲ ここまで修正 ▲▲▲ */
 .item-list-item .item-buttons .impersonate-btn {
   background-color: var(--admin-color);
   color: #333;
@@ -1632,10 +1660,15 @@ input[type=color] {
   #nav-menu > * {
     width: 100%;
     display: flex;
-    justify-content: center;
+    justify-content: left;
+    flex-direction: column;
+    box-sizing: border-box;
   }
   #nav-menu.active {
     display: flex;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 0;
   }
   .auth-controls {
     flex-direction: column;
@@ -1648,10 +1681,6 @@ input[type=color] {
     max-width: 300px;
     text-align: center;
     justify-content: center;
-  }
-  #groupSwitcher {
-    width: 80%;
-    max-width: 300px;
   }
   #currentGroupName {
     width: 100%;
@@ -1699,6 +1728,7 @@ input[type=color] {
   color: var(--text-color);
   padding: 10px;
   border: none;
+  justify-content: left;
 }
 
 .dropdown-content button:hover {
@@ -1755,6 +1785,10 @@ input[type=color] {
   padding: 0;
   margin: 0;
 }
+.header-dropdown .dropdown-content ul li {
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+}
 .header-dropdown .dropdown-content li button, .header-dropdown .dropdown-content a.dropdown-item-link {
   width: 100%;
   text-align: left;
@@ -1762,10 +1796,15 @@ input[type=color] {
   color: var(--text-color);
   padding: 12px 16px;
   border: none;
+  border-radius: 0;
   border-bottom: 1px solid var(--border-color);
   display: block;
   text-decoration: none;
   font-size: 14px;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 .header-dropdown .dropdown-content li:last-child button, .header-dropdown .dropdown-content a.dropdown-item-link {
   border-bottom: none;
@@ -1783,7 +1822,7 @@ input[type=color] {
   background: none;
   border: none;
   color: var(--text-color);
-  padding: 4px 12px;
+  padding: 4px 12px 12px;
   border-radius: 4px;
   height: 52px;
   position: relative;
@@ -1795,6 +1834,8 @@ input[type=color] {
   font-size: 10px;
 }
 .button.header-icon-button .dropdown-arrow {
+  position: absolute;
+  bottom: 2px;
   width: 12px;
   height: 12px;
   stroke-width: 2.5;
@@ -1811,6 +1852,109 @@ input[type=color] {
   border: 1px solid var(--white-color);
 }
 
+.header-dropdown .dropdown-content a.dropdown-item-link .notification-dot {
+  position: static; /* positionをリセットしてflexレイアウトに従わせる */
+  flex-shrink: 0; /* 縮まないようにする */
+  margin-left: 10px; /* テキストとの間に余白を追加 */
+}
+
+.group-switcher-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-switcher-label {
+  font-size: 10px;
+  color: var(--text-color);
+  opacity: 0.7;
+  font-weight: 500;
+  margin-bottom: -10px;
+  z-index: 1;
+  display: inline-block;
+  background-color: var(--white-color);
+  margin-left: 10px;
+  align-self: flex-start;
+}
+
+#homeButton {
+  text-decoration-line: none;
+  padding: 8px 12px;
+}
+
+@media (max-width: 768px) {
+  .group-switcher-container {
+    width: 90%;
+  }
+  #currentGroupName {
+    display: none;
+  }
+  #groupSwitcher .dropdown-content {
+    position: static;
+    display: block;
+    background: none;
+    box-shadow: none;
+    min-width: unset;
+    width: 100%;
+    padding: 0;
+  }
+  #groupSwitcher ul {
+    background-color: var(--white-color);
+  }
+  #switcherCreateGroup {
+    box-sizing: content-box;
+    margin-top: 0px;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    padding: 10px 20px;
+    justify-content: left;
+    color: var(--text-color);
+    font-size: 1rem;
+  }
+  .button.header-icon-button {
+    box-sizing: content-box;
+    flex-direction: row !important;
+    justify-content: left;
+    gap: 20px;
+    position: relative;
+    padding: 10px 20px;
+    border-radius: 0;
+  }
+  .button.header-icon-button .dropdown-arrow {
+    left: calc(100% - 3em);
+    bottom: calc(50% - 0.5em);
+  }
+  .button.header-icon-button {
+    border-bottom: 1px solid var(--border-color);
+    height: 2rem;
+  }
+  .group-switcher-label {
+    display: none;
+  }
+  #switcherGroupList {
+    display: none;
+  }
+  .button.header-icon-button span {
+    font-size: 1rem;
+  }
+  #homeButton {
+    min-height: 60px;
+    padding: 10px 20px;
+  }
+  .header-dropdown .dropdown-content li:last-child button, .header-dropdown .dropdown-content a.dropdown-item-link {
+    border-bottom: 1px solid var(--border-color);
+    height: 60px;
+  }
+  .header-dropdown .dropdown-content ul li {
+    margin-left: 25px;
+    height: 60px;
+  }
+  .header-dropdown .dropdown-content ul li button {
+    height: 100%;
+    border-top: none;
+  }
+}
 #bulk-step2-preview .tabs {
   display: flex;
   border-bottom: 1px solid var(--border-color);
