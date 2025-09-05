@@ -223,8 +223,7 @@ export function showResultsView(eventData, targetName, isShareView) {
     } else {
       if (elements.myResult) elements.myResult.innerHTML = '<b>全結果を表示します</b>';
     }
-    // ▼▼▼ ここから修正 ▼▼▼
-    const isParticipant = !!(state.currentParticipantId && eventData.participants.some(p => p.memberId === state.currentParticipantId));
+    const isParticipant = !!(state.currentParticipantId && eventData.participants.some((p) => p.memberId === state.currentParticipantId));
 
     if (!isShareView) {
       if (elements.shareButton) {
@@ -234,7 +233,6 @@ export function showResultsView(eventData, targetName, isShareView) {
         elements.backToControlPanelFromResultButton.style.display = 'block';
       }
     }
-    // ▲▲▲ ここまで修正 ▲▲▲
     if (eventData.results) {
       renderAllResults(eventData.results, isShareView, state.currentParticipantName);
     }
@@ -329,7 +327,6 @@ export function renderOtherEvents(events, groupCustomUrl) {
 }
 
 export async function initializeParticipantView(eventId, isShare, sharedParticipantName) {
-  console.log(`[DEBUG] 1. initializeParticipantView CALLED for event: ${eventId}`);
   state.setCurrentEventId(eventId);
 
   ui.showView('participantView');
@@ -337,34 +334,27 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
 
   try {
     let eventData = isShare ? await api.getPublicShareData(eventId, sharedParticipantName) : await api.getPublicEventData(eventId);
-    console.log('[DEBUG] 3. Fetched initial event data.');
 
     state.setCurrentGroupId(eventData.groupId);
     state.loadParticipantState();
 
     if (!isShare && state.currentParticipantId) {
-      console.log('[DEBUG] 4. Re-fetching event data with auth headers.');
       eventData = await api.getPublicEventData(eventId);
     }
 
     state.setCurrentLotteryData(eventData);
 
-    // ▼▼▼ ここから修正 ▼▼▼
     if (!isShare) {
-      console.log(`[DEBUG] Setting up REALTIME listener for view...`);
       const eventRef = db.collection('events').doc(eventId);
 
       const unsubscribe = eventRef.onSnapshot(
         async (doc) => {
-          console.log('%c[DEBUG] REALTIME UPDATE RECEIVED (onSnapshot fired)', 'color: blue; font-weight: bold;');
           if (!doc.exists) {
-            console.log('[DEBUG] Document no longer exists.');
             return;
           }
           const updatedData = doc.data();
 
           if (updatedData.status === 'started' && state.currentLotteryData.status === 'pending') {
-            console.log('[DEBUG] Event has started! Transitioning to results view.');
             ui.showToast('イベントが開始されました！結果発表です！', 3000);
             state.setCurrentLotteryData(updatedData);
             await showResultsView(updatedData, state.currentParticipantName, false);
@@ -386,10 +376,7 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
             }
           }
 
-          console.log(`[DEBUG] Update Check: Remote=${remoteTimestampMs}, Local=${localTimestampMs}, Needs Refresh=${remoteTimestampMs > localTimestampMs}`);
-
           if (localTimestampMs > 0 && remoteTimestampMs > localTimestampMs) {
-            console.log('[DEBUG] Structural change detected! Reloading view.');
             ui.showToast('管理者がイベントを更新しました。画面を再読み込みします。', 4000);
 
             unsubscribe();
@@ -403,7 +390,6 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
           state.currentLotteryData.lastModifiedAt = updatedData.lastModifiedAt;
 
           if (updatedData.doodles && JSON.stringify(state.currentLotteryData.doodles) !== JSON.stringify(updatedData.doodles)) {
-            console.log('[DEBUG] Doodle data has changed. Redrawing canvas...');
             state.currentLotteryData.doodles = updatedData.doodles || [];
 
             const staticCanvas = document.getElementById('participantCanvasStatic');
@@ -411,10 +397,7 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
               const ctx = staticCanvas.getContext('2d');
               const storedState = participantPanzoom ? {pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale()} : null;
               await prepareStepAnimation(ctx, true, false, false, storedState);
-              console.log('[DEBUG] Canvas redraw complete.');
             }
-          } else {
-            console.log('[DEBUG] No structural or doodle changes detected.');
           }
         },
         (error) => {
@@ -423,7 +406,6 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
       );
       addFirestoreListener(unsubscribe);
     }
-    // ▲▲▲ ここまで修正 ▲▲▲
 
     if (ui.elements.participantEventName) ui.elements.participantEventName.textContent = eventData.eventName || 'あみだくじイベント';
 
@@ -498,16 +480,19 @@ export function initParticipantView() {
         drawDoodlePreview(ctx, state.previewDoodle);
       }
     };
-    staticCanvas.addEventListener('mousemove', (e) => {
-      if (!state.currentLotteryData || !state.currentLotteryData.allowDoodleMode || state.doodleTool !== 'draw' || 'ontouchstart' in window) {
-        return;
-      }
+
+    const getDoodleDataFromEvent = (e) => {
       const canvas = e.target;
       const rect = canvas.getBoundingClientRect();
       const pan = participantPanzoom.getPan();
       const scale = participantPanzoom.getScale();
-      const x = (e.clientX - rect.left - pan.x) / scale;
-      const y = (e.clientY - rect.top - pan.y) / scale;
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const x = (clientX - rect.left - pan.x) / scale;
+      const y = (clientY - rect.top - pan.y) / scale;
+
       const {participants, prizes} = state.currentLotteryData;
       const numParticipants = participants.length;
       const container = canvas.closest('.canvas-panzoom-container');
@@ -521,13 +506,11 @@ export function initParticipantView() {
       const topMargin = 70;
       const bottomMargin = 330;
       const sourceLineRange = bottomMargin - topMargin;
+
       if (y < lineTopY || y > lineBottomY) {
-        if (state.hoverDoodle) {
-          state.setHoverDoodle(null);
-          redrawCanvas();
-        }
-        return;
+        return null;
       }
+
       let fromIndex = -1;
       for (let i = 0; i < numParticipants - 1; i++) {
         const startX = participantSpacing * (i + 1);
@@ -537,18 +520,59 @@ export function initParticipantView() {
           break;
         }
       }
+
       if (fromIndex === -1) {
-        if (state.hoverDoodle) {
-          state.setHoverDoodle(null);
-          redrawCanvas();
-        }
-        return;
+        return null;
       }
+
       const relativeY = y - lineTopY;
       const originalY = (relativeY / amidaDrawableHeight) * sourceLineRange + topMargin;
-      state.setHoverDoodle({fromIndex, toIndex: fromIndex + 1, y: originalY});
+      return {fromIndex, toIndex: fromIndex + 1, y: originalY};
+    };
+
+    const handlePointerMove = (e) => {
+      if (!state.currentLotteryData || !state.currentLotteryData.allowDoodleMode || state.doodleTool !== 'draw') {
+        return;
+      }
+      const doodleData = getDoodleDataFromEvent(e);
+      if (doodleData) {
+        state.setHoverDoodle(doodleData);
+      } else {
+        if (state.hoverDoodle) {
+          state.setHoverDoodle(null);
+        }
+      }
       redrawCanvas();
+    };
+
+    const handlePointerDown = async (e) => {
+      if (!state.currentLotteryData || !state.currentLotteryData.allowDoodleMode) {
+        return;
+      }
+      if (state.doodleTool === 'draw') {
+        const doodleData = getDoodleDataFromEvent(e);
+        if (!doodleData) return;
+        state.setPreviewDoodle(doodleData);
+      }
+    };
+
+    staticCanvas.addEventListener('mousemove', handlePointerMove);
+    staticCanvas.addEventListener('touchmove', (e) => {
+      e.preventDefault(); // スクロールを防止
+      handlePointerMove(e);
     });
+    staticCanvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handlePointerDown(e);
+      // 即座にクリックイベントを発火させて線を引く
+      staticCanvas.dispatchEvent(
+        new MouseEvent('click', {
+          clientX: e.touches[0].clientX,
+          clientY: e.touches[0].clientY,
+        })
+      );
+    });
+
     staticCanvas.addEventListener('mouseleave', () => {
       if (state.hoverDoodle) {
         state.setHoverDoodle(null);
@@ -566,7 +590,7 @@ export function initParticipantView() {
         }
       };
       if (state.doodleTool === 'draw') {
-        const doodleData = state.hoverDoodle;
+        const doodleData = state.hoverDoodle || getDoodleDataFromEvent(e);
         if (!doodleData) return;
         state.setPreviewDoodle(doodleData);
         setControlsDisabled(true);
@@ -706,22 +730,19 @@ export function initParticipantView() {
       }
     });
 
-  // ▼▼▼ ここから修正 ▼▼▼
   if (elements.backToControlPanelFromResultButton)
     elements.backToControlPanelFromResultButton.addEventListener('click', async () => {
       try {
-        const isParticipant = !!(state.currentParticipantId && state.currentLotteryData.participants.some(p => p.memberId === state.currentParticipantId));
+        const isParticipant = !!(state.currentParticipantId && state.currentLotteryData.participants.some((p) => p.memberId === state.currentParticipantId));
         const group = await api.getGroup(state.currentGroupId);
-        
+
         if (isParticipant) {
-          // 参加者はダッシュボードへ
           if (group && group.customUrl) {
             await router.navigateTo(`/g/${group.customUrl}/dashboard`);
           } else {
             await router.navigateTo(`/groups/${state.currentGroupId}`);
           }
         } else {
-          // 未参加者はイベント一覧へ
           if (group && group.customUrl) {
             await router.navigateTo(`/g/${group.customUrl}`);
           } else {
@@ -733,7 +754,6 @@ export function initParticipantView() {
         await router.navigateTo('/');
       }
     });
-  // ▲▲▲ ここまで修正 ▲▲▲
 
   if (elements.setPasswordButton)
     elements.setPasswordButton.addEventListener('click', async () => {
