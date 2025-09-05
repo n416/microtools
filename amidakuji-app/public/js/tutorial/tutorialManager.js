@@ -325,7 +325,7 @@
                 <div class="step-title">${escapeHtml(story.title)}</div>
                 <div class="step-message">${escapeHtml(subStep.message)}</div>
                 <div class="step-actions">
-                    <button id="tutorial-cancel-btn">終了</button>
+                    <button id="tutorial-cancel-btn">キャンセル</button>
                     <button id="tutorial-next-btn" class="primary">次へ</button>
                 </div>
             `;

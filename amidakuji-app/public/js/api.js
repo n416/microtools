@@ -54,9 +54,7 @@ export const deleteEvent = (eventId) => request(`/api/events/${eventId}`, 'DELET
 export const startEvent = (eventId) => request(`/api/events/${eventId}/start`, 'POST');
 export const generateEventPrizeUploadUrl = (eventId, fileType, fileHash) => request(`/api/events/${eventId}/generate-upload-url`, 'POST', {fileType, fileHash});
 export const addDoodle = (eventId, memberId, doodle) => request(`/api/events/${eventId}/doodle`, 'POST', {memberId, doodle}, {'x-auth-token': state.currentParticipantToken});
-// ▼▼▼ ここから修正 ▼▼▼
 export const deleteDoodle = (eventId, memberId) => request(`/api/events/${eventId}/doodle`, 'DELETE', {memberId}, {'x-auth-token': state.currentParticipantToken});
-// ▲▲▲ ここまで修正 ▲▲▲
 
 export const getPublicEventData = (eventId) => {
   const headers = {};
@@ -86,23 +84,25 @@ export const deletePrizeMaster = (masterId, groupId) => request(`/api/prize-mast
 export const requestAdminAccess = () => request('/api/admin/request', 'POST');
 export const getAdminRequests = () => request('/api/admin/requests');
 export const approveAdminRequest = (requestId) => request('/api/admin/approve', 'POST', {requestId});
-export const getSystemAdmins = (lastVisible = null, searchEmail = '') => {
+// ▼▼▼ ここから修正 ▼▼▼
+export const getSystemAdmins = (lastVisible = null, searchId = '') => {
   let endpoint = '/api/admin/system-admins';
   const params = new URLSearchParams();
   if (lastVisible) params.append('lastVisible', lastVisible);
-  if (searchEmail) params.append('searchEmail', searchEmail);
+  if (searchId) params.append('searchId', searchId);
   if (params.toString()) endpoint += `?${params.toString()}`;
   return request(endpoint);
 };
 
-export const getGroupAdmins = (lastVisible = null, searchEmail = '') => {
+export const getGroupAdmins = (lastVisible = null, searchId = '') => {
   let endpoint = '/api/admin/group-admins';
   const params = new URLSearchParams();
   if (lastVisible) params.append('lastVisible', lastVisible);
-  if (searchEmail) params.append('searchEmail', searchEmail);
+  if (searchId) params.append('searchId', searchId);
   if (params.toString()) endpoint += `?${params.toString()}`;
   return request(endpoint);
 };
+// ▲▲▲ ここまで修正 ▲▲▲
 export const demoteAdmin = (userId) => request('/api/admin/demote', 'POST', {userId});
 export const impersonateUser = (targetUserId) => request('/api/admin/impersonate', 'POST', {targetUserId});
 export const stopImpersonating = () => request('/api/admin/stop-impersonating', 'POST');

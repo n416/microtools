@@ -4,24 +4,18 @@ import * as ui from './ui.js';
 import * as state from './state.js';
 import {startAnimation, stopAnimation, prepareStepAnimation} from './animation.js';
 import {renderGroupList} from './components/groupDashboard.js';
-import {renderEventList, showPasswordResetNotification} from './components/eventDashboard.js';
+import {renderEventList, showPasswordResetNotification, displayUserInfo} from './components/eventDashboard.js';
 import {renderMemberList} from './components/memberManagement.js';
 import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
 import {loadAdminDashboardData} from './components/adminDashboard.js';
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
 import {db} from './main.js';
 
-/**
- * イベントに参加、またはログインします。
- * @param {string} eventId - イベントID
- * @param {string} name - ユーザー名
- * @param {string|null} memberId - メンバーID（任意）
- */
 export async function handleLoginOrRegister(eventId, name, memberId = null) {
   try {
     const result = await api.joinEvent(eventId, name, memberId);
     state.saveParticipantState(result.token, result.memberId, result.name);
-    await navigateTo(window.location.pathname, false); // 現在のビューを再読み込み
+    await navigateTo(window.location.pathname, false);
   } catch (error) {
     if (error.requiresPassword) {
       const password = prompt(`「${name}」さんの合言葉を入力してください:`);
@@ -34,12 +28,6 @@ export async function handleLoginOrRegister(eventId, name, memberId = null) {
   }
 }
 
-/**
- * グループのダッシュボードにログインします。
- * @param {string} groupId - グループID
- * @param {string} name - ユーザー名
- * @param {string|null} memberId - メンバーID（任意）
- */
 export async function handleParticipantLogin(groupId, name, memberId = null) {
   try {
     const result = await api.loginOrRegisterToGroup(groupId, name, memberId);
@@ -51,7 +39,6 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
     if (error.requiresPassword) {
       const password = prompt(`「${name}」さんの合言葉を入力してください:`);
       if (password) {
-        // パスワード認証を試みます
         await verifyAndLogin(null, error.memberId, password);
       }
     } else {
@@ -60,30 +47,23 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
   }
 }
 
-/**
- * 合言葉を検証してログインします。
- * @param {string|null} eventId - イベントID（任意）
- * @param {string} memberId - メンバーID
- * @param {string} password - 合言葉
- */
 export async function verifyAndLogin(eventId, memberId, password) {
   try {
-    // slotが選択されていない状態でのログインを想定
     const result = await api.verifyPasswordAndJoin(eventId, memberId, password, state.selectedSlot);
     state.saveParticipantState(result.token, result.memberId, result.name);
-    await navigateTo(window.location.pathname, false); // 現在のビューを再読み込み
+    await navigateTo(window.location.pathname, false);
   } catch (error) {
     alert(error.error || '認証に失敗しました。');
   }
 }
 
-// ヘルパー関数をhandleRoutingの前に定義し直し、参照エラーを解決
 async function loadAndShowGroupEvents(groupId) {
   const groupData = await api.getGroup(groupId).catch(() => null);
   const groupName = groupData ? groupData.name : '不明なグループ';
 
   state.setCurrentGroupId(groupId);
   ui.showView('dashboardView');
+  displayUserInfo(); // ★ 追加
   if (ui.elements.eventGroupName) ui.elements.eventGroupName.textContent = `グループ: ${groupName}`;
 
   const showStartedCheckbox = document.getElementById('showStartedEvents');
@@ -158,8 +138,6 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
     state.setCurrentEventId(eventId);
     state.setCurrentGroupId(data.groupId);
 
-    // ▼▼▼ ここからが今回の修正点です ▼▼▼
-    // 先に各ビューの描画処理を完了させます
     let parentGroup = state.allUserGroups.find((g) => g.id === data.groupId);
 
     if (!parentGroup) {
@@ -206,9 +184,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
       await prepareStepAnimation(ctx, hidePrizes);
     }
 
-    // 最後にビュー全体の表示を切り替え、チュートリアルを起動します
     ui.showView(viewToShow);
-    // ▲▲▲ ここまでが修正点です ▲▲▲
   } catch (error) {
     console.error('イベントの読み込み中にAPIエラーが発生しました:', error);
     alert(error.error || 'イベントの読み込みに失敗しました。');
@@ -222,7 +198,7 @@ async function loadAndShowBroadcast(eventId) {
 async function loadAndShowEventForm(groupId) {
   state.setCurrentGroupId(groupId);
   ui.resetEventCreationForm();
-  await renderEventForEditing({}); // フォームの表示をリセット
+  await renderEventForEditing({});
   ui.showView('eventEditView');
 }
 
@@ -236,7 +212,7 @@ async function loadAdminDashboard() {
 
 async function handleRouting(initialData) {
   const path = window.location.pathname;
-  const search = window.location.search; // クエリパラメータを取得
+  const search = window.location.search;
 
   const user = await api.checkGoogleAuthState().catch(() => null);
   state.setCurrentUser(user);
@@ -249,7 +225,7 @@ async function handleRouting(initialData) {
   } else {
     ui.setMainHeaderVisibility(true);
     ui.updateAuthUI(user);
-    ui.updateTutorialDropdown(); // ★★★ この行を追加 ★★★
+    ui.updateTutorialDropdown();
   }
 
   state.loadParticipantState();
@@ -430,9 +406,7 @@ export async function navigateTo(path, pushState = true) {
     }
   } catch (error) {
     console.error('ページ遷移中にエラーが発生しました:', error);
-    // ここでユーザー向けのエラー表示をすることも可能です
   } finally {
-    // 描画が完了するのを少し待ってからロード画面を非表示にする
     setTimeout(() => ui.hideGlobalLoadingMask(), 100);
   }
 }
@@ -473,11 +447,9 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
       }
     }
     backToDashboardFromEventListButton.style.display = 'block';
-    // ▼▼▼ ここからが今回の修正点です ▼▼▼
-    // 既存のリスナーを解除し、新しいリスナーを設定する
     const newButton = backToDashboardFromEventListButton.cloneNode(true);
     backToDashboardFromEventListButton.parentNode.replaceChild(newButton, backToDashboardFromEventListButton);
-    ui.elements.backToDashboardFromEventListButton = newButton; // ui.elementsも更新
+    ui.elements.backToDashboardFromEventListButton = newButton;
 
     newButton.addEventListener('click', async (e) => {
       const button = e.currentTarget;
@@ -494,7 +466,6 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
         await navigateTo('/');
       }
     });
-    // ▲▲▲ ここまでが修正点です ▲▲▲
   } else {
     backToDashboardFromEventListButton.style.display = 'none';
   }

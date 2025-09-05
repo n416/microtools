@@ -1,5 +1,6 @@
 const {firestore, bucket} = require('../utils/firestore');
 const {Firestore} = require('@google-cloud/firestore');
+const { generateAnonymousName } = require('../utils/nameGenerator');
 
 exports.requestAdminAccess = async (req, res) => {
   try {
@@ -28,14 +29,19 @@ exports.requestAdminAccess = async (req, res) => {
 exports.getAdminRequests = async (req, res) => {
   try {
     const snapshot = await firestore.collection('adminRequests').where('status', '==', 'pending').get();
-    const requests = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+    const requests = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: generateAnonymousName(data.userId),
+      };
+    });
     res.status(200).json(requests);
   } catch (error) {
     console.error('Error fetching admin requests:', error);
     res.status(500).json({error: '申請一覧の取得に失敗しました。'});
   }
 };
-
 exports.approveAdminRequest = async (req, res) => {
   try {
     const {requestId} = req.body;
@@ -58,27 +64,33 @@ exports.approveAdminRequest = async (req, res) => {
 };
 exports.getGroupAdmins = async (req, res) => {
   try {
-    const {lastVisible, searchEmail} = req.query;
+    const {lastVisible, searchId} = req.query;
+    console.log(`[BACKEND LOG] getGroupAdmins called with searchId: "${searchId}"`); // ★ 追加: ログ
     const PAGE_SIZE = 10;
 
     let query = firestore.collection('users');
 
-    if (searchEmail) {
-      query = query.where('email', '>=', searchEmail).where('email', '<=', searchEmail + '\uf8ff');
+    if (searchId) {
+      query = query.orderBy(Firestore.FieldPath.documentId())
+                   .where(Firestore.FieldPath.documentId(), '>=', searchId)
+                   .where(Firestore.FieldPath.documentId(), '<=', searchId + '\uf8ff');
+    } else {
+      query = query.orderBy(Firestore.FieldPath.documentId());
     }
 
-    query = query.orderBy('email').limit(PAGE_SIZE + 1);
+    query = query.limit(PAGE_SIZE + 1);
 
     if (lastVisible) {
-      const lastDoc = await firestore.collection('users').doc(lastVisible).get();
-      if (lastDoc.exists) {
-        query = query.startAfter(lastDoc);
-      }
+        query = query.startAfter(lastVisible);
     }
-
+    
     const snapshot = await query.get();
+    console.log(`[BACKEND LOG] Found ${snapshot.docs.length} users.`); // ★ 追加: ログ
     const hasNextPage = snapshot.docs.length > PAGE_SIZE;
-    const admins = snapshot.docs.slice(0, PAGE_SIZE).map((doc) => ({id: doc.id, ...doc.data()}));
+    const admins = snapshot.docs.slice(0, PAGE_SIZE).map((doc) => ({
+        id: doc.id,
+        name: generateAnonymousName(doc.id),
+    }));
 
     const newLastVisible = hasNextPage ? snapshot.docs[PAGE_SIZE - 1].id : null;
 
@@ -91,25 +103,37 @@ exports.getGroupAdmins = async (req, res) => {
 
 exports.getSystemAdmins = async (req, res) => {
   try {
-    const {lastVisible, searchEmail} = req.query;
+    const {lastVisible, searchId} = req.query;
+    console.log(`[BACKEND LOG] getSystemAdmins called with searchId: "${searchId}"`); // ★ 追加: ログ
     const PAGE_SIZE = 10;
 
     let query = firestore.collection('users').where('role', '==', 'system_admin');
 
-    if (searchEmail) {
-      query = query.where('email', '>=', searchEmail).where('email', '<=', searchEmail + '\uf8ff');
+    if (searchId) {
+        query = query.orderBy(Firestore.FieldPath.documentId())
+                     .where(Firestore.FieldPath.documentId(), '>=', searchId)
+                     .where(Firestore.FieldPath.documentId(), '<=', searchId + '\uf8ff');
+    } else {
+        query = query.orderBy(Firestore.FieldPath.documentId());
     }
-
-    query = query.orderBy('email').limit(PAGE_SIZE + 1);
-
+    
+    query = query.limit(PAGE_SIZE + 1);
+    
     if (lastVisible) {
-      const lastDoc = await firestore.collection('users').doc(lastVisible).get();
-      query = query.startAfter(lastDoc);
+        query = query.startAfter(lastVisible);
     }
 
     const snapshot = await query.get();
+    console.log(`[BACKEND LOG] Found ${snapshot.docs.length} system admins.`); // ★ 追加: ログ
     const hasNextPage = snapshot.docs.length > PAGE_SIZE;
-    const admins = snapshot.docs.slice(0, PAGE_SIZE).map((doc) => ({id: doc.id, ...doc.data()}));
+    const admins = snapshot.docs.slice(0, PAGE_SIZE).map((doc) => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            name: generateAnonymousName(doc.id), 
+            createdAt: data.createdAt,
+        };
+    });
 
     const newLastVisible = hasNextPage ? snapshot.docs[PAGE_SIZE - 1].id : null;
 
@@ -204,15 +228,12 @@ exports.approvePasswordReset = async (req, res) => {
       return res.status(404).json({error: 'グループが見つかりません。'});
     }
 
-    // --- ▼▼▼ ここから修正 ▼▼▼ ---
     const isOwner = groupDoc.data().ownerId === req.user.id;
     const isSysAdmin = req.user.role === 'system_admin';
 
     if (!isOwner && !isSysAdmin) {
       return res.status(403).json({error: '権限がありません。'});
     }
-    // --- ▲▲▲ ここまで修正 ▲▲▲ ---
-
     const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
     const requestRef = firestore.collection('passwordResetRequests').doc(requestId);
 
