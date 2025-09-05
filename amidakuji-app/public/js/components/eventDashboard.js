@@ -5,7 +5,6 @@ import * as ui from '../ui.js';
 import {openGroupSettingsFor} from './groupDashboard.js';
 import {processImage} from '../imageProcessor.js';
 
-// このコンポーネントが管理するDOM要素
 const elements = {
   dashboardView: document.getElementById('dashboardView'),
   eventGroupName: document.getElementById('eventGroupName'),
@@ -24,7 +23,15 @@ const elements = {
 
 let processedMasterPrizeFile = null;
 
-// イベントリストを描画する関数
+// ★ 追加: ユーザー情報を表示する関数
+export function displayUserInfo() {
+  const userInfoDisplay = document.getElementById('userInfoDisplay');
+  if (userInfoDisplay && state.currentUser && state.currentUser.anonymousName) {
+    const userIdShort = state.currentUser.id.substring(0, 8);
+    userInfoDisplay.textContent = `ようこそ ${state.currentUser.anonymousName} さん (id: ${userIdShort}...)`;
+  }
+}
+
 export function renderEventList(allEvents) {
   if (!elements.eventList) return;
 
@@ -71,7 +78,6 @@ export function renderEventList(allEvents) {
   });
 }
 
-// パスワードリセット依頼の通知バナーを表示する関数
 export function showPasswordResetNotification(requests) {
   if (!elements.passwordResetNotification || !elements.passwordResetCount) return;
 
@@ -83,7 +89,6 @@ export function showPasswordResetNotification(requests) {
   }
 }
 
-// パスワードリセット依頼モーダルを開く関数
 export function openPasswordResetRequestModal(requests, handlers) {
   if (!elements.passwordResetRequestModal) return;
   renderPasswordRequests(requests);
@@ -97,12 +102,10 @@ export function openPasswordResetRequestModal(requests, handlers) {
   elements.passwordResetRequestModal.style.display = 'block';
 }
 
-// パスワードリセット依頼モーダルを閉じる関数
 export function closePasswordResetRequestModal() {
   if (elements.passwordResetRequestModal) elements.passwordResetRequestModal.style.display = 'none';
 }
 
-// パスワードリセット依頼リストを描画する関数
 export function renderPasswordRequests(requests) {
   if (!elements.passwordResetRequestList) return;
   elements.passwordResetRequestList.innerHTML = '';
@@ -132,7 +135,6 @@ async function handleCopyEvent(eventId) {
   }
 }
 
-// イベントリスナーを初期化する関数
 export function initEventDashboard() {
   if (elements.eventList) {
     elements.eventList.addEventListener('click', async (e) => {
