@@ -13,6 +13,16 @@ import {processImage} from '../imageProcessor.js';
 
 let processedProfileIconFile = null;
 
+const handleInvalidTokenError = (error) => {
+  if (error.errorCode === 'INVALID_TOKEN') {
+    alert(error.error || '認証情報が無効です。参加状態をリセットしてやり直します。');
+    state.clearParticipantState();
+    window.location.reload();
+    return true; // エラーが処理されたことを示す
+  }
+  return false; // 通常のエラー
+};
+
 const elements = {
   participantView: document.getElementById('participantView'),
   participantEventName: document.getElementById('participantEventName'),
@@ -401,7 +411,7 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
           }
         },
         (error) => {
-          console.error('[DEBUG] Firestore onSnapshot listener failed:', error);
+          console.error('Firestore onSnapshot listener failed:', error);
         }
       );
       addFirestoreListener(unsubscribe);
@@ -558,13 +568,12 @@ export function initParticipantView() {
 
     staticCanvas.addEventListener('mousemove', handlePointerMove);
     staticCanvas.addEventListener('touchmove', (e) => {
-      e.preventDefault(); // スクロールを防止
+      e.preventDefault();
       handlePointerMove(e);
     });
     staticCanvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       handlePointerDown(e);
-      // 即座にクリックイベントを発火させて線を引く
       staticCanvas.dispatchEvent(
         new MouseEvent('click', {
           clientX: e.touches[0].clientX,
@@ -600,10 +609,12 @@ export function initParticipantView() {
           state.currentLotteryData.doodles.push({...doodleData, memberId: state.currentParticipantId});
           state.setPreviewDoodle(null);
         } catch (error) {
-          if (error.error === '他の線に近すぎるため、線を引けません。') {
-            ui.showToast(error.error);
-          } else {
-            alert(error.error || '線の追加に失敗しました。');
+          if (!handleInvalidTokenError(error)) {
+            if (error.error === '他の線に近すぎるため、線を引けません。') {
+              ui.showToast(error.error);
+            } else {
+              alert(error.error || '線の追加に失敗しました。');
+            }
           }
           state.setPreviewDoodle(null);
         } finally {
@@ -621,7 +632,9 @@ export function initParticipantView() {
           state.setPreviewDoodle(null);
           state.currentLotteryData.doodles = state.currentLotteryData.doodles.filter((d) => d.memberId !== state.currentParticipantId);
         } catch (error) {
-          ui.showToast(error.error || '線の削除に失敗しました。');
+          if (!handleInvalidTokenError(error)) {
+            ui.showToast(error.error || '線の削除に失敗しました。');
+          }
         } finally {
           setControlsDisabled(false);
           redrawCanvas();
@@ -715,45 +728,34 @@ export function initParticipantView() {
       }
     });
 
-  if (elements.backToControlPanelButton)
-    elements.backToControlPanelButton.addEventListener('click', async () => {
-      try {
-        const group = await api.getGroup(state.currentGroupId);
-        if (group && group.customUrl) {
-          await router.navigateTo(`/g/${group.customUrl}/dashboard`);
-        } else {
-          await router.navigateTo('/');
-        }
-      } catch (error) {
-        console.error('Failed to get group info for navigation:', error);
+  // ▼▼▼ ここから修正 ▼▼▼
+  const backToDashboardHandler = async () => {
+    try {
+      const group = await api.getGroup(state.currentGroupId);
+      if (group) {
+        const url = group.customUrl ? `/g/${group.customUrl}/dashboard` : `/groups/${group.id}/dashboard`;
+        await router.navigateTo(url);
+      } else {
         await router.navigateTo('/');
       }
-    });
+    } catch (error) {
+      console.error('Failed to get group info for navigation:', error);
+      await router.navigateTo('/');
+    }
+  };
 
-  if (elements.backToControlPanelFromResultButton)
-    elements.backToControlPanelFromResultButton.addEventListener('click', async () => {
-      try {
-        const isParticipant = !!(state.currentParticipantId && state.currentLotteryData.participants.some((p) => p.memberId === state.currentParticipantId));
-        const group = await api.getGroup(state.currentGroupId);
+  if (elements.backToControlPanelButton) {
+    elements.backToControlPanelButton.addEventListener('click', backToDashboardHandler);
+  }
 
-        if (isParticipant) {
-          if (group && group.customUrl) {
-            await router.navigateTo(`/g/${group.customUrl}/dashboard`);
-          } else {
-            await router.navigateTo(`/groups/${state.currentGroupId}`);
-          }
-        } else {
-          if (group && group.customUrl) {
-            await router.navigateTo(`/g/${group.customUrl}`);
-          } else {
-            await router.navigateTo(`/groups/${state.currentGroupId}`);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to get group info for navigation:', error);
-        await router.navigateTo('/');
-      }
-    });
+  if (elements.backToControlPanelFromResultButton) {
+    elements.backToControlPanelFromResultButton.addEventListener('click', backToDashboardHandler);
+  }
+
+  if (elements.backToDashboardFromWaitingButton) {
+    elements.backToDashboardFromWaitingButton.addEventListener('click', backToDashboardHandler);
+  }
+  // ▲▲▲ ここまで修正 ▲▲▲
 
   if (elements.setPasswordButton)
     elements.setPasswordButton.addEventListener('click', async () => {
@@ -793,21 +795,6 @@ export function initParticipantView() {
     });
   }
 
-  if (elements.backToDashboardFromWaitingButton)
-    elements.backToDashboardFromWaitingButton.addEventListener('click', async () => {
-      try {
-        const group = await api.getGroup(state.currentGroupId);
-        if (group && group.customUrl) {
-          await router.navigateTo(`/g/${group.customUrl}/dashboard`);
-        } else {
-          await router.navigateTo(`/groups/${state.currentGroupId}`);
-        }
-      } catch (error) {
-        console.error('Failed to get group info for navigation:', error);
-        await router.navigateTo('/');
-      }
-    });
-
   if (elements.participantLogoutButton)
     elements.participantLogoutButton.addEventListener('click', async () => {
       try {
@@ -829,7 +816,9 @@ export function initParticipantView() {
         state.clearParticipantState();
         window.location.reload();
       } catch (error) {
-        alert(`削除エラー: ${error.error}`);
+        if (!handleInvalidTokenError(error)) {
+          alert(`削除エラー: ${error.error}`);
+        }
       }
     });
 
@@ -851,7 +840,9 @@ export function initParticipantView() {
         await api.joinSlot(state.currentEventId, state.currentParticipantId, state.currentParticipantToken, state.selectedSlot);
         await router.navigateTo(window.location.pathname, false);
       } catch (error) {
-        alert(error.error);
+        if (!handleInvalidTokenError(error)) {
+          alert(error.error);
+        }
       } finally {
         elements.joinButton.disabled = false;
       }
@@ -867,7 +858,9 @@ export function initParticipantView() {
         alert('参加を取り消しました。');
         window.location.reload();
       } catch (error) {
-        alert(error.error);
+        if (!handleInvalidTokenError(error)) {
+          alert(error.error);
+        }
       }
     });
 
@@ -892,14 +885,18 @@ export function initParticipantView() {
               alert('プロフィールを保存しました。');
               ui.closeProfileEditModal();
             } catch (error) {
-              alert(error.error);
+              if (!handleInvalidTokenError(error)) {
+                alert(error.error);
+              }
             } finally {
               ui.elements.saveProfileButton.disabled = false;
             }
           },
         });
       } catch (error) {
-        alert(error.error);
+        if (!handleInvalidTokenError(error)) {
+          alert(error.error);
+        }
       }
     });
   }
@@ -939,7 +936,9 @@ export function initParticipantView() {
         }
         alert('結果を受け取りました！');
       } catch (error) {
-        alert(`エラー: ${error.error || '処理に失敗しました。'}`);
+        if (!handleInvalidTokenError(error)) {
+          alert(`エラー: ${error.error || '処理に失敗しました。'}`);
+        }
       }
     });
   }

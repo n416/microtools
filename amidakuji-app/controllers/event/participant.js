@@ -30,7 +30,7 @@ exports.addDoodle = async (req, res) => {
       const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
       const memberDoc = await memberRef.get();
       if (!memberDoc.exists || memberDoc.data().deleteToken !== token) {
-        throw {status: 403, message: '認証に失敗しました。'};
+        throw {status: 403, message: '認証に失敗しました。', errorCode: 'INVALID_TOKEN'};
       }
 
       // Event status validation
@@ -43,7 +43,6 @@ exports.addDoodle = async (req, res) => {
 
       const existingDoodles = eventData.doodles || [];
 
-      // ▼▼▼ ここから修正 ▼▼▼
       // ユーザーが以前に描いた線をフィルタリングして除外
       const otherDoodles = existingDoodles.filter((d) => d.memberId !== memberId);
 
@@ -72,14 +71,13 @@ exports.addDoodle = async (req, res) => {
       const updatedDoodles = [...otherDoodles, newDoodle];
 
       transaction.update(eventRef, {doodles: updatedDoodles});
-      // ▲▲▲ ここまで修正 ▲▲▲
     });
 
     res.status(200).json({message: '線を追加しました。'});
   } catch (error) {
     console.error('Error adding doodle:', error);
     if (error.status) {
-      return res.status(error.status).json({error: error.message});
+      return res.status(error.status).json({error: error.message, errorCode: error.errorCode});
     }
     res.status(500).json({error: '線の追加処理中にエラーが発生しました。'});
   }
@@ -107,7 +105,7 @@ exports.deleteDoodle = async (req, res) => {
     const memberRef = firestore.collection('groups').doc(groupId).collection('members').doc(memberId);
     const memberDoc = await memberRef.get();
     if (!memberDoc.exists || memberDoc.data().deleteToken !== token) {
-      return res.status(403).json({error: '認証に失敗しました。'});
+      return res.status(403).json({error: '認証に失敗しました。', errorCode: 'INVALID_TOKEN'});
     }
 
     if (eventData.status !== 'pending') {
@@ -270,7 +268,7 @@ exports.joinSlot = async (req, res) => {
     const memberDoc = await memberRef.get();
 
     if (!memberDoc.exists || memberDoc.data().deleteToken !== token) {
-      return res.status(403).json({error: '認証情報が無効です。'});
+      return res.status(403).json({error: '認証情報が無効です。セッションをリセットします。', errorCode: 'INVALID_TOKEN'});
     }
     const memberData = memberDoc.data();
 
@@ -383,7 +381,7 @@ exports.deleteParticipant = async (req, res) => {
     } else {
       const membersSnapshot = await firestore.collection('groups').doc(eventData.groupId).collection('members').where('deleteToken', '==', deleteToken).get();
       if (membersSnapshot.empty) {
-        return res.status(404).json({error: '指定された参加者情報が見つかりません。'});
+        return res.status(404).json({error: '指定された参加者情報が見つかりません。セッションをリセットします。', errorCode: 'INVALID_TOKEN'});
       }
       memberIdToDelete = membersSnapshot.docs[0].id;
       const participantIdx = newParticipants.findIndex((p) => p.memberId === memberIdToDelete);
@@ -434,7 +432,7 @@ exports.acknowledgeResult = async (req, res) => {
     const memberDoc = await memberRef.get();
 
     if (!memberDoc.exists || memberDoc.data().deleteToken !== token) {
-      return res.status(403).json({error: '認証に失敗しました。'});
+      return res.status(403).json({error: '認証に失敗しました。セッションをリセットします。', errorCode: 'INVALID_TOKEN'});
     }
 
     const participantIndex = eventData.participants.findIndex((p) => p.memberId === memberId);
@@ -496,7 +494,7 @@ exports.fillSlots = async (req, res) => {
       }
     }
 
-    await eventRef.update({participants: updatedParticipants, lastModifiedAt: new Date()}); // ★ 修正点: lastModifiedAtを追加
+    await eventRef.update({participants: updatedParticipants, lastModifiedAt: new Date()});
 
     res.status(200).json({message: '参加枠を更新しました。', participants: updatedParticipants});
   } catch (error) {
