@@ -48,6 +48,10 @@
   color: #333;
 }
 
+.badge.full {
+  background-color: var(--full-color);
+}
+
 .loading-mask {
   position: absolute;
   top: 0;

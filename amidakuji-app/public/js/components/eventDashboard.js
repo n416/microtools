@@ -52,7 +52,14 @@ export function renderEventList(allEvents) {
     if (event.status === 'started') {
       statusBadge = '<span>実施済み</span>';
     } else {
-      statusBadge = '<span class="badge ongoing">開催中</span>';
+      // ▼▼▼ ここから修正 ▼▼▼
+      const isFull = event.participants.every((p) => p.name !== null);
+      if (isFull) {
+        statusBadge = '<span class="badge full">満員御礼</span>';
+      } else {
+        statusBadge = '<span class="badge ongoing">開催中</span>';
+      }
+      // ▲▲▲ ここまで修正 ▲▲▲
     }
 
     const itemClass = state.currentUser ? 'item-list-item list-item-link' : 'item-list-item';
