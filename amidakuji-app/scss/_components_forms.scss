@@ -131,11 +131,6 @@ input:checked + .slider:before {
   background-color: var(--white-color);
 }
 
-@media (prefers-color-scheme: dark) {
-  .prize-card-name-input:focus {
-    background-color: #2a2a2a;
-  }
-}
 
 .radio-group {
   display: flex;
@@ -267,12 +262,6 @@ textarea {
 
 .input-group.checkbox-group input[type='checkbox']:checked + label::after {
   opacity: 1;
-}
-
-@media (prefers-color-scheme: dark) {
-  .input-group.checkbox-group label::before {
-    background-color: #333;
-  }
 }
 
 .prize-master-inputs {

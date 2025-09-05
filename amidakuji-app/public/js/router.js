@@ -1,8 +1,8 @@
-import {clearAllFirestoreListeners, addFirestoreListener} from './state.js';
+import {clearAllFirestoreListeners} from './state.js';
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
-import {startAnimation, stopAnimation, prepareStepAnimation} from './animation.js';
+import {prepareStepAnimation} from './animation.js';
 import {renderGroupList} from './components/groupDashboard.js';
 import {renderEventList, showPasswordResetNotification, displayUserInfo} from './components/eventDashboard.js';
 import {renderMemberList} from './components/memberManagement.js';
@@ -10,6 +10,7 @@ import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from '.
 import {loadAdminDashboardData} from './components/adminDashboard.js';
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
 import {db} from './main.js';
+import {clearAnimationState} from './animation/core.js';
 
 export async function handleLoginOrRegister(eventId, name, memberId = null) {
   try {
@@ -63,7 +64,7 @@ async function loadAndShowGroupEvents(groupId) {
 
   state.setCurrentGroupId(groupId);
   ui.showView('dashboardView');
-  displayUserInfo(); // ★ 追加
+  displayUserInfo();
   if (ui.elements.eventGroupName) ui.elements.eventGroupName.textContent = `グループ: ${groupName}`;
 
   const showStartedCheckbox = document.getElementById('showStartedEvents');
@@ -390,6 +391,8 @@ async function handleRouting(initialData) {
 
 export async function navigateTo(path, pushState = true) {
   clearAllFirestoreListeners();
+  clearAnimationState();
+
   ui.showGlobalLoadingMask();
 
   try {

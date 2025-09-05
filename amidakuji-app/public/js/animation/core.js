@@ -1,9 +1,7 @@
 import * as state from '../state.js';
 import {calculatePath, getTargetHeight, getVirtualWidth, calculateClientSideResults} from './path.js';
 import {drawLotteryBase, drawRevealedPrizes, drawTracerPath, drawTracerIcon} from './drawing.js';
-// ▼▼▼ この行を修正 ▼▼▼
 import {initializePanzoom, preloadIcons, preloadPrizeImages, adminPanzoom, participantPanzoom} from './setup.js';
-// ▲▲▲ ここまで修正 ▲▲▲
 import {createSparks, celebrate, Particle} from './effects.js';
 
 export const animator = {
@@ -50,6 +48,20 @@ export function stopAnimation() {
     cancelAnimationFrame(animationFrameId);
   }
 }
+
+// ▼▼▼ ここから修正 ▼▼▼
+export function clearAnimationState() {
+  stopAnimation();
+  animator.tracers = [];
+  animator.icons = {};
+  animator.prizeImages = {};
+  animator.particles = [];
+  animator.onComplete = null;
+  animator.context = null;
+  animator.lastContainerWidth = 0;
+  animator.lastContainerHeight = 0;
+}
+// ▲▲▲ ここまで修正 ▲▲▲
 
 function updateTracerPosition(tracer, speed) {
   const revealPrize = () => {
@@ -205,10 +217,7 @@ function animationLoop() {
   const isRevealingPrizes = state.revealedPrizes.some((p) => p.revealProgress < 15);
   const particlesRemaining = animator.particles.length > 0;
 
-  // ▼▼▼ ここからが修正箇所です ▼▼▼
-  // アニメーションが完了したかどうかを判定
   if (allTracersFinished && !isRevealingPrizes && !particlesRemaining) {
-    // animator.running フラグをチェックし、一度だけ onComplete を呼び出すようにする
     if (animator.running) {
       console.log('%c[DEBUG] Animation finished. Calling onComplete callback.', 'color: green; font-weight: bold;');
       animator.running = false; // ループを停止
@@ -217,13 +226,10 @@ function animationLoop() {
         animator.onComplete = null; // 複数回呼ばれないようにクリア
       }
     }
-    // ループを止める
     return;
   }
 
-  // アニメーションが続く場合は次のフレームを要求
   animationFrameId = requestAnimationFrame(animationLoop);
-  // ▲▲▲ ここまでが修正箇所です ▲▲▲
 }
 
 export async function startAnimation(targetCtx, userNames = [], onComplete = null, panToName = null) {

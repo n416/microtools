@@ -145,7 +145,7 @@ export function renderAllResults(results, isShareView, highlightName) {
 
     let imageHtml = '';
     if (prizeImageUrl) {
-      imageHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image">`;
+      imageHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image large">`;
     }
 
     html += `<li class="item-list-item ${isHighlighted}">${imageHtml}<span>${name} → ${prizeName}</span></li>`;
