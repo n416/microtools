@@ -3,6 +3,7 @@ const {getNextAvailableColor} = require('../utils/color');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
+const { generateAnonymousName } = require('../utils/nameGenerator'); // ★ 追加
 
 exports.getCurrentUser = async (req, res) => {
   if (!req.user) {
@@ -10,6 +11,9 @@ exports.getCurrentUser = async (req, res) => {
   }
 
   const user = {...req.user};
+
+  // ★ 追加: レスポンスに含めるユーザー情報に匿名名を追加する
+  user.anonymousName = generateAnonymousName(user.id);
 
   if (user.role === 'user') {
     const requestRef = firestore.collection('adminRequests').doc(user.id);
@@ -297,7 +301,6 @@ exports.setPassword = async (req, res) => {
       return res.status(403).json({error: '権限がありません。'});
     }
 
-    // パスワードがnullでない場合（設定・変更の場合）のみ検証
     if (password !== null) {
       if (!password || password.length < 4) {
         return res.status(400).json({error: '合言葉は4文字以上で設定してください。'});
@@ -306,7 +309,6 @@ exports.setPassword = async (req, res) => {
       await memberRef.update({password: hashedPassword});
       res.status(200).json({message: '合言葉を設定しました。'});
     } else {
-      // パスワードがnullの場合（削除の場合）
       await memberRef.update({password: null});
       res.status(200).json({message: '合言葉を削除しました。'});
     }

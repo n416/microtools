@@ -62,28 +62,25 @@ async function loadSystemAdmins(cursor = null, search = '') {
 }
 
 function renderPendingRequests(requests) {
-  console.log(`[FRONTEND LOG] Rendering ${requests.length} pending requests.`);
   if (elements.pendingRequestsList) {
-    elements.pendingRequestsList.innerHTML = requests.length === 0 ? '<li>現在、承認待ちの申請はありません。</li>' : requests.map((req) => `<li class="item-list-item"><span>${req.name} (${req.email})</span><div class="item-buttons"><button class="approve-btn" data-request-id="${req.id}">承認</button></div></li>`).join('');
+    elements.pendingRequestsList.innerHTML = requests.length === 0 ? '<li>現在、承認待ちの申請はありません。</li>' : requests.map((req) => `<li class="item-list-item"><span>${req.name} (id: ${req.id})</span><div class="item-buttons"><button class="approve-btn" data-request-id="${req.id}">承認</button></div></li>`).join('');
   }
 }
 
 function renderGroupAdmins(admins) {
-  console.log(`[FRONTEND LOG] Rendering ${admins.length} group admins.`);
   if (elements.adminUserList) {
-    elements.adminUserList.innerHTML = admins.length === 0 ? '<li>グループ管理者は存在しません。</li>' : admins.map((user) => `<li class="item-list-item"><span>${user.name} (${user.email})</span><div class="item-buttons"><button class="impersonate-btn" data-user-id="${user.id}">成り代わり</button></div></li>`).join('');
+    elements.adminUserList.innerHTML = admins.length === 0 ? '<li>ユーザーは存在しません。</li>' : admins.map((user) => `<li class="item-list-item"><span>${user.name} (id: ${user.id})</span><div class="item-buttons"><button class="impersonate-btn" data-user-id="${user.id}">成り代わり</button></div></li>`).join('');
   }
 }
 
 function renderSystemAdmins(admins) {
-  console.log(`[FRONTEND LOG] Rendering ${admins.length} system admins.`);
   if (elements.systemAdminList) {
     elements.systemAdminList.innerHTML = admins
       .map((admin) => {
         const isCurrentUser = admin.id === (state.currentUser.isImpersonating ? state.currentUser.originalUser.id : state.currentUser.id);
         const buttons = isCurrentUser ? '' : `<div class="item-buttons"><button class="demote-btn delete-btn" data-user-id="${admin.id}">権限剥奪</button></div>`;
         const registrationDate = admin.createdAt && admin.createdAt._seconds ? new Date(admin.createdAt._seconds * 1000).toLocaleDateString() : '不明';
-        return `<li class="item-list-item"><span>${admin.name} (${admin.email})</span> <span class="registration-date">登録日: ${registrationDate}</span> ${buttons}</li>`;
+        return `<li class="item-list-item"><span>${admin.name} (id: ${admin.id})</span> <span class="registration-date">登録日: ${registrationDate}</span> ${buttons}</li>`;
       })
       .join('');
   }
@@ -93,7 +90,6 @@ function updatePaginationControls(type) {
   const state = type === 'groupAdmin' ? groupAdminState : systemAdminState;
   const paginationControls = type === 'groupAdmin' ? elements.groupAdminPagination : elements.systemAdminPagination;
   if (!paginationControls) return;
-  console.log(`[FRONTEND LOG] Updating pagination for ${type}: page=${state.page}, hasNext=${state.hasNext}`);
 
   const prevBtn = paginationControls.querySelector('.prev-btn');
   const nextBtn = paginationControls.querySelector('.next-btn');
@@ -118,10 +114,26 @@ export function initAdminDashboard() {
     });
   }
 
+  if (elements.groupAdminSearchInput) {
+    elements.groupAdminSearchInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+            elements.groupAdminSearchButton.click();
+        }
+    });
+  }
+  
   if (elements.groupAdminSearchButton) {
     elements.groupAdminSearchButton.addEventListener('click', () => {
       groupAdminState = {page: 0, history: [null], nextCursor: null, hasNext: false, searchTerm: elements.groupAdminSearchInput.value};
       loadGroupAdmins(null, groupAdminState.searchTerm);
+    });
+  }
+
+  if (elements.systemAdminSearchInput) {
+    elements.systemAdminSearchInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+            elements.systemAdminSearchButton.click();
+        }
     });
   }
 
