@@ -179,28 +179,21 @@ export async function renderEventForEditing(data) {
   elements.eventNameInput.value = data.eventName || '';
   state.setPrizes(data.prizes || []);
 
-  // --- Visibility and State Control ---
   elements.createEventButtonContainer.style.display = 'none';
   elements.saveStartedEventContainer.style.display = 'none';
   elements.finalPrepSection.style.display = 'none';
-
-  // Set opacity to 1 to ensure it's visible if display is set to block
   elements.createEventButtonContainer.style.opacity = '1';
 
   if (state.currentEventId) {
-    // Editing an existing event
     elements.finalPrepSection.style.display = 'block';
     await drawPreviewCanvas();
-    setDirty(false); // Ensure overlay is hidden on initial load
+    setDirty(false);
     attachRealtimeDoodleListener();
   } else {
-    // Creating a new event
     elements.createEventButtonContainer.style.display = 'block';
   }
 
-  // --- Form Controls (Disable/Enable) and Button Visibility ---
   if (isStarted) {
-    // EVENT IS FINISHED
     elements.saveStartedEventContainer.style.display = 'block';
     const inputs = elements.eventEditView.querySelectorAll('input, button, textarea, select');
     inputs.forEach((input) => {
@@ -210,14 +203,12 @@ export async function renderEventForEditing(data) {
       }
     });
   } else {
-    // EVENT IS NEW OR ONGOING
     const inputs = elements.eventEditView.querySelectorAll('input, button, textarea, select');
     inputs.forEach((input) => {
       input.disabled = false;
     });
   }
 
-  // --- Other UI Updates ---
   if (elements.displayPrizeName) {
     elements.displayPrizeName.checked = data.hasOwnProperty('displayPrizeName') ? data.displayPrizeName : true;
   }
@@ -299,7 +290,6 @@ export function renderPrizeCardList() {
     nameInput.value = prizeName;
     nameInput.className = 'prize-card-name-input';
     nameInput.dataset.index = index;
-    // ★★★ 修正点: 'change'を'input'に変更 ★★★
     nameInput.addEventListener('input', (event) => {
       const updatedIndex = parseInt(event.target.dataset.index, 10);
       const newName = event.target.value.trim();
@@ -466,7 +456,6 @@ function attachRealtimeDoodleListener() {
 export function initEventEdit() {
   if (elements.eventEditView) {
     const dirtyCheckListener = () => setDirty(true);
-    // ★★★ 修正点: 'change'を'input'に変更 ★★★
     elements.eventNameInput.addEventListener('input', dirtyCheckListener);
     elements.displayPrizeName.addEventListener('change', dirtyCheckListener);
     elements.displayPrizeCount.addEventListener('change', dirtyCheckListener);
@@ -752,6 +741,7 @@ export function initEventEdit() {
     }
     if (elements.createEventButton) {
       elements.createEventButton.addEventListener('click', async () => {
+        console.log('[DEBUG] Create event button clicked.');
         const participantCount = state.prizes.length;
         if (participantCount < 2) return alert('景品は2つ以上設定してください。');
 
@@ -759,35 +749,109 @@ export function initEventEdit() {
         elements.createEventButton.textContent = 'イベント作成中...';
 
         try {
+          console.log('[DEBUG] Step 1: Creating event without images...');
           const initialEventData = {
             eventName: elements.eventNameInput.value.trim(),
-            prizes: state.prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
+            prizes: state.prizes.map((p) => ({name: p.name, imageUrl: null})),
             groupId: state.currentGroupId,
             displayPrizeName: document.getElementById('displayPrizeName').checked,
             displayPrizeCount: document.getElementById('displayPrizeCount').checked,
             allowDoodleMode: document.getElementById('allowDoodleModeCheckbox').checked,
           };
           const newEvent = await api.createEvent(initialEventData);
-          state.setCurrentEventId(newEvent.id);
+          const eventId = newEvent.id;
+          state.setCurrentEventId(eventId);
+          console.log(`[DEBUG] Step 1 SUCCESS. Event created with ID: ${eventId}`);
+
+          console.log('[DEBUG] Step 2: Preparing image uploads...');
+          const fileUploadPromises = state.prizes.map(async (prize) => {
+            if (prize.newImageFile) {
+              const buffer = await prize.newImageFile.arrayBuffer();
+              const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+              const hashArray = Array.from(new Uint8Array(hashBuffer));
+              const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+              return {file: prize.newImageFile, hash: hashHex};
+            }
+            return null;
+          });
+
+          const resolvedFileUploads = (await Promise.all(fileUploadPromises)).filter(Boolean);
+          const uniqueFiles = [...new Map(resolvedFileUploads.map((item) => [item.hash, item])).values()];
+
+          const uploadedImageUrls = {};
+          console.log(`[DEBUG] Found ${uniqueFiles.length} unique files to upload.`);
+
+          for (const {file, hash} of uniqueFiles) {
+            console.log(`[DEBUG] Uploading file with hash: ${hash}`);
+            const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, file.type, hash);
+            await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
+            uploadedImageUrls[hash] = imageUrl;
+            console.log(`[DEBUG] File upload SUCCESS. URL: ${imageUrl}`);
+          }
+
+          console.log('[DEBUG] Step 3: Creating final prize list with image URLs...');
+          const finalPrizes = await Promise.all(
+            state.prizes.map(async (prize) => {
+              if (prize.newImageFile) {
+                const buffer = await prize.newImageFile.arrayBuffer();
+                const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+                return {name: prize.name, imageUrl: uploadedImageUrls[hashHex]};
+              }
+              return {name: prize.name, imageUrl: prize.imageUrl};
+            })
+          );
+          console.log('[DEBUG] Step 3 SUCCESS. Final prize list:', finalPrizes);
+
+          console.log('[DEBUG] Step 4: Updating event with final data...');
+          const finalEventData = {
+            eventName: elements.eventNameInput.value.trim(),
+            prizes: finalPrizes,
+            displayPrizeName: document.getElementById('displayPrizeName').checked,
+            displayPrizeCount: document.getElementById('displayPrizeCount').checked,
+            allowDoodleMode: document.getElementById('allowDoodleModeCheckbox').checked,
+          };
+          await api.updateEvent(eventId, finalEventData);
+          console.log('[DEBUG] Step 4 SUCCESS. Event updated.');
+
+          // ▼▼▼ ここからログ追加 ▼▼▼
+          console.log('[DEBUG] Step 5: Updating UI with new event URL...');
+          const parentGroup = state.allUserGroups.find((g) => g.id === state.currentGroupId);
+          console.log(`[DEBUG] Parent group found:`, parentGroup);
+
+          const url = parentGroup && parentGroup.customUrl ? `${window.location.origin}/g/${parentGroup.customUrl}/${eventId}` : `${window.location.origin}/events/${eventId}`;
+          console.log(`[DEBUG] Generated URL: ${url}`);
+
+          if (ui.elements.currentEventUrl) {
+            console.log('[DEBUG] currentEventUrl element FOUND. Updating text and href.');
+            ui.elements.currentEventUrl.textContent = url;
+            ui.elements.currentEventUrl.href = url;
+          } else {
+            console.error('[DEBUG] currentEventUrl element NOT FOUND.');
+          }
+          // ▲▲▲ ここまでログ追加 ▲▲▲
 
           elements.createEventButtonContainer.style.transition = 'opacity 0.5s';
           elements.createEventButtonContainer.style.opacity = '0';
           setTimeout(async () => {
             elements.createEventButtonContainer.style.display = 'none';
-            const eventData = await api.getEvent(newEvent.id);
+            const eventData = await api.getEvent(eventId);
             state.setCurrentLotteryData(eventData);
-            // Re-render the view in "edit" mode
             await renderEventForEditing(eventData);
           }, 500);
 
-          history.pushState(null, '', `/admin/event/${newEvent.id}/edit`);
+          history.pushState(null, '', `/admin/event/${eventId}/edit`);
         } catch (error) {
+          console.error('[DEBUG] Event creation FAILED.', error);
           alert(error.error || 'イベントの作成に失敗しました。');
+        } finally {
           elements.createEventButton.disabled = false;
           elements.createEventButton.textContent = 'この内容でイベントを作成';
         }
       });
     }
+
     if (elements.saveStartedEventButton) {
       elements.saveStartedEventButton.addEventListener('click', () => handleSaveEvent(state.currentEventId, elements.saveStartedEventButton, true));
     }
