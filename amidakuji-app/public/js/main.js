@@ -297,21 +297,24 @@ function initTronAnimation() {
 function setupEventListeners() {
   initBroadcast();
 
-  // ▼▼▼ ここから修正 ▼▼▼
   window.addEventListener('popstate', (e) => {
-    // URLのクエリパラメータも含めて画面遷移関数を呼び出すように修正
     router.navigateTo(window.location.pathname + window.location.search, false);
   });
-  // ▲▲▲ ここまで修正 ▲▲▲
 
-  if (ui.elements.loginButton)
-    ui.elements.loginButton.addEventListener('click', () => {
+  // ▼▼▼ ここから修正 ▼▼▼
+  const handleAdminLogin = () => {
+    if (confirm('これはあみだくじの運営者向けのログインです。よろしいですか？')) {
       window.location.href = '/auth/google';
-    });
-  if (ui.elements.landingLoginButton)
-    ui.elements.landingLoginButton.addEventListener('click', () => {
-      window.location.href = '/auth/google';
-    });
+    }
+  };
+
+  if (ui.elements.loginButton) {
+    ui.elements.loginButton.addEventListener('click', handleAdminLogin);
+  }
+  if (ui.elements.landingLoginButton) {
+    ui.elements.landingLoginButton.addEventListener('click', handleAdminLogin);
+  }
+  // ▲▲▲ ここまで修正 ▲▲▲
   if (ui.elements.logoutButton)
     ui.elements.logoutButton.addEventListener('click', async () => {
       const isAdminPage = window.location.pathname.startsWith('/admin') || window.location.pathname === '/';

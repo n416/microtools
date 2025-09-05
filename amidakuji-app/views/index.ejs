@@ -26,7 +26,9 @@
       <h2>認証エラー</h2>
       <p><%= error.message %></p>
       <div class="error-actions">
-        <a href="/auth/google" class="button primary-action">Googleでログイン</a>
+        <%# ▼▼▼ ここから修正 ▼▼▼ %>
+        <a href="/auth/google" class="button primary-action" onclick="return confirm('このページは運営者専用です。運営者としてログインしますか？');">運営者としてGoogleでログイン</a>
+        <%# ▲▲▲ ここまで修正 ▲▲▲ %>
         <a href="/" class="button">トップページへ戻る</a>
       </div>
     </div>
@@ -103,7 +105,9 @@
         </div>
       </div>
       <div class="auth-controls">
-        <button id="loginButton">Googleでログイン</button>
+        <%# ▼▼▼ ここから修正 ▼▼▼ %>
+        <button id="loginButton">運営者ログイン</button>
+        <%# ▲▲▲ ここまで修正 ▲▲▲ %>
       </div>
     </div>
   </header>

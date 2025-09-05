@@ -51,6 +51,7 @@ export function initUI() {
     mainHeader: document.querySelector('.main-header'),
     impersonationBanner: document.querySelector('.impersonation-banner'),
     loginButton: document.getElementById('loginButton'),
+    landingLoginButton: document.getElementById('landingLoginButton'),
     logoutButton: document.getElementById('logoutButton'),
     deleteAccountButton: document.getElementById('deleteAccountButton'),
     adminDashboardButton: document.getElementById('adminDashboardButton'),
@@ -172,7 +173,9 @@ export function initUI() {
   }
 }
 
-const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView', 'staticAmidaView', 'tutorialListView'];
+// ▼▼▼ ここから修正 ▼▼▼
+const ALL_VIEWS = ['landingView', 'groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView', 'staticAmidaView', 'tutorialListView'];
+// ▲▲▲ ここまで修正 ▲▲▲
 
 export function adjustBodyPadding() {
   let totalOffset = 0;
