@@ -43,6 +43,7 @@ body.dark-mode {
   .main-header,
   .controls,
   .modal-content {
+    z-index: 4000;
     box-shadow: none;
     border: 1px solid var(--border-color);
   }
