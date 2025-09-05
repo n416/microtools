@@ -63,12 +63,6 @@
   display: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  .loading-mask {
-    background-color: rgba(30, 30, 30, 0.8);
-  }
-}
-
 .error-message {
   color: var(--danger-color);
   font-weight: bold;
