@@ -1,6 +1,7 @@
 // js/api.js
-import * as state from './state.js'; // stateをインポート
+import * as state from './state.js';
 
+// ... (request関数など、既存のコードはそのまま) ...
 async function request(endpoint, method = 'GET', body = null, headers = {}) {
   const options = {
     method,
@@ -84,7 +85,6 @@ export const deletePrizeMaster = (masterId, groupId) => request(`/api/prize-mast
 export const requestAdminAccess = () => request('/api/admin/request', 'POST');
 export const getAdminRequests = () => request('/api/admin/requests');
 export const approveAdminRequest = (requestId) => request('/api/admin/approve', 'POST', {requestId});
-// ▼▼▼ ここから修正 ▼▼▼
 export const getSystemAdmins = (lastVisible = null, searchId = '') => {
   let endpoint = '/api/admin/system-admins';
   const params = new URLSearchParams();
@@ -102,7 +102,6 @@ export const getGroupAdmins = (lastVisible = null, searchId = '') => {
   if (params.toString()) endpoint += `?${params.toString()}`;
   return request(endpoint);
 };
-// ▲▲▲ ここまで修正 ▲▲▲
 export const demoteAdmin = (userId) => request('/api/admin/demote', 'POST', {userId});
 export const impersonateUser = (targetUserId) => request('/api/admin/impersonate', 'POST', {targetUserId});
 export const stopImpersonating = () => request('/api/admin/stop-impersonating', 'POST');
@@ -111,8 +110,6 @@ export const approvePasswordReset = (memberId, groupId, requestId) => request(`/
 export const logout = () => request('/auth/logout', 'GET');
 export const clearGroupVerification = () => request('/auth/clear-group-verification', 'POST');
 
-// --- ▼▼▼ ここから新規追加 ▼▼▼ ---
-// Member Management
 export const getMembers = (groupId) => request(`/api/groups/${groupId}/members`);
 export const addMember = (groupId, name) => request(`/api/groups/${groupId}/members`, 'POST', {name});
 export const updateMember = (groupId, memberId, data) => request(`/api/groups/${groupId}/members/${memberId}`, 'PUT', data);
@@ -121,7 +118,6 @@ export const regenerateLines = (eventId, deleteDoodles = false) => request(`/api
 export const shufflePrizes = (eventId, shuffledPrizes) => request(`/api/events/${eventId}/shuffle-prizes`, 'POST', {shuffledPrizes});
 export const acknowledgeResult = (eventId, memberId, token) => request(`/api/events/${eventId}/acknowledge-result`, 'POST', {memberId}, {'x-auth-token': token});
 
-// Bulk Member Registration
 export const analyzeBulkMembers = (groupId, namesText) => request(`/api/groups/${groupId}/members/analyze-bulk`, 'POST', {namesText});
 export const finalizeBulkMembers = (groupId, resolutions) => request(`/api/groups/${groupId}/members/finalize-bulk`, 'POST', {resolutions});
 
@@ -129,3 +125,5 @@ export const updateMemberStatus = (groupId, memberId, isActive) => request(`/api
 
 export const getUnjoinedMembers = (groupId, eventId) => request(`/api/groups/${groupId}/unjoined-members?eventId=${eventId}`);
 export const fillSlots = (eventId, assignments) => request(`/api/events/${eventId}/fill-slots`, 'POST', {assignments});
+
+export const cleanupEvents = (groupId) => request(`/api/groups/${groupId}/cleanup-events`, 'POST'); // ★ 追加

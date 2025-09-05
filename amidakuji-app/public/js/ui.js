@@ -9,7 +9,6 @@ export function clientEmojiToLucide(emoji) {
 
 export let elements = {};
 
-// ▼▼▼ ここから追加 ▼▼▼
 export function showGlobalLoadingMask(message = '読み込み中...') {
   if (elements.globalLoadingMask) {
     const p = elements.globalLoadingMask.querySelector('p');
@@ -23,7 +22,6 @@ export function hideGlobalLoadingMask() {
     elements.globalLoadingMask.style.display = 'none';
   }
 }
-// ▲▲▲ ここまで追加 ▲▲▲
 
 export function showToast(message, duration = 3000) {
   const toastId = `toast-${Date.now()}`;
@@ -179,7 +177,6 @@ const ALL_VIEWS = ['groupDashboard', 'dashboardView', 'memberManagementView', 'e
 export function adjustBodyPadding() {
   let totalOffset = 0;
   if (elements.mainHeader && elements.mainHeader.classList.contains('visible')) {
-    // .visibleクラスの有無で高さを計算
     totalOffset += elements.mainHeader.offsetHeight;
   }
   if (elements.impersonationBanner && getComputedStyle(elements.impersonationBanner).display !== 'none') {
@@ -190,7 +187,6 @@ export function adjustBodyPadding() {
 
 export function setMainHeaderVisibility(visible) {
   if (elements.mainHeader) {
-    // styleを直接変更する代わりにクラスを付け外しする
     if (visible) {
       elements.mainHeader.classList.add('visible');
     } else {
@@ -210,9 +206,7 @@ export function showView(viewToShowId) {
   stopAnimation();
   adjustBodyPadding();
 
-  // ★★★ 修正点: setTimeoutをrequestAnimationFrameに変更 ★★★
   if (window.runTutorials) {
-    // 画面の描画が完了した後にチュートリアルが実行されることを保証する
     requestAnimationFrame(() => {
       window.runTutorials();
     });
@@ -249,7 +243,6 @@ export function updateTutorialDropdown() {
   const list = document.getElementById('tutorialDropdownList');
   if (!container || !dot || !list || !window.tutorials) return;
 
-  // ▼▼▼ ここからが修正箇所です ▼▼▼
   const allTutorials = window.tutorials.filter((t) => t.showInList !== false);
   const hasIncompleteTutorials = allTutorials.some((t) => !localStorage.getItem(`tutorialCompleted_${t.id}`));
 
@@ -269,40 +262,49 @@ export function updateTutorialDropdown() {
     container.style.display = 'none';
   }
 }
+
+// ▼▼▼ ここから修正 ▼▼▼
 export function updateGroupSwitcher() {
-  // ▼▼▼ この行を修正 ▼▼▼
   const groupSwitcherContainer = document.querySelector('.group-switcher-container');
   if (!groupSwitcherContainer || !elements.currentGroupName || !elements.switcherGroupList) return;
 
-  if (state.allUserGroups.length > 0) {
-    // ▼▼▼ この行を修正 ▼▼▼
+  // ログインユーザーがいればコンテナを表示（「新規作成」ボタンのため）
+  if (state.currentUser) {
     groupSwitcherContainer.style.display = 'flex';
   } else {
-    // ▼▼▼ この行を修正 ▼▼▼
     groupSwitcherContainer.style.display = 'none';
+    return;
   }
 
-  const currentGroup = state.allUserGroups.find((g) => g.id === state.currentGroupId);
-  if (currentGroup) {
-    elements.currentGroupName.textContent = currentGroup.name;
+  const hasGroups = state.allUserGroups.length > 0;
+
+  // グループがなければ、デスクトップ表示で「グループを選択」ボタンを隠す
+  // モバイルではCSSで元々非表示になっている
+  elements.currentGroupName.style.display = hasGroups ? '' : 'none';
+
+  if (hasGroups) {
+    const currentGroup = state.allUserGroups.find((g) => g.id === state.currentGroupId);
+    elements.currentGroupName.textContent = currentGroup ? currentGroup.name : 'グループを選択';
+
+    elements.switcherGroupList.innerHTML = '';
+    state.allUserGroups.forEach((group) => {
+      const li = document.createElement('li');
+      const button = document.createElement('button');
+      button.textContent = group.name;
+      button.dataset.groupId = group.id;
+      button.dataset.groupName = group.name;
+      if (group.id === state.currentGroupId) {
+        button.classList.add('active');
+      }
+      li.appendChild(button);
+      elements.switcherGroupList.appendChild(li);
+    });
   } else {
-    elements.currentGroupName.textContent = 'グループを選択';
+    // グループがない場合はリストを空にする
+    elements.switcherGroupList.innerHTML = '';
   }
-
-  elements.switcherGroupList.innerHTML = '';
-  state.allUserGroups.forEach((group) => {
-    const li = document.createElement('li');
-    const button = document.createElement('button');
-    button.textContent = group.name;
-    button.dataset.groupId = group.id;
-    button.dataset.groupName = group.name;
-    if (group.id === state.currentGroupId) {
-      button.classList.add('active');
-    }
-    li.appendChild(button);
-    elements.switcherGroupList.appendChild(li);
-  });
 }
+// ▲▲▲ ここまで修正 ▲▲▲
 
 export function openSettingsModal(group, handlers) {
   if (!elements.groupSettingsModal) return;

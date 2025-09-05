@@ -35,7 +35,7 @@ async function startServer() {
   const path = require('path');
   const session = require('express-session');
   const passport = require('passport');
-  const {emojiToLucide, emojiMap} = require('./utils/emoji-map'); // ★ emoji-mapをインポート
+  const {emojiToLucide, emojiMap} = require('./utils/emoji-map');
   const {firestore} = require('./utils/firestore');
   const {FirestoreStore} = require('@google-cloud/connect-firestore');
 
@@ -51,7 +51,6 @@ async function startServer() {
   app.set('views', path.join(__dirname, 'views'));
 
   // Expressのapp.localsにヘルパー関数とデータを設定
-  // これにより、すべてのテンプレートでグローバルに利用可能になる
   app.locals.emojiToLucide = emojiToLucide;
   app.locals.emojiMapJSON = JSON.stringify(Array.from(emojiMap.entries()));
 
@@ -59,7 +58,14 @@ async function startServer() {
   app.use(express.static(path.join(__dirname, 'public')));
   app.use(express.json());
 
-  // ▼▼▼ 今ある session の設定を、丸ごとこれに置き換える ▼▼▼
+  // ▼▼▼ 以下を追記 ▼▼▼
+  // ウォームアップリクエスト用のハンドラ
+  app.get('/_ah/warmup', (req, res) => {
+    console.log('Warmup request received. Initializing application...');
+    res.status(200).send('OK');
+  });
+  // ▲▲▲ 追記ここまで ▲▲▲
+
   app.use(
     session({
       store: new FirestoreStore({
@@ -72,7 +78,6 @@ async function startServer() {
       cookie: {secure: process.env.NODE_ENV === 'production', maxAge: 14 * 24 * 60 * 60 * 1000}, // 2週間
     })
   );
-  // ▲▲▲ ここまで ▲▲▲
 
   app.use(passport.initialize());
   app.use(passport.session());
