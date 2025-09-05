@@ -81,6 +81,10 @@ export function renderSlots(participants) {
     if (p.name) {
       slotEl.classList.add('taken');
       slotEl.textContent = p.name;
+    } else if (p.memberId) {
+      // 名前がなくてもmemberIdがあれば参加済み
+      slotEl.classList.add('taken');
+      slotEl.textContent = '参加済み';
     } else {
       slotEl.classList.add('available');
       slotEl.textContent = `参加枠 ${p.slot + 1}`;
@@ -145,7 +149,7 @@ export function renderAllResults(results, isShareView, highlightName) {
 
     let imageHtml = '';
     if (prizeImageUrl) {
-      imageHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image large">`;
+      imageHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image">`;
     }
 
     html += `<li class="item-list-item ${isHighlighted}">${imageHtml}<span>${name} → ${prizeName}</span></li>`;
@@ -319,7 +323,12 @@ export function renderOtherEvents(events, groupCustomUrl) {
       if (myParticipation) {
         badge = '<span class="badge joined">参加登録済</span>';
       } else {
-        badge = '<span class="badge ongoing">開催中</span>';
+        const isFull = event.participants.every((p) => p.name !== null);
+        if (isFull) {
+          badge = '<span class="badge full">満員御礼</span>';
+        } else {
+          badge = '<span class="badge ongoing">開催中</span>';
+        }
       }
     }
 
@@ -728,7 +737,6 @@ export function initParticipantView() {
       }
     });
 
-  // ▼▼▼ ここから修正 ▼▼▼
   const backToDashboardHandler = async () => {
     try {
       const group = await api.getGroup(state.currentGroupId);
@@ -755,7 +763,6 @@ export function initParticipantView() {
   if (elements.backToDashboardFromWaitingButton) {
     elements.backToDashboardFromWaitingButton.addEventListener('click', backToDashboardHandler);
   }
-  // ▲▲▲ ここまで修正 ▲▲▲
 
   if (elements.setPasswordButton)
     elements.setPasswordButton.addEventListener('click', async () => {
@@ -824,8 +831,8 @@ export function initParticipantView() {
 
   if (elements.slotList)
     elements.slotList.addEventListener('click', (e) => {
-      const target = e.target.closest('.slot.available');
-      if (!target) return;
+      const target = e.target.closest('.slot');
+      if (!target || !target.classList.contains('available')) return;
       document.querySelectorAll('.slot.selected').forEach((el) => el.classList.remove('selected'));
       target.classList.add('selected');
       state.setSelectedSlot(parseInt(target.dataset.slot, 10));
