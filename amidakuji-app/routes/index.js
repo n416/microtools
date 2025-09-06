@@ -1,8 +1,10 @@
+// routes/index.js
 const express = require('express');
 const {firestore} = require('../utils/firestore');
 const {ensureAuthenticated, isSystemAdmin} = require('../middleware/auth');
 const router = express.Router();
 const fetch = require('node-fetch');
+const ogpController = require('../controllers/ogpController'); // ★ 新規追加
 
 // Avatar proxy (APIルートなので先頭に配置)
 router.get('/api/avatar-proxy', async (req, res) => {
@@ -22,6 +24,9 @@ router.get('/api/avatar-proxy', async (req, res) => {
     res.status(500).send('Error fetching avatar');
   }
 });
+
+// ★ OGP画像配信用エンドポイントを新規追加
+router.get('/api/share/:eventId/:participantName/ogp.png', ogpController.generateOgpImage);
 
 // OGP and page rendering routes
 router.get('/g/:customUrl', async (req, res) => {
@@ -186,17 +191,16 @@ router.get('/share/:eventId/:participantName', async (req, res) => {
       return res.status(404).send('イベントが見つかりません');
     }
     const eventData = eventDoc.data();
-    const result = eventData.results ? eventData.results[decodeURIComponent(participantName)] : null;
 
-    let imageUrl = 'https://storage.googleapis.com/amida-468218-amidakuji-assets/default-ogp.png';
-    if (result && result.prize && result.prize.imageUrl) {
-      imageUrl = result.prize.imageUrl;
-    }
+    // ★★★ ここからが修正点 ★★★
+    // OGP画像のURLを、動的生成用エンドポイントに変更
+    const imageUrl = `${req.protocol}://${req.get('host')}/api/share/${eventId}/${participantName}/ogp.png`;
+    // ★★★ ここまでが修正点 ★★★
 
     const ogpData = {
       title: `${decodeURIComponent(participantName)}さんの結果は...！`,
       description: `${eventData.eventName || 'あみだくじイベント'}の結果をチェックしよう！`,
-      imageUrl: imageUrl,
+      imageUrl: imageUrl, // ★ 修正
     };
 
     const groupDoc = await firestore.collection('groups').doc(eventData.groupId).get();
