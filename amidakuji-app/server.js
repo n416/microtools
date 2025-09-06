@@ -38,6 +38,7 @@ async function startServer() {
   const {emojiToLucide, emojiMap} = require('./utils/emoji-map');
   const {firestore} = require('./utils/firestore');
   const {FirestoreStore} = require('@google-cloud/connect-firestore');
+  const fs = require('fs'); // fsモジュールを読み込み
 
   // Passport設定の読み込み
   require('./config/passport')(passport);
@@ -45,6 +46,21 @@ async function startServer() {
   const app = express();
   app.set('trust proxy', 1); // プロキシ設定
   const port = process.env.PORT || 3000;
+
+  // ▼▼▼ ここから修正 ▼▼▼
+  // GAEのバージョンID、なければpackage.jsonのバージョンをキャッシュ対策に利用
+  if (process.env.GAE_VERSION) {
+    app.locals.appVersion = process.env.GAE_VERSION;
+  } else {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+      app.locals.appVersion = packageJson.version;
+    } catch (error) {
+      console.error('Could not read package.json for versioning:', error);
+      app.locals.appVersion = new Date().getTime(); // 最終手段
+    }
+  }
+  // ▲▲▲ ここまで修正 ▲▲▲
 
   // EJS設定
   app.set('view engine', 'ejs');
@@ -58,13 +74,11 @@ async function startServer() {
   app.use(express.static(path.join(__dirname, 'public')));
   app.use(express.json());
 
-  // ▼▼▼ 以下を追記 ▼▼▼
   // ウォームアップリクエスト用のハンドラ
   app.get('/_ah/warmup', (req, res) => {
     console.log('Warmup request received. Initializing application...');
     res.status(200).send('OK');
   });
-  // ▲▲▲ 追記ここまで ▲▲▲
 
   app.use(
     session({
