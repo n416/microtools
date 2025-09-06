@@ -10,11 +10,16 @@ let resizeDebounceTimer;
 export function initializePanzoom(canvasElement) {
   if (!canvasElement) return null;
 
-  // ▼▼▼ ここから修正 ▼▼▼
-  if (canvasElement.id === 'participantCanvasStatic' && participantPanzoom) {
+  // ▼▼▼ ここからが今回の修正点です ▼▼▼
+  // 既にインスタンスが存在する場合は、新しく作らずに既存のものを返す
+  const isParticipantCanvas = canvasElement.id === 'participantCanvas' || canvasElement.id === 'participantCanvasStatic';
+  if (isParticipantCanvas && participantPanzoom) {
     return participantPanzoom;
   }
-  // ▲▲▲ ここまで修正 ▲▲▲
+  if (canvasElement.id === 'adminCanvas' && adminPanzoom) {
+    return adminPanzoom;
+  }
+  // ▲▲▲ ここまでが修正点です ▲▲▲
 
   const panzoomElement = canvasElement.parentElement;
 
@@ -145,11 +150,9 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMa
   await preloadIcons(allParticipantsWithNames);
   const VIRTUAL_HEIGHT = getTargetHeight(container);
 
-  // ▼▼▼ ここからが修正点 ▼▼▼
   const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
 
   animator.tracers = allParticipantsWithNames.map((p) => {
-    // calculatePathに allLines を渡す
     const path = calculatePath(p.slot, allLines, totalParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
     const isFinished = state.revealedPrizes.some((r) => r.participantName === p.name);
     const finalPoint = isFinished ? path[path.length - 1] : path[0];
@@ -164,8 +167,7 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMa
       celebrated: isFinished,
     };
   });
-  // ▲▲▲ ここまで ▲▲▲
-  
+
   animator.context = targetCtx;
   targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
   const isDarkMode = document.body.classList.contains('dark-mode');

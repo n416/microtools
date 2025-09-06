@@ -78,20 +78,18 @@ async function handleSaveEvent(eventId, buttonToAnimate, isStartedEvent = false)
   buttonToAnimate.textContent = '保存中...';
 
   try {
-    const uniqueFilesToUpload = [];
-    const fileHashes = {};
-    for (const prize of state.prizes) {
+    const fileUploadPromises = state.prizes.map(async (prize) => {
       if (prize.newImageFile) {
         const buffer = await prize.newImageFile.arrayBuffer();
         const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-        if (!uniqueFilesToUpload.some((f) => f.hash === hashHex)) {
-          uniqueFilesToUpload.push({file: prize.newImageFile, hash: hashHex});
-        }
-        fileHashes[prize.newImageFile.name] = hashHex;
+        return {file: prize.newImageFile, hash: hashHex};
       }
-    }
+      return null;
+    });
+    const resolvedFileUploads = (await Promise.all(fileUploadPromises)).filter(Boolean);
+    const uniqueFilesToUpload = [...new Map(resolvedFileUploads.map((item) => [item.hash, item])).values()];
 
     const uploadedImageUrls = {};
     for (const {file, hash} of uniqueFilesToUpload) {
@@ -100,13 +98,18 @@ async function handleSaveEvent(eventId, buttonToAnimate, isStartedEvent = false)
       uploadedImageUrls[hash] = imageUrl;
     }
 
-    const finalPrizes = state.prizes.map((prize) => {
-      if (prize.newImageFile) {
-        const hash = fileHashes[prize.newImageFile.name];
-        return {name: prize.name, imageUrl: uploadedImageUrls[hash]};
-      }
-      return {name: prize.name, imageUrl: prize.imageUrl};
-    });
+    const finalPrizes = await Promise.all(
+      state.prizes.map(async (prize) => {
+        if (prize.newImageFile) {
+          const buffer = await prize.newImageFile.arrayBuffer();
+          const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+          return {name: prize.name, imageUrl: uploadedImageUrls[hashHex], rank: prize.rank || 'uncommon'};
+        }
+        return {name: prize.name, imageUrl: prize.imageUrl, rank: prize.rank || 'uncommon'};
+      })
+    );
 
     const finalEventData = {
       eventName: elements.eventNameInput.value.trim(),
@@ -298,6 +301,23 @@ export function renderPrizeCardList() {
       updatePrizePreview();
     });
     infoContainer.appendChild(nameInput);
+
+    const rankSelector = document.createElement('div');
+    rankSelector.className = 'prize-rank-selector';
+    rankSelector.dataset.index = index;
+    const ranks = ['miss', 'uncommon', 'common', 'rare', 'epic'];
+    ranks.forEach((rank, i) => {
+      const star = document.createElement('i');
+      star.setAttribute('data-lucide', 'star');
+      star.className = 'lucide-star';
+      star.dataset.value = rank;
+      if (ranks.indexOf(p.rank || 'uncommon') >= i) {
+        star.classList.add('filled');
+      }
+      rankSelector.appendChild(star);
+    });
+    infoContainer.appendChild(rankSelector);
+
     const actionsContainer = document.createElement('div');
     actionsContainer.className = 'prize-card-actions';
     const duplicateBtn = document.createElement('button');
@@ -316,6 +336,9 @@ export function renderPrizeCardList() {
     li.appendChild(infoContainer);
     elements.prizeCardListContainer.appendChild(li);
   });
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
   updatePrizePreview();
 }
 
@@ -336,6 +359,7 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
         newImageFile: prize.newImageFile,
         newImageFileHash: prize.newImageFileHash,
         hasMultipleImages: false,
+        rank: prize.rank || 'uncommon',
       };
     }
     return acc;
@@ -357,6 +381,7 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
           <th style="width: 80px;">画像</th>
           <th data-sort-key="name" style="cursor: pointer;">${nameHeader}</th>
           <th data-sort-key="quantity" style="cursor: pointer;">${quantityHeader}</th>
+          <th>ランク</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -375,6 +400,20 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
     } else {
       imageContent = `<div class="prize-image-cell no-image" title="画像が設定されていません"><i data-lucide="image-off"></i></div>`;
     }
+
+    const ranks = ['miss', 'uncommon', 'common', 'rare', 'epic'];
+    const rankSelector = `
+      <div class="prize-rank-selector" data-name="${item.name}">
+        ${ranks
+          .map(
+            (rank, i) => `
+          <i data-lucide="star" class="lucide-star ${ranks.indexOf(item.rank) >= i ? 'filled' : ''}" data-value="${rank}"></i>
+        `
+          )
+          .join('')}
+      </div>
+    `;
+
     tableHTML += `
       <tr>
         <td>
@@ -383,6 +422,7 @@ export function renderPrizeListMode(sortConfig = {key: 'name', order: 'asc'}) {
         </td>
         <td><input type="text" class="prize-name-input-list" value="${item.name}" data-original-name="${item.name}"></td>
         <td><input type="text" inputmode="numeric" pattern="[0-9]*" class="prize-quantity-input" value="${item.quantity}" data-name="${item.name}"></td>
+        <td>${rankSelector}</td>
         <td><button class="delete-btn delete-prize-list" data-name="${item.name}">削除</button></td>
       </tr>
     `;
@@ -402,6 +442,21 @@ export function openAddPrizeModal() {
   elements.newPrizeImagePreview.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
   elements.newPrizeImagePreview.style.display = 'none';
   processedNewPrizeFile = null;
+
+  const rankSelector = elements.addPrizeModal.querySelector('.prize-rank-selector');
+  const defaultRank = 'uncommon';
+  rankSelector.dataset.rank = defaultRank;
+  const ranks = ['miss', 'uncommon', 'common', 'rare', 'epic'];
+  const defaultRankIndex = ranks.indexOf(defaultRank);
+
+  rankSelector.querySelectorAll('.lucide-star').forEach((star, index) => {
+    if (index <= defaultRankIndex) {
+      star.classList.add('filled');
+    } else {
+      star.classList.remove('filled');
+    }
+  });
+
   elements.addPrizeModal.style.display = 'block';
 }
 
@@ -550,7 +605,7 @@ export function initEventEdit() {
               return;
             }
           }
-          const prizeMaster = currentPrizes[0] || {name, imageUrl: null};
+          const prizeMaster = currentPrizes[0] || {name, imageUrl: null, rank: 'uncommon'};
           if (newQuantity > currentQuantity) {
             const diff = newQuantity - currentQuantity;
             for (let i = 0; i < diff; i++) {
@@ -640,6 +695,18 @@ export function initEventEdit() {
           }
           renderPrizeListMode(sortConfig);
         }
+        const star = e.target.closest('.lucide-star');
+        if (star) {
+          const rank = star.dataset.value;
+          const name = star.parentElement.dataset.name;
+          state.prizes.forEach((p) => {
+            if (p.name === name) {
+              p.rank = rank;
+            }
+          });
+          setDirty(true);
+          renderPrizeListMode(sortConfig);
+        }
       });
     }
     if (elements.backToGroupsButton) {
@@ -699,6 +766,14 @@ export function initEventEdit() {
           if (state.currentEventId) setDirty(true);
           renderPrizeCardList();
         }
+        const star = event.target.closest('.lucide-star');
+        if (star) {
+          const rank = star.dataset.value;
+          const index = parseInt(star.parentElement.dataset.index, 10);
+          state.prizes[index].rank = rank;
+          setDirty(true);
+          renderPrizeCardList();
+        }
       });
     }
     const shufflePrizesButton = document.getElementById('shufflePrizesButton');
@@ -752,7 +827,7 @@ export function initEventEdit() {
           console.log('[DEBUG] Step 1: Creating event without images...');
           const initialEventData = {
             eventName: elements.eventNameInput.value.trim(),
-            prizes: state.prizes.map((p) => ({name: p.name, imageUrl: null})),
+            prizes: state.prizes.map((p) => ({name: p.name, imageUrl: null, rank: p.rank || 'uncommon'})),
             groupId: state.currentGroupId,
             displayPrizeName: document.getElementById('displayPrizeName').checked,
             displayPrizeCount: document.getElementById('displayPrizeCount').checked,
@@ -797,9 +872,9 @@ export function initEventEdit() {
                 const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
                 const hashArray = Array.from(new Uint8Array(hashBuffer));
                 const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-                return {name: prize.name, imageUrl: uploadedImageUrls[hashHex]};
+                return {name: prize.name, imageUrl: uploadedImageUrls[hashHex], rank: prize.rank || 'uncommon'};
               }
-              return {name: prize.name, imageUrl: prize.imageUrl};
+              return {name: prize.name, imageUrl: prize.imageUrl, rank: prize.rank || 'uncommon'};
             })
           );
           console.log('[DEBUG] Step 3 SUCCESS. Final prize list:', finalPrizes);
@@ -868,16 +943,38 @@ export function initEventEdit() {
       elements.addPrizeOkButton.addEventListener('click', () => {
         const name = elements.newPrizeNameInput.value.trim();
         if (!name) return alert('景品名を入力してください。');
+        const rank = elements.addPrizeModal.querySelector('.prize-rank-selector').dataset.rank;
         const newPrize = {
           name,
           imageUrl: null,
           newImageFile: processedNewPrizeFile,
+          rank: rank,
         };
         state.prizes.push(newPrize);
         if (state.currentEventId) setDirty(true);
         renderPrizeCardList();
         renderPrizeListMode();
         closeAddPrizeModal();
+      });
+    }
+    if (elements.addPrizeModal) {
+      elements.addPrizeModal.addEventListener('click', (e) => {
+        const star = e.target.closest('.lucide-star');
+        if (star) {
+          const rankSelector = star.parentElement;
+          const newRank = star.dataset.value;
+          rankSelector.dataset.rank = newRank;
+          const ranks = ['miss', 'uncommon', 'common', 'rare', 'epic'];
+          const newRankIndex = ranks.indexOf(newRank);
+
+          rankSelector.querySelectorAll('.lucide-star').forEach((s, i) => {
+            if (i <= newRankIndex) {
+              s.classList.add('filled');
+            } else {
+              s.classList.remove('filled');
+            }
+          });
+        }
       });
     }
     if (elements.newPrizeImageInput) {

@@ -80,7 +80,7 @@ export const updateProfile = (memberId, profileData, groupId, token) => request(
 export const setPassword = (memberId, password, groupId, token) => request(`/api/members/${memberId}/set-password`, 'POST', {password, groupId}, {'x-auth-token': token});
 export const getPrizeMasters = (groupId) => request(`/api/groups/${groupId}/prize-masters`);
 export const generatePrizeMasterUploadUrl = (groupId, fileType) => request(`/api/groups/${groupId}/prize-masters/generate-upload-url`, 'POST', {fileType});
-export const addPrizeMaster = (groupId, name, imageUrl) => request(`/api/groups/${groupId}/prize-masters`, 'POST', {name, imageUrl});
+export const addPrizeMaster = (groupId, name, imageUrl, rank) => request(`/api/groups/${groupId}/prize-masters`, 'POST', {name, imageUrl, rank});
 export const deletePrizeMaster = (masterId, groupId) => request(`/api/prize-masters/${masterId}`, 'DELETE', {groupId});
 export const requestAdminAccess = () => request('/api/admin/request', 'POST');
 export const getAdminRequests = () => request('/api/admin/requests');

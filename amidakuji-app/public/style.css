@@ -1493,6 +1493,22 @@ input[type=color] {
   background-color: rgba(var(--primary-color-rgb, 13, 132, 255), 0.2);
 }
 
+.prize-rank-selector {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.prize-rank-selector .lucide-star {
+  cursor: pointer;
+  color: grey;
+}
+
+.prize-rank-selector .lucide-star.filled {
+  fill: gold;
+  color: gold;
+}
+
 .modal {
   display: none;
   position: fixed;
@@ -2118,7 +2134,7 @@ input[type=color] {
   width: 85%;
   max-width: 300px;
   transform: translateX(100%);
-  z-index: 2030;
+  z-index: 4030;
   padding-top: 20px;
   overflow-y: auto;
 }

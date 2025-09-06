@@ -1,3 +1,4 @@
+// amidakuji-app/public/js/animation/core.js
 import * as state from '../state.js';
 import {calculatePath, getTargetHeight, getVirtualWidth, calculateClientSideResults} from './path.js';
 import {drawLotteryBase, drawRevealedPrizes, drawTracerPath, drawTracerIcon} from './drawing.js';
@@ -112,7 +113,10 @@ function updateTracerPosition(tracer, speed) {
       if (!tracer.celebrated) {
         tracer.x = tracer.path[tracer.path.length - 1].x;
         tracer.y = tracer.path[tracer.path.length - 1].y;
-        celebrate(tracer.x, tracer.color);
+        const result = state.currentLotteryData.results[tracer.name];
+        if (result && result.prize.rank !== 'miss') {
+          celebrate(tracer.x, tracer.color);
+        }
         tracer.celebrated = true;
         revealPrize();
       }
@@ -127,7 +131,10 @@ function updateTracerPosition(tracer, speed) {
   if (!target) {
     tracer.isFinished = true;
     if (!tracer.celebrated) {
-      celebrate(tracer.x, tracer.color);
+      const result = state.currentLotteryData.results[tracer.name];
+      if (result && result.prize.rank !== 'miss') {
+        celebrate(tracer.x, tracer.color);
+      }
       tracer.celebrated = true;
       revealPrize();
     }

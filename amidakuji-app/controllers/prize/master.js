@@ -1,3 +1,5 @@
+// amidakuji-app/controllers/prize/master.js
+
 const {firestore, bucket} = require('../../utils/firestore');
 
 exports.getPrizeMasters = async (req, res) => {
@@ -58,7 +60,7 @@ exports.generatePrizeMasterUploadUrl = async (req, res) => {
 exports.addPrizeMaster = async (req, res) => {
   try {
     const {groupId} = req.params;
-    const {name, imageUrl} = req.body;
+    const {name, imageUrl, rank} = req.body;
 
     if (!name || !imageUrl) {
       return res.status(400).json({error: '賞品名と画像URLは必須です。'});
@@ -74,6 +76,7 @@ exports.addPrizeMaster = async (req, res) => {
     const newMaster = {
       name,
       imageUrl,
+      rank: rank || 'uncommon',
       createdAt: new Date(),
     };
 
