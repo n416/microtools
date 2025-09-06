@@ -187,6 +187,7 @@ export function initEventDashboard() {
           const handlers = {
             onAddMaster: async () => {
               const name = ui.elements.addMasterPrizeNameInput.value.trim();
+              const rank = ui.elements.prizeMasterModal.querySelector('.prize-rank-selector').dataset.rank;
               if (!name || !processedMasterPrizeFile) {
                 return alert('賞品名と画像を選択してください');
               }
@@ -194,7 +195,7 @@ export function initEventDashboard() {
                 ui.elements.addMasterPrizeButton.disabled = true;
                 const {signedUrl, imageUrl} = await api.generatePrizeMasterUploadUrl(state.currentGroupId, processedMasterPrizeFile.type);
                 await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': processedMasterPrizeFile.type}, body: processedMasterPrizeFile});
-                await api.addPrizeMaster(state.currentGroupId, name, imageUrl);
+                await api.addPrizeMaster(state.currentGroupId, name, imageUrl, rank);
                 alert('賞品マスターを追加しました。');
                 const masters = await api.getPrizeMasters(state.currentGroupId);
                 ui.renderPrizeMasterList(masters, false);
@@ -261,6 +262,29 @@ export function initEventDashboard() {
       }
     });
   }
+
+  // ★★★ ここからが修正点 ★★★
+  if (ui.elements.prizeMasterModal) {
+    ui.elements.prizeMasterModal.addEventListener('click', (e) => {
+      const star = e.target.closest('.lucide-star');
+      if (star) {
+        const rankSelector = star.parentElement;
+        const newRank = star.dataset.value;
+        rankSelector.dataset.rank = newRank;
+        const ranks = ['miss', 'uncommon', 'common', 'rare', 'epic'];
+        const newRankIndex = ranks.indexOf(newRank);
+
+        rankSelector.querySelectorAll('.lucide-star').forEach((s, i) => {
+          if (i <= newRankIndex) {
+            s.classList.add('filled');
+          } else {
+            s.classList.remove('filled');
+          }
+        });
+      }
+    });
+  }
+  // ★★★ ここまでが修正点 ★★★
 
   if (ui.elements.addMasterPrizeImageInput) {
     ui.elements.addMasterPrizeImageInput.addEventListener('change', async (e) => {

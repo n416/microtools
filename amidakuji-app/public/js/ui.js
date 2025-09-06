@@ -341,6 +341,23 @@ export function openPrizeMasterModal(handlers) {
     placeholder.style.display = 'flex';
   }
 
+  // ▼▼▼ ここから修正 ▼▼▼
+  // 星評価をデフォルト値（uncommon）にリセットする
+  const rankSelector = elements.prizeMasterModal.querySelector('.prize-rank-selector');
+  const defaultRank = 'uncommon';
+  rankSelector.dataset.rank = defaultRank;
+  const ranks = ['miss', 'uncommon', 'common', 'rare', 'epic'];
+  const defaultRankIndex = ranks.indexOf(defaultRank);
+
+  rankSelector.querySelectorAll('.lucide-star').forEach((star, index) => {
+    if (index <= defaultRankIndex) {
+      star.classList.add('filled');
+    } else {
+      star.classList.remove('filled');
+    }
+  });
+  // ▲▲▲ ここまで修正 ▲▲▲
+
   elements.addMasterPrizeButton.onclick = handlers.onAddMaster;
   elements.prizeMasterList.onclick = (e) => {
     const button = e.target.closest('button.delete-btn');

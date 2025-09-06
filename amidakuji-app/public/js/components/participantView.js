@@ -509,8 +509,10 @@ export function initParticipantView() {
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-      const x = (clientX - rect.left - pan.x) / scale;
-      const y = (clientY - rect.top - pan.y) / scale;
+      // ▼▼▼ ここからが今回の修正点です ▼▼▼
+      const x = (clientX - rect.left) / scale;
+      const y = (clientY - rect.top) / scale;
+      // ▲▲▲ ここまでが修正点です ▲▲▲
 
       const {participants, prizes} = state.currentLotteryData;
       const numParticipants = participants.length;
@@ -665,10 +667,7 @@ export function initParticipantView() {
         panzoomWrapper.style.cursor = tool === 'pan' ? 'grab' : 'crosshair';
         btns.forEach((btn) => btn.classList.remove('active'));
         document.getElementById(`doodleMode${tool.charAt(0).toUpperCase() + tool.slice(1)}`).classList.add('active');
-        if (state.hoverDoodle) {
-          state.setHoverDoodle(null);
-          redrawCanvas();
-        }
+        redrawCanvas();
       };
       doodleModePanBtn.addEventListener('click', () => switchMode('pan'));
       doodleModeDrawBtn.addEventListener('click', () => switchMode('draw'));

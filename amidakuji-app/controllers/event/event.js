@@ -27,7 +27,7 @@ exports.createEvent = async (req, res) => {
 
     const eventData = {
       eventName: eventName || '無題のイベント',
-      prizes: prizes.map((p) => (typeof p === 'string' ? {name: p, imageUrl: null} : p)),
+      prizes: prizes.map((p) => (typeof p === 'string' ? {name: p, imageUrl: null, rank: 'uncommon'} : {...p, rank: p.rank || 'uncommon'})),
       lines,
       groupId,
       participantCount,
@@ -130,7 +130,7 @@ exports.updateEvent = async (req, res) => {
 
     const updateData = {
       eventName: eventName || '無題のイベント',
-      prizes: prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null})),
+      prizes: prizes.map((p) => ({name: p.name, imageUrl: p.imageUrl || null, rank: p.rank || 'uncommon'})),
       participantCount,
       displayPrizeName: !!displayPrizeName,
       displayPrizeCount: !!displayPrizeCount,
