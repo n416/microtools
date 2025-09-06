@@ -5,19 +5,19 @@
 <div class="controls">
   <div class="settings-section">
     <h4>1.
-イベント情報</h4>
+      イベント情報</h4>
     <div class="input-group">
       <label for="eventNameInput">イベント名:</label>
       <input type="text" id="eventNameInput" placeholder="（例: 忘年会2025）" />
     </div>
     <div id="saveStartedEventContainer" style="display: none; margin-top: 15px;">
-        <button id="saveStartedEventButton" class="primary-action">イベント名を保存する</button>
+      <button id="saveStartedEventButton" class="primary-action">イベント名を保存する</button>
     </div>
     <p>現在のイベントURL: <a id="currentEventUrl" href="#" target="_blank">（未作成または未読み込み）</a></p>
   </div>
   <div class="settings-section">
     <h4>2.
-景品</h4>
+      景品</h4>
     <div class="prize-controls-header">
       <div class="input-group prize-main-controls">
         <button id="openAddPrizeModalButton" class="primary-action"><i data-lucide="<%= emojiToLucide('＋') %>"></i> 追加</button>
@@ -28,15 +28,16 @@
       <div class="view-mode-switcher">
         <button id="viewModeCard" class="view-mode-btn active" data-mode="card">カード表示</button>
         <button id="viewModeList" class="view-mode-btn" data-mode="list">リスト表示</button>
-     
- </div>
+
+
+      </div>
     </div>
     <ul id="prizeCardListContainer" class="prize-card-list"></ul>
     <div id="prizeListModeContainer" style="display: none;"></div>
   </div>
   <div class="settings-section">
     <h4>3.
-公開設定</h4>
+      公開設定</h4>
     <p>参加者が参加枠を選ぶ画面で、どこまで景品情報を表示するか設定します。</p>
     <div class="input-group checkbox-group">
       <input type="checkbox" id="displayPrizeName" checked />
@@ -53,7 +54,7 @@
   </div>
   <div class="settings-section">
     <h4>4.
-インタラクティブ設定</h4>
+      インタラクティブ設定</h4>
     <div class="input-group checkbox-group">
       <input type="checkbox" id="allowDoodleModeCheckbox" />
       <label for="allowDoodleModeCheckbox">落書きモードを許可する</label>
@@ -65,7 +66,8 @@
   </div>
 
   <div class="settings-section" id="finalPrepSection" style="display: none;">
-    <h4>5. 最終準備と配信</h4>
+    <h4>5.
+      最終準備と配信</h4>
     <div class="final-prep-content-wrapper">
       <div class="final-prep-overlay" style="display: none;">
         <button id="saveForPreviewButton" class="primary-action">変更を保存してプレビューを更新</button>

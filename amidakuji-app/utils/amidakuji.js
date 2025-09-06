@@ -1,6 +1,7 @@
 // amidakuji-app/utils/amidakuji.js
 
-function generateLines(numParticipants, existingLines = []) { // ★ 修正点: 第2引数 existingLines を追加
+function generateLines(numParticipants, existingLines = []) {
+  // ★ 修正点: 第2引数 existingLines を追加
   const lines = [];
   const horizontalLines = Math.floor(numParticipants * 2.5);
   const topMargin = 70;
@@ -55,8 +56,9 @@ function calculateResults(participants, lines, prizes, doodles = []) {
     });
     const participant = participants.find((p) => p.slot === i);
     if (participant && participant.name) {
+      const prize = prizes[currentPath];
       results[participant.name] = {
-        prize: prizes[currentPath],
+        prize: {...prize, rank: prize.rank || 'uncommon'},
         prizeIndex: currentPath,
         color: participant.color,
       };

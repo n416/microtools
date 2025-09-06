@@ -1,3 +1,5 @@
+// amidakuji-app/scss/_components_cards.scss
+
 .slot {
   padding: 20px;
   border-radius: 8px;
@@ -147,3 +149,16 @@
 .prize-master-item.selectable.selected {
     background-color: rgba(var(--primary-color-rgb, 13, 132, 255), 0.2);
   }
+.prize-rank-selector {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.prize-rank-selector .lucide-star {
+  cursor: pointer;
+  color: grey;
+}
+.prize-rank-selector .lucide-star.filled {
+  fill: gold;
+  color: gold;
+}
