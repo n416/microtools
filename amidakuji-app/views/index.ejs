@@ -12,7 +12,8 @@
   <meta name="robots" content="noindex" />
   <% } %>
   <title>ダイナミックあみだくじ</title>
-  <link rel="stylesheet" href="/style.css" />
+  <%# ▼▼▼ [修正点] タイムスタンプをバージョン番号変数に置き換え ▼▼▼ %>
+  <link rel="stylesheet" href="/style.css?v=<%= appVersion %>" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
 </head>
 
@@ -26,9 +27,7 @@
       <h2>認証エラー</h2>
       <p><%= error.message %></p>
       <div class="error-actions">
-        <%# ▼▼▼ ここから修正 ▼▼▼ %>
         <a href="/auth/google" class="button primary-action" onclick="return confirm('このページは運営者専用です。運営者としてログインしますか？');">運営者としてGoogleでログイン</a>
-        <%# ▲▲▲ ここまで修正 ▲▲▲ %>
         <a href="/" class="button">トップページへ戻る</a>
       </div>
     </div>
@@ -105,9 +104,7 @@
         </div>
       </div>
       <div class="auth-controls">
-        <%# ▼▼▼ ここから修正 ▼▼▼ %>
         <button id="loginButton">運営者ログイン</button>
-        <%# ▲▲▲ ここまで修正 ▲▲▲ %>
       </div>
     </div>
   </header>
@@ -188,11 +185,12 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="/js/tutorial/tutorialData.js"></script>
-  <script src="/js/tutorial/tutorialUtils.js"></script>
-  <script src="/js/tutorial/tutorialManager.js"></script>
-  <script src="/js/tutorial/tutorialList.js"></script>
-  <script type="module" src="/js/main.js"></script>
+  <%# ▼▼▼ [修正点] すべてのローカルJSファイルにバージョン番号変数を追加 ▼▼▼ %>
+  <script src="/js/tutorial/tutorialData.js?v=<%= appVersion %>"></script>
+  <script src="/js/tutorial/tutorialUtils.js?v=<%= appVersion %>"></script>
+  <script src="/js/tutorial/tutorialManager.js?v=<%= appVersion %>"></script>
+  <script src="/js/tutorial/tutorialList.js?v=<%= appVersion %>"></script>
+  <script type="module" src="/js/main.js?v=<%= appVersion %>"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="https://unpkg.com/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
