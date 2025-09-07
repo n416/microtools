@@ -48,6 +48,19 @@ export function showToast(message, duration = 3000) {
 
 export function initUI() {
   elements = {
+    // ▼▼▼ 修正箇所 ▼▼▼
+    headerContainer: document.getElementById('header-container'),
+    participantHeader: document.getElementById('participantHeader'),
+    participantHeaderLoggedIn: document.getElementById('participant-header-logged-in'),
+    participantHeaderLoggedOut: document.getElementById('participant-header-logged-out'),
+    participantWelcomeMessage: document.getElementById('participantWelcomeMessage'),
+    // ▼▼▼ 以下4行を追加 ▼▼▼
+    participantDashboardButtonLoggedOut: document.getElementById('participantDashboardButtonLoggedOut'),
+    participantLoginButton: document.getElementById('participantLoginButton'),
+    participantDashboardButton: document.getElementById('participantDashboardButton'),
+    participantProfileButton: document.getElementById('participantProfileButton'),
+    headerParticipantLogoutButton: document.getElementById('headerParticipantLogoutButton'),
+    // ▲▲▲ 修正箇所 ▲▲▲
     mainHeader: document.querySelector('.main-header'),
     impersonationBanner: document.querySelector('.impersonation-banner'),
     loginButton: document.getElementById('loginButton'),
@@ -173,17 +186,12 @@ export function initUI() {
   }
 }
 
-// ▼▼▼ ここから修正 ▼▼▼
 const ALL_VIEWS = ['landingView', 'groupDashboard', 'dashboardView', 'memberManagementView', 'eventEditView', 'broadcastView', 'participantView', 'adminDashboard', 'groupEventListView', 'staticAmidaView', 'tutorialListView'];
-// ▲▲▲ ここまで修正 ▲▲▲
 
 export function adjustBodyPadding() {
   let totalOffset = 0;
-  if (elements.mainHeader && elements.mainHeader.classList.contains('visible')) {
-    totalOffset += elements.mainHeader.offsetHeight;
-  }
-  if (elements.impersonationBanner && getComputedStyle(elements.impersonationBanner).display !== 'none') {
-    totalOffset += elements.impersonationBanner.offsetHeight;
+  if (elements.headerContainer && getComputedStyle(elements.headerContainer).position === 'fixed') {
+    totalOffset = elements.headerContainer.offsetHeight;
   }
   document.body.style.paddingTop = `${totalOffset}px`;
 }
@@ -197,6 +205,24 @@ export function setMainHeaderVisibility(visible) {
     }
   }
   adjustBodyPadding();
+}
+
+export function setParticipantHeaderVisibility(visible) {
+  if (elements.participantHeader) {
+    elements.participantHeader.style.display = visible ? 'flex' : 'none';
+  }
+  adjustBodyPadding();
+}
+
+export function updateParticipantHeader(participant) {
+  if (participant && participant.name) {
+    elements.participantHeaderLoggedIn.style.display = 'flex';
+    elements.participantHeaderLoggedOut.style.display = 'none';
+    elements.participantWelcomeMessage.textContent = `ようこそ、${participant.name} さん`;
+  } else {
+    elements.participantHeaderLoggedIn.style.display = 'none';
+    elements.participantHeaderLoggedOut.style.display = 'flex';
+  }
 }
 
 export function showView(viewToShowId) {
@@ -266,7 +292,6 @@ export function updateTutorialDropdown() {
   }
 }
 
-// ▼▼▼ ここから修正 ▼▼▼
 export function updateGroupSwitcher() {
   const groupSwitcherContainer = document.querySelector('.group-switcher-container');
   if (!groupSwitcherContainer || !elements.currentGroupName || !elements.switcherGroupList) return;
@@ -307,7 +332,6 @@ export function updateGroupSwitcher() {
     elements.switcherGroupList.innerHTML = '';
   }
 }
-// ▲▲▲ ここまで修正 ▲▲▲
 
 export function openSettingsModal(group, handlers) {
   if (!elements.groupSettingsModal) return;
@@ -341,8 +365,6 @@ export function openPrizeMasterModal(handlers) {
     placeholder.style.display = 'flex';
   }
 
-  // ▼▼▼ ここから修正 ▼▼▼
-  // 星評価をデフォルト値（uncommon）にリセットする
   const rankSelector = elements.prizeMasterModal.querySelector('.prize-rank-selector');
   const defaultRank = 'uncommon';
   rankSelector.dataset.rank = defaultRank;
@@ -356,7 +378,6 @@ export function openPrizeMasterModal(handlers) {
       star.classList.remove('filled');
     }
   });
-  // ▲▲▲ ここまで修正 ▲▲▲
 
   elements.addMasterPrizeButton.onclick = handlers.onAddMaster;
   elements.prizeMasterList.onclick = (e) => {

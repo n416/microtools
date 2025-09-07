@@ -1,0 +1,70 @@
+// amidakuji-app/scss/_participant_header.scss
+
+.participant-header {
+  background-color: var(--participant-header-bg);
+  border-bottom: 1px solid var(--participant-header-border);
+  border-top: 1px solid var(--participant-header-border);
+  padding: 0.5rem 1rem;
+  box-sizing: border-box;
+
+  .header-content-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  #participant-header-logged-in, #participant-header-logged-out {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #participant-header-logged-out {
+    justify-content: flex-end;
+  }
+
+  #participantWelcomeMessage {
+    font-weight: 500;
+    color: var(--text-color);
+    margin-right: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .participant-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    button {
+      padding: 6px 12px;
+      font-size: 14px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.5rem;
+
+    .header-content-wrapper, #participant-header-logged-in {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+
+    #participantWelcomeMessage {
+      text-align: center;
+      margin-right: 0;
+    }
+
+    .participant-header-actions {
+      justify-content: center;
+    }
+  }
+}
