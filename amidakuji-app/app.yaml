@@ -6,15 +6,20 @@ inbound_services:
   - warmup
 
 handlers:
-  # 修正点：APIへのリクエストは、すべてアプリケーションで処理するように明示します。
+  # /js/ 以下のすべてのリクエストを静的ファイルとして扱う
+  - url: /js/(.*)
+    static_files: public/js/\1
+    upload: public/js/(.*)
+
+  # CSSや他の静的ファイルも同様の記述が確実です
+  - url: /(.*\.(css|png|gif|svg))$
+    static_files: public/\1
+    upload: public/.*\.(css|png|gif|svg)$
+
+  # APIへのリクエストは、すべてアプリケーションで処理するように明示します。
   - url: /api/.*
     script: auto
     secure: always
-
-  # API以外の.pngなどの静的ファイルリクエストを処理します。
-  - url: /(.*\.(css|js|png|gif|svg))$
-    static_files: public/\1
-    upload: public/.*\.(css|js|png|gif|svg)$
 
   - url: /_ah/warmup
     script: auto
