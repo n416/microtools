@@ -198,8 +198,8 @@ export function initBroadcast() {
         elements.toggleFullscreenButton.textContent = isMaximized ? '元のサイズに戻す' : '表示エリアを最大化';
 
         setTimeout(() => {
-          const hidePrizes = state.currentLotteryData?.displayMode === 'private';
-          prepareStepAnimation(elements.adminCanvas.getContext('2d'), hidePrizes, false, true);
+          const hidePrizes = state.currentLotteryData?.status !== 'started';
+          prepareStepAnimation(adminCanvas.getContext('2d'), hidePrizes, false, true);
           renderBroadcastResults();
         }, 300);
       }

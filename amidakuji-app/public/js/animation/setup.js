@@ -110,8 +110,8 @@ export function handleResize() {
 
   if (adminCanvas && adminCanvas.offsetParent !== null) {
     console.log('[Animation] Redrawing admin canvas for resize.');
-    const hidePrizes = state.currentLotteryData?.displayMode === 'private';
-    prepareStepAnimation(adminCanvas.getContext('2d'), hidePrizes, false, true);
+    const hidePrizes = state.currentLotteryData?.status !== 'started';
+    prepareStepAnimation(elements.adminCanvas.getContext('2d'), hidePrizes, false, true);
   } else if (participantCanvas && participantCanvas.offsetParent !== null) {
     console.log('[Animation] Redrawing participant canvas for resize.');
     const hidePrizes = state.currentLotteryData?.displayMode === 'private' && state.currentLotteryData?.status !== 'started';
