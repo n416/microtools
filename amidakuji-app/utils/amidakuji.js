@@ -6,6 +6,7 @@ function generateLines(numParticipants, existingLines = []) {
   const horizontalLines = Math.floor(numParticipants * 2.5);
   const topMargin = 70;
   const bottomMargin = 330;
+  const padding = 5; // 上下のマージンを5pxに設定
   const drawableHeight = bottomMargin - topMargin;
 
   let attempts = 0;
@@ -15,7 +16,7 @@ function generateLines(numParticipants, existingLines = []) {
     attempts++;
     const startNode = Math.floor(Math.random() * (numParticipants - 1));
     const endNode = startNode + 1;
-    const y = Math.floor(Math.random() * drawableHeight) + topMargin;
+    const y = Math.floor(Math.random() * drawableHeight) + topMargin + padding * 2;
     // ▼▼▼ ここから修正 ▼▼▼
     // チェック対象に、既に生成済みの線と、引数で渡された既存の線（落書き）の両方を含める
     const allCurrentLines = [...lines, ...existingLines];
