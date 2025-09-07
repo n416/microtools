@@ -6,10 +6,8 @@
 :root {
   --primary-color: #007bff;
   --primary-hover-color: #0056b3;
-  /* ▼▼▼ ここから修正 ▼▼▼ */
-  --danger-color: #d9534f; /* 少し落ち着いた赤に変更 */
-  --danger-hover-color: #c9302c; /* hover色も調整 */
-  /* ▲▲▲ ここまで修正 ▲▲▲ */
+  --danger-color: #d9534f; 
+  --danger-hover-color: #c9302c;
   --light-bg-color: #f4f7f6;
   --white-color: #fff;
   --white-color-rgb: 255, 255, 255;
@@ -17,14 +15,18 @@
   --border-color: #ddd;
   --shadow-color: rgba(0, 0, 0, 0.08);
   --full-color: #ba0000;
-  --admin-color: #f0ad4e; /* 少し落ち着いたオレンジに変更 */
-  /* ▲▲▲ ここまで修正 ▲▲▲ */
+  --admin-color: #f0ad4e;
   --approve-color: #28a745;
   --approve-hover-color: #218838;
   --notification-bg-color: #fffbe6;
   --notification-border-color: #ffe58f;
   --notification-text-color: #8a6d3b;
   --lucide-stroke-width: 1;
+
+  /* ▼▼▼ 以下を追記 ▼▼▼ */
+  --participant-header-bg: #f8f9fa;
+  --participant-header-border: #e7e7e7;
+  /* ▲▲▲ ここまで ▲▲▲ */
 }
 
 body {
@@ -267,85 +269,17 @@ body.dark-mode {
   --light-bg-color: #121212;
   --white-color: #1e1e1e;
   --text-color: #dcdcdc;
-  --white-color-rgb: 30, 30, 30; /* <--- 追加 */
+  --white-color-rgb: 30, 30, 30; 
   --border-color: #444;
   --shadow-color: rgba(255, 255, 255, 0.08);
   --notification-bg-color: #001933;
   --notification-border-color: #665600;
-  --notification-text-color: #f0e68c
-}
+  --notification-text-color: #f0e68c;
 
-.url-preview code {
-    background-color: #333;
-    color: #e0e0e0;
-  }
-
-a,
-  a:link,
-  #backToGroupEventListLink {
-    color: var(--primary-color);
-  }
-
-body.dark-mode .view-mode-switcher {
-  background-color: #343a40;
-}
-
-body.dark-mode .view-mode-btn {
-  color: #adb5bd !important;
-}
-
-body.dark-mode .view-mode-btn.active {
-  color: #fff !important;
-}
-
-body.light-mode .input-group.checkbox-group label::before {
-  background-color: var(--white-color);
-}
-
-body.dark-mode .input-group.checkbox-group label::before {
-  background-color: #333;
-}
-
-.broadcast-sidebar h4 {
-  margin: 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-color);
-  text-align: center;
-  font-size: 16px;
-}
-
-.display-preview .item-list li {
-  background-color: #fff;
-  padding: 8px 12px;
-  font-size: 14px;
-}
-
-.display-preview ul {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.display-preview li {
-  background-color: var(--white-color);
-  padding: 8px 16px;
-  border-radius: 20px;
-  box-shadow: 0 1px 3px var(--shadow-color); /* 影を少し調整 */
-  font-weight: bold;
-  font-size: 14px;
-}
-
-body.dark-mode .display-preview {
-  background-color: rgba(255, 255, 255, 0.05); /* ダークモード用の背景色 */
-}
-
-body.dark-mode .display-preview li {
-  background-color: #3a3a3a; /* 背景を少し明るいグレーに */
-  border: 1px solid #555; /* 輪郭を明確にするための枠線を追加 */
+  /* ▼▼▼ 以下を追記 ▼▼▼ */
+  --participant-header-bg: #2a2a2a;
+  --participant-header-border: #383838;
+  /* ▲▲▲ ここまで ▲▲▲ */
 }
 
 body.dark-mode .cropper-container {

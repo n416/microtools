@@ -216,16 +216,40 @@ async function handleRouting(initialData) {
   const user = await api.checkGoogleAuthState().catch(() => null);
   state.setCurrentUser(user);
 
-  const publicRoutesToHideHeader = ['/g/', '/share/', '/events/'];
-  const isPublicPage = publicRoutesToHideHeader.some((route) => path.startsWith(route));
+  // --- ▼▼▼ ロジック ▼▼▼ ---
 
-  if (!user && (isPublicPage || path.startsWith('/groups/'))) {
-    ui.setMainHeaderVisibility(false);
+  const isAdminPage = path.startsWith('/admin/');
+  const isParticipantPage = (path.startsWith('/g/') || path.startsWith('/groups/')) && !isAdminPage;
+
+  // 1. 【参加者ヘッダーの表示制御】 参加者ページかどうかだけで判断
+  if (isParticipantPage) {
+    ui.setParticipantHeaderVisibility(true);
+    state.loadParticipantState();
+    ui.updateParticipantHeader({name: state.currentParticipantName});
   } else {
+    ui.setParticipantHeaderVisibility(false);
+  }
+
+  // 2. 【管理者ヘッダーの表示制御】 管理者としてログインしているかどうか、または管理者向けページかどうかで判断
+  if (user) {
+    // ログインしている場合は、管理者ヘッダーを常に表示
     ui.setMainHeaderVisibility(true);
     ui.updateAuthUI(user);
     ui.updateTutorialDropdown();
+  } else {
+    // 未ログイン時は、従来のロジックで表示・非表示を決定
+    const publicRoutesToHideHeader = ['/g/', '/share/', '/events/', '/groups/'];
+    const isPublicPageForAdminHeader = publicRoutesToHideHeader.some((route) => path.startsWith(route));
+
+    if (isPublicPageForAdminHeader) {
+      ui.setMainHeaderVisibility(false);
+    } else {
+      ui.setMainHeaderVisibility(true);
+      ui.updateAuthUI(null);
+    }
   }
+
+  // --- ▲▲▲ ロジックここまで ▲▲▲ ---
 
   state.loadParticipantState();
 

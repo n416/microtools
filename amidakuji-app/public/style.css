@@ -7,10 +7,8 @@
 :root {
   --primary-color: #007bff;
   --primary-hover-color: #0056b3;
-  /* ▼▼▼ ここから修正 ▼▼▼ */
-  --danger-color: #d9534f; /* 少し落ち着いた赤に変更 */
-  --danger-hover-color: #c9302c; /* hover色も調整 */
-  /* ▲▲▲ ここまで修正 ▲▲▲ */
+  --danger-color: #d9534f;
+  --danger-hover-color: #c9302c;
   --light-bg-color: #f4f7f6;
   --white-color: #fff;
   --white-color-rgb: 255, 255, 255;
@@ -18,14 +16,17 @@
   --border-color: #ddd;
   --shadow-color: rgba(0, 0, 0, 0.08);
   --full-color: #ba0000;
-  --admin-color: #f0ad4e; /* 少し落ち着いたオレンジに変更 */
-  /* ▲▲▲ ここまで修正 ▲▲▲ */
+  --admin-color: #f0ad4e;
   --approve-color: #28a745;
   --approve-hover-color: #218838;
   --notification-bg-color: #fffbe6;
   --notification-border-color: #ffe58f;
   --notification-text-color: #8a6d3b;
   --lucide-stroke-width: 1;
+  /* ▼▼▼ 以下を追記 ▼▼▼ */
+  --participant-header-bg: #f8f9fa;
+  --participant-header-border: #e7e7e7;
+  /* ▲▲▲ ここまで ▲▲▲ */
 }
 
 body {
@@ -260,85 +261,16 @@ body.dark-mode {
   --light-bg-color: #121212;
   --white-color: #1e1e1e;
   --text-color: #dcdcdc;
-  --white-color-rgb: 30, 30, 30; /* <--- 追加 */
+  --white-color-rgb: 30, 30, 30;
   --border-color: #444;
   --shadow-color: rgba(255, 255, 255, 0.08);
   --notification-bg-color: #001933;
   --notification-border-color: #665600;
-  --notification-text-color: #f0e68c ;
-}
-
-.url-preview code {
-  background-color: #333;
-  color: #e0e0e0;
-}
-
-a,
-a:link,
-#backToGroupEventListLink {
-  color: var(--primary-color);
-}
-
-body.dark-mode .view-mode-switcher {
-  background-color: #343a40;
-}
-
-body.dark-mode .view-mode-btn {
-  color: #adb5bd !important;
-}
-
-body.dark-mode .view-mode-btn.active {
-  color: #fff !important;
-}
-
-body.light-mode .input-group.checkbox-group label::before {
-  background-color: var(--white-color);
-}
-
-body.dark-mode .input-group.checkbox-group label::before {
-  background-color: #333;
-}
-
-.broadcast-sidebar h4 {
-  margin: 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-color);
-  text-align: center;
-  font-size: 16px;
-}
-
-.display-preview .item-list li {
-  background-color: #fff;
-  padding: 8px 12px;
-  font-size: 14px;
-}
-
-.display-preview ul {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.display-preview li {
-  background-color: var(--white-color);
-  padding: 8px 16px;
-  border-radius: 20px;
-  box-shadow: 0 1px 3px var(--shadow-color); /* 影を少し調整 */
-  font-weight: bold;
-  font-size: 14px;
-}
-
-body.dark-mode .display-preview {
-  background-color: rgba(255, 255, 255, 0.05); /* ダークモード用の背景色 */
-}
-
-body.dark-mode .display-preview li {
-  background-color: #3a3a3a; /* 背景を少し明るいグレーに */
-  border: 1px solid #555; /* 輪郭を明確にするための枠線を追加 */
+  --notification-text-color: #f0e68c;
+  /* ▼▼▼ 以下を追記 ▼▼▼ */
+  --participant-header-bg: #2a2a2a;
+  --participant-header-border: #383838;
+  /* ▲▲▲ ここまで ▲▲▲ */
 }
 
 body.dark-mode .cropper-container {
@@ -349,16 +281,21 @@ body.dark-mode #adminControls #glimpseButton {
   background-color: rgba(var(--white-color-rgb, 30, 30, 30), 0.7);
 }
 
+#header-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
 .impersonation-banner {
+  position: relative;
   background-color: var(--admin-color);
   color: #333;
   text-align: center;
   padding: 10px;
   font-weight: bold;
-  position: fixed;
-  top: 60px; /* Below main header */
-  width: 100%;
-  z-index: 1001;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
@@ -376,16 +313,30 @@ body.dark-mode #adminControls #glimpseButton {
   padding: 10px 10px 8px;
   background-color: var(--white-color);
   box-shadow: 0 2px 5px var(--shadow-color);
-  width: 100%;
   box-sizing: border-box;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1000;
+  width: 100%;
 }
 
 .main-header.visible {
   display: flex;
+}
+
+.participant-header {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: var(--white-color);
+  box-shadow: 0 2px 5px var(--shadow-color);
+  color: var(--text-color);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.participant-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
 .auth-controls {
@@ -413,15 +364,15 @@ body.dark-mode #adminControls #glimpseButton {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100vh; /* 画面全体の高さに */
-    background-color: rgba(var(--white-color-rgb), 0.85); /* 半透明の背景 */
-    backdrop-filter: blur(10px); /* 背景をぼかす */
+    height: 100vh;
+    background-color: rgba(var(--white-color-rgb), 0.85);
+    backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     z-index: 1005;
     flex-direction: column;
-    justify-content: flex-start; /* 上から配置 */
+    justify-content: flex-start;
     align-items: center;
-    padding-top: 80px; /* ヘッダーの高さ分、下にずらす */
+    padding-top: 80px;
     gap: 20px;
   }
   #nav-menu .header-dropdown .dropdown-content {
@@ -566,7 +517,7 @@ body.dark-mode #adminControls #glimpseButton {
 .canvas-panzoom-container {
   flex-grow: 1;
   position: relative;
-  min-width: 0; /* flexアイテムが縮小できるようにする */
+  min-width: 0;
 }
 
 @media (min-width: 1221px) {
@@ -598,6 +549,67 @@ body.dark-mode #adminControls #glimpseButton {
   border: 1px solid var(--border-color);
   padding: 20px;
   border-radius: 8px;
+}
+
+.participant-header {
+  background-color: var(--participant-header-bg);
+  border-bottom: 1px solid var(--participant-header-border);
+  border-top: 1px solid var(--participant-header-border);
+  padding: 0.5rem 1rem;
+  box-sizing: border-box;
+}
+.participant-header .header-content-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.participant-header #participant-header-logged-in, .participant-header #participant-header-logged-out {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.participant-header #participant-header-logged-out {
+  justify-content: flex-end;
+}
+.participant-header #participantWelcomeMessage {
+  font-weight: 500;
+  color: var(--text-color);
+  margin-right: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.participant-header .participant-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.participant-header .participant-header-actions button {
+  padding: 6px 12px;
+  font-size: 14px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+@media (max-width: 768px) {
+  .participant-header {
+    padding: 0.5rem;
+  }
+  .participant-header .header-content-wrapper, .participant-header #participant-header-logged-in {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .participant-header #participantWelcomeMessage {
+    text-align: center;
+    margin-right: 0;
+  }
+  .participant-header .participant-header-actions {
+    justify-content: center;
+  }
 }
 
 #adminDashboardButton {
