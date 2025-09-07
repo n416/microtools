@@ -67,7 +67,7 @@ export function calculatePath(startIdx, allLines, numParticipants, containerWidt
   sortedLines.forEach((line) => {
     if (sourceLineRange <= 0) return;
     const lineY = lineTopY + ((line.y - 70) / sourceLineRange) * amidaDrawableHeight;
-    if (lineY > currentY) {
+    if (lineY >= currentY) {
       if (line.fromIndex === currentPathIdx) {
         path.push({x: currentX, y: lineY});
         currentPathIdx = line.toIndex;
