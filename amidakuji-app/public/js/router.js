@@ -9,7 +9,7 @@ import {renderMemberList} from './components/memberManagement.js';
 import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
 import {loadAdminDashboardData} from './components/adminDashboard.js';
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
-import { db } from './firebase.js'; // ★★★ この行を修正 ★★★
+import {db} from './firebase.js'; // ★★★ この行を修正 ★★★
 import {clearAnimationState} from './animation/core.js';
 
 export async function handleLoginOrRegister(eventId, name, memberId = null) {
@@ -180,11 +180,10 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
       if (adminControls) adminControls.style.display = isPending ? 'flex' : 'none';
       if (openSidebarButton) openSidebarButton.style.display = isPending ? 'none' : 'flex';
 
-      const hidePrizes = true;
+      const hidePrizes = data.status !== 'started';
       const ctx = adminCanvas.getContext('2d');
       await prepareStepAnimation(ctx, hidePrizes);
     }
-
   } catch (error) {
     console.error('イベントの読み込み中にAPIエラーが発生しました:', error);
     alert(error.error || 'イベントの読み込みに失敗しました。');
