@@ -3,7 +3,7 @@
 function generateLines(numParticipants, existingLines = []) {
   // ★ 修正点: 第2引数 existingLines を追加
   const lines = [];
-  const horizontalLines = Math.floor(numParticipants * 2.5);
+  const horizontalLines = Math.floor(numParticipants * 1.8);
   const topMargin = 70;
   const bottomMargin = 330;
   const padding = 5; // 上下のマージンを5pxに設定
