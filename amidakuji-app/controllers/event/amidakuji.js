@@ -57,9 +57,9 @@ exports.regenerateLines = async (req, res) => {
       return res.status(400).json({error: '開始済みのイベントのあみだくじは変更できません。'});
     }
 
-    const newLines = generateLines(eventData.participantCount);
-    const doodlesForCalculation = deleteDoodles ? [] : eventData.doodles;
-    const newResults = calculateResults(eventData.participants, newLines, eventData.prizes, doodlesForCalculation);
+    const doodlesToPreserve = deleteDoodles ? [] : eventData.doodles || [];
+    const newLines = generateLines(eventData.participantCount, doodlesToPreserve);
+    const newResults = calculateResults(eventData.participants, newLines, eventData.prizes, doodlesToPreserve);
 
     const updatePayload = {
       lines: newLines,

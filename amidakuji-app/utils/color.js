@@ -38,7 +38,7 @@ function hslToHex(h, s, l) {
     b = 0;
   if (0 <= h && h < 60) {
     [r, g, b] = [c, x, 0];
-  } else if (60 <= h && h < 180) {
+  } else if (60 <= h && h < 120) {
     [r, g, b] = [x, c, 0];
   } else if (120 <= h && h < 180) {
     [r, g, b] = [0, c, x];
