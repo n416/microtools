@@ -816,7 +816,6 @@ export function initEventEdit() {
     }
     if (elements.createEventButton) {
       elements.createEventButton.addEventListener('click', async () => {
-        console.log('[DEBUG] Create event button clicked.');
         const participantCount = state.prizes.length;
         if (participantCount < 2) return alert('景品は2つ以上設定してください。');
 
@@ -824,7 +823,6 @@ export function initEventEdit() {
         elements.createEventButton.textContent = 'イベント作成中...';
 
         try {
-          console.log('[DEBUG] Step 1: Creating event without images...');
           const initialEventData = {
             eventName: elements.eventNameInput.value.trim(),
             prizes: state.prizes.map((p) => ({name: p.name, imageUrl: null, rank: p.rank || 'uncommon'})),
@@ -836,9 +834,7 @@ export function initEventEdit() {
           const newEvent = await api.createEvent(initialEventData);
           const eventId = newEvent.id;
           state.setCurrentEventId(eventId);
-          console.log(`[DEBUG] Step 1 SUCCESS. Event created with ID: ${eventId}`);
 
-          console.log('[DEBUG] Step 2: Preparing image uploads...');
           const fileUploadPromises = state.prizes.map(async (prize) => {
             if (prize.newImageFile) {
               const buffer = await prize.newImageFile.arrayBuffer();
@@ -864,7 +860,6 @@ export function initEventEdit() {
             console.log(`[DEBUG] File upload SUCCESS. URL: ${imageUrl}`);
           }
 
-          console.log('[DEBUG] Step 3: Creating final prize list with image URLs...');
           const finalPrizes = await Promise.all(
             state.prizes.map(async (prize) => {
               if (prize.newImageFile) {
@@ -877,9 +872,7 @@ export function initEventEdit() {
               return {name: prize.name, imageUrl: prize.imageUrl, rank: prize.rank || 'uncommon'};
             })
           );
-          console.log('[DEBUG] Step 3 SUCCESS. Final prize list:', finalPrizes);
 
-          console.log('[DEBUG] Step 4: Updating event with final data...');
           const finalEventData = {
             eventName: elements.eventNameInput.value.trim(),
             prizes: finalPrizes,
@@ -888,24 +881,16 @@ export function initEventEdit() {
             allowDoodleMode: document.getElementById('allowDoodleModeCheckbox').checked,
           };
           await api.updateEvent(eventId, finalEventData);
-          console.log('[DEBUG] Step 4 SUCCESS. Event updated.');
 
-          // ▼▼▼ ここからログ追加 ▼▼▼
-          console.log('[DEBUG] Step 5: Updating UI with new event URL...');
           const parentGroup = state.allUserGroups.find((g) => g.id === state.currentGroupId);
-          console.log(`[DEBUG] Parent group found:`, parentGroup);
 
           const url = parentGroup && parentGroup.customUrl ? `${window.location.origin}/g/${parentGroup.customUrl}/${eventId}` : `${window.location.origin}/events/${eventId}`;
-          console.log(`[DEBUG] Generated URL: ${url}`);
 
           if (ui.elements.currentEventUrl) {
-            console.log('[DEBUG] currentEventUrl element FOUND. Updating text and href.');
             ui.elements.currentEventUrl.textContent = url;
             ui.elements.currentEventUrl.href = url;
           } else {
-            console.error('[DEBUG] currentEventUrl element NOT FOUND.');
           }
-          // ▲▲▲ ここまでログ追加 ▲▲▲
 
           elements.createEventButtonContainer.style.transition = 'opacity 0.5s';
           elements.createEventButtonContainer.style.opacity = '0';
@@ -918,7 +903,6 @@ export function initEventEdit() {
 
           history.pushState(null, '', `/admin/event/${eventId}/edit`);
         } catch (error) {
-          console.error('[DEBUG] Event creation FAILED.', error);
           alert(error.error || 'イベントの作成に失敗しました。');
         } finally {
           elements.createEventButton.disabled = false;

@@ -42,7 +42,6 @@ function setBroadcastControlsDisabled(disabled) {
 }
 
 /** リアルタイム結果リストを描画・更新する関数 */
-/** リアルタイム結果リストを描画・更新する関数 */
 function renderBroadcastResults() {
   const container = elements.adminCanvas.closest('.canvas-panzoom-container');
 
