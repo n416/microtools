@@ -5,6 +5,7 @@ const {ensureAuthenticated, isSystemAdmin} = require('../middleware/auth');
 const router = express.Router();
 const fetch = require('node-fetch');
 const ogpController = require('../controllers/ogpController'); // ★ 新規追加
+const path = require('path'); // この行を追加
 
 // Avatar proxy (APIルートなので先頭に配置)
 router.get('/api/avatar-proxy', async (req, res) => {
@@ -254,16 +255,6 @@ router.get('/admin', ensureAuthenticated, isSystemAdmin, (req, res) => {
 });
 router.get('/admin-request', ensureAuthenticated, (req, res) => {
   res.render('index', {user: req.user, ogpData: {}, noIndex: true});
-});
-
-router.get('*', (req, res) => {
-  res.render('index', {
-    user: req.user,
-    ogpData: {},
-    noIndex: true,
-    groupData: null,
-    eventData: null,
-  });
 });
 
 module.exports = router;

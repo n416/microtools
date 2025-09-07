@@ -9,7 +9,7 @@ import {renderMemberList} from './components/memberManagement.js';
 import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
 import {loadAdminDashboardData} from './components/adminDashboard.js';
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
-import {db} from './main.js';
+import { db } from './firebase.js'; // ★★★ この行を修正 ★★★
 import {clearAnimationState} from './animation/core.js';
 
 export async function handleLoginOrRegister(eventId, name, memberId = null) {
