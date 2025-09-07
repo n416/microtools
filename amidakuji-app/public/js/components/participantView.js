@@ -8,7 +8,7 @@ import {participantPanzoom} from '../animation/setup.js';
 import * as ui from '../ui.js';
 import {clientEmojiToLucide} from '../ui.js';
 import {addFirestoreListener} from '../state.js';
-import {db} from '../main.js';
+import { db } from '../firebase.js'; // ★★★ この行を修正 ★★★
 import {processImage} from '../imageProcessor.js';
 
 let processedProfileIconFile = null;

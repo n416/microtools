@@ -4,7 +4,7 @@ import * as router from '../router.js';
 import * as ui from '../ui.js';
 import {processImage} from '../imageProcessor.js';
 import {prepareStepAnimation} from '../animation.js';
-import {db} from '../main.js';
+import { db } from '../firebase.js'; // ★★★ この行を修正 ★★★
 import {addFirestoreListener, clearAllFirestoreListeners} from '../state.js';
 
 const elements = {

@@ -11,8 +11,6 @@ import * as router from './router.js';
 import {initParticipantView} from './components/participantView.js';
 import {initBroadcast} from './components/broadcast.js';
 
-export const db = firebase.firestore();
-
 const settings = {
   animation: true,
   theme: 'auto',
@@ -593,21 +591,44 @@ function applySettings() {
   }
 }
 function setupSettingsControls() {
+  // ▼▼▼ ここからログを追加 ▼▼▼
+
+  console.log('[DEBUG] setupSettingsControls: 関数が呼び出されました。');
+
   const fab = document.getElementById('settingsFab');
+
   const panel = document.getElementById('settingsPanel');
+
+  console.log('[DEBUG] setupSettingsControls: fab要素:', fab);
+
+  console.log('[DEBUG] setupSettingsControls: panel要素:', panel); // ▲▲▲ ここまでログを追加 ▲▲▲
+
   const animationToggle = document.getElementById('animationToggle');
+
   const themeRadios = document.querySelectorAll('input[name="theme"]');
 
-  if (!fab || !panel) return;
+  if (!fab || !panel) {
+    // ▼▼▼ ログを追加 ▼▼▼
+
+    console.error('[DEBUG] setupSettingsControls: fabまたはpanel要素が見つからないため、処理を中断します。'); // ▲▲▲ ここまでログを追加 ▲▲▲
+
+    return;
+  }
 
   fab.addEventListener('click', () => {
+    // ▼▼▼ ログを追加 ▼▼▼
+
+    console.log('[DEBUG] settingsFab: クリックイベントが発火しました。'); // ▲▲▲ ここまでログを追加 ▲▲▲
+
     panel.classList.toggle('visible');
+
     fab.classList.toggle('active');
   });
 
   document.addEventListener('click', (e) => {
     if (!panel.contains(e.target) && !fab.contains(e.target)) {
       panel.classList.remove('visible');
+
       fab.classList.remove('active');
     }
   });
@@ -615,11 +636,16 @@ function setupSettingsControls() {
   if (animationToggle) {
     animationToggle.addEventListener('change', () => {
       settings.animation = animationToggle.checked;
+
       saveSettings();
+
       const canvasContainer = document.getElementById('canvas-container');
+
       if (settings.animation) {
         canvasContainer.style.display = 'block';
+
         tronAnimationAPI = initTronAnimation();
+
         tronAnimationAPI.setTheme(settings.theme);
       } else {
         canvasContainer.style.display = 'none';
@@ -630,8 +656,11 @@ function setupSettingsControls() {
   themeRadios.forEach((radio) => {
     radio.addEventListener('change', () => {
       let storedState = null;
+
       let panzoomInstance = null;
+
       const adminCanvas = document.getElementById('adminCanvas');
+
       const participantCanvas = document.getElementById('participantCanvas');
 
       if (adminCanvas && adminCanvas.offsetParent !== null) {
@@ -643,11 +672,15 @@ function setupSettingsControls() {
       if (panzoomInstance) {
         storedState = {
           pan: panzoomInstance.getPan(),
+
           scale: panzoomInstance.getScale(),
         };
       }
+
       settings.theme = radio.value;
+
       saveSettings();
+
       applyTheme(settings.theme, storedState);
     });
   });
