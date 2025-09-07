@@ -1,5 +1,6 @@
 @use "base";
 @use "layout";
+@use "participant_header"; // この行を追加
 @use "components_buttons";
 @use "components_forms";
 @use "components_lists";

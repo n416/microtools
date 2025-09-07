@@ -256,5 +256,17 @@ router.get('/admin', ensureAuthenticated, isSystemAdmin, (req, res) => {
 router.get('/admin-request', ensureAuthenticated, (req, res) => {
   res.render('index', {user: req.user, ogpData: {}, noIndex: true});
 });
-
+// ▼▼▼ 以下を追記 ▼▼▼
+// 上記のどのルートにも一致しなかった場合、トップページとしてindex.ejsをレンダリングする
+// これにより、クライアントサイドのJavaScriptルーターが動作を開始できる
+router.get('/', (req, res) => {
+  res.render('index', {
+    user: req.user,
+    ogpData: {},
+    noIndex: false,
+    groupData: null,
+    eventData: null,
+  });
+});
+// ▲▲▲ ここまで追記 ▲▲▲
 module.exports = router;

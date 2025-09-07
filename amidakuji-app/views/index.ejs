@@ -13,12 +13,14 @@
   <% } %>
   <title>ダイナミックあみだくじ</title>
   <%# ▼▼▼ [修正点] タイムスタンプをバージョン番号変数に置き換え ▼▼▼ %>
-  <link rel="stylesheet" href="/style.css?v=<%= appVersion %>" />
+  <link rel="stylesheet" href="/style.css?v=<%= appVersion 
+%>" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
 </head>
 
 <body>
-  <div id="globalLoadingMask" class="loading-mask" style="position: fixed; display: none; z-index: 9999;">
+  <div id="globalLoadingMask" class="loading-mask" style="position: fixed; display: none;
+z-index: 9999;">
     <p>読み込み中...</p>
   </div>
   <% if (typeof error !== 'undefined' && error) { %>
@@ -36,83 +38,92 @@
   <div id="canvas-container">
     <canvas id="grid-canvas"></canvas>
     <canvas id="animation-canvas"></canvas>
-  </div>
-  <% if (typeof user !== 'undefined' && user && user.isImpersonating) { %>
-  <div class="impersonation-banner">
-    現在、<strong><%= user.name %> (<%= user.email %>)</strong> として操作中です。
-    <button id="stopImpersonatingButton">元の管理者に戻る</button>
-  </div>
-  <% } %>
-  <header class="main-header">
-    <h1>ダイナミックあみだくじ</h1>
-    <button id="hamburger-button" aria-label="メニューを開く" aria-controls="nav-menu" aria-expanded="false">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
-    <div id="nav-menu">
-      <%
-        let homeUrl = "/";
-        if (typeof user !== 'undefined' && user && user.id) {
-          if (user.lastUsedGroupId) {
-            homeUrl = `/admin/groups/${user.lastUsedGroupId}`;
-          } else {
-            homeUrl = "/admin/groups";
-          }
-        }
-      %>
-      <a href="<%= homeUrl %>" class="button header-icon-button" id="homeButton" title="ホーム"><i data-lucide="<%= emojiToLucide('🏠') %>"></i><span>ホーム</span></a>
 
-      <div class="group-switcher-container" style="display: none;">
-        <label class="group-switcher-label">グループ選択</label>
-        <div id="groupSwitcher">
-          <button id="currentGroupName"></button>
-          <div id="groupDropdown" class="dropdown-content">
-            <ul id="switcherGroupList"></ul>
-            <button id="switcherCreateGroup"><i data-lucide="+"></i> 新規グループを作成</button>
+  </div>
+  <div id="header-container">
+    <% if (typeof user !== 'undefined' && user && user.isImpersonating) { %>
+    <div class="impersonation-banner">
+      現在、<strong><%= user.name %> (<%= user.email %>)</strong> として操作中です。
+      <button id="stopImpersonatingButton">元の管理者に戻る</button>
+    </div>
+    <% } %>
+    <header class="main-header">
+      <h1>ダイナミックあみだくじ</h1>
+      <button id="hamburger-button" aria-label="メニューを開く" aria-controls="nav-menu" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div id="nav-menu">
+        <%
+          let homeUrl = "/";
+if (typeof user !== 'undefined' && user && user.id) {
+            if (user.lastUsedGroupId) {
+              homeUrl = `/admin/groups/${user.lastUsedGroupId}`;
+} else {
+              homeUrl = "/admin/groups";
+}
+          }
+        %>
+        <a href="<%= homeUrl %>" class="button header-icon-button" id="homeButton" title="ホーム"><i data-lucide="<%= emojiToLucide('🏠') %>"></i><span>ホーム</span></a>
+
+        <div class="group-switcher-container" style="display: none;">
+          <label class="group-switcher-label">グループ選択</label>
+          <div id="groupSwitcher">
+            <button id="currentGroupName"></button>
+            <div id="groupDropdown" class="dropdown-content">
+              <ul id="switcherGroupList"></ul>
+
+              <button id="switcherCreateGroup"><i data-lucide="+"></i> 新規グループを作成</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="header-dropdown" id="tutorialMenuContainer" style="display: none;">
-        <button class="button header-icon-button" id="tutorialMenuButton">
-          <i data-lucide="<%= emojiToLucide('❔') %>"></i>
-          <span>チュートリアル</span>
-          <i data-lucide="<%= emojiToLucide('▼') %>" class="dropdown-arrow"></i>
-          <span class="notification-dot" style="display: none;"></span>
-        </button>
-        <div class="dropdown-content">
-          <ul id="tutorialDropdownList" class="item-list"></ul>
-          <a href="/tutorials" class="dropdown-item-link" id="viewAllTutorialsLink">すべて表示</a>
+        <div class="header-dropdown" id="tutorialMenuContainer" style="display: none;">
+          <button class="button header-icon-button" id="tutorialMenuButton">
+            <i data-lucide="<%= emojiToLucide('❔') %>"></i>
+            <span>チュートリアル</span>
+            <i data-lucide="<%= emojiToLucide('▼') %>" class="dropdown-arrow"></i>
+
+            <span class="notification-dot" style="display: none;"></span>
+          </button>
+          <div class="dropdown-content">
+            <ul id="tutorialDropdownList" class="item-list"></ul>
+            <a href="/tutorials" class="dropdown-item-link" id="viewAllTutorialsLink">すべて表示</a>
+          </div>
+        </div>
+
+        <div class="header-dropdown" id="userMenuContainer">
+          <button class="button header-icon-button" id="userMenuButton">
+            <i data-lucide="<%= emojiToLucide('👤') %>"></i>
+
+            <span>ユーザー</span>
+            <i data-lucide="<%= emojiToLucide('▼') %>" class="dropdown-arrow"></i>
+          </button>
+          <div class="dropdown-content">
+            <ul>
+              <% if (typeof user !== 'undefined' && user && user.role === 'system_admin' && !user.isImpersonating) { %>
+              <li><button id="adminDashboardButton">システム管理</button></li>
+              <% } %>
+
+              <li><button id="logoutButton">ログアウト</button></li>
+              <li><button id="deleteAccountButton" class="delete-btn">アカウント削除</button></li>
+            </ul>
+          </div>
+        </div>
+        <div class="auth-controls">
+          <button id="loginButton">運営者ログイン</button>
         </div>
       </div>
-
-      <div class="header-dropdown" id="userMenuContainer">
-        <button class="button header-icon-button" id="userMenuButton">
-          <i data-lucide="<%= emojiToLucide('👤') %>"></i>
-          <span>ユーザー</span>
-          <i data-lucide="<%= emojiToLucide('▼') %>" class="dropdown-arrow"></i>
-        </button>
-        <div class="dropdown-content">
-          <ul>
-            <% if (typeof user !== 'undefined' && user && user.role === 'system_admin' && !user.isImpersonating) { %>
-            <li><button id="adminDashboardButton">システム管理</button></li>
-            <% } %>
-            <li><button id="logoutButton">ログアウト</button></li>
-            <li><button id="deleteAccountButton" class="delete-btn">アカウント削除</button></li>
-          </ul>
-        </div>
-      </div>
-      <div class="auth-controls">
-        <button id="loginButton">運営者ログイン</button>
-      </div>
-    </div>
-  </header>
+    </header>
+    <%- include('partials/_participantHeader.ejs') %>
+  </div>
   <div id="landingView" class="view-container" style="display: none;">
     <%- include('partials/_landingView.ejs') %>
   </div>
   <div id="groupDashboard" class="view-container" style="display: none">
-    <%- include('partials/_groupDashboard.ejs') %>
+    <%- 
+include('partials/_groupDashboard.ejs') %>
   </div>
   <div id="adminDashboard" class="view-container" style="display: none">
     <%- include('partials/_adminDashboard.ejs') %>
@@ -134,6 +145,7 @@
   </div>
   <div id="participantView" class="view-container" style="display: none">
     <%- include('partials/_participantView.ejs') %>
+
   </div>
   <div id="tutorialListView" class="view-container" style="display: none">
     <%- include('partials/_tutorialListView.ejs') %>
@@ -156,7 +168,9 @@
   <%- include('partials/modals/_customConfirmModal.ejs') %>
   <div class="settings-fab" id="settingsFab" title="設定">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.82l-.15-.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1 0-2.82l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.82l-.15-.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1 0-2.82l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 
+0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
       <circle cx="12" cy="12" r="3"></circle>
     </svg>
   </div>
@@ -171,6 +185,7 @@
     </div>
     <div class="setting-item theme-switcher">
       <label>テーマ</label>
+
       <div class="radio-group">
         <input type="radio" id="theme-auto" name="theme" value="auto">
         <label for="theme-auto">自動</label>
@@ -181,7 +196,8 @@
       </div>
     </div>
   </div>
-  <% if (typeof error === 'undefined' || !error) { %>
+  <% if (typeof error === 'undefined' ||
+!error) { %>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -201,6 +217,7 @@
       apiKey: "AIzaSyC6gjEuKa8S-ZFbhzPi-GS8zX4L9KdiUPQ",
       authDomain: "amidakuji-app-native.firebaseapp.com",
       projectId: "amidakuji-app-native",
+
       storageBucket: "amidakuji-app-native.appspot.com",
       messagingSenderId: "482453338621",
       appId: "1:482453338621:web:5e268f146a8d778f4e0194",

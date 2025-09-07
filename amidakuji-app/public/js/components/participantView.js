@@ -8,7 +8,7 @@ import {participantPanzoom} from '../animation/setup.js';
 import * as ui from '../ui.js';
 import {clientEmojiToLucide} from '../ui.js';
 import {addFirestoreListener} from '../state.js';
-import { db } from '../firebase.js'; // ★★★ この行を修正 ★★★
+import {db} from '../firebase.js';
 import {processImage} from '../imageProcessor.js';
 
 let processedProfileIconFile = null;
@@ -18,9 +18,50 @@ const handleInvalidTokenError = (error) => {
     alert(error.error || '認証情報が無効です。参加状態をリセットしてやり直します。');
     state.clearParticipantState();
     window.location.reload();
-    return true; // エラーが処理されたことを示す
+    return true;
   }
-  return false; // 通常のエラー
+  return false;
+};
+
+const handleOpenProfileModal = async () => {
+  if (!state.currentGroupId || !state.currentParticipantId || !state.currentParticipantToken) {
+    alert('プロフィールの表示には、再度ログインが必要です。');
+    state.clearParticipantState();
+    window.location.reload();
+    return;
+  }
+  try {
+    const memberData = await api.getMemberDetails(state.currentGroupId, state.currentParticipantId);
+    processedProfileIconFile = null;
+    ui.openProfileEditModal(memberData, {
+      onSave: async () => {
+        ui.elements.saveProfileButton.disabled = true;
+        try {
+          let newIconUrl = null;
+          if (processedProfileIconFile) {
+            const {signedUrl, iconUrl} = await api.generateUploadUrl(state.currentParticipantId, processedProfileIconFile.type, state.currentGroupId, state.currentParticipantToken);
+            await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': processedProfileIconFile.type}, body: processedProfileIconFile});
+            newIconUrl = iconUrl;
+          }
+          const profileData = {color: ui.elements.profileColorInput.value};
+          if (newIconUrl) profileData.iconUrl = newIconUrl;
+          await api.updateProfile(state.currentParticipantId, profileData, state.currentGroupId, state.currentParticipantToken);
+          alert('プロフィールを保存しました。');
+          ui.closeProfileEditModal();
+        } catch (error) {
+          if (!handleInvalidTokenError(error)) {
+            alert(error.error);
+          }
+        } finally {
+          ui.elements.saveProfileButton.disabled = false;
+        }
+      },
+    });
+  } catch (error) {
+    if (!handleInvalidTokenError(error)) {
+      alert(error.error);
+    }
+  }
 };
 
 const elements = {
@@ -82,7 +123,6 @@ export function renderSlots(participants) {
       slotEl.classList.add('taken');
       slotEl.textContent = p.name;
     } else if (p.memberId) {
-      // 名前がなくてもmemberIdがあれば参加済み
       slotEl.classList.add('taken');
       slotEl.textContent = '参加済み';
     } else {
@@ -267,6 +307,8 @@ export function showUserDashboardView(groupData, events) {
   }
 
   state.loadParticipantState();
+  ui.updateParticipantHeader({name: state.currentParticipantName});
+
   if (state.currentParticipantId && state.currentParticipantToken) {
     showControlPanelView({participants: [], status: 'pending'});
   } else {
@@ -356,6 +398,8 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
 
     state.setCurrentGroupId(eventData.groupId);
     state.loadParticipantState();
+
+    ui.updateParticipantHeader({name: state.currentParticipantName});
 
     if (!isShare && state.currentParticipantId) {
       eventData = await api.getPublicEventData(eventId);
@@ -486,6 +530,49 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
 }
 
 export function initParticipantView() {
+  // ▼▼▼ 修正: backToDashboardHandler を関数の先頭に移動 ▼▼▼
+  const backToDashboardHandler = async () => {
+    try {
+      const group = await api.getGroup(state.currentGroupId);
+      if (group) {
+        const url = group.customUrl ? `/g/${group.customUrl}/dashboard` : `/groups/${group.id}/dashboard`;
+        await router.navigateTo(url);
+      } else {
+        await router.navigateTo('/');
+      }
+    } catch (error) {
+      console.error('Failed to get group info for navigation:', error);
+      await router.navigateTo('/');
+    }
+  };
+
+  if (ui.elements.participantLoginButton) {
+    ui.elements.participantLoginButton.addEventListener('click', () => {
+      showNameEntryView();
+    });
+  }
+
+  if (ui.elements.participantDashboardButtonLoggedOut) {
+    ui.elements.participantDashboardButtonLoggedOut.addEventListener('click', backToDashboardHandler);
+  }
+
+  if (ui.elements.participantDashboardButton) {
+    ui.elements.participantDashboardButton.addEventListener('click', backToDashboardHandler);
+  }
+
+  if (ui.elements.headerParticipantLogoutButton) {
+    ui.elements.headerParticipantLogoutButton.addEventListener('click', () => {
+      if (state.currentGroupId) {
+        state.clearParticipantState();
+        window.location.reload();
+      }
+    });
+  }
+
+  if (ui.elements.participantProfileButton) {
+    ui.elements.participantProfileButton.addEventListener('click', handleOpenProfileModal);
+  }
+
   const staticCanvas = document.getElementById('participantCanvasStatic');
   if (staticCanvas) {
     const redrawCanvas = async () => {
@@ -509,10 +596,8 @@ export function initParticipantView() {
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-      // ▼▼▼ ここからが今回の修正点です ▼▼▼
-      const x = (clientX - rect.left) / scale;
-      const y = (clientY - rect.top) / scale;
-      // ▲▲▲ ここまでが修正点です ▲▲▲
+      const x = (clientX - rect.left - pan.x) / scale;
+      const y = (clientY - rect.top - pan.y) / scale;
 
       const {participants, prizes} = state.currentLotteryData;
       const numParticipants = participants.length;
@@ -736,21 +821,7 @@ export function initParticipantView() {
       }
     });
 
-  const backToDashboardHandler = async () => {
-    try {
-      const group = await api.getGroup(state.currentGroupId);
-      if (group) {
-        const url = group.customUrl ? `/g/${group.customUrl}/dashboard` : `/groups/${group.id}/dashboard`;
-        await router.navigateTo(url);
-      } else {
-        await router.navigateTo('/');
-      }
-    } catch (error) {
-      console.error('Failed to get group info for navigation:', error);
-      await router.navigateTo('/');
-    }
-  };
-
+  // ▼▼▼ 修正: backToDashboardHandler を使用するように統一 ▼▼▼
   if (elements.backToControlPanelButton) {
     elements.backToControlPanelButton.addEventListener('click', backToDashboardHandler);
   }
@@ -762,6 +833,7 @@ export function initParticipantView() {
   if (elements.backToDashboardFromWaitingButton) {
     elements.backToDashboardFromWaitingButton.addEventListener('click', backToDashboardHandler);
   }
+  // ▲▲▲ 修正箇所 ▲▲▲
 
   if (elements.setPasswordButton)
     elements.setPasswordButton.addEventListener('click', async () => {
@@ -871,40 +943,7 @@ export function initParticipantView() {
     });
 
   if (elements.editProfileButton) {
-    elements.editProfileButton.addEventListener('click', async () => {
-      try {
-        const memberData = await api.getMemberDetails(state.currentGroupId, state.currentParticipantId);
-        processedProfileIconFile = null;
-        ui.openProfileEditModal(memberData, {
-          onSave: async () => {
-            ui.elements.saveProfileButton.disabled = true;
-            try {
-              let newIconUrl = null;
-              if (processedProfileIconFile) {
-                const {signedUrl, iconUrl} = await api.generateUploadUrl(state.currentParticipantId, processedProfileIconFile.type, state.currentGroupId, state.currentParticipantToken);
-                await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': processedProfileIconFile.type}, body: processedProfileIconFile});
-                newIconUrl = iconUrl;
-              }
-              const profileData = {color: ui.elements.profileColorInput.value};
-              if (newIconUrl) profileData.iconUrl = newIconUrl;
-              await api.updateProfile(state.currentParticipantId, profileData, state.currentGroupId, state.currentParticipantToken);
-              alert('プロフィールを保存しました。');
-              ui.closeProfileEditModal();
-            } catch (error) {
-              if (!handleInvalidTokenError(error)) {
-                alert(error.error);
-              }
-            } finally {
-              ui.elements.saveProfileButton.disabled = false;
-            }
-          },
-        });
-      } catch (error) {
-        if (!handleInvalidTokenError(error)) {
-          alert(error.error);
-        }
-      }
-    });
+    elements.editProfileButton.addEventListener('click', handleOpenProfileModal);
   }
 
   if (ui.elements.profileIconInput) {
