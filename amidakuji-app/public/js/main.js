@@ -593,32 +593,19 @@ function applySettings() {
 function setupSettingsControls() {
   // ▼▼▼ ここからログを追加 ▼▼▼
 
-  console.log('[DEBUG] setupSettingsControls: 関数が呼び出されました。');
-
   const fab = document.getElementById('settingsFab');
 
   const panel = document.getElementById('settingsPanel');
-
-  console.log('[DEBUG] setupSettingsControls: fab要素:', fab);
-
-  console.log('[DEBUG] setupSettingsControls: panel要素:', panel); // ▲▲▲ ここまでログを追加 ▲▲▲
 
   const animationToggle = document.getElementById('animationToggle');
 
   const themeRadios = document.querySelectorAll('input[name="theme"]');
 
   if (!fab || !panel) {
-    // ▼▼▼ ログを追加 ▼▼▼
-
-    console.error('[DEBUG] setupSettingsControls: fabまたはpanel要素が見つからないため、処理を中断します。'); // ▲▲▲ ここまでログを追加 ▲▲▲
-
     return;
   }
 
   fab.addEventListener('click', () => {
-    // ▼▼▼ ログを追加 ▼▼▼
-
-    console.log('[DEBUG] settingsFab: クリックイベントが発火しました。'); // ▲▲▲ ここまでログを追加 ▲▲▲
 
     panel.classList.toggle('visible');
 
