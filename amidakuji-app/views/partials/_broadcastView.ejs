@@ -1,12 +1,18 @@
 <div class="broadcast-header">
-  <button id="backToDashboardButton"><i data-lucide="<%= emojiToLucide('←') %>"></i> ダッシュボードに戻る</button>
-  <button id="toggleFullscreenButton">表示エリアを最大化</button>
+  <%# ▼▼▼ アイコンの指定方法を変更 ▼▼▼ %>
+  <button id="backToDashboardButton"><i data-lucide="arrow-left"></i> <span>ダッシュボードに戻る</span></button>
+
+  <%# ▼▼▼ クラス名を変更し、ボタンの構成を調整 ▼▼▼ %>
+  <div class="broadcast-header-controls">
+    <button id="toggleFullscreenButton"><i data-lucide="maximize"></i> <span>表示エリアを最大化</span></button>
+    <button id="openSidebarButton"><i data-lucide="sliders-horizontal"></i> <span>設定</span></button>
+  </div>
 </div>
 <div class="broadcast-layout">
   <p class="event-url-display">イベントURL: <a id="broadcastEventUrl" href="#" target="_blank">読み込み中...</a></p>
   <div class="canvas-panzoom-container">
     <div id="adminControls" class="floating-controls" style="justify-content: center; width: 100%; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-      <button id="startEventButton" class="primary-action" style="font-size: 1.5em; padding: 15px 30px;"><i data-lucide="<%= emojiToLucide('🎉') %>"></i> イベント開始！</button>
+      <button id="startEventButton" class="primary-action" style="font-size: 1.5em; padding: 15px 30px;"><i data-lucide="party-popper"></i> イベント開始！</button>
       <button id="glimpseButton">景品チラ見せ</button>
     </div>
     <div class="loading-mask" id="admin-loading-mask">あみだくじを生成中...</div>
@@ -15,12 +21,13 @@
     </div>
   </div>
 
-  <div id="broadcastResultsContainer" class="controls" style="display: none;
+  <div id="broadcastResultsContainer" class="controls" style="display: 
+none;
 width: 100%; margin-top: 20px;">
     <ul id="broadcastResultsList" class="item-list"></ul>
   </div>
   <aside id="broadcastSidebar" class="broadcast-sidebar">
-    <button id="closeSidebarButton" class="close-sidebar-btn" aria-label="閉じる"><i data-lucide="<%= emojiToLucide('×') %>"></i></button>
+    <button id="closeSidebarButton" class="close-sidebar-btn" aria-label="閉じる"><i data-lucide="x"></i></button>
     <h4>コントロールパネル</h4>
     <div class="broadcast-controls">
       <div class="control-group">
@@ -41,17 +48,3 @@ width: 100%; margin-top: 20px;">
     </div>
   </aside>
 </div>
-<button id="openSidebarButton" class="floating-fab" aria-label="コントロールパネルを開く">
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="4" y1="21" x2="4" y2="14"></line>
-    <line x1="4" y1="10" x2="4" y2="3"></line>
-
-    <line x1="12" y1="21" x2="12" y2="12"></line>
-    <line x1="12" y1="8" x2="12" y2="3"></line>
-    <line x1="20" y1="21" x2="20" y2="16"></line>
-    <line x1="20" y1="12" x2="20" y2="3"></line>
-    <line x1="1" y1="14" x2="7" y2="14"></line>
-    <line x1="9" y1="8" x2="15" y2="8"></line>
-    <line x1="17" y1="16" x2="23" y2="16"></line>
-  </svg>
-</button>

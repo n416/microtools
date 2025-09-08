@@ -1,6 +1,6 @@
 import * as state from '../state.js';
 import {animator, isAnimationRunning, stopAnimation} from './core.js';
-import {getTargetHeight, getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight, calculateClientSideResults} from './path.js';
+import {calculateAllPaths, getTargetHeight, getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight} from './path.js';
 import {preloadIcons} from './setup.js';
 
 export function wrapText(context, text, x, y, lineLength, lineHeight) {
@@ -295,7 +295,6 @@ export async function showAllTracersInstantly() {
     state.setRevealedPrizes(allRevealedPrizes);
   }
 
-  // ▼▼▼ ここからが修正点 ▼▼▼
   const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
   const allPaths = calculateAllPaths(state.currentLotteryData.participants, allLines, container.clientWidth, VIRTUAL_HEIGHT, container);
 
@@ -313,7 +312,6 @@ export async function showAllTracersInstantly() {
       celebrated: true,
     };
   });
-  // ▲▲▲ ここまで ▲▲▲
 
   targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
   const isDarkMode = document.body.classList.contains('dark-mode');
@@ -322,10 +320,19 @@ export async function showAllTracersInstantly() {
 
   drawLotteryBase(targetCtx, state.currentLotteryData, baseLineColor, hidePrizes);
 
+  // ▼▼▼ ここからが今回の修正点です ▼▼▼
+
+  // 1. まず、すべてのトレーサーの軌跡（パス）を描画します
   animator.tracers.forEach((tracer) => {
     drawTracerPath(targetCtx, tracer);
+  });
+
+  // 2. 次に、すべてのトレーサーのアイコンを描画します
+  animator.tracers.forEach((tracer) => {
     drawTracerIcon(targetCtx, tracer);
   });
+
+  // ▲▲▲ ここまでが修正点です ▲▲▲
 
   drawRevealedPrizes(targetCtx);
 }

@@ -59,7 +59,7 @@ export function renderBroadcastResults() {
 
       let imageHtml = '';
       if (prizeImageUrl) {
-        imageHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image">`;
+        imageHtml = `<img src="${prizeImageUrl}" alt="${prizeName}" class="result-prize-image large">`;
       }
 
       const li = document.createElement('li');

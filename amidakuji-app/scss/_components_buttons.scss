@@ -295,32 +295,6 @@ a.button.help-link {
   background-color: transparent; /* ホバーエフェクトを削除 */
 }
 
-.floating-fab {
-  display: flex;
-  position: fixed;
-  width: 56px;
-  height: 56px;
-  border-radius: 0;
-  background-color: var(--primary-color);
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border: none;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  z-index: 2015;
-  bottom: 0;
-  right: 21px;
-  position: absolute;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-.floating-fab:hover {
-  background-color: var(--primary-hover-color);
-}
-
 .close-sidebar-btn {
   display: block;
   position: absolute;
@@ -341,7 +315,5 @@ a.button.help-link {
 }
 
 #broadcastView.fullscreen-active .floating-fab {
-  position: fixed !important;
-  top: 0;
-  right: 0;
+
 }

@@ -102,12 +102,14 @@ function updateTracerPosition(tracer, speed) {
     }
   };
 
+  // ▼▼▼ この if ブロック全体を修正します ▼▼▼
   if (tracer.stopY && tracer.y >= tracer.stopY) {
-    tracer.y = tracer.stopY;
-    tracer.isFinished = true;
-
+    // 中間停止点に到達した場合
+    tracer.y = tracer.stopY; // 座標を正確に合わせる
+    tracer.isFinished = true; // ★重要: これでアニメーションのステップが停止します
     const finalY = tracer.path[tracer.path.length - 1].y;
     if (tracer.stopY >= finalY) {
+      // 停止点が最終ゴールだった場合のみ、お祝いエフェクトを出す
       if (!tracer.celebrated) {
         tracer.x = tracer.path[tracer.path.length - 1].x;
         tracer.y = tracer.path[tracer.path.length - 1].y;
@@ -123,10 +125,12 @@ function updateTracerPosition(tracer, speed) {
     delete tracer.stopY;
     return;
   }
+  // ▲▲▲ ここまで修正 ▲▲▲
 
   const target = tracer.path[tracer.pathIndex + 1];
 
   if (!target) {
+    // ▼▼▼ isFinished が true になるのは、この「経路の終点」に到達した時のみ ▼▼▼
     tracer.isFinished = true;
     if (!tracer.celebrated) {
       const result = state.currentLotteryData.results[tracer.name];
@@ -155,7 +159,6 @@ function updateTracerPosition(tracer, speed) {
     tracer.y += (dy / distance) * speed;
   }
 }
-
 function animationLoop() {
   if (!animator.running) {
     return;
@@ -208,12 +211,14 @@ function animationLoop() {
   });
   let allTracersFinished = true;
 
-  // 1. まず、すべてのトレーサーの軌跡（パス）を描画します
+  // ▼▼▼ ここからが今回の修正点です ▼▼▼
+
+  // 1. まず、すべてのトレーサーの位置を更新し、軌跡（パス）を描画します
   animator.tracers.forEach((tracer) => {
     if (tracer.isFinished) {
       drawTracerPath(targetCtx, tracer);
     } else {
-      allTracersFinished = false;
+      allTracersFinished = false; // ★この行がアニメーション継続の鍵です
       updateTracerPosition(tracer, dynamicSpeed);
       drawTracerPath(targetCtx, tracer);
       if (Math.random() > 0.5) {
@@ -221,10 +226,13 @@ function animationLoop() {
       }
     }
   });
-  // 2. 次に、すべてのトレーサーのアイコンを描画します
+
+  // 2. 次に、すべてのトレーサーのアイコンを、描画済みの軌跡の上に描画します
   animator.tracers.forEach((tracer) => {
     drawTracerIcon(targetCtx, tracer);
   });
+
+  // ▲▲▲ ここまでが修正点です ▲▲▲
 
   const isRevealingPrizes = state.revealedPrizes.some((p) => p.revealProgress < 15);
   const particlesRemaining = animator.particles.length > 0;
@@ -310,8 +318,13 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
 
 export function advanceLineByLine(onComplete = null) {
   if (animator.tracers.length === 0 || animator.running) return;
-  const allAtTheEnd = animator.tracers.every((t) => t.pathIndex >= t.path.length - 1);
-  if (allAtTheEnd) {
+
+  // ▼▼▼ このリセット条件の判定を修正します ▼▼▼
+  // isFinished フラグではなく、実際の経路の終点にいるかで判断する
+  const allAtFinalDestination = animator.tracers.every((t) => t.pathIndex >= t.path.length - 1);
+
+  if (allAtFinalDestination) {
+    // 全員がゴールにいる場合のみ、最初からリセットする
     state.setRevealedPrizes([]);
     animator.tracers.forEach((tracer) => {
       tracer.pathIndex = 0;
@@ -322,31 +335,42 @@ export function advanceLineByLine(onComplete = null) {
       delete tracer.stopY;
     });
   }
+  // ▲▲▲ ここまで修正 ▲▲▲
+
   animator.onComplete = onComplete;
   let animationShouldStart = false;
   animator.tracers.forEach((tracer) => {
-    if (tracer.pathIndex >= tracer.path.length - 1) {
-      tracer.isFinished = true;
-      return;
-    }
-    tracer.isFinished = false;
-    animationShouldStart = true;
-    let nextYForThisTracer = Infinity;
-    for (let i = tracer.pathIndex + 1; i < tracer.path.length; i++) {
-      if (tracer.path[i].y > tracer.y + 0.1) {
-        nextYForThisTracer = tracer.path[i].y;
-        break;
+    // まだゴールしていないトレーサーを動かす準備をする
+    if (tracer.pathIndex < tracer.path.length - 1) {
+      tracer.isFinished = false; // 動けるようにフラグをリセット
+      animationShouldStart = true;
+      let nextYForThisTracer = Infinity;
+      // 現在地から見て、次にある横線のY座標を探す
+      for (let i = tracer.pathIndex + 1; i < tracer.path.length; i++) {
+        if (tracer.path[i].y > tracer.y + 0.1) {
+          nextYForThisTracer = tracer.path[i].y;
+          break;
+        }
       }
-    }
-    if (nextYForThisTracer !== Infinity) {
-      tracer.stopY = nextYForThisTracer;
+
+      if (nextYForThisTracer !== Infinity) {
+        // 次の横線が見つかったら、そこを中間停止点に設定
+        tracer.stopY = nextYForThisTracer;
+      } else {
+        // 見つからなければ、ゴールが次の停止点
+        tracer.stopY = tracer.path[tracer.path.length - 1].y;
+      }
     } else {
-      delete tracer.stopY;
+      // 既にゴールしているトレーサーは何もしない
+      tracer.isFinished = true;
     }
   });
+
   if (animationShouldStart) {
     animator.running = true;
     animationLoop();
+  } else if (onComplete) {
+    onComplete();
   }
 }
 
