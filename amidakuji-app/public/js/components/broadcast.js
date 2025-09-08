@@ -42,7 +42,7 @@ function setBroadcastControlsDisabled(disabled) {
 }
 
 /** リアルタイム結果リストを描画・更新する関数 */
-function renderBroadcastResults() {
+export function renderBroadcastResults() {
   const container = elements.adminCanvas.closest('.canvas-panzoom-container');
 
   // フルスクリーンではない、かつ、結果が1件以上ある場合のみ表示
