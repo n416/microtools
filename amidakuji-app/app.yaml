@@ -6,6 +6,10 @@ inbound_services:
   - warmup
 
 handlers:
+  - url: /favicon.ico
+    static_files: public/favicon.ico
+    upload: public/favicon.ico
+
   # /js/ 以下のすべてのリクエストを静的ファイルとして扱う
   - url: /js/(.*)
     static_files: public/js/\1

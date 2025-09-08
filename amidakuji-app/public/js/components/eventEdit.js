@@ -575,7 +575,7 @@ export function initEventEdit() {
           }
         }
       });
-      prizeListContainer.addEventListener('change', (e) => {
+      prizeListContainer.addEventListener('change', async (e) => {
         const changedElement = e.target;
         const isQuantityInput = changedElement.classList.contains('prize-quantity-input');
         const isNameInput = changedElement.classList.contains('prize-name-input-list');
@@ -644,19 +644,24 @@ export function initEventEdit() {
           const name = changedElement.dataset.name;
           const file = changedElement.files[0];
           if (file) {
-            const reader = new FileReader();
-            reader.onload = async () => {
+            // 既存の FileReader 処理の代わりに processImage を呼び出す
+            const processedFile = await processImage(file);
+            if (processedFile) {
+              // state 内の該当するすべての景品の画像を更新
               state.prizes.forEach((p) => {
                 if (p.name === name) {
-                  p.newImageFile = file;
-                  p.imageUrl = null;
+                  p.newImageFile = processedFile;
+                  p.imageUrl = null; // 古いURLはクリア
                 }
               });
               if (state.currentEventId) setDirty(true);
-              renderPrizeCardList();
+              
+              // 両方のビューを再描画して同期
+              renderPrizeCardList(); 
               renderPrizeListMode(sortConfig);
-            };
-            reader.readAsArrayBuffer(file);
+            }
+            // 選択をクリアして同じファイルを再度選択できるようにする
+            changedElement.value = ''; 
           }
         }
         renderPrizeCardList();
