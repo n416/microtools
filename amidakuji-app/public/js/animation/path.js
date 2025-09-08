@@ -93,9 +93,6 @@ export function calculateAllPaths(participants, allLines, containerWidth, contai
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
   const sortedLines = [...allLines].sort((a, b) => a.y - b.y);
 
-  console.groupCollapsed(`[Amida Path Debug] New Offset Calculation`);
-  console.log('Input Participants:', participants);
-  console.log('Input Lines:', sortedLines);
 
   // 1. 各参加者の理想経路（Ideal Path）を計算
   const idealPaths = participants.map((p, index) => {
@@ -109,20 +106,13 @@ export function calculateAllPaths(participants, allLines, containerWidth, contai
     });
     return {participantIndex: index, slot: p.slot, name: p.name, idealPath: path};
   });
-  console.log('Ideal Paths:', idealPaths);
 
   // 2. 各水平線ごとに通過する参加者を特定し、オフセットを計算
   const offsets = {}; // { participantIndex: { y_coord: y_offset } }
   const OFFSET_Y = 4; // 12pxずらす
 
-  console.groupCollapsed('Offset Assignment Details');
   sortedLines.forEach((line) => {
     const crossingParticipants = idealPaths.filter((p) => p.idealPath.some((step) => step.line === line)).sort((a, b) => a.slot - b.slot); // slot番号でソート
-
-    console.log(
-      `Line at Y=${line.y}:`,
-      crossingParticipants.map((p) => `slot ${p.slot} (${p.name})`)
-    );
 
     crossingParticipants.forEach((p, orderIndex) => {
       if (!offsets[p.participantIndex]) {
@@ -132,11 +122,9 @@ export function calculateAllPaths(participants, allLines, containerWidth, contai
       const magnitude = Math.ceil(orderIndex / 2);
       const yOffset = orderIndex === 0 ? 0 : magnitude * OFFSET_Y * sign;
       offsets[p.participantIndex][line.y] = yOffset;
-      console.log(` -> Assigning offset ${yOffset}px to slot ${p.slot}`);
     });
   });
   console.groupEnd();
-  console.log('Final Calculated Offsets:', offsets);
 
   // 3. 最終的な描画パスを生成
   const finalPaths = {};
@@ -181,7 +169,6 @@ export function calculateAllPaths(participants, allLines, containerWidth, contai
     finalPaths[p.name] = finalPath;
   });
 
-  console.log('Final Render Paths:', finalPaths);
   console.groupEnd();
 
   return finalPaths;
