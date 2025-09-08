@@ -163,7 +163,9 @@ h4 {
   flex-grow: 1;
 }
 
-#prizeDisplay ul {
+/* ▼▼▼ ここからが今回の修正点です ▼▼▼ */
+#prizeDisplay ul,
+.display-preview ul {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -172,14 +174,19 @@ h4 {
   padding: 0;
   margin-bottom: 30px;
 }
+.display-preview ul {
+  margin-bottom: 0px;
+}
 
-#prizeDisplay li {
+#prizeDisplay li,
+.display-preview li {
   background-color: var(--white-color);
   padding: 10px 20px;
   border-radius: 20px;
   box-shadow: 0 2px 5px var(--shadow-color);
   font-weight: bold;
 }
+/* ▲▲▲ ここまでが修正点です ▲▲▲ */
 
 .dropdown-content ul {
   list-style: none;

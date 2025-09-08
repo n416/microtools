@@ -200,12 +200,16 @@ window.tutorials = [
       {
         type: 'page',
         match: 'dashboardView',
+        // ▼▼▼ 以下の2行を新しく追加してください ▼▼▼
+        precondition: () => document.querySelector('[data-tutorial-target="edit-event"]'),
+        preconditionFailMessage: 'このチュートリアルを開始するには、未実施のイベント（「編集」ボタンが表示されているもの）が必要です。先にイベントを作成してください。',
+        // ▲▲▲ 追加ここまで ▲▲▲
         subSteps: [
           {
             message: '作成済みのイベントを配信してみましょう。リストから配信したいイベントの「編集」ボタンを押してください。',
-            highlightSelector: '#eventList .item-list-item',
-            focusSelector: '#eventList .edit-event-btn',
-            waitForClickOn: '#eventList .edit-event-btn',
+            highlightSelector: '#eventList .item-list-item:has([data-tutorial-target="edit-event"])',
+            focusSelector: '[data-tutorial-target="edit-event"]',
+            waitForClickOn: '[data-tutorial-target="edit-event"]',
             removeOkButton: true,
           },
         ],
