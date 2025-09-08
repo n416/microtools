@@ -93,77 +93,52 @@ export function calculateAllPaths(participants, allLines, containerWidth, contai
   const participantSpacing = VIRTUAL_WIDTH / (numParticipants + 1);
   const sortedLines = [...allLines].sort((a, b) => a.y - b.y);
 
-  console.group(`[Amida Path Debug] Collision Resolution Calculation`);
+  console.groupCollapsed(`[Amida Path Debug] New Offset Calculation`);
+  console.log('Input Participants:', participants);
+  console.log('Input Lines:', sortedLines);
 
-  // 1. 各参加者の基本経路（どの水平線をいつ通過するか）を計算
-  const basePaths = participants.map((p, index) => {
+  // 1. 各参加者の理想経路（Ideal Path）を計算
+  const idealPaths = participants.map((p, index) => {
+    const path = [];
     let currentPathIdx = index;
-    const checkpoints = [];
-    let currentTime = 70;
-
     sortedLines.forEach((line) => {
       if (line.fromIndex === currentPathIdx || line.toIndex === currentPathIdx) {
-        const prevY = checkpoints.length > 0 ? checkpoints[checkpoints.length - 1].y : 70;
-        currentTime += Math.abs(line.y - prevY);
-
-        checkpoints.push({y: line.y, arrivalTime: currentTime, line});
-
-        currentTime += participantSpacing;
+        path.push({y: line.y, line});
         currentPathIdx = line.fromIndex === currentPathIdx ? line.toIndex : line.fromIndex;
       }
     });
-    return checkpoints;
+    return {participantIndex: index, slot: p.slot, name: p.name, idealPath: path};
   });
+  console.log('Ideal Paths:', idealPaths);
 
-  // 2. 各水平線ごとに通過情報を集約
-  const crossingsByLine = {};
-  basePaths.forEach((checkpoints, pIndex) => {
-    checkpoints.forEach((cp) => {
-      const lineY = cp.line.y;
-      if (!crossingsByLine[lineY]) {
-        crossingsByLine[lineY] = [];
-      }
-      crossingsByLine[lineY].push({
-        participantIndex: pIndex,
-        arrivalTime: cp.arrivalTime,
-        name: participants.find((p) => p.slot === pIndex)?.name,
-      });
-    });
-  });
-
-  // 3. 各水平線ごとにオフセットを計算
+  // 2. 各水平線ごとに通過する参加者を特定し、オフセットを計算
   const offsets = {}; // { participantIndex: { y_coord: y_offset } }
-  const OFFSET_Y = 3;
+  const OFFSET_Y = 4; // 12pxずらす
 
-  console.log('Crossings grouped by horizontal line:', crossingsByLine);
+  console.groupCollapsed('Offset Assignment Details');
+  sortedLines.forEach((line) => {
+    const crossingParticipants = idealPaths.filter((p) => p.idealPath.some((step) => step.line === line)).sort((a, b) => a.slot - b.slot); // slot番号でソート
 
-  for (const y in crossingsByLine) {
-    const crossings = crossingsByLine[y];
-    crossings.sort((a, b) => a.arrivalTime - b.arrivalTime);
+    console.log(
+      `Line at Y=${line.y}:`,
+      crossingParticipants.map((p) => `slot ${p.slot} (${p.name})`)
+    );
 
-    console.group(`Line at Y=${y}`);
-    console.log('Sorted Crossings:', crossings);
-
-    let offsetCounter = 0;
-    crossings.forEach((crossing) => {
-      if (!offsets[crossing.participantIndex]) {
-        offsets[crossing.participantIndex] = {};
+    crossingParticipants.forEach((p, orderIndex) => {
+      if (!offsets[p.participantIndex]) {
+        offsets[p.participantIndex] = {};
       }
-      const sign = offsetCounter % 2 === 0 ? 1 : -1;
-      const magnitude = Math.ceil(offsetCounter / 2);
-      const yOffset = offsetCounter === 0 ? 0 : magnitude * OFFSET_Y * sign;
-      offsets[crossing.participantIndex][y] = yOffset;
-
-      console.log(` -> [${crossing.name}] gets Y-Offset: ${yOffset}px`);
-      offsetCounter++;
+      const sign = orderIndex % 2 === 0 ? -1 : 1;
+      const magnitude = Math.ceil(orderIndex / 2);
+      const yOffset = orderIndex === 0 ? 0 : magnitude * OFFSET_Y * sign;
+      offsets[p.participantIndex][line.y] = yOffset;
+      console.log(` -> Assigning offset ${yOffset}px to slot ${p.slot}`);
     });
-    console.groupEnd();
-  }
-
-  console.log('Final Calculated Offsets:', offsets);
+  });
   console.groupEnd();
+  console.log('Final Calculated Offsets:', offsets);
 
-  // 4. 最終的な描画パスを生成
+  // 3. 最終的な描画パスを生成
   const finalPaths = {};
   participants.forEach((p, index) => {
     if (!p.name) return;
@@ -205,6 +180,9 @@ export function calculateAllPaths(participants, allLines, containerWidth, contai
     finalPath.push({x: participantSpacing * (currentPathIdx + 1), y: lineBottomY});
     finalPaths[p.name] = finalPath;
   });
+
+  console.log('Final Render Paths:', finalPaths);
+  console.groupEnd();
 
   return finalPaths;
 }
