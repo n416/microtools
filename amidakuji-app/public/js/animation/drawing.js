@@ -1,6 +1,6 @@
 import * as state from '../state.js';
 import {animator, isAnimationRunning, stopAnimation} from './core.js';
-import {getTargetHeight, getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight, calculatePath} from './path.js';
+import {getTargetHeight, getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight, calculateClientSideResults} from './path.js';
 import {preloadIcons} from './setup.js';
 
 export function wrapText(context, text, x, y, lineLength, lineHeight) {
@@ -297,9 +297,10 @@ export async function showAllTracersInstantly() {
 
   // ▼▼▼ ここからが修正点 ▼▼▼
   const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
+  const allPaths = calculateAllPaths(state.currentLotteryData.participants, allLines, container.clientWidth, VIRTUAL_HEIGHT, container);
 
   animator.tracers = allParticipantsWithNames.map((p) => {
-    const path = calculatePath(p.slot, allLines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
+    const path = allPaths[p.name];
     const finalPoint = path[path.length - 1];
     return {
       name: p.name,

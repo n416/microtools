@@ -1,6 +1,6 @@
 import * as state from '../state.js';
 import {animator, isAnimationRunning} from './core.js';
-import {calculatePath, getTargetHeight, calculatePrizeAreaHeight} from './path.js';
+import {calculateAllPaths, getTargetHeight, calculatePrizeAreaHeight} from './path.js';
 import {drawLotteryBase, drawTracerPath, drawTracerIcon, drawRevealedPrizes} from './drawing.js';
 
 export let adminPanzoom = null;
@@ -10,8 +10,6 @@ let resizeDebounceTimer;
 export function initializePanzoom(canvasElement) {
   if (!canvasElement) return null;
 
-  // ▼▼▼ ここからが今回の修正点です ▼▼▼
-  // 既にインスタンスが存在する場合は、新しく作らずに既存のものを返す
   const isParticipantCanvas = canvasElement.id === 'participantCanvas' || canvasElement.id === 'participantCanvasStatic';
   if (isParticipantCanvas && participantPanzoom) {
     return participantPanzoom;
@@ -19,7 +17,6 @@ export function initializePanzoom(canvasElement) {
   if (canvasElement.id === 'adminCanvas' && adminPanzoom) {
     return adminPanzoom;
   }
-  // ▲▲▲ ここまでが修正点です ▲▲▲
 
   const panzoomElement = canvasElement.parentElement;
 
@@ -145,15 +142,16 @@ export async function prepareStepAnimation(targetCtx, hidePrizes = false, showMa
     animator.prizeImages = {};
   }
   const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
-  const totalParticipants = state.currentLotteryData.participants.length;
   await preloadPrizeImages(state.currentLotteryData.prizes);
   await preloadIcons(allParticipantsWithNames);
   const VIRTUAL_HEIGHT = getTargetHeight(container);
 
   const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
 
+  const allPaths = calculateAllPaths(state.currentLotteryData.participants, allLines, container.clientWidth, VIRTUAL_HEIGHT, container);
+
   animator.tracers = allParticipantsWithNames.map((p) => {
-    const path = calculatePath(p.slot, allLines, totalParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
+    const path = allPaths[p.name];
     const isFinished = state.revealedPrizes.some((r) => r.participantName === p.name);
     const finalPoint = isFinished ? path[path.length - 1] : path[0];
     return {
