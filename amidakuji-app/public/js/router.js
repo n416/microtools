@@ -5,13 +5,13 @@ import * as state from './state.js';
 import {prepareStepAnimation} from './animation.js';
 import {renderGroupList} from './components/groupDashboard.js';
 import {renderEventList, showPasswordResetNotification, displayUserInfo} from './components/eventDashboard.js';
+import {renderBroadcastResults} from './components/broadcast.js';
 import {renderMemberList} from './components/memberManagement.js';
 import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
 import {loadAdminDashboardData} from './components/adminDashboard.js';
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
-import {db} from './firebase.js'; // ★★★ この行を修正 ★★★
+import {db} from './firebase.js';
 import {clearAnimationState} from './animation/core.js';
-import {renderBroadcastResults} from './components/broadcast.js';
 
 export async function handleLoginOrRegister(eventId, name, memberId = null) {
   try {
@@ -231,12 +231,9 @@ async function handleRouting(initialData) {
   const user = await api.checkGoogleAuthState().catch(() => null);
   state.setCurrentUser(user);
 
-  // --- ▼▼▼ ロジック ▼▼▼ ---
-
   const isAdminPage = path.startsWith('/admin/');
   const isParticipantPage = (path.startsWith('/g/') || path.startsWith('/groups/')) && !isAdminPage;
 
-  // 1. 【参加者ヘッダーの表示制御】 参加者ページかどうかだけで判断
   if (isParticipantPage) {
     ui.setParticipantHeaderVisibility(true);
     state.loadParticipantState();
@@ -245,14 +242,11 @@ async function handleRouting(initialData) {
     ui.setParticipantHeaderVisibility(false);
   }
 
-  // 2. 【管理者ヘッダーの表示制御】 管理者としてログインしているかどうか、または管理者向けページかどうかで判断
   if (user) {
-    // ログインしている場合は、管理者ヘッダーを常に表示
     ui.setMainHeaderVisibility(true);
     ui.updateAuthUI(user);
     ui.updateTutorialDropdown();
   } else {
-    // 未ログイン時は、従来のロジックで表示・非表示を決定
     const publicRoutesToHideHeader = ['/g/', '/share/', '/events/', '/groups/'];
     const isPublicPageForAdminHeader = publicRoutesToHideHeader.some((route) => path.startsWith(route));
 
@@ -263,8 +257,6 @@ async function handleRouting(initialData) {
       ui.updateAuthUI(null);
     }
   }
-
-  // --- ▲▲▲ ロジックここまで ▲▲▲ ---
 
   state.loadParticipantState();
 
@@ -426,6 +418,14 @@ async function handleRouting(initialData) {
   ui.adjustBodyPadding();
 }
 
+export function removeQueryParam(param) {
+  const url = new URL(window.location);
+  if (url.searchParams.has(param)) {
+    url.searchParams.delete(param);
+    history.replaceState({}, '', url.toString());
+  }
+}
+
 export async function navigateTo(path, pushState = true) {
   clearAllFirestoreListeners();
   clearAnimationState();
@@ -434,8 +434,20 @@ export async function navigateTo(path, pushState = true) {
 
   try {
     const currentPath = window.location.pathname + window.location.search;
-    if (pushState && currentPath !== path) {
-      history.pushState({path}, '', path);
+
+    // ▼▼▼ ここからが今回の修正点です ▼▼▼
+    const currentSearchParams = new URLSearchParams(window.location.search);
+    const forcedTutorial = currentSearchParams.get('forceTutorial');
+    let finalPath = path;
+
+    if (forcedTutorial && path.indexOf('forceTutorial') === -1) {
+      const separator = path.indexOf('?') === -1 ? '?' : '&';
+      finalPath = `${path}${separator}forceTutorial=${encodeURIComponent(forcedTutorial)}`;
+    }
+    // ▲▲▲ ここまでが修正点です ▲▲▲
+
+    if (pushState && currentPath !== finalPath) {
+      history.pushState({path: finalPath}, '', finalPath);
     }
     const action = await handleRouting({
       group: window.history.state?.groupData,

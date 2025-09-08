@@ -57,9 +57,21 @@
     if (forcedTutorialId) {
       const storyToForce = window.tutorials.find((s) => s.id === forcedTutorialId);
       if (storyToForce) {
-        setTimeout(() => startTutorialSteps(storyToForce, currentViewId), 100);
+        const pageStep = storyToForce.steps.find((step) => step.type === 'page' && step.match === currentViewId);
+        if (pageStep) {
+          // 事前条件をここでチェック
+          if (pageStep.precondition && !pageStep.precondition(state)) {
+            if (pageStep.preconditionFailMessage) {
+              ui.showToast(pageStep.preconditionFailMessage, 4000);
+              router.removeQueryParam('forceTutorial');
+            }
+          } else {
+            // 条件を満たしていればチュートリアルを開始
+            setTimeout(() => startTutorialSteps(storyToForce, currentViewId), 100);
+          }
+        }
       }
-      return;
+      return; // 強制チュートリアルの処理はここで終了
     }
 
     for (const story of window.tutorials) {
@@ -69,6 +81,14 @@
 
       if (pageStep) {
         if (pageStep.precondition && !pageStep.precondition(state)) {
+          // ▼▼▼ ここからが今回の修正点です ▼▼▼
+          // URLに `forceTutorial` が指定されている場合（＝ユーザーがチュートリアル一覧からクリックした場合）に
+          // 条件を満たしていない理由をトーストで通知します。
+          if (forcedTutorialId === story.id && pageStep.preconditionFailMessage) {
+            ui.showToast(pageStep.preconditionFailMessage, 4000);
+            router.removeQueryParam('forceTutorial'); // 通知後はURLをクリーンアップ
+          }
+          // ▲▲▲ ここまでが修正点です ▲▲▲
           continue;
         }
 
@@ -358,7 +378,11 @@
       };
 
       const onNext = () => closeDialog({ok: true});
-      const onCancel = () => closeDialog({ok: false});
+      const onCancel = () => {
+        router.removeQueryParam('forceTutorial'); // この行を追加してURLをクリーンアップ
+        closeDialog({ok: false});
+        returnUrl = null; // キャンセルされたら戻り先URLをリセット
+      };
 
       nextBtn.addEventListener('click', onNext);
       cancelBtn.addEventListener('click', onCancel);
@@ -506,6 +530,9 @@
   function markTutorialAsCompleted(storyId) {
     try {
       localStorage.setItem(`tutorialCompleted_${storyId}`, 'true');
+      // ▼▼▼ この行を新しく追加してください ▼▼▼
+      router.removeQueryParam('forceTutorial'); // URLからチュートリアルフラグを削除
+      // ▲▲▲ ここまで追加 ▲▲▲
     } catch (e) {
       console.error('[TUTORIAL_LOG] FAILED to set item in localStorage:', e);
     }
