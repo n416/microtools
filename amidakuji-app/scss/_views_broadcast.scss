@@ -14,12 +14,46 @@
 .broadcast-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 15px;
   flex-wrap: wrap;
   position: relative;
   z-index: 2005;
   gap: 10px;
+}
+
+.broadcast-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto; /* 右寄せにする */
+}
+
+.broadcast-header button {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.broadcast-header button:hover {
+  background-color: var(--shadow-color);
+}
+
+/* スマートフォン向けのスタイル */
+@media (max-width: 768px) {
+  .broadcast-header button span {
+    display: none; /* テキストを非表示 */
+  }
+  .broadcast-header button {
+    padding: 8px; /* アイコンのみになるため正方形に近づける */
+  }
 }
 
 .floating-controls {
@@ -50,6 +84,7 @@
   z-index: 4030;
   padding-top: 20px;
   overflow-y: auto;
+  opacity: 0.9;
 }
 
 .broadcast-sidebar.is-open {
@@ -165,4 +200,8 @@
 /* フルスクリーン時にフローティングコントロールがヘッダーと重ならないように下に移動 */
 #broadcastView.fullscreen-active .floating-controls {
   top: 70px; /* ヘッダーの高さ分、下にずらす */
+}
+
+#broadcastResultsList .item-list-item {
+  justify-content:  center;
 }
