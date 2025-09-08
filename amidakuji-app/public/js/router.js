@@ -11,6 +11,7 @@ import {loadAdminDashboardData} from './components/adminDashboard.js';
 import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
 import {db} from './firebase.js'; // ★★★ この行を修正 ★★★
 import {clearAnimationState} from './animation/core.js';
+import {renderBroadcastResults} from './components/broadcast.js';
 
 export async function handleLoginOrRegister(eventId, name, memberId = null) {
   try {
@@ -175,6 +176,18 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
         highlightUserSelect.innerHTML = allParticipants.map((p) => `<option value="${p.name}">${p.name}</option>`).join('');
       }
 
+      if (data.status === 'started' && data.results) {
+        const revealed = Object.entries(data.results).map(([participantName, result]) => ({
+          participantName,
+          prize: result.prize,
+          prizeIndex: result.prizeIndex,
+          revealProgress: 15, // 完了状態
+        }));
+        state.setRevealedPrizes(revealed);
+      } else {
+        state.setRevealedPrizes([]);
+      }
+
       const isPending = data.status === 'pending';
 
       if (adminControls) adminControls.style.display = isPending ? 'flex' : 'none';
@@ -183,6 +196,8 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
       const hidePrizes = data.status !== 'started';
       const ctx = adminCanvas.getContext('2d');
       await prepareStepAnimation(ctx, hidePrizes);
+
+      renderBroadcastResults();
     }
   } catch (error) {
     console.error('イベントの読み込み中にAPIエラーが発生しました:', error);

@@ -207,6 +207,8 @@ function animationLoop() {
     p.draw(targetCtx);
   });
   let allTracersFinished = true;
+
+  // 1. まず、すべてのトレーサーの軌跡（パス）を描画します
   animator.tracers.forEach((tracer) => {
     if (tracer.isFinished) {
       drawTracerPath(targetCtx, tracer);
@@ -218,8 +220,12 @@ function animationLoop() {
         animator.particles.push(new Particle(tracer.x, tracer.y, tracer.color));
       }
     }
+  });
+  // 2. 次に、すべてのトレーサーのアイコンを描画します
+  animator.tracers.forEach((tracer) => {
     drawTracerIcon(targetCtx, tracer);
   });
+
   const isRevealingPrizes = state.revealedPrizes.some((p) => p.revealProgress < 15);
   const particlesRemaining = animator.particles.length > 0;
 
