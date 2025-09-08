@@ -1,6 +1,6 @@
 // amidakuji-app/public/js/animation/core.js
 import * as state from '../state.js';
-import {calculatePath, getTargetHeight, getVirtualWidth, calculateClientSideResults} from './path.js';
+import {calculateAllPaths, getTargetHeight, getVirtualWidth, calculateClientSideResults} from './path.js';
 import {drawLotteryBase, drawRevealedPrizes, drawTracerPath, drawTracerIcon} from './drawing.js';
 import {initializePanzoom, preloadIcons, preloadPrizeImages, adminPanzoom, participantPanzoom} from './setup.js';
 import {createSparks, celebrate, Particle} from './effects.js';
@@ -50,7 +50,6 @@ export function stopAnimation() {
   }
 }
 
-// ▼▼▼ ここから修正 ▼▼▼
 export function clearAnimationState() {
   stopAnimation();
   animator.tracers = [];
@@ -62,7 +61,6 @@ export function clearAnimationState() {
   animator.lastContainerWidth = 0;
   animator.lastContainerHeight = 0;
 }
-// ▲▲▲ ここまで修正 ▲▲▲
 
 function updateTracerPosition(tracer, speed) {
   const revealPrize = () => {
@@ -175,17 +173,18 @@ function animationLoop() {
   const currentContainerWidth = container.clientWidth;
   const currentContainerHeight = getTargetHeight(container);
   if (currentContainerWidth !== animator.lastContainerWidth || currentContainerHeight !== animator.lastContainerHeight) {
-    const numParticipants = state.currentLotteryData.participants.length;
     const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
+    const allPaths = calculateAllPaths(state.currentLotteryData.participants, allLines, currentContainerWidth, currentContainerHeight, container);
+
     animator.tracers.forEach((tracer) => {
-      const participant = state.currentLotteryData.participants.find((p) => p.name === tracer.name);
-      if (!participant) return;
-      const newPath = calculatePath(participant.slot, allLines, numParticipants, currentContainerWidth, currentContainerHeight, container);
-      tracer.path = newPath;
-      if (tracer.isFinished) {
-        const finalPoint = newPath[newPath.length - 1];
-        tracer.x = finalPoint.x;
-        tracer.y = finalPoint.y;
+      const newPath = allPaths[tracer.name];
+      if (newPath) {
+        tracer.path = newPath;
+        if (tracer.isFinished) {
+          const finalPoint = newPath[newPath.length - 1];
+          tracer.x = finalPoint.x;
+          tracer.y = finalPoint.y;
+        }
       }
     });
     animator.lastContainerWidth = currentContainerWidth;
@@ -260,8 +259,11 @@ export async function startAnimation(targetCtx, userNames = [], onComplete = nul
   const numParticipants = state.currentLotteryData.participants.length;
   const finishedTracers = animator.tracers.filter((t) => t.isFinished);
   const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
+
+  const allPaths = calculateAllPaths(state.currentLotteryData.participants, allLines, container.clientWidth, VIRTUAL_HEIGHT, container);
+
   const newTracers = participantsToAnimate.map((p) => {
-    const path = calculatePath(p.slot, allLines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
+    const path = allPaths[p.name];
     return {name: p.name, color: p.color || '#333', path, pathIndex: 0, progress: 0, x: path[0].x, y: path[0].y, isFinished: false, celebrated: false};
   });
   const uniqueFinishedTracers = finishedTracers.filter((t) => !namesToAnimate.includes(t.name));
@@ -349,12 +351,14 @@ export async function resetAnimation(onComplete = null) {
   const container = animator.context.canvas.closest('.canvas-panzoom-container');
   if (!container) return;
   const VIRTUAL_HEIGHT = getTargetHeight(container);
-  const numParticipants = state.currentLotteryData.participants.length;
   const allParticipantsWithNames = state.currentLotteryData.participants.filter((p) => p.name);
   await preloadIcons(allParticipantsWithNames);
   const allLines = [...(state.currentLotteryData.lines || []), ...(state.currentLotteryData.doodles || [])];
+
+  const allPaths = calculateAllPaths(state.currentLotteryData.participants, allLines, container.clientWidth, VIRTUAL_HEIGHT, container);
+
   animator.tracers = allParticipantsWithNames.map((p) => {
-    const path = calculatePath(p.slot, allLines, numParticipants, container.clientWidth, VIRTUAL_HEIGHT, container);
+    const path = allPaths[p.name];
     return {
       name: p.name,
       color: p.color || '#333',
