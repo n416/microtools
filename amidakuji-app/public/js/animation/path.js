@@ -109,7 +109,7 @@ export function calculateAllPaths(participants, allLines, containerWidth, contai
 
   // 2. 各水平線ごとに通過する参加者を特定し、オフセットを計算
   const offsets = {}; // { participantIndex: { y_coord: y_offset } }
-  const OFFSET_Y = 4; // 12pxずらす
+  const OFFSET_Y = 5; // 5pxずらす
 
   sortedLines.forEach((line) => {
     const crossingParticipants = idealPaths.filter((p) => p.idealPath.some((step) => step.line === line)).sort((a, b) => a.slot - b.slot); // slot番号でソート
