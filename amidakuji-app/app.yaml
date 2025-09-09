@@ -16,9 +16,9 @@ handlers:
     upload: public/js/(.*)
 
   # CSSや他の静的ファイルも同様の記述が確実です
-  - url: /(.*\.(css|png|gif|svg))$
+  - url: /(.*\.(css|png|gif|svg|ico))$
     static_files: public/\1
-    upload: public/.*\.(css|png|gif|svg)$
+    upload: public/.*\.(css|png|gif|svg|ico)$
 
   # APIへのリクエストは、すべてアプリケーションで処理するように明示します。
   - url: /api/.*
