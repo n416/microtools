@@ -1,7 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
-*{
-  box-sizing: border-box;
-}
 
 body {
     background-color: #121212;
@@ -12,22 +9,22 @@ body {
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    padding: 20px 0; /* 上下に余白を追加 */
+    padding: 20px 0;
 }
 
 .simulator-container {
     display: flex;
-    flex-wrap: wrap; /* スマホ表示のために折り返しを許可 */
+    flex-wrap: wrap;
     gap: 30px;
     padding: 20px;
     width: 100%;
-    max-width: 900px; /* 最大幅を設定 */
+    max-width: 900px;
 }
 
 /* --- 左側：スロットパネル --- */
 .slot-panel {
-    flex: 1; /* フレックスアイテムとして伸縮 */
-    min-width: 320px; /* 最小幅を設定 */
+    flex: 1;
+    min-width: 320px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -52,7 +49,7 @@ body {
     height: 70px;
     background-color: #2c2c2c;
     border: 2px solid #00aaff;
-    border-radius: 50%; /* スロットを円形に */
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     justify-content: center;
@@ -63,47 +60,67 @@ body {
     transition: background-color 0.3s, transform 0.3s;
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
 }
+
 .slot:hover {
     transform: scale(1.1);
     background-color: #3a3a3a;
 }
-/* スロット内のコンテンツは常に水平 */
+
 .slot-content {
     display: flex;
     justify-content: center;
     align-items: center;
     width: 100%;
     height: 100%;
-    /* ここに逆回転の transform を JavaScript で適用する */
 }
-.slot-content img { width: 100%; height: 100%; object-fit: cover; }
 
+.slot-content img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 
-/* スロットを円形に配置 - それぞれの transform は位置調整のみ */
 #slot-1 { top: 0; left: 50%; transform: translate(-50%, -50%) rotate(0deg); }
 #slot-2 { top: 28%; right: 0; transform: translate(50%, -50%) rotate(72deg); }
 #slot-3 { bottom: 5%; right: 22%; transform: rotate(144deg); }
 #slot-4 { bottom: 5%; left: 22%; transform: rotate(216deg); }
 #slot-5 { top: 28%; left: 0; transform: translate(-50%, -50%) rotate(288deg); }
 
+.result-container {
+    display: flex;
+    gap: 15px;
+    width: 100%;
+    justify-content: center;
+    margin: 10px 0;
+}
 
 .result-area {
+    flex: 1;
     text-align: center;
     border: 2px solid #00aaff;
-    padding: 15px 40px;
+    padding: 10px;
     border-radius: 10px;
     background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
     box-shadow: 0 2px 10px rgba(0, 170, 255, 0.2);
 }
+
+.result-area h3 {
+    margin: 0 0 10px 0;
+    font-size: 1em;
+    color: #ccc;
+    font-weight: normal;
+}
+
 .result-area h2 {
-    font-size: 3.5em;
+    font-size: 2.5em;
     color: #ffc107;
     margin: 0;
     font-weight: 700;
 }
+
 .result-area p {
     margin: 5px 0 0 0;
-    font-size: 1.2em;
+    font-size: 1em;
     color: #aaa;
 }
 
@@ -127,8 +144,8 @@ body {
 
 /* --- 右側：インベントリパネル --- */
 .inventory-panel {
-    flex: 1; /* フレックスアイテムとして伸縮 */
-    min-width: 300px; /* 最小幅を設定 */
+    flex: 1;
+    min-width: 300px;
     height: 600px;
     overflow-y: auto;
     background-color: #1e1e1e;
@@ -136,11 +153,13 @@ body {
     border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
+
 .inventory-panel h3 {
     text-align: center;
     margin-top: 0;
     color: #00aaff;
 }
+
 .inventory-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
@@ -158,45 +177,70 @@ body {
     align-items: center;
     text-align: center;
     font-size: 10px;
-    transition: transform 0.2s, border-color 0.2s;
+    transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
+    padding: 2px;
 }
+
 .inventory-item:hover {
     transform: scale(1.05);
     border-color: #00aaff;
 }
-.inventory-item img { max-width: 90%; max-height: 90%; }
+
+.inventory-item img {
+    max-width: 90%;
+    max-height: 90%;
+}
+
+.item-source-a {
+    border-color: #666;
+}
+
+.item-source-b {
+    background-color: #1a1a1a;
+}
+
+.item-source-common {}
 
 /* アイテムのレアリティ別背景色 */
 .item-purple { background-color: #4a235a; border: 1px solid #9b59b6; }
 .item-blue { background-color: #154360; border: 1px solid #3498db; }
-
+.item-green { background-color: #145A32; border: 1px solid #2ECC71; }
 
 /* --- スマートフォン向けレスポンシブ対応 --- */
 @media (max-width: 768px) {
     body {
-        align-items: flex-start; /* 上寄せに変更 */
+        align-items: flex-start;
     }
+
     .simulator-container {
-        flex-direction: column; /* 縦並びに変更 */
+        flex-direction: column;
         gap: 20px;
         padding: 10px;
     }
-    .slot-panel, .inventory-panel {
+
+    .slot-panel,
+    .inventory-panel {
         width: 100%;
-        max-width: none; /* 最大幅を解除 */
+        max-width: none;
     }
+
     .slot-circle {
         width: 300px;
         height: 300px;
     }
+
     .slot {
         width: 60px;
         height: 60px;
         font-size: 9px;
     }
+
     .inventory-panel {
-        height: auto; /* 高さを自動に */
-        max-height: 400px; /* スクロール可能な最大高さを設定 */
+        height: auto;
+        max-height: 400px;
     }
-    .result-area h2 { font-size: 2.8em; }
+
+    .result-area h2 {
+        font-size: 2.2em;
+    }
 }
