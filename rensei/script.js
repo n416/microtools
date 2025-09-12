@@ -9,7 +9,8 @@ const items = {
   purple_plus6: { name: '+6 紫装備', points: 127, icon: '仮', rarity: 'purple' },
   purple_plus7: { name: '+7 紫装備', points: 197, icon: '仮', rarity: 'purple' },
   purple_plus8: { name: '+8 紫装備', points: 400, icon: '仮', rarity: 'purple' },
-  purple_plus9: { name: '+9 紫装備', points: 400, icon: '仮', rarity: 'purple' },
+  // ▼▼▼ 誤っていたポイントを修正 ▼▼▼
+  purple_plus9: { name: '+9 紫装備', points: 413, icon: '仮', rarity: 'purple' },
   purple_plus10: { name: '+10 紫装備', points: 426, icon: '仮', rarity: 'purple' },
   purple_plus11: { name: '+11 紫装備', points: 476, icon: '仮', rarity: 'purple' },
 
@@ -22,7 +23,11 @@ const items = {
 };
 
 // 段階のしきい値
+// ▼▼▼ 7段階以上のデータを追加 ▼▼▼
 const thresholds = [
+  { stage: 10, requiredPoints: 1250 },
+  { stage: 9, requiredPoints: 1000 },
+  { stage: 8, requiredPoints: 700 },
   { stage: 7, requiredPoints: 450 },
   { stage: 6, requiredPoints: 400 },
   { stage: 5, requiredPoints: 250 },
