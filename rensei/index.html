@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ゲームルール シミュレーター</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="simulator-container">
+    <div class="slot-panel">
+      <div class="slot-circle">
+        <div class="slot" id="slot-1" data-slot-index="0"></div>
+        <div class="slot" id="slot-2" data-slot-index="1"></div>
+        <div class="slot" id="slot-3" data-slot-index="2"></div>
+        <div class="slot" id="slot-4" data-slot-index="3"></div>
+        <div class="slot" id="slot-5" data-slot-index="4"></div>
+      </div>
+      <div class="result-area" id="result-display">
+        <h2>- 段階 -</h2>
+        <p>合計ポイント: 0</p>
+      </div>
+      <button id="reset-button">リセット</button>
+    </div>
+
+    <div class="inventory-panel">
+      <h3>インベントリ</h3>
+      <div class="inventory-grid" id="inventory-grid">
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
