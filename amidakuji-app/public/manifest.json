@@ -1,6 +1,6 @@
 {
-  "name": "ウェブアプリ",
-  "short_name": "ウェブアプリ",
+  "name": "あみだくじ",
+  "short_name": "あみだ",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
