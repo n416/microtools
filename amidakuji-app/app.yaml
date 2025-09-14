@@ -5,6 +5,9 @@ automatic_scaling:
 inbound_services:
   - warmup
 
+env_variables:
+  GCS_BUCKET_NAME: 'amidakuji-app-native-bucket'
+  
 handlers:
   - url: /favicon.ico
     static_files: public/favicon.ico
