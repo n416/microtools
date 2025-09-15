@@ -193,7 +193,8 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
       if (adminControls) adminControls.style.display = isPending ? 'flex' : 'none';
       if (openSidebarButton) openSidebarButton.style.display = isPending ? 'none' : 'flex';
 
-      const hidePrizes = data.status !== 'started';
+      // const hidePrizes = data.status !== 'started';
+      const hidePrizes = true; 
       const ctx = adminCanvas.getContext('2d');
       await prepareStepAnimation(ctx, hidePrizes);
 
