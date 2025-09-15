@@ -1,15 +1,15 @@
 import * as api from '../api.js';
 import * as state from '../state.js';
 import * as router from '../router.js';
-import {startAnimation, isAnimationRunning, showAllTracersInstantly, prepareStepAnimation} from '../animation.js';
-import {drawDoodlePreview, drawDoodleHoverPreview} from '../animation/drawing.js';
-import {getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight, getTargetHeight} from '../animation/path.js';
-import {participantPanzoom} from '../animation/setup.js';
+import { startAnimation, isAnimationRunning, showAllTracersInstantly, prepareStepAnimation } from '../animation.js';
+import { drawDoodlePreview, drawDoodleHoverPreview } from '../animation/drawing.js';
+import { getVirtualWidth, getNameAreaHeight, calculatePrizeAreaHeight, getTargetHeight } from '../animation/path.js';
+import { participantPanzoom } from '../animation/setup.js';
 import * as ui from '../ui.js';
-import {clientEmojiToLucide} from '../ui.js';
-import {addFirestoreListener} from '../state.js';
-import {db} from '../firebase.js';
-import {processImage} from '../imageProcessor.js';
+import { clientEmojiToLucide } from '../ui.js';
+import { addFirestoreListener } from '../state.js';
+import { db } from '../firebase.js';
+import { processImage } from '../imageProcessor.js';
 
 let processedProfileIconFile = null;
 
@@ -39,11 +39,11 @@ const handleOpenProfileModal = async () => {
         try {
           let newIconUrl = null;
           if (processedProfileIconFile) {
-            const {signedUrl, iconUrl} = await api.generateUploadUrl(state.currentParticipantId, processedProfileIconFile.type, state.currentGroupId, state.currentParticipantToken);
-            await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': processedProfileIconFile.type}, body: processedProfileIconFile});
+            const { signedUrl, iconUrl } = await api.generateUploadUrl(state.currentParticipantId, processedProfileIconFile.type, state.currentGroupId, state.currentParticipantToken);
+            await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': processedProfileIconFile.type }, body: processedProfileIconFile });
             newIconUrl = iconUrl;
           }
-          const profileData = {color: ui.elements.profileColorInput.value};
+          const profileData = { color: ui.elements.profileColorInput.value };
           if (newIconUrl) profileData.iconUrl = newIconUrl;
           await api.updateProfile(state.currentParticipantId, profileData, state.currentGroupId, state.currentParticipantToken);
           alert('プロフィールを保存しました。');
@@ -247,7 +247,7 @@ export async function showStaticAmidaView() {
   }
 
   const ctx = ui.elements.participantCanvasStatic.getContext('2d');
-  const storedState = participantPanzoom ? {pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale()} : null;
+  const storedState = participantPanzoom ? { pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale() } : null;
   await prepareStepAnimation(ctx, true, false, false, storedState);
 
   if (state.hoverDoodle) {
@@ -307,10 +307,10 @@ export function showUserDashboardView(groupData, events) {
   }
 
   state.loadParticipantState();
-  ui.updateParticipantHeader({name: state.currentParticipantName});
+  ui.updateParticipantHeader({ name: state.currentParticipantName });
 
   if (state.currentParticipantId && state.currentParticipantToken) {
-    showControlPanelView({participants: [], status: 'pending'});
+    showControlPanelView({ participants: [], status: 'pending' });
   } else {
     showNameEntryView();
     if (elements.nameInput) elements.nameInput.placeholder = '名前を入力して参加/ログイン';
@@ -399,7 +399,7 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
     state.setCurrentGroupId(eventData.groupId);
     state.loadParticipantState();
 
-    ui.updateParticipantHeader({name: state.currentParticipantName});
+    ui.updateParticipantHeader({ name: state.currentParticipantName });
 
     if (!isShare && state.currentParticipantId) {
       eventData = await api.getPublicEventData(eventId);
@@ -458,7 +458,7 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
             const staticCanvas = document.getElementById('participantCanvasStatic');
             if (staticCanvas && staticCanvas.offsetParent !== null) {
               const ctx = staticCanvas.getContext('2d');
-              const storedState = participantPanzoom ? {pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale()} : null;
+              const storedState = participantPanzoom ? { pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale() } : null;
               await prepareStepAnimation(ctx, true, false, false, storedState);
             }
           }
@@ -576,7 +576,7 @@ export function initParticipantView() {
   const staticCanvas = document.getElementById('participantCanvasStatic');
   if (staticCanvas) {
     const redrawCanvas = async () => {
-      const storedState = participantPanzoom ? {pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale()} : null;
+      const storedState = participantPanzoom ? { pan: participantPanzoom.getPan(), scale: participantPanzoom.getScale() } : null;
       const ctx = staticCanvas.getContext('2d');
       await prepareStepAnimation(ctx, true, false, false, storedState);
       if (state.hoverDoodle) {
@@ -596,10 +596,15 @@ export function initParticipantView() {
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-      const x = (clientX - rect.left - pan.x) / scale;
-      const y = (clientY - rect.top - pan.y) / scale;
+    // ▼▼▼ ここからが今回の修正点です ▼▼▼
+      // パンによるオフセットは rect.left と rect.top に既に含まれているため、
+      // pan.x と pan.y を引く処理を削除します。
+      const x = (clientX - rect.left) / scale;
+      const y = (clientY - rect.top) / scale;
+      // ▲▲▲ ここまでが修正点です ▲▲▲
 
-      const {participants, prizes} = state.currentLotteryData;
+
+      const { participants, prizes } = state.currentLotteryData;
       const numParticipants = participants.length;
       const container = canvas.closest('.canvas-panzoom-container');
       const VIRTUAL_WIDTH = getVirtualWidth(numParticipants, container.clientWidth);
@@ -633,7 +638,7 @@ export function initParticipantView() {
 
       const relativeY = y - lineTopY;
       const originalY = (relativeY / amidaDrawableHeight) * sourceLineRange + topMargin;
-      return {fromIndex, toIndex: fromIndex + 1, y: originalY};
+      return { fromIndex, toIndex: fromIndex + 1, y: originalY };
     };
 
     const handlePointerMove = (e) => {
@@ -702,7 +707,7 @@ export function initParticipantView() {
         try {
           await api.addDoodle(state.currentEventId, state.currentParticipantId, doodleData);
           state.currentLotteryData.doodles = state.currentLotteryData.doodles.filter((d) => d.memberId !== state.currentParticipantId);
-          state.currentLotteryData.doodles.push({...doodleData, memberId: state.currentParticipantId});
+          state.currentLotteryData.doodles.push({ ...doodleData, memberId: state.currentParticipantId });
           state.setPreviewDoodle(null);
         } catch (error) {
           if (!handleInvalidTokenError(error)) {
