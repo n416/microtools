@@ -16,7 +16,24 @@
   <meta name="robots" content="noindex" />
   <% } %>
   <title>ダイナミックあみだくじ</title>
-  <%# ▼▼▼ [修正点] タイムスタンプをバージョン番号変数に置き換え ▼▼▼ %>
+  <script type="importmap">
+    {
+        "imports": {
+            "./api.js": "/js/api.js?v=<%= appVersion %>",
+            "./ui.js": "/js/ui.js?v=<%= appVersion %>",
+            "./state.js": "/js/state.js?v=<%= appVersion %>",
+            "./animation.js": "/js/animation.js?v=<%= appVersion %>",
+            "./router.js": "/js/router.js?v=<%= appVersion %>",
+            "./components/groupDashboard.js": "/js/components/groupDashboard.js?v=<%= appVersion %>",
+            "./components/eventDashboard.js": "/js/components/eventDashboard.js?v=<%= appVersion %>",
+            "./components/memberManagement.js": "/js/components/memberManagement.js?v=<%= appVersion %>",
+            "./components/eventEdit.js": "/js/components/eventEdit.js?v=<%= appVersion %>",
+            "./components/adminDashboard.js": "/js/components/adminDashboard.js?v=<%= appVersion %>",
+            "./components/participantView.js": "/js/components/participantView.js?v=<%= appVersion %>",
+            "./components/broadcast.js": "/js/components/broadcast.js?v=<%= appVersion %>"
+        }
+    }
+  </script>
   <link rel="stylesheet" href="/style.css?v=<%= appVersion 
 %>" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
