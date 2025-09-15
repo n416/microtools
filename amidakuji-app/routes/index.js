@@ -272,6 +272,7 @@ router.get('/', (req, res) => {
     noIndex: false,
     groupData: null,
     eventData: null,
+    appVersion: req.app.locals.appVersion
   });
 });
 // ▲▲▲ ここまで追記 ▲▲▲
