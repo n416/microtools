@@ -20,9 +20,7 @@ const darkModeMatcher = window.matchMedia('(prefers-color-scheme: dark)');
 let tronAnimationAPI = null;
 let appInitialized = false; // 初期化済みフラグ
 document.addEventListener('DOMContentLoaded', () => {
-  // ★★★ 修正点: DOMContentLoadedでチュートリアルマネージャーを初期化 ★★★
   if (window.tutorialManager && typeof window.tutorialManager.init === 'function') {
-    // 依存性を渡して初期化
     window.tutorialManager.init({state, router, ui});
   }
 
@@ -45,15 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initializeApp() {
   ui.initUI();
 
-  // ★★★ ここからが修正点 ★★★
-  // tutorialManagerとtutorialListの両方に依存性を注入
   if (window.tutorialManager && typeof window.tutorialManager.init === 'function') {
     window.tutorialManager.init({state, router, ui});
   }
   if (window.tutorialList && typeof window.tutorialList.init === 'function') {
     window.tutorialList.init({state, router, ui});
   }
-  // ★★★ ここまでが修正点 ★★★
 
   loadSettings();
   applySettings();
@@ -77,10 +72,7 @@ async function initializeApp() {
     event: typeof initialEventData !== 'undefined' ? initialEventData : null,
   };
 
-  // ▼▼▼ ここから修正 ▼▼▼
-  // URLのクエリパラメータも含めて画面遷移関数を呼び出すように修正
   await router.navigateTo(window.location.pathname + window.location.search, false);
-  // ▲▲▲ ここまで修正 ▲▲▲
 
   if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
     await router.loadUserAndRedirect(state.currentUser.lastUsedGroupId);
@@ -299,7 +291,6 @@ function setupEventListeners() {
     router.navigateTo(window.location.pathname + window.location.search, false);
   });
 
-  // ▼▼▼ ここから修正 ▼▼▼
   const handleAdminLogin = () => {
     if (confirm('これはあみだくじの運営者向けのログインです。よろしいですか？')) {
       window.location.href = '/auth/google';
@@ -312,7 +303,6 @@ function setupEventListeners() {
   if (ui.elements.landingLoginButton) {
     ui.elements.landingLoginButton.addEventListener('click', handleAdminLogin);
   }
-  // ▲▲▲ ここまで修正 ▲▲▲
   if (ui.elements.logoutButton)
     ui.elements.logoutButton.addEventListener('click', async () => {
       const isAdminPage = window.location.pathname.startsWith('/admin') || window.location.pathname === '/';
@@ -359,16 +349,13 @@ function setupEventListeners() {
     });
   if (ui.elements.adminDashboardButton) {
     ui.elements.adminDashboardButton.addEventListener('click', (e) => {
-      // 親の<li>のクリックイベントが発火しないようにする
       e.stopPropagation();
       document.querySelector('#userMenuContainer .dropdown-content').style.display = 'none';
       router.navigateTo('/admin/dashboard');
     });
   }
 
-  // ▼▼▼ このブロックを新しく追加 ▼▼▼
   document.addEventListener('click', (e) => {
-    // ドロップダウン以外の場所をクリックしたら、すべてのドロップダウンを閉じる
     if (!e.target.closest('.header-dropdown')) {
       document.querySelectorAll('.header-dropdown .dropdown-content').forEach((el) => (el.style.display = 'none'));
     }
@@ -380,11 +367,9 @@ function setupEventListeners() {
 
     button.addEventListener('click', (e) => {
       e.stopPropagation();
-      // 他のドロップダウンを閉じる
       document.querySelectorAll('.header-dropdown .dropdown-content').forEach((el) => {
         if (el !== content) el.style.display = 'none';
       });
-      // 現在のドロップダウンの表示を切り替える
       content.style.display = content.style.display === 'block' ? 'none' : 'block';
     });
   });
@@ -489,13 +474,10 @@ function setupEventListeners() {
       if (url.origin === window.location.origin) {
         event.preventDefault();
 
-        // ▼▼▼ ここからが修正点です ▼▼▼
-        // クリックされたリンクがドロップダウン内にあれば、そのドロップダウンを閉じる
         const dropdownContent = link.closest('.dropdown-content');
         if (dropdownContent) {
           dropdownContent.style.display = 'none';
         }
-        // ▲▲▲ ここまでが修正点です ▲▲▲
 
         router.navigateTo(url.pathname + url.search);
       }
@@ -597,14 +579,9 @@ function applySettings() {
   }
 }
 function setupSettingsControls() {
-  // ▼▼▼ ここからログを追加 ▼▼▼
-
   const fab = document.getElementById('settingsFab');
-
   const panel = document.getElementById('settingsPanel');
-
   const animationToggle = document.getElementById('animationToggle');
-
   const themeRadios = document.querySelectorAll('input[name="theme"]');
 
   if (!fab || !panel) {
@@ -613,14 +590,12 @@ function setupSettingsControls() {
 
   fab.addEventListener('click', () => {
     panel.classList.toggle('visible');
-
     fab.classList.toggle('active');
   });
 
   document.addEventListener('click', (e) => {
     if (!panel.contains(e.target) && !fab.contains(e.target)) {
       panel.classList.remove('visible');
-
       fab.classList.remove('active');
     }
   });
@@ -628,16 +603,11 @@ function setupSettingsControls() {
   if (animationToggle) {
     animationToggle.addEventListener('change', () => {
       settings.animation = animationToggle.checked;
-
       saveSettings();
-
       const canvasContainer = document.getElementById('canvas-container');
-
       if (settings.animation) {
         canvasContainer.style.display = 'block';
-
         tronAnimationAPI = initTronAnimation();
-
         tronAnimationAPI.setTheme(settings.theme);
       } else {
         canvasContainer.style.display = 'none';
@@ -648,11 +618,8 @@ function setupSettingsControls() {
   themeRadios.forEach((radio) => {
     radio.addEventListener('change', () => {
       let storedState = null;
-
       let panzoomInstance = null;
-
       const adminCanvas = document.getElementById('adminCanvas');
-
       const participantCanvas = document.getElementById('participantCanvas');
 
       if (adminCanvas && adminCanvas.offsetParent !== null) {
@@ -664,16 +631,45 @@ function setupSettingsControls() {
       if (panzoomInstance) {
         storedState = {
           pan: panzoomInstance.getPan(),
-
           scale: panzoomInstance.getScale(),
         };
       }
 
       settings.theme = radio.value;
-
       saveSettings();
-
       applyTheme(settings.theme, storedState);
     });
   });
 }
+
+/**
+ * チュートリアルメニューの未読通知（赤ポチ）の状態を更新します。
+ */
+function updateTutorialMenuState() {
+  const tutorialMenuButton = document.getElementById('tutorialMenuButton');
+  const tutorialDropdownList = document.getElementById('tutorialDropdownList');
+
+  if (!tutorialMenuButton || !tutorialDropdownList) {
+    return;
+  }
+
+  const mainNotificationDot = tutorialMenuButton.querySelector('.notification-dot');
+
+  const hasUncompletedTutorials = window.tutorials?.some((tutorial) => localStorage.getItem(`tutorialCompleted_${tutorial.id}`) !== 'true');
+
+  if (hasUncompletedTutorials) {
+    if (mainNotificationDot) {
+      mainNotificationDot.style.display = 'flex';
+    }
+  } else {
+    if (mainNotificationDot) {
+      mainNotificationDot.style.display = 'none';
+    }
+    const listNotificationDots = tutorialDropdownList.querySelectorAll('.notification-dot');
+    listNotificationDots.forEach((dot) => dot.remove());
+  }
+}
+
+window.addEventListener('tutorialsUpdated', updateTutorialMenuState);
+document.addEventListener('DOMContentLoaded', updateTutorialMenuState);
+// ▲▲▲ ここまで ▲▲▲

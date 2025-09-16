@@ -2,22 +2,16 @@
 (function () {
   const LIST_CONTAINER_ID = 'tutorial-list-container';
   let containerEl = null;
-  let state = null; // モジュール内変数として依存性を保持
-  let router = null; // モジュール内変数として依存性を保持
-  let ui = null; // ★★★ uiオブジェクトを保持する変数を追加 ★★★
-  let isInitialized = false; // イベントリスナーの重複登録を防ぐフラグ
-
-  const viewToUrlMap = {
-    groupDashboard: '/admin/groups',
-    dashboardView: (groupId) => `/admin/groups/${groupId}`,
-    eventEditView: (groupId) => `/admin/group/${groupId}/event/new`,
-  };
+  let state = null;
+  let router = null;
+  let ui = null;
+  let isInitialized = false;
 
   window.tutorialList = {
     init: function (dependencies) {
       state = dependencies.state;
       router = dependencies.router;
-      ui = dependencies.ui; // ★★★ 渡されたuiオブジェクトを保存 ★★★
+      ui = dependencies.ui;
     },
 
     renderView: function () {
@@ -52,7 +46,6 @@
         html += '<ul class="item-list">';
         groupedTutorials[groupName].forEach((tutorial) => {
           const isCompleted = localStorage.getItem(`tutorialCompleted_${tutorial.id}`) === 'true';
-          // 共通関数を使ってURLを生成
           const href = window.tutorialUtils.generateTutorialUrl(tutorial, state);
 
           html += `
@@ -83,11 +76,10 @@
 
         if (link) {
           e.preventDefault();
-          // ▼▼▼ チュートリアル開始前に現在のURLを保存 ▼▼▼
+          // このページからチュートリアルを開始する際に、戻り先URLを保存する
           if (window.tutorialManager) {
             window.tutorialManager.setReturnUrl(window.location.pathname);
           }
-          // ▲▲▲ ここまで ▲▲▲
           setTimeout(() => {
             router.navigateTo(link.getAttribute('href'));
           }, 0);
