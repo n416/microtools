@@ -1,17 +1,17 @@
-import {clearAllFirestoreListeners} from './state.js';
+import { clearAllFirestoreListeners } from './state.js';
 import * as api from './api.js';
 import * as ui from './ui.js';
 import * as state from './state.js';
-import {prepareStepAnimation} from './animation.js';
-import {renderGroupList} from './components/groupDashboard.js';
-import {renderEventList, showPasswordResetNotification, displayUserInfo} from './components/eventDashboard.js';
-import {renderBroadcastResults} from './components/broadcast.js';
-import {renderMemberList} from './components/memberManagement.js';
-import {renderPrizeCardList, renderPrizeListMode, renderEventForEditing} from './components/eventEdit.js';
-import {loadAdminDashboardData} from './components/adminDashboard.js';
-import {showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView} from './components/participantView.js';
-import {db} from './firebase.js';
-import {clearAnimationState} from './animation/core.js';
+import { prepareStepAnimation } from './animation.js';
+import { renderGroupList } from './components/groupDashboard.js';
+import { renderEventList, showPasswordResetNotification, displayUserInfo } from './components/eventDashboard.js';
+import { renderBroadcastResults } from './components/broadcast.js';
+import { renderMemberList } from './components/memberManagement.js';
+import { renderPrizeCardList, renderPrizeListMode, renderEventForEditing } from './components/eventEdit.js';
+import { loadAdminDashboardData } from './components/adminDashboard.js';
+import { showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView } from './components/participantView.js';
+import { db } from './firebase.js';
+import { clearAnimationState } from './animation/core.js';
 
 export async function handleLoginOrRegister(eventId, name, memberId = null) {
   try {
@@ -88,6 +88,19 @@ async function loadAndShowGroupEvents(groupId) {
     });
   }
 
+  // ▼▼▼ ここからが修正点 ▼▼▼
+  // グループ一覧の取得とスイッチャーの更新を、イベント取得より先に、独立して実行する
+  if (state.allUserGroups.length === 0) {
+    try {
+      const allGroups = await api.getGroups();
+      state.setAllUserGroups(allGroups);
+    } catch (error) {
+      console.error("スイッチャー用のグループ一覧取得に失敗:", error);
+    }
+  }
+  ui.updateGroupSwitcher();
+  // ▲▲▲ ここまでが修正点 ▲▲▲
+
   try {
     const [events, passwordRequests] = await Promise.all([api.getEventsForGroup(groupId), api.getPasswordRequests(groupId)]);
 
@@ -96,11 +109,10 @@ async function loadAndShowGroupEvents(groupId) {
 
     showPasswordResetNotification(passwordRequests);
 
-    if (state.allUserGroups.length === 0) {
-      const allGroups = await api.getGroups();
-      state.setAllUserGroups(allGroups);
-    }
-    ui.updateGroupSwitcher();
+    // ★★★ 修正点: 元の場所にあった以下のコードブロックは削除する ★★★
+    // if (state.allUserGroups.length === 0) { ... }
+    // ui.updateGroupSwitcher();
+
   } catch (error) {
     console.error(`イベント一覧の読み込み失敗 (Group ID: ${groupId}):`, error);
     if (ui.elements.eventList) ui.elements.eventList.innerHTML = `<li class="error-message">${error.error || error.message}</li>`;
@@ -194,7 +206,7 @@ export async function loadEventForEditing(eventId, viewToShow = 'eventEditView',
       if (openSidebarButton) openSidebarButton.style.display = isPending ? 'none' : 'flex';
 
       // const hidePrizes = data.status !== 'started';
-      const hidePrizes = true; 
+      const hidePrizes = true;
       const ctx = adminCanvas.getContext('2d');
       await prepareStepAnimation(ctx, hidePrizes);
 
@@ -238,7 +250,7 @@ async function handleRouting(initialData) {
   if (isParticipantPage) {
     ui.setParticipantHeaderVisibility(true);
     state.loadParticipantState();
-    ui.updateParticipantHeader({name: state.currentParticipantName});
+    ui.updateParticipantHeader({ name: state.currentParticipantName });
   } else {
     ui.setParticipantHeaderVisibility(false);
   }
@@ -448,7 +460,7 @@ export async function navigateTo(path, pushState = true) {
     // ▲▲▲ ここまでが修正点です ▲▲▲
 
     if (pushState && currentPath !== finalPath) {
-      history.pushState({path: finalPath}, '', finalPath);
+      history.pushState({ path: finalPath }, '', finalPath);
     }
     const action = await handleRouting({
       group: window.history.state?.groupData,
@@ -465,7 +477,7 @@ export async function navigateTo(path, pushState = true) {
 }
 
 async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCustomUrl) {
-  const {groupEventListContainer, groupNameTitle, backToDashboardFromEventListButton} = ui.elements;
+  const { groupEventListContainer, groupNameTitle, backToDashboardFromEventListButton } = ui.elements;
   if (!groupEventListContainer || !groupNameTitle || !backToDashboardFromEventListButton) return;
 
   ui.showView('groupEventListView');
