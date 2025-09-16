@@ -488,10 +488,16 @@ function setupEventListeners() {
       const url = new URL(link.href);
       if (url.origin === window.location.origin) {
         event.preventDefault();
-        // ▼▼▼ ここから修正 ▼▼▼
-        // url.pathname のみでなく、検索クエリ(search)も含めて画面遷移するように修正
+
+        // ▼▼▼ ここからが修正点です ▼▼▼
+        // クリックされたリンクがドロップダウン内にあれば、そのドロップダウンを閉じる
+        const dropdownContent = link.closest('.dropdown-content');
+        if (dropdownContent) {
+          dropdownContent.style.display = 'none';
+        }
+        // ▲▲▲ ここまでが修正点です ▲▲▲
+
         router.navigateTo(url.pathname + url.search);
-        // ▲▲▲ ここまで修正 ▲▲▲
       }
     }
   });
@@ -606,7 +612,6 @@ function setupSettingsControls() {
   }
 
   fab.addEventListener('click', () => {
-
     panel.classList.toggle('visible');
 
     fab.classList.toggle('active');

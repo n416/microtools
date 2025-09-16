@@ -520,56 +520,48 @@ export async function buildNewPrizesWithDataPreservation(newNames) {
   });
   return newPrizes;
 }
-export function showCustomConfirm(message, buttons) {
+
+/**
+ * カスタム確認モーダルを表示します。
+ * @param {string} message - モーダルに表示するメッセージ。
+ * @param {string} [okText='OK'] - OKボタンのテキスト。
+ * @param {string} [cancelText='キャンセル'] - キャンセルボタンのテキスト。
+ * @returns {Promise<boolean>} ユーザーがOKを押した場合はtrue、それ以外はfalseを返します。
+ */
+export function showCustomConfirm(message, okText = 'OK', cancelText = 'キャンセル') {
   return new Promise((resolve) => {
-    const modal = elements.customConfirmModal;
-    const messageEl = elements.customConfirmMessage;
-    const buttonsEl = elements.customConfirmButtons;
+    const modal = document.getElementById('customConfirmModal');
+    const messageEl = document.getElementById('customConfirmMessage');
+    const buttonsEl = document.getElementById('customConfirmButtons');
 
     if (!modal || !messageEl || !buttonsEl) {
-      const result = window.confirm(message);
-      resolve(result ? buttons[0] : null);
+      // 万が一要素が見つからない場合は、ブラウザ標準のconfirmで代用します
+      resolve(window.confirm(message));
       return;
     }
 
     messageEl.textContent = message;
-    buttonsEl.innerHTML = '';
+    buttonsEl.innerHTML = `
+      <button id="customConfirmCancel" class="button-secondary">${cancelText}</button>
+      <button id="customConfirmOk" class="button-primary">${okText}</button>
+    `;
 
-    let cleanup = () => {};
-
-    const outsideClickListener = (e) => {
-      if (e.target === modal) {
-        cleanup();
-        resolve(null);
-      }
-    };
-
-    cleanup = () => {
-      modal.style.display = 'none';
-      modal.removeEventListener('click', outsideClickListener);
-    };
-
-    buttons.forEach((btnText, index) => {
-      const button = document.createElement('button');
-      button.textContent = btnText;
-      button.className = index === 0 ? 'primary-action' : 'secondary-btn';
-      button.onclick = () => {
-        cleanup();
-        resolve(btnText);
-      };
-      buttonsEl.appendChild(button);
-    });
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'キャンセル';
-    cancelBtn.className = 'secondary-btn';
-    cancelBtn.onclick = () => {
-      cleanup();
-      resolve(null);
-    };
-    buttonsEl.appendChild(cancelBtn);
-
-    modal.addEventListener('click', outsideClickListener);
     modal.style.display = 'block';
+
+    const okButton = document.getElementById('customConfirmOk');
+    const cancelButton = document.getElementById('customConfirmCancel');
+
+    const close = (result) => {
+      modal.style.display = 'none';
+      okButton.removeEventListener('click', onOk);
+      cancelButton.removeEventListener('click', onCancel);
+      resolve(result);
+    };
+
+    const onOk = () => close(true);
+    const onCancel = () => close(false);
+
+    okButton.addEventListener('click', onOk, {once: true});
+    cancelButton.addEventListener('click', onCancel, {once: true});
   });
 }

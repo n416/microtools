@@ -81,14 +81,12 @@
 
       if (pageStep) {
         if (pageStep.precondition && !pageStep.precondition(state)) {
-          // ▼▼▼ ここからが今回の修正点です ▼▼▼
           // URLに `forceTutorial` が指定されている場合（＝ユーザーがチュートリアル一覧からクリックした場合）に
           // 条件を満たしていない理由をトーストで通知します。
           if (forcedTutorialId === story.id && pageStep.preconditionFailMessage) {
             ui.showToast(pageStep.preconditionFailMessage, 4000);
             router.removeQueryParam('forceTutorial'); // 通知後はURLをクリーンアップ
           }
-          // ▲▲▲ ここまでが修正点です ▲▲▲
           continue;
         }
 
@@ -133,7 +131,7 @@
                 transition: all 0.3s ease-in-out;
                 border: 3px solid blue;
                 border-radius: 5px;
-                box-sizing: border-box; /* ★★★ 修正点 ★★★ */
+                box-sizing: border-box;
             }
             .tutorial-dialog {
                 position: fixed; background-color: white; border: 1px solid #ccc;
@@ -141,26 +139,27 @@
                 z-index: 10002; display: none; max-width: 350px;
                 transition: opacity 0.3s ease, transform 0.3s ease; color: #333;
             }
-            @media (prefers-color-scheme: dark) {
-                .tutorial-dialog {
-                    background-color: #333; border-color: #555; color: #eee;
-                }
-                .tutorial-dialog button {
-                    border-color: #555; background-color: #444; color: #eee;
-                }
-                .tutorial-dialog button.primary {
-                    background-color: #0d6efd; border-color: #0d6efd; color: white;
-                }
+
+            body.dark-mode .tutorial-dialog {
+                background-color: #333; border-color: #555; color: #eee;
             }
+            body.dark-mode .tutorial-dialog button {
+                border-color: #555; background-color: #444; color: #eee;
+            }
+            body.dark-mode .tutorial-dialog button.primary {
+                background-color: #0d6efd; border-color: #0d6efd; color: white;
+            }
+
             .tutorial-dialog .step-title { font-weight: bold; margin-bottom: 10px; font-size: 1.2em; }
             .tutorial-dialog .step-message { margin-bottom: 20px; line-height: 1.6; }
-            .tutorial-dialog .step-actions { display: flex; justify-content: flex-end; gap: 10px; }
+            .tutorial-dialog .step-actions { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
             .tutorial-dialog button { padding: 8px 16px; border-radius: 4px; cursor: pointer; border: 1px solid #ccc; }
             .tutorial-dialog button.primary { background-color: #007bff; color: white; border-color: #007bff; }
+            .tutorial-dialog .skip-all-link { font-size: 0.8em; color: #dc3545; cursor: pointer; text-decoration: underline; }
         `;
     const styleSheet = document.createElement('style');
     styleSheet.type = 'text/css';
-    styleSheet.innerText = styles;
+    styleSheet.textContent  = styles;
     document.head.appendChild(styleSheet);
 
     highlightEl = document.createElement('div');
@@ -248,14 +247,13 @@
         }
         if (subStep.complete === true) {
           markTutorialAsCompleted(story.id);
-          // ▼▼▼ チュートリアル完了時の処理を追加 ▼▼▼
+          // チュートリアル完了時の処理を追加
           if (story.returnOnComplete && returnUrl && router) {
             const urlToReturn = returnUrl;
             returnUrl = null; // 次回のためにリセット
             ui.showToast('チュートリアル完了！元の画面に戻ります。', 2000);
             setTimeout(() => router.navigateTo(urlToReturn), 1500);
           }
-          // ▲▲▲ ここまで ▲▲▲
           return;
         }
       }
@@ -345,12 +343,16 @@
                 <div class="step-title">${escapeHtml(story.title)}</div>
                 <div class="step-message">${escapeHtml(subStep.message)}</div>
                 <div class="step-actions">
-                    <button id="tutorial-cancel-btn">キャンセル</button>
-                    <button id="tutorial-next-btn" class="primary">次へ</button>
+                    <a id="skip-all-tutorials-link" class="skip-all-link">チュートリアルを全部終了したことにする</a>
+                    <div>
+                        <button id="tutorial-cancel-btn">キャンセル</button>
+                        <button id="tutorial-next-btn" class="primary">次へ</button>
+                    </div>
                 </div>
             `;
       const nextBtn = dialogEl.querySelector('#tutorial-next-btn');
       const cancelBtn = dialogEl.querySelector('#tutorial-cancel-btn');
+      const skipAllLink = dialogEl.querySelector('#skip-all-tutorials-link');
 
       if (subStep.removeOkButton) nextBtn.style.display = 'none';
 
@@ -379,13 +381,37 @@
 
       const onNext = () => closeDialog({ok: true});
       const onCancel = () => {
-        router.removeQueryParam('forceTutorial'); // この行を追加してURLをクリーンアップ
+        router.removeQueryParam('forceTutorial');
         closeDialog({ok: false});
-        returnUrl = null; // キャンセルされたら戻り先URLをリセット
+        returnUrl = null;
+      };
+
+      const onSkipAll = async () => {
+        // 先にチュートリアルモーダルを非表示にして、確認ダイアログが見えるようにします。
+        dialogEl.style.display = 'none';
+        highlightEl.style.display = 'none';
+        focusBorderEl.style.display = 'none';
+
+        try {
+          const confirm1 = await ui.showCustomConfirm('本当にすべてのチュートリアルを完了済みにしますか？');
+          if (!confirm1) return; // ユーザーがキャンセルしたら、以降の処理は中断
+
+          const confirm2 = await ui.showCustomConfirm('この操作は元に戻せません。本当によろしいですか？');
+          if (!confirm2) return; // ユーザーがキャンセルしたら、以降の処理は中断
+
+          // すべての確認がOKだった場合のみ、完了処理とトースト表示を実行
+          markAllTutorialsAsCompleted();
+          ui.showToast('すべてのチュートリアルを完了済みにしました。', 3000);
+        } finally {
+          // 確認の結果（OKでもキャンセルでも）、最終的にチュートリアルダイアログを
+          // キャンセル扱いで完全に閉じます。
+          closeDialog({ok: false});
+        }
       };
 
       nextBtn.addEventListener('click', onNext);
       cancelBtn.addEventListener('click', onCancel);
+      skipAllLink.addEventListener('click', onSkipAll);
 
       let clickHandler;
       let inputHandler, compositionStartHandler, compositionEndHandler, debounceTimeout;
@@ -449,6 +475,7 @@
         window.alert = originalAlert;
         nextBtn.removeEventListener('click', onNext);
         cancelBtn.removeEventListener('click', onCancel);
+        skipAllLink.removeEventListener('click', onSkipAll);
         if (clickSelector && clickHandler) {
           const clickTarget = document.querySelector(clickSelector);
           if (clickTarget) clickTarget.removeEventListener('click', clickHandler);
@@ -466,8 +493,8 @@
     });
   }
 
-  function updateHighlightPosition(targetEl) {
-    if (!targetEl) {
+  function updateHighlightPosition(_targetEl) {
+    if (!_targetEl) {
       highlightEl.style.display = 'block';
       highlightEl.style.boxShadow = '0 0 0 9999px rgba(0, 0, 0, 0.75)';
       highlightEl.style.left = '0px';
@@ -476,7 +503,7 @@
       highlightEl.style.height = '0px';
       return;
     }
-    const rect = targetEl.getBoundingClientRect();
+    const rect = _targetEl.getBoundingClientRect();
     const padding = 5;
     highlightEl.style.left = `${rect.left - padding}px`;
     highlightEl.style.top = `${rect.top - padding}px`;
@@ -485,12 +512,12 @@
     highlightEl.style.display = 'block';
   }
 
-  function updateFocusBorderPosition(targetEl) {
-    if (!targetEl) {
+  function updateFocusBorderPosition(_targetEl) {
+    if (!_targetEl) {
       focusBorderEl.style.display = 'none';
       return;
     }
-    const rect = targetEl.getBoundingClientRect();
+    const rect = _targetEl.getBoundingClientRect();
     focusBorderEl.style.left = `${rect.left}px`;
     focusBorderEl.style.top = `${rect.top}px`;
     focusBorderEl.style.width = `${rect.width}px`;
@@ -498,14 +525,14 @@
     focusBorderEl.style.display = 'block';
   }
 
-  function positionDialog(dialog, targetEl) {
+  function positionDialog(dialog, _targetEl) {
     const dialogRect = dialog.getBoundingClientRect();
     let top, left;
-    if (!targetEl) {
+    if (!_targetEl) {
       top = (window.innerHeight - dialogRect.height) / 2;
       left = (window.innerWidth - dialogRect.width) / 2;
     } else {
-      const rect = targetEl.getBoundingClientRect();
+      const rect = _targetEl.getBoundingClientRect();
       const padding = 15;
       top = rect.bottom + padding;
       left = rect.left + rect.width / 2 - dialogRect.width / 2;
@@ -530,12 +557,22 @@
   function markTutorialAsCompleted(storyId) {
     try {
       localStorage.setItem(`tutorialCompleted_${storyId}`, 'true');
-      // ▼▼▼ この行を新しく追加してください ▼▼▼
-      router.removeQueryParam('forceTutorial'); // URLからチュートリアルフラグを削除
-      // ▲▲▲ ここまで追加 ▲▲▲
+      router.removeQueryParam('forceTutorial');
     } catch (e) {
       console.error('[TUTORIAL_LOG] FAILED to set item in localStorage:', e);
     }
+  }
+
+  function markAllTutorialsAsCompleted() {
+    if (window.tutorials && Array.isArray(window.tutorials)) {
+      for (const story of window.tutorials) {
+        markTutorialAsCompleted(story.id);
+      }
+    }
+    // ▼▼▼ ログを追加 ▼▼▼
+    console.log('[TUTORIAL_LOG] "tutorialsUpdated" イベントを発行します。');
+    // ▲▲▲ ここまで追加 ▲▲▲
+    window.dispatchEvent(new CustomEvent('tutorialsUpdated'));
   }
 
   function escapeHtml(str) {
