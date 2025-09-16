@@ -50,6 +50,19 @@ router.get('/g/:customUrl', async (req, res) => {
   }
 });
 
+// チュートリアルページ用のルートを追加
+router.get('/tutorials', (req, res) => {
+  // ログインしているユーザー情報を渡しつつ、メインのindex.ejsを描画する
+  // これにより、クライアントサイドのルーターが/tutorialsを正しく解釈できるようになる
+  res.render('index', {
+    user: req.user,
+    ogpData: {},
+    noIndex: true,
+    groupData: null,
+    eventData: null
+  });
+});
+
 router.get('/g/:customUrl/dashboard', async (req, res) => {
   try {
     const { customUrl } = req.params;
