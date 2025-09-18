@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MediaPipe ランドマークのみデモ</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+    }
+    .container {
+      position: relative;
+      width: 640px;
+      height: 480px;
+      border: 2px solid #333;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      background-color: black; /* コンテナの背景を黒に */
+    }
+    #webcam {
+      /* ★★★ カメラ映像を完全に非表示にする ★★★ */
+      display: none;
+    }
+    #output_canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <video id="webcam"></video> <canvas id="output_canvas"></canvas>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+  <script>
+    const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    const SMOOTHING_FACTOR = 0.8;
+    let smoothedLandmarks = null;
+
+    function onResults(results) {
+      canvasElement.width = videoElement.videoWidth;
+      canvasElement.height = videoElement.videoHeight;
+      const canvasWidth = canvasElement.width;
+      const canvasHeight = canvasElement.height;
+
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+      // ★★★ カメラ映像の代わりに黒い背景を描画 ★★★
+      canvasCtx.fillStyle = '#000000'; // 黒色
+      canvasCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // 左右反転は直感的な操作のために維持する
+      canvasCtx.translate(canvasWidth, 0);
+      canvasCtx.scale(-1, 1);
+      
+      // ★★★ カメラ映像の描画命令をコメントアウトまたは削除 ★★★
+      // canvasCtx.drawImage(results.image, 0, 0, canvasWidth, canvasHeight);
+
+      if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+        const landmarks = results.multiFaceLandmarks[0];
+
+        if (smoothedLandmarks === null) {
+          smoothedLandmarks = landmarks;
+        } else {
+          smoothedLandmarks.forEach((prev, i) => {
+            prev.x = prev.x * SMOOTHING_FACTOR + landmarks[i].x * (1 - SMOOTHING_FACTOR);
+            prev.y = prev.y * SMOOTHING_FACTOR + landmarks[i].y * (1 - SMOOTHING_FACTOR);
+            prev.z = prev.z * SMOOTHING_FACTOR + landmarks[i].z * (1 - SMOOTHING_FACTOR);
+          });
+        }
+        
+        drawConnectors(canvasCtx, smoothedLandmarks, FACEMESH_TESSELATION,
+                       {color: '#C0C0C070', lineWidth: 1});
+        drawConnectors(canvasCtx, smoothedLandmarks, FACEMESH_CONTOURS,
+                       {color: '#30FF30', lineWidth: 2});
+        
+        const rightEyePupil = smoothedLandmarks[468];
+        const leftEyePupil = smoothedLandmarks[473];
+
+        if (rightEyePupil && leftEyePupil) {
+          const eyeCenterX = (rightEyePupil.x + leftEyePupil.x) / 2;
+          const eyeCenterY = (rightEyePupil.y + leftEyePupil.y) / 2;
+          const crosshairX = eyeCenterX * canvasWidth;
+          const crosshairY = eyeCenterY * canvasHeight;
+          
+          drawCrosshair(crosshairX, crosshairY);
+        }
+      }
+      canvasCtx.restore();
+    }
+    
+    function drawCrosshair(x, y) {
+      const size = 20;
+      canvasCtx.beginPath();
+      canvasCtx.strokeStyle = 'lime';
+      canvasCtx.lineWidth = 2;
+      canvasCtx.moveTo(x - size, y);
+      canvasCtx.lineTo(x + size, y);
+      canvasCtx.moveTo(x, y - size);
+      canvasCtx.lineTo(x, y + size);
+      canvasCtx.stroke();
+    }
+
+    const faceMesh = new FaceMesh({locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+    }});
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    faceMesh.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await faceMesh.send({image: videoElement});
+      },
+      width: 640,
+      height: 480
+    });
+    camera.start();
+  </script>
+</body>
+</html>
