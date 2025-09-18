@@ -1,0 +1,139 @@
+/* --- skill_converter/style.css --- */
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f8f9fa;
+    color: #343a40;
+}
+
+h1, h2 {
+    color: #0056b3;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+h2 {
+    font-size: 1.3em;
+    text-align: left;
+}
+
+.selector-container {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.selector-container label {
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+#job-select {
+    padding: 10px 15px;
+    border-radius: 5px;
+    border: 1px solid #ced4da;
+    font-size: 1em;
+    min-width: 250px;
+}
+
+.container {
+    display: flex;
+    gap: 30px;
+}
+
+.skill-list-container,
+.conversion-list-container {
+    flex: 1;
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+li {
+    padding: 12px 18px;
+    margin-bottom: 8px;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease-in-out;
+}
+
+#skill-list li {
+    cursor: pointer;
+}
+
+#skill-list li:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-color: #007bff;
+}
+
+#skill-list li.selected {
+    font-weight: bold;
+    background-color: #e7f5ff !important;
+    border-left: 5px solid #007bff;
+    color: #0056b3;
+}
+
+.conversion-list-container li {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.conversion-list-container .job-name {
+    font-weight: bold;
+    min-width: 80px;
+}
+.conversion-list-container .skill-name {
+    font-style: italic;
+}
+
+
+/* ランク別カラー */
+.rank-高級, .rank-高級-パッシブ { background-color: #c8e6c9; }
+.rank-希少, .rank-希少-パッシブ { background-color: #bbdefb; }
+.rank-英雄, .rank-英雄-パッシブ { background-color: #d1c4e9; }
+.rank-古代, .rank-古代-パッシブ { background-color: #fff9c4; }
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+    h1 { font-size: 1.8em; }
+    h2 { font-size: 1.2em; }
+}
+/* --- skill_converter/style.css の一番下に追記 --- */
+
+.back-to-top {
+    text-align: center;
+    margin-top: 40px;
+    padding: 20px;
+}
+
+.back-to-top a {
+    text-decoration: none;
+    color: #fff;
+    background-color: #007bff;
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.back-to-top a:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
