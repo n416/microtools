@@ -4,41 +4,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>スキル変換先 確認ツール</title>
+  <title>スキル変換ツール</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:,">
 </head>
 
 <body>
-  <h1 id="page-top-anchor">スキル変換先 確認ツール</h1>
 
-  <div class="selector-container">
-    <label for="job-select">職を選択:</label>
-    <select id="job-select">
-      <option value="">-- 職を選択 --</option>
-    </select>
+  <div class="app-container">
+
+    <main id="app-main">
+      <div id="accordion-container">
+      </div>
+    </main>
   </div>
 
-  <div class="container">
-    <div class="skill-list-container">
-      <h2>スキル一覧</h2>
-      <ul id="skill-list">
-        <li>職を選択してください。</li>
-      </ul>
-    </div>
-
-    <div class="conversion-list-container">
-      <h2 id="conversion-list-anchor">変換先のスキル一覧</h2>
-      <ul id="conversion-list">
-        <li>スキルを選択してください。</li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="back-to-top">
-    <a href="#page-top-anchor">▲ スキル選択に戻る</a>
-  </div>
-
-  <script src="../skill/script.js"></script>
+  <script src="../skill/skill-data.js"></script>
   <script src="script.js"></script>
 </body>
 
