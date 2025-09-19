@@ -1,158 +1,289 @@
-// --- skill_converter/script.js (更新版) ---
+// --- skill_converter_v6/script.js (変更なし) ---
 
 document.addEventListener('DOMContentLoaded', () => {
-  const jobSelect = document.getElementById('job-select');
-  const skillList = document.getElementById('skill-list');
-  const conversionList = document.getElementById('conversion-list');
-  const conversionListAnchor = document.getElementById('conversion-list-anchor');
-  const backToTopLink = document.querySelector('.back-to-top a');
-  const topAnchor = document.getElementById('page-top-anchor');
+    // --- DOM要素 ---
+    const accordionContainer = document.getElementById('accordion-container');
 
-  const jobNames = Object.keys(skillData[0]).filter(key => !['id', 'cost', 'rank'].includes(key));
+    // --- データと状態管理 ---
+    const PRICE_LOGS_STORAGE_KEY = 'skillPriceLogsV6';
+    let priceLogs = JSON.parse(localStorage.getItem(PRICE_LOGS_STORAGE_KEY)) || {};
+    const jobNames = Object.keys(skillData[0]).filter(key => !['id', 'cost', 'rank'].includes(key));
+    const serverConfig = { servers: ['kiki', 'anica', 'hugo'], numbers: [1, 2, 3, 4, 5] };
 
-  // 職選択のプルダウンを初期化
-  function initializeJobSelector() {
-    jobNames.forEach(job => {
-      const option = document.createElement('option');
-      option.value = job;
-      option.textContent = job;
-      jobSelect.appendChild(option);
-    });
-  }
-
-  // URLのハッシュを解析して初期状態を設定
-  function applyStateFromUrl() {
-    try {
-      const hash = decodeURIComponent(window.location.hash.substring(1));
-      if (!hash) return;
-
-      const [job, skillId] = hash.split('/');
-      if (job && jobNames.includes(job)) {
-        jobSelect.value = job;
-        // skillIdがあれば、スクロールも実行するようにtrueを渡す
-        displaySkills(job, skillId ? parseInt(skillId, 10) : null, !!skillId);
-      }
-    } catch (e) {
-      console.error("URLの解析に失敗しました:", e);
+    // --- 初期化 ---
+    function initialize() {
+        renderJobAccordions();
     }
-  }
-
-  // スキルリストを表示
-  function displaySkills(job, selectedSkillId = null, shouldScrollOnLoad = false) {
-    skillList.innerHTML = '';
-    conversionList.innerHTML = '<li>スキルを選択してください。</li>';
-
-    const skillsForJob = skillData.filter(skill => skill[job] && skill[job] !== 'ー');
-
-    if (skillsForJob.length === 0) {
-      skillList.innerHTML = '<li>利用可能なスキルがありません。</li>';
-      return;
-    }
-
-    skillsForJob.forEach(skill => {
-      const li = document.createElement('li');
-      li.textContent = `${skill[job]} (${skill.rank})`;
-      li.dataset.skillId = skill.id;
-      li.dataset.job = job;
-
-      const rankClass = `rank-${sanitizeRankForClass(skill.rank)}`;
-      li.classList.add(rankClass);
-
-      li.addEventListener('click', () => {
-        // 他の選択済みクラスを削除
-        skillList.querySelectorAll('li').forEach(item => item.classList.remove('selected'));
-        li.classList.add('selected');
-        displayConversions(skill.id, job);
-        updateURL(job, skill.id);
-
-        // ▼▼▼ 追加: 変換先リストにスクロール ▼▼▼
-        if (conversionListAnchor) {
-          conversionListAnchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // --- 親アコーディオンの高さ調整 ---
+    function adjustParentHeight(element) {
+        let parentContent = element.closest('.list-content');
+        while (parentContent) {
+            const currentParent = parentContent; 
+            setTimeout(() => {
+                if (currentParent && currentParent.parentElement && currentParent.parentElement.classList.contains('open')) {
+                    currentParent.style.maxHeight = currentParent.scrollHeight + "px";
+                }
+            }, 300);
+            parentContent = currentParent.parentElement.closest('.list-content');
         }
-      });
-      skillList.appendChild(li);
+    }
 
-      if (selectedSkillId && skill.id === selectedSkillId) {
-        li.classList.add('selected');
-        displayConversions(skill.id, job);
-        // URLから直接読み込んだ場合もスクロール
-        if (shouldScrollOnLoad && conversionListAnchor) {
-          setTimeout(() => { // 描画が完了してからスクロール
-            conversionListAnchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 100);
+    // --- アコーディオン描画 ---
+    function renderJobAccordions() {
+        accordionContainer.innerHTML = '';
+        const jobListGroup = document.createElement('div');
+        jobListGroup.className = 'list-group';
+
+        jobNames.forEach(job => {
+            const jobItem = createListItem('job', job);
+            jobListGroup.appendChild(jobItem);
+
+            const header = jobItem.querySelector('.list-header');
+            header.addEventListener('click', () => {
+                const content = jobItem.querySelector('.list-content');
+                if (jobItem.classList.toggle('open')) {
+                    if (!content.hasChildNodes()) {
+                        renderSkillList(job, content);
+                    }
+                    content.style.maxHeight = content.scrollHeight + "px";
+                } else {
+                    content.style.maxHeight = null;
+                }
+            });
+        });
+        accordionContainer.appendChild(jobListGroup);
+    }
+
+    function renderSkillList(job, container) {
+        container.innerHTML = '';
+        const skillsForJob = skillData.filter(s => s[job] && s[job] !== 'ー');
+        skillsForJob.forEach(skill => {
+            const skillItem = createListItem('skill', skill[job], skill.rank, job, skill.id);
+            container.appendChild(skillItem);
+
+            const header = skillItem.querySelector('.list-header');
+            header.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const content = skillItem.querySelector('.list-content');
+                if (skillItem.classList.toggle('open')) {
+                    if (!content.hasChildNodes()) {
+                        renderSkillDetail(skill, job, content);
+                    }
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    adjustParentHeight(content);
+                } else {
+                    content.style.maxHeight = null;
+                }
+            });
+        });
+    }
+
+    function renderSkillDetail(skill, job, container) {
+        const mainSkillName = skill[job];
+        const allRelated = getAllRelatedSkills(skill.id);
+        const otherSkills = allRelated.filter(s => s.name !== mainSkillName);
+
+        container.innerHTML = `
+            <div class="skill-detail-content">
+                ${createPriceLoggerHTML(mainSkillName)}
+                <div class="related-skills-section">
+                    <h4>関連スキル</h4>
+                    <div class="list-group related-skills-list">
+                        ${otherSkills.length > 0 ? otherSkills.map(s => createListItem('related', s.name, s.rank, s.job, s.id).outerHTML).join('') : '<p class="placeholder">関連スキルはありません。</p>'}
+                    </div>
+                </div>
+            </div>
+        `;
+        setupPriceLogger(container.querySelector('.price-logger'));
+
+        container.querySelectorAll('.list-related').forEach(relatedAccordion => {
+            const header = relatedAccordion.querySelector('.list-header');
+            const content = relatedAccordion.querySelector('.list-content');
+            const relatedSkillName = relatedAccordion.dataset.skillName;
+
+            header.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if(relatedAccordion.classList.toggle('open')) {
+                    if (!content.hasChildNodes()) {
+                        content.innerHTML = createPriceLoggerHTML(relatedSkillName);
+                        setupPriceLogger(content.querySelector('.price-logger'));
+                    }
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    adjustParentHeight(content);
+                } else {
+                    content.style.maxHeight = null;
+                }
+            });
+        });
+    }
+    
+    // --- HTML生成ヘルパー ---
+    function createListItem(type, title, rank = null, job = null, skillId = null) {
+        const element = document.createElement('div');
+        let titleHtml = `<span class="header-title">${title}</span>`;
+        if (type === 'related') {
+            titleHtml = `<div class="related-skill-item">
+                            <span class="job-name">${job}:</span>
+                            <span class="header-title">${title}</span>
+                         </div>`;
         }
-      }
-    });
-  }
+        
+        element.className = `list-item list-${type}`;
+        if (rank) element.classList.add(`rank-${sanitizeRankForClass(rank)}`);
+        if (skillId) element.dataset.skillId = skillId;
+        element.dataset.skillName = title;
 
-  // 変換先スキルリストを表示
-  function displayConversions(skillId, sourceJob) {
-    conversionList.innerHTML = '';
-    const skillInfo = skillData.find(s => s.id === skillId);
+        element.innerHTML = `
+            <div class="list-header">
+                ${titleHtml}
+                <div class="header-meta">
+                    <span class="price-range"></span>
+                    <span class="list-chevron"></span>
+                </div>
+            </div>
+            <div class="list-content"></div>
+        `;
 
-    if (!skillInfo) return;
+        if(type === 'skill' || type === 'related'){
+            updatePriceRangeDisplay(title, element);
+        }
 
-    let foundConversion = false;
-    jobNames.forEach(targetJob => {
-      if (targetJob !== sourceJob && skillInfo[targetJob] && skillInfo[targetJob] !== 'ー') {
-        const li = document.createElement('li');
-        const rankClass = `rank-${sanitizeRankForClass(skillInfo.rank)}`;
-        li.classList.add(rankClass);
-        li.innerHTML = `<span class="job-name">${targetJob}:</span> <span class="skill-name">${skillInfo[targetJob]}</span>`;
-        conversionList.appendChild(li);
-        foundConversion = true;
-      }
-    });
-
-    if (!foundConversion) {
-      conversionList.innerHTML = '<li>変換可能なスキルはありません。</li>';
+        return element;
     }
-  }
 
-  // ランク名をCSSクラス名として使える形式に変換
-  function sanitizeRankForClass(rank) {
-    return rank.replace(/\//g, '-');
-  }
-
-  // URLを更新
-  function updateURL(job, skillId) {
-    if (job && skillId) {
-      const hash = `${job}/${skillId}`;
-      if (decodeURIComponent(window.location.hash.substring(1)) !== hash) {
-        window.location.hash = hash;
-      }
-    } else if (job) {
-      if (decodeURIComponent(window.location.hash.substring(1)) !== job) {
-        window.location.hash = job;
-      }
+    function createPriceLoggerHTML(skillName) {
+        return `<div class="price-logger" data-skill-name="${skillName}">
+                    <h4>価格を記録</h4>
+                    <div class="price-section"></div>
+                    <div class="price-log-container" style="display: none;"></div>
+                </div>`;
     }
-  }
 
-  // --- イベントリスナー ---
-  jobSelect.addEventListener('change', () => {
-    const selectedJob = jobSelect.value;
-    if (selectedJob) {
-      displaySkills(selectedJob);
-      updateURL(selectedJob);
-    } else {
-      skillList.innerHTML = '<li>職を選択してください。</li>';
-      conversionList.innerHTML = '<li>スキルを選択してください。</li>';
-      window.location.hash = '';
+    function getAllRelatedSkills(skillId) {
+        const skills = [];
+        const targetSkill = skillData.find(s => s.id === skillId);
+        if(!targetSkill) return [];
+        jobNames.forEach(job => {
+            if(targetSkill[job] && targetSkill[job] !== 'ー') {
+                skills.push({id: targetSkill.id, job, name: targetSkill[job], rank: targetSkill.rank});
+            }
+        });
+        return skills;
     }
-  });
 
-  // URLハッシュの変更を監視
-  window.addEventListener('hashchange', applyStateFromUrl);
+    function updatePriceRangeDisplay(skillName, listItemElement) {
+        const logs = priceLogs[skillName];
+        const rangeElement = listItemElement.querySelector('.price-range');
+        if (!rangeElement) return;
 
-  // ▼▼▼ 追加: 戻るリンクのスムーズスクロール ▼▼▼
-  if (backToTopLink && topAnchor) {
-    backToTopLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      topAnchor.scrollIntoView({ behavior: 'smooth' });
-    });
-  }
+        if (logs && logs.length > 0) {
+            const prices = logs.map(log => log.price);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            rangeElement.textContent = `${minPrice.toLocaleString()}～${maxPrice.toLocaleString()} G`;
+        } else {
+            rangeElement.textContent = '';
+        }
+    }
+    
+    // --- 価格記録UI ---
+    function setupPriceLogger(loggerElement) {
+        if (!loggerElement) return;
+        const skillName = loggerElement.dataset.skillName;
+        const priceSection = loggerElement.querySelector('.price-section');
+        const logContainer = loggerElement.querySelector('.price-log-container');
+        if (!priceSection || !logContainer) return;
 
-  // --- 初期化処理 ---
-  initializeJobSelector();
-  applyStateFromUrl();
+        const logs = priceLogs[skillName] || [];
+        const latestLog = logs.length > 0 ? logs[0] : {};
+        const serverOptions = serverConfig.servers.map(s => `<option value="${s}" ${latestLog.server === s ? 'selected' : ''}>${s}</option>`).join('');
+        const numberOptions = serverConfig.numbers.map(n => `<option value="${n}" ${latestLog.number == n ? 'selected' : ''}>${n}</option>`).join('');
+        
+        priceSection.innerHTML = `
+            <input type="number" class="price-input" placeholder="価格" value="${latestLog.price || ''}">
+            <select class="server-select">${serverOptions}</select>
+            <select class="number-select">${numberOptions}</select>
+            <button class="save-price-btn">保存</button>
+            <button class="show-log-btn">履歴</button>
+        `;
+        
+        const priceInput = priceSection.querySelector('.price-input');
+        const serverSelect = priceSection.querySelector('.server-select');
+        const numberSelect = priceSection.querySelector('.number-select');
+        const saveBtn = priceSection.querySelector('.save-price-btn');
+        const logBtn = priceSection.querySelector('.show-log-btn');
+
+        saveBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const price = parseInt(priceInput.value, 10);
+            if (!isNaN(price) && price >= 0) {
+                const newLog = { price, server: serverSelect.value, number: parseInt(numberSelect.value, 10), date: new Date().toISOString() };
+                if (!priceLogs[skillName]) priceLogs[skillName] = [];
+                priceLogs[skillName].unshift(newLog);
+                localStorage.setItem(PRICE_LOGS_STORAGE_KEY, JSON.stringify(priceLogs));
+                renderPriceLog(skillName, logContainer);
+                saveBtn.textContent = '保存済!';
+                
+                document.querySelectorAll(`.list-item[data-skill-name="${skillName}"]`).forEach(item => {
+                    updatePriceRangeDisplay(skillName, item);
+                });
+
+                setTimeout(() => { saveBtn.textContent = '保存'; }, 1500);
+            } else {
+                alert('有効な価格を入力してください。');
+            }
+        });
+
+        logBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            logContainer.style.display = logContainer.style.display === 'none' ? 'block' : 'none';
+            if (logContainer.style.display === 'block') {
+                renderPriceLog(skillName, logContainer);
+            }
+            adjustParentHeight(logContainer);
+        });
+    }
+
+    function renderPriceLog(skillName, container) {
+        container.innerHTML = '';
+        const logs = priceLogs[skillName] || [];
+        if (logs.length === 0) {
+            container.innerHTML = '<p class="no-log">価格履歴はありません。</p>';
+            return;
+        }
+        const logList = document.createElement('ul');
+        logs.forEach((log, index) => {
+            const logItem = document.createElement('li');
+            logItem.className = 'log-entry';
+            const date = new Date(log.date);
+            const formattedDate = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            logItem.innerHTML = `<div class="log-details"><span class="log-price">${log.price.toLocaleString()} G</span><span class="log-location">${log.server || ''}-${log.number || ''}</span></div><div class="log-meta"><span class="log-date">${formattedDate}</span><button class="delete-log-btn" data-index="${index}">×</button></div>`;
+            logList.appendChild(logItem);
+        });
+        container.appendChild(logList);
+        container.querySelectorAll('.delete-log-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm('この履歴を削除しますか？')) {
+                    const indexToDelete = parseInt(btn.dataset.index, 10);
+                    priceLogs[skillName].splice(indexToDelete, 1);
+                    localStorage.setItem(PRICE_LOGS_STORAGE_KEY, JSON.stringify(priceLogs));
+                    renderPriceLog(skillName, container);
+                    
+                    document.querySelectorAll(`.list-item[data-skill-name="${skillName}"]`).forEach(item => {
+                        updatePriceRangeDisplay(skillName, item);
+                    });
+
+                    adjustParentHeight(container);
+                }
+            });
+        });
+    }
+
+    function sanitizeRankForClass(rank) {
+        return rank ? rank.replace(/\//g, '-') : '';
+    }
+
+    initialize();
 });

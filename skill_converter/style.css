@@ -1,139 +1,311 @@
-/* --- skill_converter/style.css --- */
+/* --- skill_converter_v6/style.css (修正版) --- */
+:root {
+    --primary-color: #007aff;
+    --border-color: #c6c6c8;
+    --bg-light: #f2f2f7;
+    --bg-white: #ffffff;
+    --text-dark: #000000;
+    --text-light: #8e8e93;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary-color: #0a84ff;
+        --border-color: #3a3a3c;
+        --bg-light: #000000;
+        --bg-white: #1c1c1e;
+        --text-dark: #ffffff;
+        --text-light: #8d8d92;
+    }
+}
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
 body {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     margin: 0;
-    padding: 20px;
-    background-color: #f8f9fa;
-    color: #343a40;
+    background-color: var(--bg-light);
+    color: var(--text-dark);
 }
-
-h1, h2 {
-    color: #0056b3;
-    border-bottom: 2px solid #007bff;
-    padding-bottom: 10px;
+.app-container {
+    max-width: 680px;
+    margin: 0 auto;
+}
+.app-header {
+    background-color: var(--bg-white);
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
     text-align: center;
-    margin-bottom: 25px;
+}
+h1 {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin: 0;
+}
+#app-main {
+    padding: 20px 0;
 }
 
-h2 {
-    font-size: 1.3em;
-    text-align: left;
+/* --- iPhone風リストUI --- */
+.list-group {
+    margin: 0 0 0 15px;
+    background-color: var(--bg-white);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.list-item {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    position: relative;
+}
+.list-item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 15px;
+    right: 0;
+    height: 1px;
+    background-color: var(--border-color);
+}
+.list-job:not(:last-child)::after {
+    left: 0;
+}
+.list-skill:not(:last-child)::after {
+    left: 30px;
+}
+.list-related:not(:last-child)::after {
+    left: 0;
+}
+.list-item.open::after {
+    display: none;
 }
 
-.selector-container {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-.selector-container label {
-    font-weight: bold;
-    margin-right: 10px;
-}
-
-#job-select {
-    padding: 10px 15px;
-    border-radius: 5px;
-    border: 1px solid #ced4da;
-    font-size: 1em;
-    min-width: 250px;
-}
-
-.container {
+.list-header {
     display: flex;
-    gap: 30px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: pointer;
+    font-size: 1.1em;
+    transition: background-color 0.2s;
+    background-color: inherit; /* 親の背景色を引き継ぐ */
+}
+.list-header:active {
+    background-color: #e5e5ea;
+}
+@media (prefers-color-scheme: dark) {
+    .list-header:active {
+        background-color: #3a3a3c;
+    }
 }
 
-.skill-list-container,
-.conversion-list-container {
-    flex: 1;
-    background-color: #fff;
-    padding: 25px;
+.list-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    padding: 0;
+    background-color: inherit;
+}
+.list-item.open > .list-content {
+    border-top: none;
+}
+
+.header-meta {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    color:#444;
+    gap: 10px;
+}
+.price-range {
+    display: flex;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+/* シェブロンアイコン (>) */
+.list-chevron {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid #c7c7cc;
+    border-bottom: 2px solid #c7c7cc;
+    transform: rotate(-45deg);
+    transition: transform 0.3s ease;
+}
+.list-item.open > .list-header .list-chevron {
+    transform: rotate(45deg);
+}
+
+/* スキルリスト (第2階層) */
+.list-skill .list-header {
+    padding-left: 30px;
+    font-size: 1em;
+}
+
+/* 関連スキルリスト (第3階層) */
+.list-related .list-header {
+    padding-left: 0;
+    font-size: 0.9em;
+}
+.related-skill-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+}
+.related-skill-item .job-name {
+    font-weight: 600;
+}
+
+/* スキル詳細 */
+.skill-detail-content {
+    padding: 0px 0px 0px 30px;
+    border-bottom: 1px solid #ddd;
+}
+.list-related > .list-content {
+    padding: 0px 0px 0px 30px;
+}
+
+.related-skills-section h4,
+.price-logger h4 {
+    font-size: 0.8em;
+    color: var(--text-light);
+    margin: 15px 0 8px 0;
+    font-weight: 400;
+    text-transform: uppercase;
+}
+.related-skills-section h4:first-child,
+.price-logger h4:first-child {
+    margin-top: 0px;
+    margin-bottom: 5px;
+}
+.related-skills-list {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 価格記録UI */
+.price-logger {
+    padding: 0;
+}
+.price-section {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 0px;
+    margin-bottom: 10px;
+    padding-right: 15px;
+}
+.price-input,
+.server-select,
+.number-select,
+.save-price-btn,
+.show-log-btn {
+    padding: 10px;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    font-size: 1em;
+    background-color: var(--bg-white);
+    color: var(--text-dark);
 }
-
-ul {
+.price-input {
+    flex: 1 1 80px;
+}
+.save-price-btn,
+.show-log-btn {
+    border: none;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+}
+.save-price-btn {
+    background-color: #34c759;
+}
+.show-log-btn {
+    background-color: var(--text-light);
+}
+.price-log-container ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    max-height: 500px;
-    overflow-y: auto;
 }
-
-li {
-    padding: 12px 18px;
-    margin-bottom: 8px;
-    border-radius: 5px;
-    border: 1px solid #dee2e6;
-    transition: all 0.2s ease-in-out;
-}
-
-#skill-list li {
-    cursor: pointer;
-}
-
-#skill-list li:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border-color: #007bff;
-}
-
-#skill-list li.selected {
-    font-weight: bold;
-    background-color: #e7f5ff !important;
-    border-left: 5px solid #007bff;
-    color: #0056b3;
-}
-
-.conversion-list-container li {
+.log-entry {
     display: flex;
-    gap: 15px;
+    justify-content: space-between;
     align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    font-size: 0.9em;
+    position: relative;
+    border-bottom: 1px solid var(--border-color);
 }
-
-.conversion-list-container .job-name {
+.price-log-container li:last-child .log-entry {
+    border-bottom: none;
+}
+.log-details {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: 500;
+}
+.log-location {
+    background-color: #e5e5ea;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.9em;
+}
+.delete-log-btn {
+    background-color: #ff3b30;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
     font-weight: bold;
-    min-width: 80px;
-}
-.conversion-list-container .skill-name {
-    font-style: italic;
 }
 
+/* ▼▼▼【重要】ランク別カラーを .list-item 全体に適用 ▼▼▼ */
+.list-item.rank-高級,
+.list-item.rank-高級-パッシブ {
+    background-color: rgba(52, 199, 89, 0.1);
+}
+.list-item.rank-希少,
+.list-item.rank-希少-パッシブ {
+    background-color: rgba(0, 122, 255, 0.1);
+}
+.list-item.rank-英雄,
+.list-item.rank-英雄-パッシブ {
+    background-color: rgba(88, 86, 214, 0.1);
+}
+.list-item.rank-古代,
+.list-item.rank-古代-パッシブ {
+    background-color: rgba(255, 204, 0, 0.1);
+}
 
-/* ランク別カラー */
-.rank-高級, .rank-高級-パッシブ { background-color: #c8e6c9; }
-.rank-希少, .rank-希少-パッシブ { background-color: #bbdefb; }
-.rank-英雄, .rank-英雄-パッシブ { background-color: #d1c4e9; }
-.rank-古代, .rank-古代-パッシブ { background-color: #fff9c4; }
-
-/* レスポンシブ対応 */
-@media (max-width: 768px) {
-    .container {
-        flex-direction: column;
+@media (prefers-color-scheme: dark) {
+    .list-header:active {
+        background-color: #3a3a3c;
     }
-    h1 { font-size: 1.8em; }
-    h2 { font-size: 1.2em; }
+    .log-location {
+        background-color: #3a3a3c;
+    }
+    .list-item.rank-高級,
+    .list-item.rank-高級-パッシブ {
+        background-color: rgba(52, 199, 89, 0.2);
+    }
+    .list-item.rank-希少,
+    .list-item.rank-希少-パッシブ {
+        background-color: rgba(10, 132, 255, 0.2);
+    }
+    .list-item.rank-英雄,
+    .list-item.rank-英雄-パッシブ {
+        background-color: rgba(94, 92, 230, 0.2);
+    }
+    .list-item.rank-古代,
+    .list-item.rank-古代-パッシブ {
+        background-color: rgba(255, 214, 10, 0.2);
+    }
 }
-/* --- skill_converter/style.css の一番下に追記 --- */
-
-.back-to-top {
-    text-align: center;
-    margin-top: 40px;
-    padding: 20px;
-}
-
-.back-to-top a {
-    text-decoration: none;
-    color: #fff;
-    background-color: #007bff;
-    padding: 12px 25px;
-    border-radius: 25px;
-    font-weight: bold;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.2s ease, transform 0.2s ease;
-}
-
-.back-to-top a:hover {
-    background-color: #0056b3;
-    transform: translateY(-2px);
-}
+/* ★修正点: ファイル末尾の余分な閉じ括弧 '}' を削除しました */
