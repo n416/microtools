@@ -51,7 +51,6 @@ export function performMirrorCopy(clickedPreview, context) {
     newSelection = [];
   clickedPreview.parent.children.forEach((preview, i) => {
     const newObject = new THREE.Mesh(preview.geometry, selectedObjects[i].material.clone());
-    newObject.name = context.getNewObjectName(selectedObjects[i].name + "_mirrored");
     newObject.position.copy(preview.position);
     newObject.rotation.copy(preview.rotation);
     newObject.scale.copy(preview.scale);
@@ -140,7 +139,6 @@ export function confirmPaste(clickedPreview, context) {
   const newPastedObjects = [];
   modes.clipboard.forEach((clip) => {
     const newObject = new THREE.Mesh(clip.geometry, clip.material.clone());
-    newObject.name = context.getNewObjectName(clip.source.name + "_pasted");
     newObject.scale.copy(clip.source.scale);
     newObject.rotation.copy(clip.source.rotation);
     newObject.position.copy(clip.source.position).add(offset);
@@ -160,7 +158,6 @@ export function performDirectPaste(context) {
   const newPastedObjects = [];
   modes.lastPasteInfo.objects.forEach((lastObj) => {
     const newObject = new THREE.Mesh(lastObj.geometry, lastObj.material.clone());
-    newObject.name = context.getNewObjectName(lastObj.name + "_pasted");
     newObject.scale.copy(lastObj.scale);
     newObject.rotation.copy(lastObj.rotation);
     newObject.position.copy(lastObj.position).add(offset);
