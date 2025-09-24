@@ -1,316 +1,351 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>メカドットクリエイター - デバッグモード</title>
-    <style>
-      body {
-        margin: 0;
-        font-family: sans-serif;
-        background-color: #111;
-      }
-      #ui,
-      #instructions {
-        position: absolute;
-        background-color: rgba(0, 0, 0, 0.5);
-        padding: 10px;
-        border-radius: 5px;
-        z-index: 10;
-      }
-      #ui {
-        top: 10px;
-        left: 10px;
-        display: flex;
-        flex-direction: column;
-      }
-      #ui div {
-        margin-bottom: 5px;
-      }
-      #ui button {
-        margin: 2px;
-      }
-      #instructions {
-        bottom: 80px;
-        left: 10px;
-        color: white;
-        background-color: rgba(0, 0, 0, 0.5);
-        padding: 8px;
-        border-radius: 5px;
-        z-index: 10;
-        font-size: 12px;
-        max-width: 300px;
-      }
-      #cancel-container {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 15;
-      }
-      #escapeButton {
-        background-color: #e67e22;
-        color: white;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-      #escapeButton:hover {
-        background-color: #d35400;
-      }
-      #viewport-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: grid;
-        grid-template-areas: 'top perspective' 'front side';
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
-      }
-      .viewport {
-        position: relative;
-        border: 1px solid #555;
-        overflow: hidden;
-      }
-      #view-top {
-        grid-area: top;
-      }
-      #view-perspective {
-        grid-area: perspective;
-      }
-      #view-side {
-        grid-area: side;
-      }
-      #view-front {
-        grid-area: front;
-      }
-      .viewport-label {
-        position: absolute;
-        bottom: 5px;
-        left: 5px;
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 14px;
-        font-weight: bold;
-        pointer-events: none;
-      }
-      #log-display {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        color: #2ecc71;
-        font-family: monospace;
-        font-size: 12px;
-        background-color: rgba(0, 0, 0, 0.8);
-        padding: 5px 10px;
-        border-radius: 3px;
-        z-index: 10;
-        max-height: 60px;
-        overflow-y: hidden;
-        writing-mode: horizontal-tb;
-      }
-      .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.6);
-        z-index: 20;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      .modal-content {
-        background-color: #333;
-        padding: 20px;
-        border-radius: 5px;
-        color: white;
-        text-align: center;
-      }
-      .modal-content h3 {
-        margin-top: 0;
-      }
-      .modal-content input {
-        margin: 10px;
-        padding: 5px;
-      }
-      .modal-content button {
-        margin: 5px;
-      }
 
-      #selection-box {
-        position: absolute;
-        border: 1px solid #55aaff;
-        background-color: rgba(85, 170, 255, 0.3);
-        z-index: 100;
-        pointer-events: none;
-      }
-      .light-direction-label {
-        display: inline-block;
-        width: 70px;
-      }
-      #ik-browser {
-        position: absolute;
-        top: 45px;
-        right: 10px;
-        width: 300px;
-        height: 300px;
-        background-color: rgba(20, 20, 20, 0.75);
-        color: white;
-        border: 1px solid #666;
-        border-radius: 5px;
-        z-index: 12;
-        font-family: monospace;
-        font-size: 12px;
-        overflow-y: auto;
-        padding: 8px;
-        backdrop-filter: blur(2px);
-      }
-      #ik-browser-list div:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-      }
-      #ik-browser-list .highlight {
-        background-color: #f39c12;
-        color: black;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="cancel-container">
-      <button id="escapeButton">キャンセル (Esc)</button>
-    </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>メカドットクリエイター - デバッグモード</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #111;
+    }
 
-    <div id="selection-box" style="display: none"></div>
+    #ui,
+    #instructions {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 10;
+    }
 
-    <div id="ui">
-      <div>
-        <div id="guide-controls" style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px; color: white">
-          <b>ゴースト表示:</b>
-          <span style="margin-left: 10px">
-            <input type="checkbox" id="guidePlayerToggle" data-guide-name="player" />
-            <label for="guidePlayerToggle">自機</label>
-          </span>
-          <span style="margin-left: 10px">
-            <input type="checkbox" id="guideZakoToggle" data-guide-name="zako" />
-            <label for="guideZakoToggle">ザコ</label>
-          </span>
-          <span style="margin-left: 10px">
-            <input type="checkbox" id="guideBossToggle" data-guide-name="boss" />
-            <label for="guideBossToggle">ボス</label>
-          </span>
-          <span style="margin-left: 20px; border-left: 1px solid #555; padding-left: 20px">
-            <input type="checkbox" id="wireframeToggle" checked />
-            <label for="wireframeToggle">ワイヤーフレーム</label>
-          </span>
-        </div>
-        <button id="addCube">立方体</button>
-        <button id="addSphere">球体</button>
-        <button id="addCone">円錐</button>
-        <button id="addCylinder">円柱</button>
-        <button id="addPrism">多角形柱</button>
+    #ui {
+      top: 10px;
+      left: 10px;
+      display: flex;
+      flex-direction: column;
+    }
 
-        <button id="multiSelect" style="background-color: #f39c12; color: white">複数選択</button>
-        <button id="panModeButton" style="background-color: #3498db; color: white">パン</button>
-        <button id="deleteObject" style="background-color: #c0392b; color: white">削除</button>
+    #ui div {
+      margin-bottom: 5px;
+    }
+
+    #ui button {
+      margin: 2px;
+    }
+
+    #instructions {
+      bottom: 80px;
+      left: 10px;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 8px;
+      border-radius: 5px;
+      z-index: 10;
+      font-size: 12px;
+      max-width: 300px;
+    }
+
+    #cancel-container {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 15;
+    }
+
+    #escapeButton {
+      background-color: #e67e22;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #escapeButton:hover {
+      background-color: #d35400;
+    }
+
+    #viewport-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-areas: 'top perspective''front side';
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+
+    .viewport {
+      position: relative;
+      border: 1px solid #555;
+      overflow: hidden;
+    }
+
+    #view-top {
+      grid-area: top;
+    }
+
+    #view-perspective {
+      grid-area: perspective;
+    }
+
+    #view-side {
+      grid-area: side;
+    }
+
+    #view-front {
+      grid-area: front;
+    }
+
+    .viewport-label {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+      font-weight: bold;
+      pointer-events: none;
+    }
+
+    #log-display {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: #2ecc71;
+      font-family: monospace;
+      font-size: 12px;
+      background-color: rgba(0, 0, 0, 0.8);
+      padding: 5px 10px;
+      border-radius: 3px;
+      z-index: 10;
+      max-height: 60px;
+      overflow-y: hidden;
+      writing-mode: horizontal-tb;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      z-index: 20;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background-color: #333;
+      padding: 20px;
+      border-radius: 5px;
+      color: white;
+      text-align: center;
+    }
+
+    .modal-content h3 {
+      margin-top: 0;
+    }
+
+    .modal-content input {
+      margin: 10px;
+      padding: 5px;
+    }
+
+    .modal-content button {
+      margin: 5px;
+    }
+
+    #selection-box {
+      position: absolute;
+      border: 1px solid #55aaff;
+      background-color: rgba(85, 170, 255, 0.3);
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .light-direction-label {
+      display: inline-block;
+      width: 70px;
+    }
+
+    #ik-browser {
+      position: absolute;
+      top: 45px;
+      right: 10px;
+      width: 300px;
+      height: 300px;
+      background-color: rgba(20, 20, 20, 0.75);
+      color: white;
+      border: 1px solid #666;
+      border-radius: 5px;
+      z-index: 12;
+      font-family: monospace;
+      font-size: 12px;
+      overflow-y: auto;
+      padding: 8px;
+      backdrop-filter: blur(2px);
+    }
+
+    #ik-browser-list div:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    #ik-browser-list .highlight {
+      background-color: #f39c12;
+      color: black;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="cancel-container">
+    <button id="escapeButton">キャンセル (Esc)</button>
+  </div>
+
+  <div id="selection-box" style="display: none"></div>
+
+  <div id="ui">
+    <div>
+      <div id="guide-controls" style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px; color: white">
+        <b>ゴースト表示:</b>
+        <span style="margin-left: 10px">
+          <input type="checkbox" id="guidePlayerToggle" data-guide-name="player" />
+          <label for="guidePlayerToggle">自機</label>
+        </span>
+        <span style="margin-left: 10px">
+          <input type="checkbox" id="guideZakoToggle" data-guide-name="zako" />
+          <label for="guideZakoToggle">ザコ</label>
+        </span>
+        <span style="margin-left: 10px">
+          <input type="checkbox" id="guideBossToggle" data-guide-name="boss" />
+          <label for="guideBossToggle">ボス</label>
+        </span>
+        <span style="margin-left: 20px; border-left: 1px solid #555; padding-left: 20px">
+          <input type="checkbox" id="wireframeToggle" checked />
+          <label for="wireframeToggle">ワイヤーフレーム</label>
+        </span>
       </div>
-      <div>
-        <button id="unionObjects" style="background-color: #16a085; color: white">合体 (Union)</button>
-        <button id="intersectObjects" style="background-color: #f1c40f; color: white">交差 (Intersect)</button>
-        <button id="subtractObjects" style="background-color: #e74c3c; color: white">掘削 (Subtract)</button>
-        <button id="mirrorCopy" style="background-color: #2980b9; color: white">鏡面コピー</button>
-        <button id="paintModeButton" style="background-color: #9b59b6; color: white">ペイント</button>
-        <button id="cancelMirrorCopy" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
-        <button id="cancelSubtract" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
-      </div>
-      <div id="joint-operations" style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px">
-        <button id="addSphereJoint" style="background-color: #d35400; color: white">球ジョイント</button>
-        <button id="addCylinderJoint" style="background-color: #d35400; color: white">円柱ジョイント</button>
-        <button id="addSlideJoint" style="background-color: #d35400; color: white">スライドジョイント</button>
-        <button id="jointModeButton" style="background-color: #8e44ad; color: white">ジョイント操作(FK)</button>
-        <button id="ikModeButton" style="background-color: #8e44ad; color: white">IK操作</button>
-      </div>
-      <div>
-        <button id="save">保存</button>
-        <button id="load">読込</button>
-        <button id="importObj" style="background-color: #27ae60; color: white">OBJ読込</button>
-        <input type="file" id="fileInput" style="display: none" />
-        <input type="file" id="objFileInput" style="display: none" accept=".obj" />
-      </div>
-      <div id="paint-controls" style="display: none; border: 2px solid #2ecc71; padding: 8px; margin-top: 5px; color: white; background-color: #2c3e50">
-        <div id="paint-settings">
-          <div>
-            <span
-              >色:
-              <span id="currentColorDisplay" style="display: inline-block; width: 16px; height: 16px; border: 1px solid white; vertical-align: middle; margin-right: 10px"></span>
-            </span>
-            <button id="eyedropperButton" style="vertical-align: middle; margin-right: 10px">スポイト</button>
-            <div id="colorPalette" style="display: inline-block; vertical-align: middle"></div>
-          </div>
-          <div style="margin-top: 5px">
-            <label for="metalnessSlider">金属度: </label>
-            <input type="range" id="metalnessSlider" min="0" max="1" step="0.01" value="1.0" style="vertical-align: middle" />
-          </div>
-          <div style="margin-top: 5px">
-            <input type="checkbox" id="emissiveCheckbox" style="vertical-align: middle" />
-            <label for="emissiveCheckbox">光源にする</label>
-          </div>
-          <div id="emissive-controls" style="display: none; margin-top: 5px; padding-top: 5px; border-top: 1px solid #444">
-            <div>
-              <label for="emissiveColor">光の色: </label>
-              <input type="color" id="emissiveColor" value="#ffffff" />
-              <label for="emissiveIntensity">光の強さ: </label>
-              <input type="range" id="emissiveIntensity" min="0" max="10" step="0.1" value="1.0" />
-              <label for="emissivePenumbra">光のボケ: </label>
-              <input type="range" id="emissivePenumbra" min="0" max="1" step="0.01" value="0.2" />
-            </div>
-            <div style="margin-top: 5px">
-              <b>光の出る方向:</b><br />
-              <input type="radio" id="dir-pos-x" name="lightDirection" value="pos-x" /><label for="dir-pos-x" class="light-direction-label">X (右)</label> <input type="radio" id="dir-neg-x" name="lightDirection" value="neg-x" /><label for="dir-neg-x" class="light-direction-label">-X (左)</label><br />
-              <input type="radio" id="dir-pos-y" name="lightDirection" value="pos-y" /><label for="dir-pos-y" class="light-direction-label">Y (上)</label> <input type="radio" id="dir-neg-y" name="lightDirection" value="neg-y" /><label for="dir-neg-y" class="light-direction-label">-Y (下)</label><br />
-              <input type="radio" id="dir-pos-z" name="lightDirection" value="pos-z" /><label for="dir-pos-z" class="light-direction-label">Z (奥)</label> <input type="radio" id="dir-neg-z" name="lightDirection" value="neg-z" checked /><label for="dir-neg-z" class="light-direction-label">-Z (手前)</label>
-            </div>
-          </div>
-        </div>
-        <div id="paint-confirm-buttons" style="display: none; margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; text-align: right">
-          <button id="cancelPaint" style="background-color: #e74c3c; color: white">キャンセル (Esc)</button>
-          <button id="confirmPaint" style="background-color: #2ecc71; color: white">OK (Enter)</button>
-        </div>
-      </div>
-      <div style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px">
-        <button id="debugLog" style="background-color: #8e44ad; color: white">デバッグログ</button>
-      </div>
+      <button id="addCube">立方体</button>
+      <button id="addSphere">球体</button>
+      <button id="addCone">円錐</button>
+      <button id="addCylinder">円柱</button>
+      <button id="addPrism">多角形柱</button>
+
+      <button id="multiSelect" style="background-color: #f39c12; color: white">複数選択</button>
+      <button id="panModeButton" style="background-color: #3498db; color: white">パン</button>
+      <button id="deleteObject" style="background-color: #c0392b; color: white">削除</button>
     </div>
-    <div id="instructions">
-      <b>操作方法:</b><br />
-      <b>[3面図]</b>: マウスドラッグでオブジェクト移動<br />
-      <b>[プレビュー]</b>: マウスドラッグで視点移動<br />
-      <b>[共通]</b>: クリックで選択、矢印キーでも移動
+    <div>
+      <button id="unionObjects" style="background-color: #16a085; color: white">合体 (Union)</button>
+      <button id="intersectObjects" style="background-color: #f1c40f; color: white">交差 (Intersect)</button>
+      <button id="subtractObjects" style="background-color: #e74c3c; color: white">掘削 (Subtract)</button>
+      <button id="mirrorCopy" style="background-color: #2980b9; color: white">鏡面コピー</button>
+      <button id="paintModeButton" style="background-color: #9b59b6; color: white">ペイント</button>
+      <button id="cancelMirrorCopy" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
+      <button id="cancelSubtract" style="display: none; background-color: #e67e22; color: white">キャンセル</button>
     </div>
-    <div id="log-display"></div>
-    <div id="viewport-container">
-      <div id="view-top" class="viewport"><div class="viewport-label">平面図 (横:X / 縦:Z)</div></div>
-      <div id="view-perspective" class="viewport"><div class="viewport-label">プレビュー (3D)</div></div>
-      <div id="view-side" class="viewport"><div class="viewport-label">側面図 (横:Z / 縦:Y)</div></div>
-      <div id="view-front" class="viewport"><div class="viewport-label">正面図 (横:X / 縦:Y)</div></div>
+    <div id="joint-operations" style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px">
+      <button id="addSphereJoint" style="background-color: #d35400; color: white">球ジョイント</button>
+      <button id="addCylinderJoint" style="background-color: #d35400; color: white">円柱ジョイント</button>
+      <button id="addSlideJoint" style="background-color: #d35400; color: white">スライドジョイント</button>
+      <button id="pinObjectButton" style="background-color: #d35400; color: white">ピン留め</button>
+      <button id="jointModeButton" style="background-color: #8e44ad; color: white">ジョイント操作(FK)</button>
+      <button id="ikModeButton" style="background-color: #8e44ad; color: white">IK操作</button>
     </div>
-    <div id="prismModal" class="modal-overlay" style="display: none">
-      <div class="modal-content">
-        <h3>多角形柱の辺の数を入力</h3>
-        <input type="number" id="sidesInput" value="6" min="3" max="64" />
+    <div>
+      <button id="save">保存</button>
+      <button id="load">読込</button>
+      <button id="importObj" style="background-color: #27ae60; color: white">OBJ読込</button>
+      <input type="file" id="fileInput" style="display: none" />
+      <input type="file" id="objFileInput" style="display: none" accept=".obj" />
+    </div>
+    <div id="paint-controls" style="display: none; border: 2px solid #2ecc71; padding: 8px; margin-top: 5px; color: white; background-color: #2c3e50">
+      <div id="paint-settings">
         <div>
-          <button id="confirmPrism">OK</button>
-          <button id="cancelPrism">キャンセル</button>
+          <span>色:
+            <span id="currentColorDisplay" style="display: inline-block; width: 16px; height: 16px; border: 1px solid white; vertical-align: middle; margin-right: 10px"></span>
+          </span>
+          <button id="eyedropperButton" style="vertical-align: middle; margin-right: 10px">スポイト</button>
+          <div id="colorPalette" style="display: inline-block; vertical-align: middle"></div>
+        </div>
+        <div style="margin-top: 5px">
+          <label for="metalnessSlider">金属度: </label>
+          <input type="range" id="metalnessSlider" min="0" max="1" step="0.01" value="1.0" style="vertical-align: middle" />
+        </div>
+        <div style="margin-top: 5px">
+          <input type="checkbox" id="emissiveCheckbox" style="vertical-align: middle" />
+          <label for="emissiveCheckbox">光源にする</label>
+        </div>
+        <div id="emissive-controls" style="display: none; margin-top: 5px; padding-top: 5px; border-top: 1px solid #444">
+          <div>
+            <label for="emissiveColor">光の色: </label>
+            <input type="color" id="emissiveColor" value="#ffffff" />
+            <label for="emissiveIntensity">光の強さ: </label>
+            <input type="range" id="emissiveIntensity" min="0" max="10" step="0.1" value="1.0" />
+            <label for="emissivePenumbra">光のボケ: </label>
+            <input type="range" id="emissivePenumbra" min="0" max="1" step="0.01" value="0.2" />
+          </div>
+          <div style="margin-top: 5px">
+            <b>光の出る方向:</b><br />
+            <input type="radio" id="dir-pos-x" name="lightDirection" value="pos-x" /><label for="dir-pos-x" class="light-direction-label">X (右)</label> <input type="radio" id="dir-neg-x" name="lightDirection" value="neg-x" /><label for="dir-neg-x" class="light-direction-label">-X (左)</label><br />
+            <input type="radio" id="dir-pos-y" name="lightDirection" value="pos-y" /><label for="dir-pos-y" class="light-direction-label">Y (上)</label> <input type="radio" id="dir-neg-y" name="lightDirection" value="neg-y" /><label for="dir-neg-y" class="light-direction-label">-Y (下)</label><br />
+            <input type="radio" id="dir-pos-z" name="lightDirection" value="pos-z" /><label for="dir-pos-z" class="light-direction-label">Z (奥)</label> <input type="radio" id="dir-neg-z" name="lightDirection" value="neg-z" checked /><label for="dir-neg-z" class="light-direction-label">-Z (手前)</label>
+          </div>
         </div>
       </div>
+      <div id="paint-confirm-buttons" style="display: none; margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; text-align: right">
+        <button id="cancelPaint" style="background-color: #e74c3c; color: white">キャンセル (Esc)</button>
+        <button id="confirmPaint" style="background-color: #2ecc71; color: white">OK (Enter)</button>
+      </div>
     </div>
-    <div id="ik-browser">
-      <b style="padding-bottom: 5px; display: block; border-bottom: 1px solid #444; margin-bottom: 5px">IK接続ブラウザ</b>
-      <div id="ik-browser-list"></div>
+    <div style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px">
+      <button id="debugLog" style="background-color: #8e44ad; color: white">デバッグログ</button>
     </div>
-    <script type="importmap">
-      {
+  </div>
+  <div id="instructions">
+    <b>操作方法:</b><br />
+    <b>[3面図]</b>: マウスドラッグでオブジェクト移動<br />
+    <b>[プレビュー]</b>: マウスドラッグで視点移動<br />
+    <b>[共通]</b>: クリックで選択、矢印キーでも移動
+  </div>
+  <div id="log-display"></div>
+  <div id="viewport-container">
+    <div id="view-top" class="viewport">
+      <div class="viewport-label">平面図 (横:X / 縦:Z)</div>
+    </div>
+    <div id="view-perspective" class="viewport">
+      <div class="viewport-label">プレビュー (3D)</div>
+    </div>
+    <div id="view-side" class="viewport">
+      <div class="viewport-label">側面図 (横:Z / 縦:Y)</div>
+    </div>
+    <div id="view-front" class="viewport">
+      <div class="viewport-label">正面図 (横:X / 縦:Y)</div>
+    </div>
+  </div>
+  <div id="prismModal" class="modal-overlay" style="display: none">
+    <div class="modal-content">
+      <h3>多角形柱の辺の数を入力</h3>
+      <input type="number" id="sidesInput" value="6" min="3" max="64" />
+      <div>
+        <button id="confirmPrism">OK</button>
+        <button id="cancelPrism">キャンセル</button>
+      </div>
+    </div>
+  </div>
+  <div id="ik-browser">
+    <b style="padding-bottom: 5px; display: block; border-bottom: 1px solid #444; margin-bottom: 5px">IK接続ブラウザ</b>
+    <div id="ik-browser-list"></div>
+  </div>
+  <script type="importmap">
+    {
         "imports": {
           "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
           "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/",
@@ -319,6 +354,7 @@
         }
       }
     </script>
-    <script type="module" src="Main.js"></script>
-  </body>
+  <script type="module" src="Main.js"></script>
+</body>
+
 </html>

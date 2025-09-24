@@ -220,14 +220,8 @@ export class MechaCreatorApp {
     }
     this.transformControls.detach();
 
-    if (this.appState.modes.isIkMode) {
-        if(this.appState.modes.ik.endEffector && !this.appState.modes.ik.endEffector.userData.boxHelper){
-             const boxHelper = new THREE.BoxHelper(this.appState.modes.ik.endEffector, 0x00ff00);
-             this.appState.modes.ik.endEffector.userData.boxHelper = boxHelper;
-             this.selectionBoxes.add(boxHelper);
-        }
-    } else if (this.appState.modes.isJointMode) {
-      // Joint mode, no gizmo
+    if (this.appState.modes.isJointMode || this.appState.modes.isIkMode || this.appState.modes.isPinMode) {
+      // これらのモードでは3Dギズモを表示しない
     } else if (selectedObjects.length === 1) {
       this.transformControls.attach(selectedObjects[0]);
     } else if (selectedObjects.length > 1) {
@@ -248,10 +242,30 @@ export class MechaCreatorApp {
       }
     }
 
+    // ピン留めされたオブジェクトを常にハイライト表示
+    this.mechaGroup.children.forEach(obj => {
+        if (obj.userData.isPinned) {
+            // 既にBoxHelperが存在するかチェック (重複作成防止)
+            const existingHelper = this.selectionBoxes.children.find(h => h.object === obj && h.material.color.getHex() === 0xff00ff);
+            if (!existingHelper) {
+                this.selectionBoxes.add(new THREE.BoxHelper(obj, 0xff00ff)); // マゼンタ色で表示
+            }
+        } else {
+             const helperToRemove = this.selectionBoxes.children.find(h => h.object === obj && h.material.color.getHex() === 0xff00ff);
+             if (helperToRemove) {
+                 this.selectionBoxes.remove(helperToRemove);
+             }
+        }
+    });
+
     if (selectedObjects.length > 0) {
       selectedObjects.forEach((obj) => {
         const color = obj.userData.isJoint ? 0xffa500 : 0xffff00;
-        this.selectionBoxes.add(new THREE.BoxHelper(obj, color));
+        // 既にBoxHelperが存在しないかチェック (重複作成防止)
+        const existingHelper = this.selectionBoxes.children.find(h => h.object === obj);
+        if(!existingHelper) {
+            this.selectionBoxes.add(new THREE.BoxHelper(obj, color));
+        }
       });
     }
   }
@@ -295,6 +309,12 @@ export class MechaCreatorApp {
     this.appState.onSelectionChange.add(this.updateSelection.bind(this));
     this.inputHandler.initialize();
     this.uiControl.initialize();
+    
+    // モード変更イベントでUIを更新
+    document.addEventListener('mode-changed', () => {
+        this.uiControl.updateModeButtons();
+        this.updateSelection(); // モード変更時に選択ハイライトを更新
+    });
 
     this.transformControls.addEventListener('dragging-changed', (event) => {
       this.orbitControls.enabled = !event.value;
@@ -323,6 +343,7 @@ export class MechaCreatorApp {
       }
       this.log('初期化完了');
       this.viewportManager.onWindowResize();
+      this.updateSelection(); // ロード後にもハイライトを更新
     });
 
     this.animate();
