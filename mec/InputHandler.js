@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-// ★★★ The unnecessary import of IkTransformCommand has been removed from this line ★★★
-import {TransformCommand, MacroCommand, DeleteObjectCommand} from './CommandEdit.js';
-import {PaintObjectCommand} from './CommandPaint.js';
+import { TransformCommand, MacroCommand, DeleteObjectCommand } from './CommandEdit.js';
+import { PaintObjectCommand } from './CommandPaint.js';
 import * as CsgOperations from './CsgOperations.js';
 import * as ClipboardFeatures from './ClipboardFeatures.js';
 import * as PlacementFeatures from './PlacementFeatures.js';
 import * as JointFeatures from './JointFeatures.js';
 import * as IkFeatures from './IkFeatures.js';
+import * as SceneIO from './SceneIo.js';
 
 export class InputHandler {
   constructor(appContext) {
@@ -21,7 +21,7 @@ export class InputHandler {
     this.log = appContext.log;
 
     this.isPanning2D = false;
-    this.panStart = {x: 0, y: 0};
+    this.panStart = { x: 0, y: 0 };
     this.cameraStartPos = new THREE.Vector3();
     this.panningViewportKey = null;
 
@@ -36,9 +36,10 @@ export class InputHandler {
     this.dragStartPointer = new THREE.Vector2();
     this.draggedInfo = null;
     this.transformStartCache = null;
-    this.dragStartObjectState = {position: new THREE.Vector3(), scale: new THREE.Vector3(), rotation: new THREE.Euler()};
+    this.dragStartObjectState = { position: new THREE.Vector3(), scale: new THREE.Vector3(), rotation: new THREE.Euler() };
     this.worldTransforms = new Map();
     this.transformGroup = null;
+    this.matrixAutoUpdateCache = null;
 
     this.isSpacebarDown = false;
     this.activePointerId = null;
@@ -46,7 +47,9 @@ export class InputHandler {
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
 
-    this.isPreparingIkDrag = false;
+    // PBD IK用の状態変数
+    this.pbdGraph = null;
+    this.isIkDragging = false;
   }
 
   initialize() {
@@ -56,7 +59,7 @@ export class InputHandler {
     window.addEventListener('pointermove', this.onPointerMove.bind(this));
     window.addEventListener('pointerup', this.onPointerUp.bind(this));
     window.addEventListener('contextmenu', this.onContextMenu.bind(this));
-    this.viewportManager.container.addEventListener('wheel', this.onMouseWheel.bind(this), {passive: false});
+    this.viewportManager.container.addEventListener('wheel', this.onMouseWheel.bind(this), { passive: false });
   }
 
   onMouseWheel(event) {
@@ -96,8 +99,13 @@ export class InputHandler {
         document.getElementById('cancelSubtract').click();
         return;
       }
+      if (this.appState.modes.isPinMode) {
+        this.appState.togglePinMode();
+        this.log('ピン留めモードを終了しました。');
+        return;
+      }
       if (this.appState.modes.isIkMode) {
-        document.getElementById('ikModeButton').click();
+        this.appState.toggleIkMode();
         return;
       }
       if (this.appState.modes.isJointMode) {
@@ -187,7 +195,7 @@ export class InputHandler {
               geometry: obj.geometry,
               material: obj.material,
               userData: obj.userData,
-              source: {scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone()},
+              source: { scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone() },
             }));
             this.log(`${selectedObjectsCopy.length}個のオブジェクトをコピーしました。`);
           } else {
@@ -229,12 +237,12 @@ export class InputHandler {
         break;
       case 'r':
         this.transformControls.setMode('rotate');
-        document.dispatchEvent(new CustomEvent('setGizmoMode', {detail: 'rotate'}));
+        document.dispatchEvent(new CustomEvent('setGizmoMode', { detail: 'rotate' }));
         this.log('モード -> 回転 (3D/2Dビュー)');
         break;
       case 's':
         this.transformControls.setMode('scale');
-        document.dispatchEvent(new CustomEvent('setGizmoMode', {detail: 'scale'}));
+        document.dispatchEvent(new CustomEvent('setGizmoMode', { detail: 'scale' }));
         this.log('モード -> 拡縮 (3D/2Dビュー)');
         break;
     }
@@ -259,8 +267,8 @@ export class InputHandler {
       scaleAmount = 0.05;
     const commands = [];
     selectedObjects.forEach((obj) => {
-      const oldTransform = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
-      const newTransform = {position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone()};
+      const oldTransform = { position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone() };
+      const newTransform = { position: obj.position.clone(), rotation: obj.rotation.clone(), scale: obj.scale.clone() };
       let operationDone = false;
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
@@ -361,7 +369,7 @@ export class InputHandler {
 
     if (event.button === 0) {
       if (!clickedViewportInfo) return;
-      const {key: clickedViewportKey, rect: clickedRect} = clickedViewportInfo;
+      const { key: clickedViewportKey, rect: clickedRect } = clickedViewportInfo;
 
       if ((this.appContext.isPanModeActive || this.isSpacebarDown) && clickedViewportKey === 'perspective') return;
       if ((this.appContext.isPanModeActive || this.isSpacebarDown) && clickedViewportKey !== 'perspective') {
@@ -380,12 +388,11 @@ export class InputHandler {
       const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
       const intersectionPoint = allObjectIntersects.length > 0 ? allObjectIntersects[0].point : null;
 
-      if (this.appState.modes.isIkMode) {
-        if (clickedObject && !clickedObject.userData.isJoint) {
-          if (this.appState.modes.ik.endEffector === clickedObject) {
-            this.isPreparingIkDrag = true;
-            this.appContext.orbitControls.enabled = false;
-          }
+      // 新しい物理IKのドラッグ開始処理
+      if (this.appState.modes.isIkMode && this.pbdGraph && clickedObject === this.appState.selectedObjects[0]) {
+        if (IkFeatures.startIKDrag(clickedObject, this.pbdGraph, this.appContext)) {
+          this.isIkDragging = true;
+          this.appContext.orbitControls.enabled = false;
         }
         return;
       }
@@ -400,7 +407,7 @@ export class InputHandler {
         return;
       }
 
-      if (this.appState.modes.isMirrorCopyMode || this.appState.modes.isSubtractMode || this.appState.modes.isPasteMode || this.appState.isPaintMode || this.appState.isEyedropperMode || this.appState.isLivePaintPreviewMode || this.appState.modes.isPlacementPreviewMode) {
+      if (this.appState.modes.isMirrorCopyMode || this.appState.modes.isSubtractMode || this.appState.modes.isPasteMode || this.appState.isPaintMode || this.appState.isEyedropperMode || this.appState.isLivePaintPreviewMode || this.appState.modes.isPlacementPreviewMode || this.appState.modes.isIkMode) {
         return;
       }
 
@@ -415,14 +422,19 @@ export class InputHandler {
         const setupTransformState = () => {
           this.appContext.orbitControls.enabled = false;
           this.dragStartPointer.set(event.clientX, event.clientY);
+          // ★★★ 追加: キャッシュを初期化 ★★★
+          this.matrixAutoUpdateCache = new Map();
+
           this.appState.selectedObjects.forEach((obj) => {
+            // ★★★ 追加: 現在の状態をキャッシュに保存 ★★★
+            this.matrixAutoUpdateCache.set(obj, obj.matrixAutoUpdate);
             const isRotated = !obj.quaternion.equals(new THREE.Quaternion());
             if (isRotated && obj.matrixAutoUpdate === true) {
               obj.matrixAutoUpdate = false;
               obj.updateMatrix();
             }
           });
-          this.transformStartCache = this.appState.selectedObjects.map((obj) => ({matrix: obj.matrix.clone()}));
+          this.transformStartCache = this.appState.selectedObjects.map((obj) => ({ matrix: obj.matrix.clone() }));
         };
 
         const setupMultiSelectGroup = () => {
@@ -431,7 +443,7 @@ export class InputHandler {
           groupBounds.getCenter(this.dragStartObjectState.position);
           groupBounds.getSize(this.dragStartObjectState.scale);
           this.worldTransforms.clear();
-          this.appState.selectedObjects.forEach((obj) => this.worldTransforms.set(obj, {parent: obj.parent}));
+          this.appState.selectedObjects.forEach((obj) => this.worldTransforms.set(obj, { parent: obj.parent }));
           if (this.transformGroup) this.appContext.scene.remove(this.transformGroup);
           this.transformGroup = new THREE.Group();
           this.appState.transformGroup = this.transformGroup;
@@ -448,7 +460,7 @@ export class InputHandler {
           } else if (this.appContext.gizmoMode === 'rotate') {
             this.isRotatingIn2DView = true;
           }
-          this.draggedInfo = {viewportKey: clickedViewportKey, handleName: handleIntersects[0].object.name};
+          this.draggedInfo = { viewportKey: clickedViewportKey, handleName: handleIntersects[0].object.name };
           return;
         }
 
@@ -457,7 +469,7 @@ export class InputHandler {
           this.isDraggingIn2DView = true;
           this.appState.isDraggingObject = true;
           setupMultiSelectGroup();
-          this.draggedInfo = {viewportKey: clickedViewportKey, handleName: null};
+          this.draggedInfo = { viewportKey: clickedViewportKey, handleName: null };
           return;
         }
       }
@@ -516,13 +528,9 @@ export class InputHandler {
       return;
     }
 
-    if (this.isPreparingIkDrag) {
-      if (IkFeatures.startIkDrag(event, this.appContext)) {
-        this.isPreparingIkDrag = false;
-      }
-    }
-    if (this.appState.modes.ik.isDragging) {
-      IkFeatures.solveIk(event, this.appContext);
+    // 新しい物理IKのドラッグ中処理
+    if (this.isIkDragging) {
+      IkFeatures.solveIK(event, this.appContext);
       return;
     }
 
@@ -789,11 +797,15 @@ export class InputHandler {
       return;
     }
 
-    if (this.appState.modes.ik.isDragging) {
-      IkFeatures.endIkDrag(this.appContext);
+    // 新しい物理IKのドラッグ終了処理
+    if (this.isIkDragging) {
+      IkFeatures.endIKDrag(this.appContext);
+      this.isIkDragging = false;
+      this.pbdGraph = null; // ドラッグ終了でグラフをリセット
+      this.appContext.orbitControls.enabled = true;
+      this.activePointerId = null;
+      return;
     }
-    this.isPreparingIkDrag = false;
-    this.appContext.orbitControls.enabled = true;
 
     if (this.isDraggingJoint) {
       JointFeatures.endJointDrag(this.appContext);
@@ -813,7 +825,21 @@ export class InputHandler {
           const oldT = this.transformStartCache[i];
           const originalParent = this.worldTransforms.get(obj).parent;
           originalParent.attach(obj);
-          const newT = {matrix: obj.matrix.clone()};
+
+          // ★★★ 追加: matrixAutoUpdateの状態を復元 ★★★
+          if (this.matrixAutoUpdateCache && this.matrixAutoUpdateCache.has(obj)) {
+            const cachedState = this.matrixAutoUpdateCache.get(obj);
+
+            // 手動(false)から自動(true)に戻す場合
+            if (cachedState === true && obj.matrixAutoUpdate === false) {
+              // 現在のMatrix（attachによって更新済み）から位置/回転/拡縮を再分解する
+              obj.matrix.decompose(obj.position, obj.quaternion, obj.scale);
+            }
+            obj.matrixAutoUpdate = cachedState;
+          }
+          // ★★★ 追加ここまで ★★★
+          
+          const newT = { matrix: obj.matrix.clone() };
           if (!oldT.matrix.equals(newT.matrix)) {
             commands.push(new TransformCommand(obj, oldT, newT));
           }
@@ -849,7 +875,7 @@ export class InputHandler {
         if (this.appState.isLivePaintPreviewMode) {
           document.getElementById('cancelPaint').click();
         }
-        const boxRect = {left: Math.min(this.startPoint.x, endPoint.x), right: Math.max(this.startPoint.x, endPoint.x), top: Math.min(this.startPoint.y, endPoint.y), bottom: Math.max(this.startPoint.y, endPoint.y)};
+        const boxRect = { left: Math.min(this.startPoint.x, endPoint.x), right: Math.max(this.startPoint.x, endPoint.x), top: Math.min(this.startPoint.y, endPoint.y), bottom: Math.max(this.startPoint.y, endPoint.y) };
         const objectsInBox = [];
         for (const key in this.viewportManager.viewports) {
           const view = this.viewportManager.viewports[key];
@@ -925,13 +951,24 @@ export class InputHandler {
       const intersects = this.raycaster.intersectObjects([...this.mechaGroup.children.filter((c) => !c.userData.isNonSelectable), ...this.jointGroup.children], false);
       const clickedObject = intersects.length > 0 ? intersects[0].object : null;
 
+      if (this.appState.modes.isPinMode) {
+        if (clickedObject && !clickedObject.userData.isJoint) {
+          clickedObject.userData.isPinned = !clickedObject.userData.isPinned;
+          this.log(`オブジェクトを${clickedObject.userData.isPinned ? 'ピン留め' : 'ピン留め解除'}しました。`);
+          SceneIO.autoSaveScene(this.appContext);
+          this.appState.notifySelectionChange();
+        }
+        this.activePointerId = null;
+        return;
+      }
+
       if (this.appState.isEyedropperMode) {
         if (clickedObject && !clickedObject.userData.isJoint) {
           const pickedProps = {
             color: clickedObject.material.color.clone(),
             metalness: clickedObject.material.metalness,
             isEmissive: clickedObject.material.emissive.getHex() > 0,
-            emissiveProperties: {color: clickedObject.material.emissive.clone(), intensity: 1.0, penumbra: 0.2},
+            emissiveProperties: { color: clickedObject.material.emissive.clone(), intensity: 1.0, penumbra: 0.2 },
             lightDirection: 'neg-z',
           };
           const existingLight = clickedObject.getObjectByProperty('isSpotLight', true);
@@ -944,15 +981,15 @@ export class InputHandler {
           }
 
           if (this.appState.isLivePaintPreviewMode) {
-            document.dispatchEvent(new CustomEvent('livePaintEyedrop', {detail: pickedProps}));
+            document.dispatchEvent(new CustomEvent('livePaintEyedrop', { detail: pickedProps }));
             this.log(`プロパティを抽出しました`);
           } else {
-            this.appState.brushProperties = {...pickedProps};
+            this.appState.brushProperties = { ...pickedProps };
             document.dispatchEvent(new CustomEvent('updatePaintUIFromBrush'));
             this.log(`ブラシにプロパティを抽出しました`);
           }
         }
-        document.dispatchEvent(new CustomEvent('setEyedropperMode', {detail: false}));
+        document.dispatchEvent(new CustomEvent('setEyedropperMode', { detail: false }));
         this.activePointerId = null;
         return;
       }
@@ -968,10 +1005,15 @@ export class InputHandler {
       }
 
       if (this.appState.modes.isIkMode) {
-        if (clickedObject && !clickedObject.userData.isJoint) {
-          IkFeatures.selectEndEffector(clickedObject, this.appContext);
+        this.appState.setSelection(clickedObject);
+        if (clickedObject) {
+          const pinnedObjects = this.mechaGroup.children.filter(o => o.userData.isPinned);
+          this.pbdGraph = IkFeatures.prepareIK(clickedObject, this.mechaGroup.children, this.jointGroup.children, pinnedObjects);
+          if (!this.pbdGraph) {
+            this.log("IK操作の準備に失敗しました。アンカーを確認してください。");
+          }
         } else {
-          this.appState.clearIkSelection();
+          this.pbdGraph = null;
         }
       } else if (this.appState.modes.isJointMode) {
         if (e.ctrlKey) {
@@ -1023,7 +1065,7 @@ export class InputHandler {
         } else {
           this.appState.setSelection(clickedObject);
         }
-        if (this.appState.isMultiSelectMode && !clickedObject) document.dispatchEvent(new CustomEvent('setMultiSelectMode', {detail: false}));
+        if (this.appState.isMultiSelectMode && !clickedObject) document.dispatchEvent(new CustomEvent('setMultiSelectMode', { detail: false }));
       }
 
       const selectionCount = this.appState.selectedObjects.length;
