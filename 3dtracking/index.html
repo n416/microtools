@@ -2,11 +2,12 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>MediaPipe ランドマークのみデモ</title>
+  <title>MediaPipe ペンギンデモ</title>
   <style>
     body {
       font-family: sans-serif;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       height: 100vh;
@@ -19,10 +20,9 @@
       height: 480px;
       border: 2px solid #333;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      background-color: black; /* コンテナの背景を黒に */
+      background-color: black;
     }
     #webcam {
-      /* ★★★ カメラ映像を完全に非表示にする ★★★ */
       display: none;
     }
     #output_canvas {
@@ -32,12 +32,16 @@
       width: 100%;
       height: 100%;
     }
+    h1 {
+        margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
-
+  <h1>ペンギンに変身！</h1>
   <div class="container">
-    <video id="webcam"></video> <canvas id="output_canvas"></canvas>
+    <video id="webcam"></video>
+    <canvas id="output_canvas"></canvas>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -45,13 +49,23 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
-  <script>
+<script>
     const videoElement = document.getElementById('webcam');
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
 
+    const beakImage = new Image();
+    beakImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAA6tJREFUeJzt3D1u1EAUhuFnZ18AFyRdpE6Vr0Kk4hvoEylS5U/oEl0pUnJKlFxAnwB/gbsCAgJ+SSQx1t7Ozj6L9ySLZOO1Z8/szI53cpcDAAAAAAAAAAAAAAAAgMBe5KkHk/P5R9e5T+4++Tq5uDzl43z24c3N/R87383nL1r/5QG44EHyWbJ2a2sv+XLyX/Y+8sXk+fyr+YkH4IIPk4/37u5+8P+V/7d/u/fRe5OfJt/OflsC/A2Q4D8DSf43QIL/DSDB/wZI8L8BkvxvgAT/GyDB/wZI8L8BkvxvgAT/GyDB/wZI8L8BkvxvgAT/GyDB/wZI8L8BkvxvgAT/G3iA/D65+3g6+S/7eDI5eR9t/nng+vP5h9f5R+8eA3wQ/k/OPgG+B8gAEwwgwwAyDCDDAJIMIMMA0gwwAyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADAN+AnB08uP428mvk2d3H4/3P3uePPiK/Pz8r6v8xN8/gV/kdwMAAAAAAAAAAAAAAACAwH/5Azj7O7F4xY4ZAAAAAElFTkSuQmCC';
+    
     const SMOOTHING_FACTOR = 0.8;
     let smoothedLandmarks = null;
+
+    beakImage.onload = () => {
+      camera.start();
+    };
+    beakImage.onerror = () => {
+      console.error("画像の読み込みに失敗しました。");
+    };
 
     function onResults(results) {
       canvasElement.width = videoElement.videoWidth;
@@ -61,17 +75,11 @@
 
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-
-      // ★★★ カメラ映像の代わりに黒い背景を描画 ★★★
-      canvasCtx.fillStyle = '#000000'; // 黒色
+      canvasCtx.fillStyle = '#000000';
       canvasCtx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-      // 左右反転は直感的な操作のために維持する
       canvasCtx.translate(canvasWidth, 0);
       canvasCtx.scale(-1, 1);
-      
-      // ★★★ カメラ映像の描画命令をコメントアウトまたは削除 ★★★
-      // canvasCtx.drawImage(results.image, 0, 0, canvasWidth, canvasHeight);
 
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         const landmarks = results.multiFaceLandmarks[0];
@@ -86,58 +94,38 @@
           });
         }
         
-        drawConnectors(canvasCtx, smoothedLandmarks, FACEMESH_TESSELATION,
-                       {color: '#C0C0C070', lineWidth: 1});
-        drawConnectors(canvasCtx, smoothedLandmarks, FACEMESH_CONTOURS,
-                       {color: '#30FF30', lineWidth: 2});
-        
-        const rightEyePupil = smoothedLandmarks[468];
-        const leftEyePupil = smoothedLandmarks[473];
+        drawConnectors(canvasCtx, smoothedLandmarks, FACEMESH_CONTOURS, {color: '#30FF30', lineWidth: 1});
 
-        if (rightEyePupil && leftEyePupil) {
-          const eyeCenterX = (rightEyePupil.x + leftEyePupil.x) / 2;
-          const eyeCenterY = (rightEyePupil.y + leftEyePupil.y) / 2;
-          const crosshairX = eyeCenterX * canvasWidth;
-          const crosshairY = eyeCenterY * canvasHeight;
-          
-          drawCrosshair(crosshairX, crosshairY);
-        }
+        drawPenguinParts(smoothedLandmarks, canvasWidth, canvasHeight);
       }
       canvasCtx.restore();
     }
     
-    function drawCrosshair(x, y) {
-      const size = 20;
-      canvasCtx.beginPath();
-      canvasCtx.strokeStyle = 'lime';
-      canvasCtx.lineWidth = 2;
-      canvasCtx.moveTo(x - size, y);
-      canvasCtx.lineTo(x + size, y);
-      canvasCtx.moveTo(x, y - size);
-      canvasCtx.lineTo(x, y + size);
-      canvasCtx.stroke();
+    // ★★★ 傾きや大きさの計算をなくした、シンプルな描画関数 ★★★
+    function drawPenguinParts(landmarks, width, height) {
+        // 鼻の先端（1番）の座標を取得
+        const beakAnchor = landmarks[1];
+        if (!beakAnchor) return; // 念のためデータがあるか確認
+
+        const beakX = beakAnchor.x * width;
+        const beakY = beakAnchor.y * height;
+
+        // 大きさを100pxに固定（テスト用）
+        const beakSize = 100;
+
+        // 傾きの計算はせず、そのまま描画
+        // 画像の中心が鼻先にくるように座標をずらす
+        canvasCtx.drawImage(beakImage, beakX - beakSize / 2, beakY - beakSize / 2, beakSize, beakSize);
     }
 
-    const faceMesh = new FaceMesh({locateFile: (file) => {
-      return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-    }});
-    faceMesh.setOptions({
-      maxNumFaces: 1,
-      refineLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
+    const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     faceMesh.onResults(onResults);
 
     const camera = new Camera(videoElement, {
-      onFrame: async () => {
-        await faceMesh.send({image: videoElement});
-      },
-      width: 640,
-      height: 480,
-      facingMode: 'user'
+      onFrame: async () => { await faceMesh.send({image: videoElement}); },
+      width: 640, height: 480, facingMode: 'user'
     });
-    camera.start();
-  </script>
+</script>
 </body>
 </html>
