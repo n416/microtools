@@ -194,7 +194,7 @@ export class InputHandler {
               geometry: obj.geometry,
               material: obj.material,
               userData: obj.userData,
-              source: { name: obj.name, scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone() },
+              source: { scale: obj.scale.clone(), rotation: obj.rotation.clone(), position: obj.position.clone() },
             }));
             this.log(`${selectedObjectsCopy.length}個のオブジェクトをコピーしました。`);
           } else {
@@ -997,14 +997,13 @@ export class InputHandler {
       if (this.appState.modes.isIkMode) {
         this.appState.setSelection(clickedObject);
         if (clickedObject) {
-          this.appContext.scene.updateMatrixWorld(true);
-
           const pinnedObjects = this.mechaGroup.children.filter(o => o.userData.isPinned);
+          // ★★★ 修正: パーツとジョイントの両方を渡す ★★★
           const allObjectsAndJoints = [...this.mechaGroup.children, ...this.jointGroup.children];
           this.pbdGraph = IkFeatures.prepareIK(clickedObject, allObjectsAndJoints, this.jointGroup.children, pinnedObjects);
 
           if (!this.pbdGraph) {
-            this.log("IK操作の準備に失敗しました。アンカーまたは接続を確認してください。");
+            this.log("IK操作の準備に失敗しました。アンカーを確認してください。");
           }
         } else {
           this.pbdGraph = null;

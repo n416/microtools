@@ -225,6 +225,7 @@ export function applyJointTransform(event, appContext) {
 
     dragStartState.lastMousePoint.copy(currentMousePoint);
 }
+
 export function endJointDrag(appContext) {
     if (!dragStartState) return;
     const { history } = appContext;
@@ -232,23 +233,19 @@ export function endJointDrag(appContext) {
     dragStartState.activeJoint.material.color.set(0xffa500);
     dragStartState.activeJoint.material.wireframe = true;
 
-    // ★★★ 修正箇所 ★★★
-    // finalTransforms が回転情報として quaternion を使うように修正
+    // ★★★ エラー修正： 'quaternion' を使用するように統一 ★★★
     const finalTransforms = dragStartState.movingGroup.map(state => ({
         object: state.object,
         position: state.object.position.clone(),
-        quaternion: state.object.quaternion.clone(), // rotation.clone() から変更
+        quaternion: state.object.quaternion.clone(),
     }));
 
-    // ★★★ 修正箇所 ★★★
-    // initialTransforms も quaternion を使うように修正
     const initialTransforms = dragStartState.movingGroup.map(state => {
         const tempMatrix = state.startMatrix.clone();
         const position = new THREE.Vector3();
         const quaternion = new THREE.Quaternion();
         const scale = new THREE.Vector3();
         tempMatrix.decompose(position, quaternion, scale);
-        // rotation を経由せず、直接 quaternion を返す
         return { object: state.object, position, quaternion };
     });
 

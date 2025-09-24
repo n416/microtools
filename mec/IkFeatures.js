@@ -96,8 +96,8 @@ export function prepareIK(selectedObject, allObjectsAndJoints, allJoints, pinned
 
     // 4. グラフを使って、ルートから選択オブジェクトまでの完全なパス（パーツとジョイントを含む）を探す
     const fullPath = findPath(root, selectedObject, fullGraph);
-
-    // --- ▼▼▼ ここからデバッグログを追加 ▼▼▼ ---
+    
+    // ▼▼▼ ご希望によりデバッグログを残します ▼▼▼
     console.log("--- prepareIK: Path Finding Details ---");
     if (fullPath) {
         console.log(`Path found with ${fullPath.length} nodes.`);
@@ -114,7 +114,6 @@ export function prepareIK(selectedObject, allObjectsAndJoints, allJoints, pinned
         console.log("Path not found from root to selected object.");
     }
     console.log("------------------------------------");
-    // --- ▲▲▲ ここまでデバッグログを追加 ▲▲▲ ---
 
     if (!fullPath) return null;
 
@@ -124,7 +123,7 @@ export function prepareIK(selectedObject, allObjectsAndJoints, allJoints, pinned
 
     // 6. パスが有効か基本的な検証を行う
     if (pathFromRoot.length < 2 || jointChain.length < 1) {
-        console.error("Failed to resolve a valid IK chain.", { pathFromRoot, jointChain });
+        console.error("Failed to resolve a valid IK chain.", {pathFromRoot, jointChain});
         return null;
     }
 
@@ -280,23 +279,23 @@ function solveCCD_IK() {
         const allObjectsFromState = ikState.initialStates.map(s => s.object);
         const allJointsFromState = allObjectsFromState.filter(o => o.userData.isJoint);
         const graph = buildFullConnectionGraph(allObjectsFromState, allJointsFromState);
-
+        
         const descendants = new Set();
         const queue = [draggedObject.uuid];
-
+        
         const visited = new Set([draggedObject.uuid]);
         const draggedIndexInChain = chain.indexOf(draggedObject);
         for (let i = 0; i < draggedIndexInChain; i++) {
             visited.add(chain[i].uuid);
-            if (joints[i]) visited.add(joints[i].uuid);
+            if(joints[i]) visited.add(joints[i].uuid);
         }
-
+        
         const allObjectsMap = new Map(ikState.initialStates.map(s => [s.object.uuid, s.object]));
 
         while (queue.length > 0) {
             const currentUuid = queue.shift();
             const neighbors = graph.get(currentUuid)?.neighbors || [];
-
+            
             for (const neighborUuid of neighbors) {
                 if (!visited.has(neighborUuid)) {
                     visited.add(neighborUuid);
@@ -308,7 +307,7 @@ function solveCCD_IK() {
                 }
             }
         }
-
+        
         descendants.forEach(descendant => {
             const descInitialState = ikState.initialStates.find(s => s.object === descendant);
             if (descInitialState) {

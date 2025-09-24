@@ -168,7 +168,7 @@ export class MechaCreatorApp {
     this.scene.add(this.jointGroup);
     this.scene.add(this.previewGroup);
     this.scene.add(this.selectionBoxes);
-    
+    this.scene.add(this.transformControls);
     const gizmoHandleMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, toneMapped: false, depthTest: false, side: THREE.DoubleSide});
     const handleSize = 0.5;
     const handlePositions = [
