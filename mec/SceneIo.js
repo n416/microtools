@@ -20,8 +20,8 @@ function getVectorFromDirection(direction) {
 }
 
 export function autoSaveScene(context) {
-  const { mechaGroup, jointGroup } = context;
-  const sceneData = { objects: [], joints: [] };
+  const { mechaGroup, jointGroup, app } = context;
+  const sceneData = { objects: [], joints: [], objectCounter: app.objectCounter };
 
   mechaGroup.children.forEach((mesh) => {
     if (mesh.userData.isNonSelectable) return;
@@ -59,7 +59,7 @@ export function autoSaveScene(context) {
     if (geometryType) {
       const saveData = {
         uuid: mesh.uuid,
-        name: mesh.name,
+        name: mesh.name, // ★★★ 修正: 名前を保存
         geometryType,
         geometryParameters,
         position: mesh.position.toArray(),
@@ -90,15 +90,13 @@ export function autoSaveScene(context) {
   jointGroup.children.forEach((joint) => {
     const saveData = {
       uuid: joint.uuid,
+      name: joint.name, // ★★★ 修正: ジョイントの名前を保存
       type: joint.userData.type,
       position: joint.position.toArray(),
       rotation: joint.rotation.toArray().slice(0, 3),
       scale: joint.scale.toArray(),
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-      // ★★★ ここが親子情報を正しく保存する修正箇所です ★★★
       parentObject: joint.userData.parentObject,
       childObjects: joint.userData.childObjects,
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
     };
     sceneData.joints.push(saveData);
   });
@@ -118,7 +116,10 @@ export function autoSaveScene(context) {
 }
 
 export function loadFromData(context, sceneData) {
-  const { mechaGroup, jointGroup, transformControls, log, history } = context;
+  const { mechaGroup, jointGroup, transformControls, log, history, app } = context;
+
+  // ★★★ 修正: カウンターを復元
+  app.objectCounter = sceneData.objectCounter || 0;
 
   while (mechaGroup.children.length > 0) {
     const mesh = mechaGroup.children[0];
@@ -189,19 +190,18 @@ export function loadFromData(context, sceneData) {
 
         const mesh = new THREE.Mesh(geometry, material);
         mesh.uuid = data.uuid;
-        mesh.name = data.name; 
+        mesh.name = data.name; // ★★★ 修正: 名前を復元
         mesh.position.fromArray(data.position);
         mesh.rotation.fromArray(data.rotation);
         mesh.scale.fromArray(data.scale);
 
         if (data.userData) {
           mesh.userData = { ...mesh.userData, ...data.userData };
-          // ★★★ isPinned フラグを読み込む ★★★
           if (data.userData.isPinned) {
             mesh.userData.isPinned = true;
           }
         }
-        
+
         if (data.spotLight) {
           const spotLight = new THREE.SpotLight(data.spotLight.color);
           spotLight.intensity = data.spotLight.intensity;
@@ -247,13 +247,11 @@ export function loadFromData(context, sceneData) {
       }
       const joint = new THREE.Mesh(geometry, material);
       joint.uuid = data.uuid;
+      joint.name = data.name; // ★★★ 修正: ジョイントの名前を復元
       joint.userData.isJoint = true;
       joint.userData.type = data.type;
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-      // ★★★ ここが親子情報を正しく読み込む修正箇所です ★★★
       joint.userData.parentObject = data.parentObject;
       joint.userData.childObjects = data.childObjects;
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
       joint.position.fromArray(data.position);
       joint.rotation.fromArray(data.rotation);

@@ -16,7 +16,7 @@ const EPSILON = 0.0001;
  */
 export function requestAddObject(geometry, appContext) {
     const { mechaGroup, history, log, state } = appContext;
-    
+
     geometry.computeBoundingBox();
     const newObjectSize = geometry.boundingBox.getSize(new THREE.Vector3());
 
@@ -37,6 +37,7 @@ export function requestAddObject(geometry, appContext) {
 
     if (!isOccupied) {
         const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff }));
+        mesh.name = appContext.getNewObjectName(geometry.type.replace('Geometry', ''));
         mesh.position.copy(initialPosition);
         history.execute(new AddObjectCommand(mesh, mechaGroup, appContext.selectionManager));
     } else {
@@ -64,7 +65,7 @@ function findAndPlacePreview(baseObject, direction, geometry, appContext, depth 
 
     const newObjectSize = geometry.boundingBox.getSize(new THREE.Vector3());
     const baseObjectBox = new THREE.Box3().setFromObject(baseObject);
-    
+
     const previewPosition = new THREE.Vector3();
 
     if (direction.x !== 0) {
@@ -107,6 +108,7 @@ function findAndPlacePreview(baseObject, direction, geometry, appContext, depth 
 export function confirmPlacement(previewObject, appContext) {
     const { history, mechaGroup } = appContext;
     const finalMesh = new THREE.Mesh(previewObject.geometry, new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff }));
+    finalMesh.name = appContext.getNewObjectName(previewObject.geometry.type.replace('Geometry', ''));
     finalMesh.position.copy(previewObject.position);
     history.execute(new AddObjectCommand(finalMesh, mechaGroup, appContext.selectionManager));
     cancelPlacementPreview(appContext);
@@ -118,7 +120,7 @@ export function confirmPlacement(previewObject, appContext) {
 export function cancelPlacementPreview(appContext) {
     const { previewGroup, state, log } = appContext;
     if (!state.modes.isPlacementPreviewMode) return;
-    
+
     const toRemove = [...previewGroup.children];
     toRemove.forEach(child => previewGroup.remove(child));
 
