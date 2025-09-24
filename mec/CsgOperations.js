@@ -32,6 +32,7 @@ function performCSG(operation, operationName, context) {
   }
 
   const newMesh = baseMesh;
+  newMesh.name = context.getNewObjectName(operationName);
   newMesh.material = finalMaterial;
   newMesh.geometry.computeVertexNormals();
   newMesh.material.side = THREE.DoubleSide;
@@ -80,7 +81,7 @@ export function startSubtractMode(context) {
 export function cancelSubtractMode(context) {
   const { modes, log, originalMaterials } = context;
   if (!modes.isSubtractMode) return;
-  
+
   modes.subtractTargets.forEach((obj) => {
     if (originalMaterials.has(obj)) {
       obj.material = originalMaterials.get(obj);
@@ -140,6 +141,7 @@ export function performSubtract(baseObjects, drillObject, context) {
   }
 
   const newMesh = resultMesh;
+  newMesh.name = context.getNewObjectName('SubtractResult');
   newMesh.material = finalMaterial;
   newMesh.geometry.computeVertexNormals();
   newMesh.material.side = THREE.DoubleSide;

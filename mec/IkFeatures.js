@@ -11,31 +11,13 @@ let ikState = {
 };
 
 // =====================================================================
-// === 1. IKの準備 (グラフ作成ロジックを分離・修正)
+// === 1. IKの準備 (ロジックを単一グラフに統一)
 // =====================================================================
 
-// [グラフ1] パーツとパーツを直接接続するグラフ (IKチェインのパス探索用)
-function buildPartConnectionGraph(allMechaParts, allJoints) {
-    const graph = new Map();
-    allMechaParts.forEach(obj => {
-        graph.set(obj.uuid, { object: obj, neighbors: new Set() });
-    });
-    allJoints.forEach(joint => {
-        const parentUUID = joint.userData.parentObject;
-        const childUUIDs = joint.userData.childObjects || [];
-        if (graph.has(parentUUID)) {
-            childUUIDs.forEach(childUUID => {
-                if (graph.has(childUUID)) {
-                    graph.get(parentUUID).neighbors.add(childUUID);
-                    graph.get(childUUID).neighbors.add(parentUUID);
-                }
-            });
-        }
-    });
-    return graph;
-}
-
-// [グラフ2] パーツとジョイントをノードとして物理的に接続するグラフ (アンカー探索、剛体追従用)
+/**
+ * パーツとジョイントをノードとして物理的に接続する単一のグラフを構築する
+ * (アンカー探索、経路探索、剛体追従のすべてで使用)
+ */
 function buildFullConnectionGraph(allObjectsAndJoints, allJoints) {
     const graph = new Map();
     allObjectsAndJoints.forEach(obj => {
@@ -47,14 +29,15 @@ function buildFullConnectionGraph(allObjectsAndJoints, allJoints) {
         const parentUUID = joint.userData.parentObject;
         const childUUIDs = joint.userData.childObjects || [];
 
+        // ジョイントと親パーツを相互に接続
         if (graph.has(parentUUID) && graph.has(jointUUID)) {
             graph.get(parentUUID).neighbors.add(jointUUID);
             graph.get(jointUUID).neighbors.add(parentUUID);
         }
+        // ジョイントと子パーツを相互に接続
         childUUIDs.forEach(childUUID => {
             if (graph.has(childUUID) && graph.has(jointUUID)) {
                 graph.get(childUUID).neighbors.add(jointUUID);
-                // ★★★ ここが修正されたバグです ★★★
                 graph.get(jointUUID).neighbors.add(childUUID);
             }
         });
@@ -99,35 +82,50 @@ function findClosestAnchor(startObject, anchors, graph) {
 }
 
 export function prepareIK(selectedObject, allObjectsAndJoints, allJoints, pinnedObjects) {
+    // 1. 物理的な接続を反映した単一のグラフを構築
     const fullGraph = buildFullConnectionGraph(allObjectsAndJoints, allJoints);
     if (!fullGraph.has(selectedObject.uuid)) return null;
 
+    // 2. 有効なアンカー（ピン留めされたオブジェクト）を確認
     const validAnchors = pinnedObjects.filter(p => fullGraph.has(p.uuid));
     if (validAnchors.length === 0) return null;
 
+    // 3. グラフを使って、選択オブジェクトから最も近いアンカー（ルート）を探す
     const root = findClosestAnchor(selectedObject, validAnchors, fullGraph);
     if (!root) return null;
 
-    const allMechaParts = allObjectsAndJoints.filter(o => !o.userData.isJoint);
-    const partGraph = buildPartConnectionGraph(allMechaParts, allJoints);
-    
-    const pathFromRoot = findPath(root, selectedObject, partGraph);
-    if (!pathFromRoot) return null;
+    // 4. グラフを使って、ルートから選択オブジェクトまでの完全なパス（パーツとジョイントを含む）を探す
+    const fullPath = findPath(root, selectedObject, fullGraph);
 
-    const jointChain = [];
-    for (let i = 0; i < pathFromRoot.length - 1; i++) {
-        const parent = pathFromRoot[i];
-        const child = pathFromRoot[i + 1];
-        const joint = allJoints.find(j =>
-            (j.userData.parentObject === parent.uuid && j.userData.childObjects.includes(child.uuid)) ||
-            (j.userData.parentObject === child.uuid && j.userData.childObjects.includes(parent.uuid))
-        );
-        if (joint) {
-            jointChain.push(joint);
-        } else {
-            console.error("Could not find joint between:", parent.name, "and", child.name);
-            return null;
-        }
+    // --- ▼▼▼ ここからデバッグログを追加 ▼▼▼ ---
+    console.log("--- prepareIK: Path Finding Details ---");
+    if (fullPath) {
+        console.log(`Path found with ${fullPath.length} nodes.`);
+        fullPath.forEach((obj, index) => {
+            if (obj) {
+                // オブジェクトが存在する場合、その詳細情報をログに出力します。
+                console.log(`[Path Node ${index}]: UUID=${obj.uuid}, Name="${obj.name}", isJoint=${!!obj.userData.isJoint}`);
+            } else {
+                // オブジェクト自体が null や undefined になっている場合、それもログに出力します。
+                console.log(`[Path Node ${index}]: Object is null or undefined!`);
+            }
+        });
+    } else {
+        console.log("Path not found from root to selected object.");
+    }
+    console.log("------------------------------------");
+    // --- ▲▲▲ ここまでデバッグログを追加 ▲▲▲ ---
+
+    if (!fullPath) return null;
+
+    // 5. 完全なパスから、パーツのリストとジョイントのリストをそれぞれ抽出する
+    const pathFromRoot = fullPath.filter(obj => !obj.userData.isJoint);
+    const jointChain = fullPath.filter(obj => obj.userData.isJoint);
+
+    // 6. パスが有効か基本的な検証を行う
+    if (pathFromRoot.length < 2 || jointChain.length < 1) {
+        console.error("Failed to resolve a valid IK chain.", { pathFromRoot, jointChain });
+        return null;
     }
 
     return {
@@ -139,7 +137,7 @@ export function prepareIK(selectedObject, allObjectsAndJoints, allJoints, pinned
 
 
 // =====================================================================
-// === 2. IK操作のメインフロー (変更なし)
+// === 2. IK操作のメインフロー
 // =====================================================================
 
 export function startIKDrag(draggedObject, ikInfo, appContext) {
@@ -221,7 +219,7 @@ export function endIKDrag(appContext) {
 
 
 // =====================================================================
-// === 3. IK実装 (変更なし)
+// === 3. IK実装
 // =====================================================================
 function solveCCD_IK() {
     const chain = ikState.ikChainPath;
@@ -282,23 +280,23 @@ function solveCCD_IK() {
         const allObjectsFromState = ikState.initialStates.map(s => s.object);
         const allJointsFromState = allObjectsFromState.filter(o => o.userData.isJoint);
         const graph = buildFullConnectionGraph(allObjectsFromState, allJointsFromState);
-        
+
         const descendants = new Set();
         const queue = [draggedObject.uuid];
-        
+
         const visited = new Set([draggedObject.uuid]);
         const draggedIndexInChain = chain.indexOf(draggedObject);
         for (let i = 0; i < draggedIndexInChain; i++) {
             visited.add(chain[i].uuid);
-            if(joints[i]) visited.add(joints[i].uuid);
+            if (joints[i]) visited.add(joints[i].uuid);
         }
-        
+
         const allObjectsMap = new Map(ikState.initialStates.map(s => [s.object.uuid, s.object]));
 
         while (queue.length > 0) {
             const currentUuid = queue.shift();
             const neighbors = graph.get(currentUuid)?.neighbors || [];
-            
+
             for (const neighborUuid of neighbors) {
                 if (!visited.has(neighborUuid)) {
                     visited.add(neighborUuid);
@@ -310,7 +308,7 @@ function solveCCD_IK() {
                 }
             }
         }
-        
+
         descendants.forEach(descendant => {
             const descInitialState = ikState.initialStates.find(s => s.object === descendant);
             if (descInitialState) {

@@ -59,28 +59,33 @@ export class TransformCommand extends command {
   execute() {
     if (this.newTransform.matrix) {
       this.object.matrix.copy(this.newTransform.matrix);
-      this.object.matrixAutoUpdate = false;
+      // matrixを直接変更した後は、必ず decompose を呼び出し、
+      // position/quaternion/scale との同期を保つ
       this.object.matrix.decompose(this.object.position, this.object.quaternion, this.object.scale);
     } else {
-      this.object.matrixAutoUpdate = true;
       this.object.position.copy(this.newTransform.position);
       this.object.rotation.copy(this.newTransform.rotation);
       this.object.scale.copy(this.newTransform.scale);
     }
+    // ▼▼▼ 修正の核心 ▼▼▼
+    // 操作の最後に、必ず matrixAutoUpdate を true に戻し、オブジェクトを正常な状態に復元する
+    this.object.matrixAutoUpdate = true;
     this.object.updateMatrixWorld(true);
   }
 
   undo() {
     if (this.oldTransform.matrix) {
       this.object.matrix.copy(this.oldTransform.matrix);
-      this.object.matrixAutoUpdate = false;
+      // undoでも同様に同期を保つ
       this.object.matrix.decompose(this.object.position, this.object.quaternion, this.object.scale);
     } else {
-      this.object.matrixAutoUpdate = true;
       this.object.position.copy(this.oldTransform.position);
       this.object.rotation.copy(this.oldTransform.rotation);
       this.object.scale.copy(this.oldTransform.scale);
     }
+    // ▼▼▼ 修正の核心 ▼▼▼
+    // undo後も、必ず正常な状態に戻す
+    this.object.matrixAutoUpdate = true;
     this.object.updateMatrixWorld(true);
   }
 }
@@ -91,22 +96,15 @@ export class TransformCommand extends command {
 export class JointTransformCommand extends command {
   constructor(initialStates, finalStates) {
     super();
-    console.log('Initial States:', initialStates);
-    console.log('Final States:', finalStates);
-
-    // 'rotation' を 'quaternion' に修正
     this.initialStates = initialStates.map((s) => ({ object: s.object, position: s.position.clone(), quaternion: s.quaternion.clone() }));
-    
-    // こちらも 'rotation' を 'quaternion' に修正
     this.finalStates = finalStates.map((s) => ({ object: s.object, position: s.position.clone(), quaternion: s.quaternion.clone() }));
-    
     this.message = 'ジョイントを操作';
   }
 
   execute() {
     this.finalStates.forEach((state) => {
       state.object.position.copy(state.position);
-      state.object.quaternion.copy(state.quaternion); // 正
+      state.object.quaternion.copy(state.quaternion);
       state.object.updateMatrixWorld(true);
     });
   }
@@ -119,5 +117,3 @@ export class JointTransformCommand extends command {
     });
   }
 }
-
-// ★★★ 不要になった IkTransformCommand を削除 ★★★

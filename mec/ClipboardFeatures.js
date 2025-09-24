@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import {MirrorCopyCommand, AddObjectCommand} from './CommandCreate.js';
-import {MacroCommand} from './CommandEdit.js';
+import { MirrorCopyCommand, AddObjectCommand } from './CommandCreate.js';
+import { MacroCommand } from './CommandEdit.js';
 
 export function startMirrorCopyMode(context) {
-  const {log, transformControls, previewGroup, selectionManager, modes} = context;
+  const { log, transformControls, previewGroup, selectionManager, modes } = context;
   const selectedObjects = selectionManager.get();
 
   if (selectedObjects.length === 0) {
@@ -15,7 +15,7 @@ export function startMirrorCopyMode(context) {
   log('鏡面コピーモード開始。コピー軸をクリックしてください。');
   document.getElementById('mirrorCopy').style.display = 'none';
   document.getElementById('cancelMirrorCopy').style.display = 'inline-block';
-  const previewMaterial = new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false});
+  const previewMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false });
   ['x', 'y', 'z'].forEach((axis) => {
     const axis_preview_group = new THREE.Group();
     axis_preview_group.userData.mirrorAxis = axis;
@@ -44,13 +44,14 @@ export function startMirrorCopyMode(context) {
 }
 
 export function performMirrorCopy(clickedPreview, context) {
-  const {mechaGroup, history, selectionManager} = context;
+  const { mechaGroup, history, selectionManager } = context;
   const selectedObjects = selectionManager.get();
   const axis = clickedPreview.parent.userData.mirrorAxis;
   const commands = [],
     newSelection = [];
   clickedPreview.parent.children.forEach((preview, i) => {
     const newObject = new THREE.Mesh(preview.geometry, selectedObjects[i].material.clone());
+    newObject.name = context.getNewObjectName(selectedObjects[i].name + "_mirrored");
     newObject.position.copy(preview.position);
     newObject.rotation.copy(preview.rotation);
     newObject.scale.copy(preview.scale);
@@ -63,7 +64,7 @@ export function performMirrorCopy(clickedPreview, context) {
 }
 
 export function cancelMirrorCopyMode(context) {
-  const {modes, previewGroup, state, log} = context; // ★ updateSelection の代わりに state を取得
+  const { modes, previewGroup, state, log } = context; // ★ updateSelection の代わりに state を取得
   if (!modes.isMirrorCopyMode) return;
   modes.isMirrorCopyMode = false;
   while (previewGroup.children.length > 0) {
@@ -80,7 +81,7 @@ export function cancelMirrorCopyMode(context) {
 }
 
 export function startPastePreview(context) {
-  const {log, transformControls, previewGroup, selectionManager, modes} = context;
+  const { log, transformControls, previewGroup, selectionManager, modes } = context;
   const selectedObjects = selectionManager.get();
   if (selectedObjects.length === 0) {
     log('貼り付け先のオブジェクトを選択してください。');
@@ -105,14 +106,14 @@ export function startPastePreview(context) {
   });
   sourceBox.setFromObject(sourceGroup);
   const sourceSize = sourceBox.getSize(new THREE.Vector3());
-  const previewMaterial = new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false});
+  const previewMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5, depthTest: false });
   const directions = [
-    {axis: 'x', sign: 1},
-    {axis: 'x', sign: -1},
-    {axis: 'y', sign: 1},
-    {axis: 'y', sign: -1},
-    {axis: 'z', sign: 1},
-    {axis: 'z', sign: -1},
+    { axis: 'x', sign: 1 },
+    { axis: 'x', sign: -1 },
+    { axis: 'y', sign: 1 },
+    { axis: 'y', sign: -1 },
+    { axis: 'z', sign: 1 },
+    { axis: 'z', sign: -1 },
   ];
   directions.forEach((dir) => {
     const offsetValue = targetSize[dir.axis] / 2 + sourceSize[dir.axis] / 2 + 0.2;
@@ -133,12 +134,13 @@ export function startPastePreview(context) {
 }
 
 export function confirmPaste(clickedPreview, context) {
-  const {mechaGroup, history, selectionManager, modes} = context;
+  const { mechaGroup, history, selectionManager, modes } = context;
   const offset = clickedPreview.parent.userData.offset;
   const commands = [];
   const newPastedObjects = [];
   modes.clipboard.forEach((clip) => {
     const newObject = new THREE.Mesh(clip.geometry, clip.material.clone());
+    newObject.name = context.getNewObjectName(clip.source.name + "_pasted");
     newObject.scale.copy(clip.source.scale);
     newObject.rotation.copy(clip.source.rotation);
     newObject.position.copy(clip.source.position).add(offset);
@@ -146,18 +148,19 @@ export function confirmPaste(clickedPreview, context) {
     newPastedObjects.push(newObject);
   });
   history.execute(new MacroCommand(commands, `${newPastedObjects.length}個のオブジェクトをペースト`));
-  modes.lastPasteInfo = {objects: newPastedObjects, offset: offset};
+  modes.lastPasteInfo = { objects: newPastedObjects, offset: offset };
   selectionManager.set(newPastedObjects);
   cancelPasteMode(context);
 }
 
 export function performDirectPaste(context) {
-  const {mechaGroup, history, selectionManager, modes} = context;
+  const { mechaGroup, history, selectionManager, modes } = context;
   const offset = modes.lastPasteInfo.offset;
   const commands = [];
   const newPastedObjects = [];
   modes.lastPasteInfo.objects.forEach((lastObj) => {
     const newObject = new THREE.Mesh(lastObj.geometry, lastObj.material.clone());
+    newObject.name = context.getNewObjectName(lastObj.name + "_pasted");
     newObject.scale.copy(lastObj.scale);
     newObject.rotation.copy(lastObj.rotation);
     newObject.position.copy(lastObj.position).add(offset);
@@ -170,7 +173,7 @@ export function performDirectPaste(context) {
 }
 
 export function cancelPasteMode(context) {
-  const {modes, previewGroup, state} = context; // ★ updateSelection の代わりに state を取得
+  const { modes, previewGroup, state } = context; // ★ updateSelection の代わりに state を取得
   modes.isPasteMode = false;
   while (previewGroup.children.length > 0) {
     const group = previewGroup.children[0];

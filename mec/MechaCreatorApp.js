@@ -8,6 +8,8 @@ import {InputHandler} from './InputHandler.js';
 import {UIControl} from './UIControl.js';
 import {History} from './History.js';
 import * as SceneIO from './SceneIo.js';
+import { TransformCommand, MacroCommand } from './CommandEdit.js';
+
 
 export class MechaCreatorApp {
   constructor() {
@@ -35,7 +37,7 @@ export class MechaCreatorApp {
 
     this.orbitControls = new OrbitControls(this.viewportManager.viewports.perspective.camera, this.viewportManager.viewports.perspective.element);
     this.transformControls = new TransformControls(this.viewportManager.viewports.perspective.camera, this.renderer.domElement);
-
+    
     const appInstance = this;
 
     this.appContext = {
@@ -166,21 +168,13 @@ export class MechaCreatorApp {
     this.scene.add(this.jointGroup);
     this.scene.add(this.previewGroup);
     this.scene.add(this.selectionBoxes);
-
-    // ★★★ 修正: この行を削除 ★★★
-    // this.scene.add(this.transformControls);
-
+    
     const gizmoHandleMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, toneMapped: false, depthTest: false, side: THREE.DoubleSide});
     const handleSize = 0.5;
     const handlePositions = [
-      {x: -0.5, y: 0.5, name: 'top-left'},
-      {x: 0, y: 0.5, name: 'top-center'},
-      {x: 0.5, y: 0.5, name: 'top-right'},
-      {x: -0.5, y: 0, name: 'middle-left'},
-      {x: 0.5, y: 0, name: 'middle-right'},
-      {x: -0.5, y: -0.5, name: 'bottom-left'},
-      {x: 0, y: -0.5, name: 'bottom-center'},
-      {x: 0.5, y: -0.5, name: 'bottom-right'},
+      {x: -0.5, y: 0.5, name: 'top-left'}, {x: 0, y: 0.5, name: 'top-center'}, {x: 0.5, y: 0.5, name: 'top-right'},
+      {x: -0.5, y: 0, name: 'middle-left'}, {x: 0.5, y: 0, name: 'middle-right'},
+      {x: -0.5, y: -0.5, name: 'bottom-left'}, {x: 0, y: -0.5, name: 'bottom-center'}, {x: 0.5, y: -0.5, name: 'bottom-right'},
     ];
     const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.5, 0.5, 0), new THREE.Vector3(0.5, 0.5, 0), new THREE.Vector3(0.5, -0.5, 0), new THREE.Vector3(-0.5, -0.5, 0), new THREE.Vector3(-0.5, 0.5, 0)]);
     const gizmoFrame = new THREE.Line(lineGeometry, this.gizmoLineMaterial);
@@ -221,7 +215,10 @@ export class MechaCreatorApp {
       if (this.groupBoundingBoxMesh.material) this.groupBoundingBoxMesh.material.dispose();
       this.groupBoundingBoxMesh = null;
     }
-    this.transformControls.detach();
+    
+    if (this.transformControls.object) {
+        this.transformControls.detach();
+    }
 
     if (this.appState.modes.isJointMode || this.appState.modes.isIkMode || this.appState.modes.isPinMode) {
       // These modes do not show the 3D gizmo
@@ -315,6 +312,55 @@ export class MechaCreatorApp {
         this.updateSelection();
     });
 
+    let transformStartStates = new Map();
+
+    this.transformControls.addEventListener('mouseDown', (event) => {
+        transformStartStates.clear();
+        const targetObject = event.target.object;
+        
+        if (this.groupBoundingBoxMesh && targetObject === this.groupBoundingBoxMesh) {
+            this.appState.selectedObjects.forEach(obj => {
+                transformStartStates.set(obj, {
+                    position: obj.position.clone(),
+                    rotation: obj.rotation.clone(),
+                    scale: obj.scale.clone()
+                });
+            });
+        } else if (targetObject) {
+             transformStartStates.set(targetObject, {
+                position: targetObject.position.clone(),
+                rotation: targetObject.rotation.clone(),
+                scale: targetObject.scale.clone()
+            });
+        }
+    });
+
+    this.transformControls.addEventListener('mouseUp', (event) => {
+        if (transformStartStates.size === 0) return;
+
+        const commands = [];
+        transformStartStates.forEach((oldTransform, obj) => {
+            const newTransform = {
+                position: obj.position.clone(),
+                rotation: obj.rotation.clone(),
+                scale: obj.scale.clone()
+            };
+            if (!oldTransform.position.equals(newTransform.position) ||
+                !oldTransform.rotation.equals(newTransform.rotation) ||
+                !oldTransform.scale.equals(newTransform.scale)) 
+            {
+                commands.push(new TransformCommand(obj, oldTransform, newTransform));
+            }
+        });
+
+        if (commands.length > 1) {
+            this.history.execute(new MacroCommand(commands, `選択した ${commands.length} 個のオブジェクトをグループ変形`));
+        } else if (commands.length === 1) {
+            this.history.execute(commands[0]);
+        }
+        transformStartStates.clear();
+    });
+    
     this.transformControls.addEventListener('dragging-changed', (event) => {
       this.orbitControls.enabled = !event.value;
     });
