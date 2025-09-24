@@ -1,14 +1,14 @@
-import {AddObjectCommand, ImportObjectCommand} from './CommandCreate.js';
-import {MacroCommand, DeleteObjectCommand} from './CommandEdit.js';
-import {PaintObjectCommand} from './CommandPaint.js';
+import { AddObjectCommand, ImportObjectCommand } from './CommandCreate.js';
+import { MacroCommand, DeleteObjectCommand } from './CommandEdit.js';
+import { PaintObjectCommand } from './CommandPaint.js';
 import * as CsgOperations from './CsgOperations.js';
 import * as SceneIO from './SceneIo.js';
 import * as ClipboardFeatures from './ClipboardFeatures.js';
-import {createColorPalette} from './Paint.js';
+import { createColorPalette } from './Paint.js';
 import * as THREE from 'three';
 import * as PlacementFeatures from './PlacementFeatures.js';
 import * as JointFeatures from './JointFeatures.js';
-import {OBJLoader} from './OBJLoader.js';
+import { OBJLoader } from './OBJLoader.js';
 
 function getVectorFromDirection(direction) {
   switch (direction) {
@@ -44,6 +44,7 @@ export class UIControl {
     this.setupCsgOperations();
     this.setupJointOperations();
     this.setupFileIO();
+    this.setupModeButtons(); // ★★★ この行を setupPaintControls の前に移動 ★★★
     this.setupModeButtons();
     this.setupPaintControls();
     this.setupGlobalCancel();
@@ -100,7 +101,7 @@ export class UIControl {
       const selectedUuids = this.appContext.selectionManager.get().map((o) => o.uuid);
       const items = browserList.querySelectorAll('div[data-parent-uuid]');
       items.forEach((item) => {
-        const {parentUuid, childUuid, jointUuid} = item.dataset;
+        const { parentUuid, childUuid, jointUuid } = item.dataset;
         if (selectedUuids.includes(parentUuid) || selectedUuids.includes(childUuid) || selectedUuids.includes(jointUuid)) {
           item.classList.add('highlight');
         } else {
@@ -111,7 +112,7 @@ export class UIControl {
 
     browserList.addEventListener('click', (e) => {
       if (e.target && e.target.dataset.parentUuid) {
-        const {parentUuid, childUuid, jointUuid} = e.target.dataset;
+        const { parentUuid, childUuid, jointUuid } = e.target.dataset;
         const findObject = (uuid) => this.mechaGroup.getObjectByProperty('uuid', uuid) || this.jointGroup.getObjectByProperty('uuid', uuid);
 
         const parent = findObject(parentUuid);
@@ -156,7 +157,7 @@ export class UIControl {
   setupGlobalCancel() {
     const escapeButton = document.getElementById('escapeButton');
     escapeButton.addEventListener('click', () => {
-      document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     });
   }
   setupObjectCreation() {
@@ -224,6 +225,11 @@ export class UIControl {
       this.history.execute(new MacroCommand(commands, `選択した ${selected.length} 個のオブジェクトを削除`));
       this.appState.clearSelection();
     });
+    // ★★★ ピン留めボタンのイベントリスナーを追加 ★★★
+    document.getElementById('pinObjectButton').addEventListener('click', () => {
+      this.appContext.state.togglePinMode();
+    });
+
   }
 
   setupJointOperations() {
@@ -250,24 +256,28 @@ export class UIControl {
 
     const ikModeButton = document.getElementById('ikModeButton');
     ikModeButton.addEventListener('click', () => {
-      this.appState.modes.isIkMode = !this.appState.modes.isIkMode;
+      // ★★★ 新しいIKモードのトグル処理 ★★★
+      this.appState.toggleIkMode();
       if (this.appState.modes.isIkMode) {
         this.appState.modes.isJointMode = false; // FKモードをOFF
         this.appState.clearSelection();
-        this.log('IK操作モード開始。エンドエフェクタを選択してください。');
+        this.log('物理IKモード開始。操作したいオブジェクトを選択してください。');
       } else {
-        this.appState.clearIkSelection();
-        this.log('IK操作モード終了。');
+        this.log('物理IKモード終了。');
       }
       this.updateModeButtons();
     });
   }
-
   updateModeButtons() {
     const jointModeButton = document.getElementById('jointModeButton');
     const ikModeButton = document.getElementById('ikModeButton');
+    const pinObjectButton = document.getElementById('pinObjectButton'); // ★★★ ボタンを取得 ★★★
+
     jointModeButton.style.backgroundColor = this.appState.modes.isJointMode ? '#2ecc71' : '#8e44ad';
     ikModeButton.style.backgroundColor = this.appState.modes.isIkMode ? '#2ecc71' : '#8e44ad';
+    // ★★★ ピン留めモードの状態をボタンに反映 ★★★
+    pinObjectButton.style.backgroundColor = this.appState.modes.isPinMode ? '#2ecc71' : '#d35400';
+
   }
 
   setupFileIO() {
@@ -276,7 +286,7 @@ export class UIControl {
       SceneIO.autoSaveScene(this.appContext);
       const dataString = localStorage.getItem('mechaCreatorAutoSave');
       if (!dataString) return this.log('保存データなし');
-      const blob = new Blob([dataString], {type: 'application/json'});
+      const blob = new Blob([dataString], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'mecha-data.json';
@@ -354,7 +364,7 @@ export class UIControl {
 
     panModeButton.addEventListener('click', () => {
       const isPanModeActive = !this.appContext.isPanModeActive;
-      document.dispatchEvent(new CustomEvent('setPanMode', {detail: isPanModeActive}));
+      document.dispatchEvent(new CustomEvent('setPanMode', { detail: isPanModeActive }));
       panModeButton.style.backgroundColor = isPanModeActive ? '#2ecc71' : '#3498db';
       this.appContext.orbitControls.mouseButtons.LEFT = isPanModeActive ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
       this.log(isPanModeActive ? 'パンモード開始。' : 'パンモード終了。');
@@ -432,7 +442,7 @@ export class UIControl {
         metalness: parseFloat(metalnessSlider.value),
         isEmissive: emissiveCheckbox.checked,
         lightDirection: document.querySelector('input[name="lightDirection"]:checked').value,
-        emissiveProperties: {color: new THREE.Color(emissiveColorInput.value), intensity: parseFloat(emissiveIntensityInput.value), penumbra: parseFloat(emissivePenumbraInput.value)},
+        emissiveProperties: { color: new THREE.Color(emissiveColorInput.value), intensity: parseFloat(emissiveIntensityInput.value), penumbra: parseFloat(emissivePenumbraInput.value) },
       };
       this.appState.selectedObjects.forEach((obj) => {
         obj.material.color.copy(currentProps.color);
@@ -466,7 +476,7 @@ export class UIControl {
       this.appState.isLivePaintPreviewMode = false;
       paintControls.style.display = 'none';
       paintModeButton.style.backgroundColor = '#9b59b6';
-      document.dispatchEvent(new CustomEvent('setEyedropperMode', {detail: false}));
+      document.dispatchEvent(new CustomEvent('setEyedropperMode', { detail: false }));
       allInteractiveElements.forEach((el) => el.removeEventListener('input', applyLivePreview));
       emissiveCheckbox.removeEventListener('change', applyLivePreview);
       colorPalette.removeEventListener('click', applyLivePreview);
@@ -479,10 +489,10 @@ export class UIControl {
         metalness: parseFloat(metalnessSlider.value),
         isEmissive: emissiveCheckbox.checked,
         lightDirection: document.querySelector('input[name="lightDirection"]:checked').value,
-        emissiveProperties: {color: new THREE.Color(emissiveColorInput.value), intensity: parseFloat(emissiveIntensityInput.value), penumbra: parseFloat(emissivePenumbraInput.value)},
+        emissiveProperties: { color: new THREE.Color(emissiveColorInput.value), intensity: parseFloat(emissiveIntensityInput.value), penumbra: parseFloat(emissivePenumbraInput.value) },
       };
 
-      this.appState.brushProperties = {...paintProps, color: paintProps.color.clone(), emissiveProperties: {...paintProps.emissiveProperties, color: paintProps.emissiveProperties.color.clone()}};
+      this.appState.brushProperties = { ...paintProps, color: paintProps.color.clone(), emissiveProperties: { ...paintProps.emissiveProperties, color: paintProps.emissiveProperties.color.clone() } };
 
       const commands = [];
       // ライブプレビュー開始時に保存した「元の状態(originalState)」を使ってコマンドを生成
@@ -534,7 +544,7 @@ export class UIControl {
           color: firstObject.material.color,
           metalness: firstObject.material.metalness,
           isEmissive: firstObject.material.emissive.getHex() > 0,
-          emissiveProperties: {color: firstObject.material.emissive, intensity: 1.0, penumbra: 0.2},
+          emissiveProperties: { color: firstObject.material.emissive, intensity: 1.0, penumbra: 0.2 },
           lightDirection: 'neg-z',
         };
         const existingLight = firstObject.getObjectByProperty('isSpotLight', true);
@@ -545,9 +555,9 @@ export class UIControl {
         }
         updateUIFromProps(propsToLoad);
         this.appState.selectedObjects.forEach((obj) => {
-          const originalState = {color: obj.material.color.clone(), metalness: obj.material.metalness, emissive: obj.material.emissive.clone(), emissiveIntensity: obj.material.emissiveIntensity};
+          const originalState = { color: obj.material.color.clone(), metalness: obj.material.metalness, emissive: obj.material.emissive.clone(), emissiveIntensity: obj.material.emissiveIntensity };
           const light = obj.getObjectByProperty('isSpotLight', true);
-          if (light) originalState.light = {color: light.color.clone(), intensity: light.intensity, penumbra: light.penumbra, direction: light.userData.direction || 'neg-z'};
+          if (light) originalState.light = { color: light.color.clone(), intensity: light.intensity, penumbra: light.penumbra, direction: light.userData.direction || 'neg-z' };
           this.appState.livePaintOriginalStates.set(obj, originalState);
         });
         paintControls.style.display = 'block';
@@ -581,7 +591,7 @@ export class UIControl {
       if (!this.appState.isPaintMode && !this.appState.isLivePaintPreviewMode) {
         document.getElementById('paintModeButton').click();
       }
-      document.dispatchEvent(new CustomEvent('setEyedropperMode', {detail: true}));
+      document.dispatchEvent(new CustomEvent('setEyedropperMode', { detail: true }));
       this.log('スポイトモード開始。');
     });
 

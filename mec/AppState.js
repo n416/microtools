@@ -5,23 +5,21 @@ export class AppState {
     /** @type {THREE.Object3D[]} */
     this.selectedObjects = [];
     this.onSelectionChange = new Set();
-
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ モード管理を刷新 ★★★
     this.modes = {
       isMirrorCopyMode: false,
       isPasteMode: false,
       isSubtractMode: false,
       isPlacementPreviewMode: false,
       isJointMode: false, // FK
-      isIkMode: false,
-      ik: {
-        endEffector: null,
-        ikChain: [],
-        isDragging: false,
-      },
+      isIkMode: false,      // 新しい物理ベースIK
+      isPinMode: false,     // ★★★ アンカー（ピン留め）モードを追加 ★★★
       subtractTargets: [],
       clipboard: null,
-      lastPasteInfo: {objects: [], offset: new THREE.Vector3()},
+      lastPasteInfo: { objects: [], offset: new THREE.Vector3() },
     };
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
     this.isWireframeOverlay = true; // デフォルトはON
 
@@ -50,6 +48,28 @@ export class AppState {
     this.transformGroup = null;
   }
 
+
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★★★ モード切り替え用のヘルパー関数を追加 ★★★
+  toggleIkMode() {
+    this.modes.isIkMode = !this.modes.isIkMode;
+    if (this.modes.isIkMode) {
+      this.modes.isJointMode = false;
+      this.modes.isPinMode = false;
+    }
+    document.dispatchEvent(new CustomEvent('mode-changed'));
+  }
+
+  togglePinMode() {
+    this.modes.isPinMode = !this.modes.isPinMode;
+    if (this.modes.isPinMode) {
+      this.modes.isIkMode = false;
+      this.modes.isJointMode = false;
+    }
+    document.dispatchEvent(new CustomEvent('mode-changed'));
+  }
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
   setSelection(objects) {
     this.selectedObjects = Array.isArray(objects) ? objects.slice() : objects ? [objects] : [];
     this.notifySelectionChange();
@@ -77,32 +97,6 @@ export class AppState {
     this.selectedObjects = [];
     this.notifySelectionChange();
   }
-
-  clearIkSelection() {
-    // 選択ハイライト(BoxHelper)を削除
-    if (this.modes.ik.endEffector && this.modes.ik.endEffector.userData.boxHelper) {
-      const boxHelper = this.modes.ik.endEffector.userData.boxHelper;
-      // boxHelper.parent が存在する場合のみ remove を呼び出す
-      if (boxHelper.parent) {
-        boxHelper.parent.remove(boxHelper);
-      }
-      this.modes.ik.endEffector.userData.boxHelper = null; // 参照を削除
-    }
-
-    // IKチェーンのジョイントのハイライトを元に戻す
-    if (this.modes.ik.ikChain) {
-        this.modes.ik.ikChain.forEach(joint => {
-            joint.material.color.set(0xffa500); // 元の色に戻す
-        });
-    }
-
-    // IK状態をリセット
-    this.modes.ik.endEffector = null;
-    this.modes.ik.ikChain = [];
-    this.modes.ik.isDragging = false;
-    this.notifySelectionChange();
-  }
-
 
   notifySelectionChange() {
     this.onSelectionChange.forEach((callback) => callback(this.selectedObjects));

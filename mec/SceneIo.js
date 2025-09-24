@@ -20,8 +20,8 @@ function getVectorFromDirection(direction) {
 }
 
 export function autoSaveScene(context) {
-  const {mechaGroup, jointGroup} = context;
-  const sceneData = {objects: [], joints: []};
+  const { mechaGroup, jointGroup } = context;
+  const sceneData = { objects: [], joints: [] };
 
   mechaGroup.children.forEach((mesh) => {
     if (mesh.userData.isNonSelectable) return;
@@ -59,6 +59,7 @@ export function autoSaveScene(context) {
     if (geometryType) {
       const saveData = {
         uuid: mesh.uuid,
+        name: mesh.name,
         geometryType,
         geometryParameters,
         position: mesh.position.toArray(),
@@ -70,7 +71,7 @@ export function autoSaveScene(context) {
           emissive: mesh.material.emissive.getHex(),
           emissiveIntensity: mesh.material.emissiveIntensity,
         },
-        userData: {...mesh.userData, ...customUserData},
+        userData: { ...mesh.userData, ...customUserData, isPinned: !!mesh.userData.isPinned },
       };
 
       const spotLight = mesh.getObjectByProperty('isSpotLight', true);
@@ -117,7 +118,7 @@ export function autoSaveScene(context) {
 }
 
 export function loadFromData(context, sceneData) {
-  const {mechaGroup, jointGroup, transformControls, log, history} = context;
+  const { mechaGroup, jointGroup, transformControls, log, history } = context;
 
   while (mechaGroup.children.length > 0) {
     const mesh = mechaGroup.children[0];
@@ -173,7 +174,7 @@ export function loadFromData(context, sceneData) {
       }
 
       if (geometry) {
-        const materialProps = {side: THREE.DoubleSide};
+        const materialProps = { side: THREE.DoubleSide };
         if (data.material) {
           materialProps.color = data.material.color;
           materialProps.metalness = data.material.metalness;
@@ -188,14 +189,19 @@ export function loadFromData(context, sceneData) {
 
         const mesh = new THREE.Mesh(geometry, material);
         mesh.uuid = data.uuid;
+        mesh.name = data.name; 
         mesh.position.fromArray(data.position);
         mesh.rotation.fromArray(data.rotation);
         mesh.scale.fromArray(data.scale);
 
         if (data.userData) {
-          mesh.userData = {...mesh.userData, ...data.userData};
+          mesh.userData = { ...mesh.userData, ...data.userData };
+          // ★★★ isPinned フラグを読み込む ★★★
+          if (data.userData.isPinned) {
+            mesh.userData.isPinned = true;
+          }
         }
-
+        
         if (data.spotLight) {
           const spotLight = new THREE.SpotLight(data.spotLight.color);
           spotLight.intensity = data.spotLight.intensity;

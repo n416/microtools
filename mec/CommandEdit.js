@@ -1,4 +1,4 @@
-import {command} from './Command.js';
+import { command } from './Command.js';
 import * as THREE from 'three';
 
 /**
@@ -91,15 +91,22 @@ export class TransformCommand extends command {
 export class JointTransformCommand extends command {
   constructor(initialStates, finalStates) {
     super();
-    this.initialStates = initialStates.map((s) => ({object: s.object, position: s.position.clone(), rotation: s.rotation.clone()}));
-    this.finalStates = finalStates.map((s) => ({object: s.object, position: s.position.clone(), rotation: s.rotation.clone()}));
+    console.log('Initial States:', initialStates);
+    console.log('Final States:', finalStates);
+
+    // 'rotation' を 'quaternion' に修正
+    this.initialStates = initialStates.map((s) => ({ object: s.object, position: s.position.clone(), quaternion: s.quaternion.clone() }));
+    
+    // こちらも 'rotation' を 'quaternion' に修正
+    this.finalStates = finalStates.map((s) => ({ object: s.object, position: s.position.clone(), quaternion: s.quaternion.clone() }));
+    
     this.message = 'ジョイントを操作';
   }
 
   execute() {
     this.finalStates.forEach((state) => {
       state.object.position.copy(state.position);
-      state.object.rotation.copy(state.rotation);
+      state.object.quaternion.copy(state.quaternion); // 正
       state.object.updateMatrixWorld(true);
     });
   }
@@ -107,8 +114,8 @@ export class JointTransformCommand extends command {
   undo() {
     this.initialStates.forEach((state) => {
       state.object.position.copy(state.position);
-      state.object.rotation.copy(state.rotation);
-       state.object.updateMatrixWorld(true);
+      state.object.quaternion.copy(state.quaternion);
+      state.object.updateMatrixWorld(true);
     });
   }
 }
