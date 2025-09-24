@@ -27,6 +27,7 @@ export class MechaCreatorApp {
     this.scaleGizmoGroup = new THREE.Group();
     this.gizmoHandles = [];
     this.gizmoLineMaterial = new THREE.LineBasicMaterial({color: 0xffff00, toneMapped: false, depthTest: false});
+    this.objectCounter = 0;
 
     this.appState = new AppState();
     this.history = new History(this);
@@ -35,7 +36,7 @@ export class MechaCreatorApp {
     this.orbitControls = new OrbitControls(this.viewportManager.viewports.perspective.camera, this.viewportManager.viewports.perspective.element);
     this.transformControls = new TransformControls(this.viewportManager.viewports.perspective.camera, this.renderer.domElement);
 
-    const appInstance = this; // `this`をappInstanceとしてキャプチャ
+    const appInstance = this;
 
     this.appContext = {
       scene: this.scene,
@@ -56,6 +57,8 @@ export class MechaCreatorApp {
         set: (newSelection) => this.appState.setSelection(newSelection),
         clear: () => this.appState.clearSelection(),
       },
+      app: this,
+      getNewObjectName: (prefix) => `${prefix}_${this.objectCounter++}`,
       gridCellSize: 0.0625,
       gridTotalSize: 20,
       highlightMaterial: new THREE.MeshStandardMaterial({color: 0x00ff00, transparent: true, opacity: 0.7, side: THREE.DoubleSide}),
@@ -91,7 +94,6 @@ export class MechaCreatorApp {
     const centerLineColor = 0x666666;
     const gridTotalSize = 20;
     const gridCellSize = 0.0625;
-    // ★★★ エラーの原因だった gridDivisions の定義を追加 ★★★
     const gridDivisions = gridTotalSize / gridCellSize;
     const gridHelper = new THREE.GridHelper(gridTotalSize, gridDivisions, 0x888888, 0x444444);
     gridHelper.name = 'GridHelper';
@@ -165,7 +167,8 @@ export class MechaCreatorApp {
     this.scene.add(this.previewGroup);
     this.scene.add(this.selectionBoxes);
 
-    this.scene.add(this.transformControls);
+    // ★★★ 修正: この行を削除 ★★★
+    // this.scene.add(this.transformControls);
 
     const gizmoHandleMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, toneMapped: false, depthTest: false, side: THREE.DoubleSide});
     const handleSize = 0.5;
@@ -221,7 +224,7 @@ export class MechaCreatorApp {
     this.transformControls.detach();
 
     if (this.appState.modes.isJointMode || this.appState.modes.isIkMode || this.appState.modes.isPinMode) {
-      // これらのモードでは3Dギズモを表示しない
+      // These modes do not show the 3D gizmo
     } else if (selectedObjects.length === 1) {
       this.transformControls.attach(selectedObjects[0]);
     } else if (selectedObjects.length > 1) {
@@ -242,13 +245,11 @@ export class MechaCreatorApp {
       }
     }
 
-    // ピン留めされたオブジェクトを常にハイライト表示
     this.mechaGroup.children.forEach(obj => {
         if (obj.userData.isPinned) {
-            // 既にBoxHelperが存在するかチェック (重複作成防止)
             const existingHelper = this.selectionBoxes.children.find(h => h.object === obj && h.material.color.getHex() === 0xff00ff);
             if (!existingHelper) {
-                this.selectionBoxes.add(new THREE.BoxHelper(obj, 0xff00ff)); // マゼンタ色で表示
+                this.selectionBoxes.add(new THREE.BoxHelper(obj, 0xff00ff));
             }
         } else {
              const helperToRemove = this.selectionBoxes.children.find(h => h.object === obj && h.material.color.getHex() === 0xff00ff);
@@ -261,7 +262,6 @@ export class MechaCreatorApp {
     if (selectedObjects.length > 0) {
       selectedObjects.forEach((obj) => {
         const color = obj.userData.isJoint ? 0xffa500 : 0xffff00;
-        // 既にBoxHelperが存在しないかチェック (重複作成防止)
         const existingHelper = this.selectionBoxes.children.find(h => h.object === obj);
         if(!existingHelper) {
             this.selectionBoxes.add(new THREE.BoxHelper(obj, color));
@@ -310,10 +310,9 @@ export class MechaCreatorApp {
     this.inputHandler.initialize();
     this.uiControl.initialize();
     
-    // モード変更イベントでUIを更新
     document.addEventListener('mode-changed', () => {
         this.uiControl.updateModeButtons();
-        this.updateSelection(); // モード変更時に選択ハイライトを更新
+        this.updateSelection();
     });
 
     this.transformControls.addEventListener('dragging-changed', (event) => {
@@ -343,7 +342,7 @@ export class MechaCreatorApp {
       }
       this.log('初期化完了');
       this.viewportManager.onWindowResize();
-      this.updateSelection(); // ロード後にもハイライトを更新
+      this.updateSelection();
     });
 
     this.animate();

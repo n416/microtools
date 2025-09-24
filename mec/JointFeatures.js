@@ -42,6 +42,7 @@ export function requestAddJoint(type, appContext) {
     }
 
     const joint = new THREE.Mesh(geometry, material);
+    joint.name = appContext.getNewObjectName(`Joint_${type}`);
     joint.userData.isJoint = true;
     joint.userData.type = type;
     joint.userData.parentObject = parentObject.uuid;
@@ -53,7 +54,7 @@ export function requestAddJoint(type, appContext) {
     const parentCenter = parentBox.getCenter(new THREE.Vector3());
     const childrenCenter = childrenBox.getCenter(new THREE.Vector3());
     const newPosition = new THREE.Vector3().lerpVectors(parentCenter, childrenCenter, 0.5);
-    
+
     joint.position.copy(newPosition);
 
     history.execute(new AddJointCommand(joint, jointGroup, selectionManager, parentObject, childObjects));
@@ -87,7 +88,7 @@ export function startJointDrag(draggedObject, intersectionPoint, event, appConte
             farthestJoint = joint;
         }
     });
-    
+
     const activeJoint = farthestJoint;
     if (!activeJoint) {
         return null;
@@ -95,7 +96,7 @@ export function startJointDrag(draggedObject, intersectionPoint, event, appConte
 
     // 3. ピボット以外の接続を辿って、操作対象となるオブジェクト群を決定する
     const movingGroup = new Set();
-    const queue = [draggedObject]; 
+    const queue = [draggedObject];
     const visited = new Set([draggedObject.uuid]);
     movingGroup.add(activeJoint); // ピボット自体も動くグループに含める
 
@@ -142,7 +143,7 @@ export function startJointDrag(draggedObject, intersectionPoint, event, appConte
     // 4. 処理の続行
     const clickedViewportInfo = viewportManager.getViewportFromEvent(event);
     if (!clickedViewportInfo) return null;
-    
+
     movingGroup.forEach(obj => {
         obj.matrixAutoUpdate = true;
         const position = new THREE.Vector3();
@@ -162,7 +163,7 @@ export function startJointDrag(draggedObject, intersectionPoint, event, appConte
         })),
         lastMousePoint: new THREE.Vector2(event.clientX, event.clientY),
     };
-    
+
     activeJoint.material.color.set(0x00ff00);
     activeJoint.material.wireframe = false;
 
@@ -179,12 +180,12 @@ export function applyJointTransform(event, appContext) {
 
     const clickedViewportInfo = viewportManager.getViewportFromEvent(event);
     if (!clickedViewportInfo) return;
-    
+
     const currentMousePoint = new THREE.Vector2(event.clientX, event.clientY);
 
     const view = viewportManager.viewports[clickedViewportInfo.key];
     const rect = view.element.getBoundingClientRect();
-    
+
     const jointScreenPos = jointPosition.clone().project(view.camera);
     const jointScreenCenter = new THREE.Vector2(
         (jointScreenPos.x * 0.5 + 0.5) * rect.width + rect.left,
@@ -197,23 +198,23 @@ export function applyJointTransform(event, appContext) {
         dragStartState.lastMousePoint.copy(currentMousePoint);
         return;
     }
-    
+
     let angle = currentVec.angle() - lastVec.angle();
-    
+
     if (angle > Math.PI) angle -= 2 * Math.PI;
     if (angle < -Math.PI) angle += 2 * Math.PI;
 
     let axis = new THREE.Vector3();
-    
-    switch(clickedViewportInfo.key) {
-        case 'top':       axis.set(0, 1, 0); angle *= -1; break;
-        case 'front':     axis.set(0, 0, 1); angle *= -1; break;
-        case 'side':      axis.set(1, 0, 0); angle *= -1; break;
-        default:          axis.set(0, 1, 0); angle *= -1;
+
+    switch (clickedViewportInfo.key) {
+        case 'top': axis.set(0, 1, 0); angle *= -1; break;
+        case 'front': axis.set(0, 0, 1); angle *= -1; break;
+        case 'side': axis.set(1, 0, 0); angle *= -1; break;
+        default: axis.set(0, 1, 0); angle *= -1;
     }
-    
+
     const incrementalRotation = new THREE.Quaternion().setFromAxisAngle(axis, angle);
-    
+
     movingGroup.forEach(state => {
         const obj = state.object;
         const vec = new THREE.Vector3().subVectors(obj.position, jointPosition);
@@ -247,8 +248,8 @@ export function endJointDrag(appContext) {
         const rotation = new THREE.Euler().setFromQuaternion(quaternion);
         return { object: state.object, position, rotation };
     });
-    
+
     history.execute(new JointTransformCommand(initialTransforms, finalTransforms));
-    
+
     dragStartState = null;
 }

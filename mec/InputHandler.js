@@ -47,7 +47,6 @@ export class InputHandler {
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
 
-    // PBD IK用の状態変数
     this.pbdGraph = null;
     this.isIkDragging = false;
   }
@@ -388,7 +387,6 @@ export class InputHandler {
       const clickedObject = allObjectIntersects.length > 0 ? allObjectIntersects[0].object : null;
       const intersectionPoint = allObjectIntersects.length > 0 ? allObjectIntersects[0].point : null;
 
-      // 新しい物理IKのドラッグ開始処理
       if (this.appState.modes.isIkMode && this.pbdGraph && clickedObject === this.appState.selectedObjects[0]) {
         if (IkFeatures.startIKDrag(clickedObject, this.pbdGraph, this.appContext)) {
           this.isIkDragging = true;
@@ -422,11 +420,9 @@ export class InputHandler {
         const setupTransformState = () => {
           this.appContext.orbitControls.enabled = false;
           this.dragStartPointer.set(event.clientX, event.clientY);
-          // ★★★ 追加: キャッシュを初期化 ★★★
           this.matrixAutoUpdateCache = new Map();
 
           this.appState.selectedObjects.forEach((obj) => {
-            // ★★★ 追加: 現在の状態をキャッシュに保存 ★★★
             this.matrixAutoUpdateCache.set(obj, obj.matrixAutoUpdate);
             const isRotated = !obj.quaternion.equals(new THREE.Quaternion());
             if (isRotated && obj.matrixAutoUpdate === true) {
@@ -528,7 +524,6 @@ export class InputHandler {
       return;
     }
 
-    // 新しい物理IKのドラッグ中処理
     if (this.isIkDragging) {
       IkFeatures.solveIK(event, this.appContext);
       return;
@@ -797,11 +792,10 @@ export class InputHandler {
       return;
     }
 
-    // 新しい物理IKのドラッグ終了処理
     if (this.isIkDragging) {
       IkFeatures.endIKDrag(this.appContext);
       this.isIkDragging = false;
-      this.pbdGraph = null; // ドラッグ終了でグラフをリセット
+      this.pbdGraph = null;
       this.appContext.orbitControls.enabled = true;
       this.activePointerId = null;
       return;
@@ -826,19 +820,15 @@ export class InputHandler {
           const originalParent = this.worldTransforms.get(obj).parent;
           originalParent.attach(obj);
 
-          // ★★★ 追加: matrixAutoUpdateの状態を復元 ★★★
           if (this.matrixAutoUpdateCache && this.matrixAutoUpdateCache.has(obj)) {
             const cachedState = this.matrixAutoUpdateCache.get(obj);
 
-            // 手動(false)から自動(true)に戻す場合
             if (cachedState === true && obj.matrixAutoUpdate === false) {
-              // 現在のMatrix（attachによって更新済み）から位置/回転/拡縮を再分解する
               obj.matrix.decompose(obj.position, obj.quaternion, obj.scale);
             }
             obj.matrixAutoUpdate = cachedState;
           }
-          // ★★★ 追加ここまで ★★★
-          
+
           const newT = { matrix: obj.matrix.clone() };
           if (!oldT.matrix.equals(newT.matrix)) {
             commands.push(new TransformCommand(obj, oldT, newT));
@@ -1008,7 +998,10 @@ export class InputHandler {
         this.appState.setSelection(clickedObject);
         if (clickedObject) {
           const pinnedObjects = this.mechaGroup.children.filter(o => o.userData.isPinned);
-          this.pbdGraph = IkFeatures.prepareIK(clickedObject, this.mechaGroup.children, this.jointGroup.children, pinnedObjects);
+          // ★★★ 修正: パーツとジョイントの両方を渡す ★★★
+          const allObjectsAndJoints = [...this.mechaGroup.children, ...this.jointGroup.children];
+          this.pbdGraph = IkFeatures.prepareIK(clickedObject, allObjectsAndJoints, this.jointGroup.children, pinnedObjects);
+
           if (!this.pbdGraph) {
             this.log("IK操作の準備に失敗しました。アンカーを確認してください。");
           }
@@ -1070,7 +1063,7 @@ export class InputHandler {
 
       const selectionCount = this.appState.selectedObjects.length;
       if (this.appState.modes.isIkMode) {
-        // IKモードのログはIKFeaturesで管理
+        // IK mode logs are handled within the IK features
       } else if (selectionCount > 0) {
         const firstObj = this.appState.selectedObjects[0];
         const objectType = firstObj.userData.isJoint ? 'ジョイント' : 'オブジェクト';
