@@ -32,7 +32,6 @@ function performCSG(operation, operationName, context) {
   }
 
   const newMesh = baseMesh;
-  newMesh.name = context.getNewObjectName(operationName);
   newMesh.material = finalMaterial;
   newMesh.geometry.computeVertexNormals();
   newMesh.material.side = THREE.DoubleSide;
@@ -141,7 +140,6 @@ export function performSubtract(baseObjects, drillObject, context) {
   }
 
   const newMesh = resultMesh;
-  newMesh.name = context.getNewObjectName('SubtractResult');
   newMesh.material = finalMaterial;
   newMesh.geometry.computeVertexNormals();
   newMesh.material.side = THREE.DoubleSide;
