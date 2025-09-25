@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パワーストーン強化シミュレーター (最終版)</title>
+    <link rel="icon" href="data:,">
+    <style>
+        :root {
+            --primary-color: #007aff;
+            --border-color: #c6c6c8;
+            --bg-light: #f2f2f7;
+            --bg-white: #ffffff;
+            --text-dark: #000000;
+            --text-light: #8e8e93;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-color: #0a84ff;
+                --border-color: #38383a;
+                --bg-light: #000000;
+                --bg-white: #1c1c1e;
+                --text-dark: #ffffff;
+                --text-light: #8d8d92;
+            }
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+        }
+        .app-container { max-width: 680px; margin: 0 auto; }
+        .app-header {
+            background-color: var(--bg-white);
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+        h1 { font-size: 1.2em; font-weight: 600; margin: 0; }
+        #app-main { padding: 20px 15px; }
+        .tabs-container {
+            display: flex;
+            background-color: #7676803D;
+            border-radius: 8px;
+            padding: 2px;
+            margin-bottom: 25px;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 8px 5px;
+            border: none;
+            background-color: transparent;
+            color: var(--text-dark);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: background-color 0.3s, color 0.3s;
+            text-align: center;
+        }
+        .tab-button.active {
+            background-color: var(--bg-white);
+            color: var(--text-dark);
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+        }
+        @media (prefers-color-scheme: dark) {
+            .tab-button.active { box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3); }
+        }
+        .result-group {
+            background-color: var(--bg-white);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .result-header {
+            text-align: left;
+            padding: 12px 15px 8px;
+            font-size: 0.8em;
+            color: var(--text-light);
+            text-transform: uppercase;
+            margin: 0;
+        }
+        .result-table { width: 100%; border-collapse: collapse; }
+        .result-table td {
+            border-top: 1px solid var(--border-color);
+            padding: 12px 15px;
+            text-align: right;
+        }
+        .result-table tr:first-child td { border-top: none; }
+        .result-table td:first-child { text-align: left; font-weight: 500; }
+        .result-table .item-count, .result-table .scroll-count { display: block; }
+        .result-table .item-count { font-size: 1.1em; }
+        .result-table .scroll-count { font-size: 0.9em; color: var(--text-light); }
+        .footer { text-align: center; margin-top: 20px; font-size: 0.8em; color: #95a5a6; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header"><h1>パワーストーン強化シミュレーター</h1></header>
+        <main id="app-main">
+            <div class="tabs-container" id="tabs-container"></div>
+            <div id="result-area"></div>
+            <div class="footer"><p>※元アイテムは「+0」、スクロールは「強化スクロール」で計算</p></div>
+        </main>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const ENHANCEMENT_DATA = {
+                6: { success: 0.50, maintain: 0.00 }, 7: { success: 0.49, maintain: 0.00 },
+                8: { success: 0.44, maintain: 0.00 }, 9: { success: 0.39, maintain: 0.00 },
+                10: { success: 0.32, maintain: 0.10 }, 11: { success: 0.25, maintain: 0.08 },
+                12: { success: 0.19, maintain: 0.07 }
+            };
+            const SCENARIOS = [
+                { name: 'かなり運が良い (上位25%)', prob: 0.25 }, { name: '中央値 (50%)', prob: 0.50 },
+                { name: '平均値 (期待値)', prob: 'avg' }, { name: '少し運が悪い (90%)', prob: 0.90 },
+                { name: '沼にハマった… (99%)', prob: 0.99 }
+            ];
+            const MIN_LEVEL = 6, MAX_LEVEL = 12;
+            const TABS_CONTAINER = document.getElementById('tabs-container');
+            const RESULT_AREA = document.getElementById('result-area');
+            const PRECOMPUTED_RATES = {}, AVERAGE_COSTS = {};
+
+            for (let level = MIN_LEVEL; level <= MAX_LEVEL; level++) {
+                const data = ENHANCEMENT_DATA[level];
+                const failureRate = 1 - data.success;
+                const destructionRate = failureRate * (1 - data.maintain);
+                PRECOMPUTED_RATES[level] = { p_prime: data.success / (data.success + destructionRate) };
+            }
+
+            let cumulativeAvgStones = 1;
+            for (let level = MIN_LEVEL; level <= MAX_LEVEL; level++) {
+                cumulativeAvgStones *= (1 / PRECOMPUTED_RATES[level].p_prime);
+                let totalScrolls = 0;
+                for (let i = MIN_LEVEL; i <= level; i++) {
+                    let attemptsAtThisStage = 1;
+                    for (let j = i; j <= level; j++) {
+                        attemptsAtThisStage *= (1 / PRECOMPUTED_RATES[j].p_prime);
+                    }
+                    totalScrolls += attemptsAtThisStage;
+                }
+                AVERAGE_COSTS[level] = { stones: cumulativeAvgStones, scrolls: totalScrolls };
+            }
+
+            function calculateCostsForTarget(targetLevel) {
+                const results = SCENARIOS.map(scenario => {
+                    let totalStones, totalScrolls;
+                    if (scenario.prob === 'avg') {
+                        ({ stones: totalStones, scrolls: totalScrolls } = AVERAGE_COSTS[targetLevel]);
+                    } else {
+                        const p_prime = PRECOMPUTED_RATES[targetLevel].p_prime;
+                        const k = Math.ceil(Math.log(1 - scenario.prob) / Math.log(1 - p_prime));
+                        if (targetLevel === MIN_LEVEL) {
+                            totalStones = k;
+                            totalScrolls = k;
+                        } else {
+                            totalStones = k * AVERAGE_COSTS[targetLevel - 1].stones;
+                            totalScrolls = k * AVERAGE_COSTS[targetLevel - 1].scrolls;
+                        }
+                    }
+                    // ▼▼▼【最終修正】ここで、元アイテム(+5)の製造コスト(スクロール5枚)を加算 ▼▼▼
+                    totalScrolls += totalStones * 5;
+                    return { scenario: scenario.name, stones: Math.round(totalStones), scrolls: Math.round(totalScrolls) };
+                });
+                return results;
+            }
+
+            function renderResults(targetLevel) {
+                const data = calculateCostsForTarget(targetLevel);
+                let contentHTML = `<h3 class="result-header">目標: +${targetLevel} の必要アイテム数</h3><div class="result-group"><table class="result-table"><tbody>`;
+                data.forEach(row => {
+                    contentHTML += `<tr><td>${row.scenario}</td><td><span class="item-count">${row.stones.toLocaleString()} 個</span><span class="scroll-count">${row.scrolls.toLocaleString()} 枚</span></td></tr>`;
+                });
+                contentHTML += `</tbody></table></div>`;
+                RESULT_AREA.innerHTML = contentHTML;
+            }
+
+            function handleTabClick(event) {
+                const clickedButton = event.target.closest('.tab-button');
+                if (!clickedButton) return;
+                TABS_CONTAINER.querySelector('.active')?.classList.remove('active');
+                clickedButton.classList.add('active');
+                renderResults(parseInt(clickedButton.dataset.level, 10));
+            }
+
+            function initialize() {
+                for (let i = MIN_LEVEL; i <= MAX_LEVEL; i++) {
+                    const button = document.createElement('button');
+                    button.className = 'tab-button';
+                    button.textContent = `+${i}`;
+                    button.dataset.level = i;
+                    TABS_CONTAINER.appendChild(button);
+                }
+                TABS_CONTAINER.addEventListener('click', handleTabClick);
+                TABS_CONTAINER.querySelector(`[data-level='${MAX_LEVEL}']`)?.click();
+            }
+            
+            initialize();
+        });
+    </script>
+</body>
+</html>
