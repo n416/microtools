@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>パワーストーン強化シミュレーター (価格計算機能付き)</title>
+    <title>パワーストーン強化シミュレーター (最終版)</title>
     <link rel="icon" href="data:,">
     <style>
         :root {
@@ -68,7 +68,6 @@
         @media (prefers-color-scheme: dark) {
             .tab-button.active { box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3); }
         }
-        /* ▼▼▼ 価格入力欄のスタイルを追加 ▼▼▼ */
         .price-inputs {
             display: flex;
             gap: 15px;
@@ -95,7 +94,6 @@
             background-color: var(--bg-light);
             color: var(--text-dark);
         }
-        /* ▲▲▲ ここまで追加 ▲▲▲ */
         .result-group {
             background-color: var(--bg-white);
             border-radius: 10px;
@@ -120,14 +118,12 @@
         .result-table .item-count, .result-table .scroll-count { display: block; }
         .result-table .item-count { font-size: 1.1em; }
         .result-table .scroll-count { font-size: 0.9em; color: var(--text-light); }
-        /* ▼▼▼ 合計価値のスタイルを追加 ▼▼▼ */
         .result-table .total-value {
             font-size: 0.8em;
             color: var(--primary-color);
             margin-top: 8px;
             font-weight: 500;
         }
-        /* ▲▲▲ ここまで追加 ▲▲▲ */
         .footer { text-align: center; margin-top: 20px; font-size: 0.8em; color: #95a5a6; }
     </style>
 </head>
@@ -136,15 +132,14 @@
         <header class="app-header"><h1>パワーストーン強化シミュレーター</h1></header>
         <main id="app-main">
             <div class="tabs-container" id="tabs-container"></div>
-            
             <div class="price-inputs">
                 <div class="price-input-group">
                     <label for="stone-price">パワーストーン価格 (1個)</label>
-                    <input type="number" id="stone-price" placeholder="例: 1000">
+                    <input type="number" id="stone-price" placeholder="例: 30">
                 </div>
                 <div class="price-input-group">
                     <label for="scroll-price">スクロール価格 (1枚)</label>
-                    <input type="number" id="scroll-price" placeholder="例: 500">
+                    <input type="number" id="scroll-price" placeholder="例: 30">
                 </div>
             </div>
             <div id="result-area"></div>
@@ -167,10 +162,10 @@
             const MIN_LEVEL = 6, MAX_LEVEL = 12;
             const TABS_CONTAINER = document.getElementById('tabs-container');
             const RESULT_AREA = document.getElementById('result-area');
-            // ▼▼▼ 価格入力欄の要素を取得 ▼▼▼
             const STONE_PRICE_INPUT = document.getElementById('stone-price');
             const SCROLL_PRICE_INPUT = document.getElementById('scroll-price');
-            // ▲▲▲ ここまで追加 ▲▲▲
+            const STONE_PRICE_KEY = 'powerStonePrice_v2'; // キー名を変更してリセット
+            const SCROLL_PRICE_KEY = 'scrollPrice_v2';
             const PRECOMPUTED_RATES = {}, AVERAGE_COSTS = {};
 
             for (let level = MIN_LEVEL; level <= MAX_LEVEL; level++) {
@@ -195,12 +190,10 @@
             }
 
             function calculateCostsForTarget(targetLevel) {
-                // ▼▼▼ 価格を取得 ▼▼▼
                 const stonePrice = parseInt(STONE_PRICE_INPUT.value, 10) || 0;
                 const scrollPrice = parseInt(SCROLL_PRICE_INPUT.value, 10) || 0;
-                // ▲▲▲ ここまで追加 ▲▲▲
-
-                const results = SCENARIOS.map(scenario => {
+                
+                return SCENARIOS.map(scenario => {
                     let totalStones, totalScrolls;
                     if (scenario.prob === 'avg') {
                         ({ stones: totalStones, scrolls: totalScrolls } = AVERAGE_COSTS[targetLevel]);
@@ -217,24 +210,15 @@
                     }
                     totalScrolls += totalStones * 5;
                     
-                    // ▼▼▼ 価値計算を追加 ▼▼▼
                     const stoneValue = Math.round(totalStones) * stonePrice;
                     const scrollValue = Math.round(totalScrolls) * scrollPrice;
                     const totalValue = stoneValue + scrollValue;
-                    // ▲▲▲ ここまで追加 ▲▲▲
 
                     return { 
-                        scenario: scenario.name, 
-                        stones: Math.round(totalStones), 
-                        scrolls: Math.round(totalScrolls),
-                        // ▼▼▼ 計算結果を返す ▼▼▼
-                        stoneValue,
-                        scrollValue,
-                        totalValue
-                        // ▲▲▲ ここまで追加 ▲▲▲
+                        scenario: scenario.name, stones: Math.round(totalStones), scrolls: Math.round(totalScrolls),
+                        stoneValue, scrollValue, totalValue
                     };
                 });
-                return results;
             }
 
             function renderResults() {
@@ -245,7 +229,6 @@
                 const data = calculateCostsForTarget(targetLevel);
                 let contentHTML = `<h3 class="result-header">目標: +${targetLevel} の必要アイテム数</h3><div class="result-group"><table class="result-table"><tbody>`;
                 data.forEach(row => {
-                    // ▼▼▼ 表示を価値計算に対応 ▼▼▼
                     contentHTML += `
                         <tr>
                             <td>${row.scenario}</td>
@@ -257,7 +240,6 @@
                                 </div>
                             </td>
                         </tr>`;
-                    // ▲▲▲ ここまで変更 ▲▲▲
                 });
                 contentHTML += `</tbody></table></div>`;
                 RESULT_AREA.innerHTML = contentHTML;
@@ -268,7 +250,7 @@
                 if (!clickedButton) return;
                 TABS_CONTAINER.querySelector('.active')?.classList.remove('active');
                 clickedButton.classList.add('active');
-                renderResults(); // 引数なしで呼び出し
+                renderResults();
             }
 
             function initialize() {
@@ -279,11 +261,37 @@
                     button.dataset.level = i;
                     TABS_CONTAINER.appendChild(button);
                 }
+
+                // ▼▼▼ ローカルストレージ読み込み＆デフォルト値設定 ▼▼▼
+                const savedStonePrice = localStorage.getItem(STONE_PRICE_KEY);
+                const savedScrollPrice = localStorage.getItem(SCROLL_PRICE_KEY);
+
+                if (savedStonePrice === null) {
+                    STONE_PRICE_INPUT.value = '30';
+                    localStorage.setItem(STONE_PRICE_KEY, '30');
+                } else {
+                    STONE_PRICE_INPUT.value = savedStonePrice;
+                }
+                
+                if (savedScrollPrice === null) {
+                    SCROLL_PRICE_INPUT.value = '30';
+                    localStorage.setItem(SCROLL_PRICE_KEY, '30');
+                } else {
+                    SCROLL_PRICE_INPUT.value = savedScrollPrice;
+                }
+                // ▲▲▲ ここまで変更 ▲▲▲
+
                 TABS_CONTAINER.addEventListener('click', handleTabClick);
-                // ▼▼▼ 価格入力時のイベントリスナーを追加 ▼▼▼
-                STONE_PRICE_INPUT.addEventListener('input', renderResults);
-                SCROLL_PRICE_INPUT.addEventListener('input', renderResults);
-                // ▲▲▲ ここまで追加 ▲▲▲
+                
+                STONE_PRICE_INPUT.addEventListener('input', () => {
+                    localStorage.setItem(STONE_PRICE_KEY, STONE_PRICE_INPUT.value);
+                    renderResults();
+                });
+                SCROLL_PRICE_INPUT.addEventListener('input', () => {
+                    localStorage.setItem(SCROLL_PRICE_KEY, SCROLL_PRICE_INPUT.value);
+                    renderResults();
+                });
+
                 TABS_CONTAINER.querySelector(`[data-level='${MAX_LEVEL}']`)?.click();
             }
             
