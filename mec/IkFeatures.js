@@ -90,50 +90,68 @@ export function prepareIK(selectedObject, allObjectsAndJoints, allJoints, pinned
     const validAnchors = pinnedObjects.filter(p => fullGraph.has(p.uuid));
     if (validAnchors.length === 0) return null;
 
-    // 3. グラフを使って、選択オブジェクトから最も近いアンカー（ルート）を探す
-    const root = findClosestAnchor(selectedObject, validAnchors, fullGraph);
-    if (!root) return null;
+    // 3. グラフを使って、選択オブジェクトから最も近いアンカー（暫定ルート）を探す
+    const provisionalRoot = findClosestAnchor(selectedObject, validAnchors, fullGraph);
+    if (!provisionalRoot) return null;
 
-    // 4. グラフを使って、ルートから選択オブジェクトまでの完全なパス（パーツとジョイントを含む）を探す
-    const fullPath = findPath(root, selectedObject, fullGraph);
-    
-    // ▼▼▼ ご希望によりデバッグログを残します ▼▼▼
-    console.log("--- prepareIK: Path Finding Details ---");
-    if (fullPath) {
-        console.log(`Path found with ${fullPath.length} nodes.`);
-        fullPath.forEach((obj, index) => {
-            if (obj) {
-                // オブジェクトが存在する場合、その詳細情報をログに出力します。
-                console.log(`[Path Node ${index}]: UUID=${obj.uuid}, Name="${obj.name}", isJoint=${!!obj.userData.isJoint}`);
-            } else {
-                // オブジェクト自体が null や undefined になっている場合、それもログに出力します。
-                console.log(`[Path Node ${index}]: Object is null or undefined!`);
-            }
-        });
-    } else {
-        console.log("Path not found from root to selected object.");
+    // 4. 暫定ルートから選択オブジェクトまでの完全なパスを探す
+    const provisionalPath = findPath(provisionalRoot, selectedObject, fullGraph);
+    if (!provisionalPath) return null;
+
+    // =======================================================
+    // ▼▼▼ 原因調査のためのデバッグコードです ▼▼▼
+    console.log("--- IK Path Debug ---");
+    console.log(`Provisional Path from: "${provisionalRoot.name}" to "${selectedObject.name}"`);
+    provisionalPath.forEach(node => {
+        const neighborCount = fullGraph.get(node.uuid)?.neighbors.size || 0;
+        console.log(`- Node: "${node.name}", Is Joint: ${!!node.userData.isJoint}, Connections: ${neighborCount}`);
+    });
+    console.log("-----------------------");
+    // ▲▲▲ ここまで ▲▲▲
+    // =======================================================
+
+    // 5. パスを逆（選択オブジェクト側）から辿り、最初の分岐点（接続数が3以上）を探す
+    let newRoot = null;
+    for (let i = provisionalPath.length - 2; i > 0; i--) {
+        const node = provisionalPath[i];
+        if (!node.userData.isJoint && fullGraph.get(node.uuid).neighbors.size >= 3) {
+            newRoot = node;
+            console.log(`IKルートを分岐点 (${newRoot.name}) に変更しました。`);
+            break;
+        }
     }
-    console.log("------------------------------------");
 
-    if (!fullPath) return null;
+    // 6. 最終的なルートとパスを決定する
+    let finalRoot, finalFullPath;
+    if (newRoot) {
+        finalRoot = newRoot;
+        finalFullPath = findPath(finalRoot, selectedObject, fullGraph);
+    } else {
+        finalRoot = provisionalRoot;
+        finalFullPath = provisionalPath;
+    }
 
-    // 5. 完全なパスから、パーツのリストとジョイントのリストをそれぞれ抽出する
-    const pathFromRoot = fullPath.filter(obj => !obj.userData.isJoint);
-    const jointChain = fullPath.filter(obj => obj.userData.isJoint);
+    if (!finalFullPath) {
+        console.error("最終的なIKパスの計算に失敗しました。");
+        return null;
+    }
 
-    // 6. パスが有効か基本的な検証を行う
+    // 7. 完全なパスから、パーツのリストとジョイントのリストをそれぞれ抽出する
+    const pathFromRoot = finalFullPath.filter(obj => !obj.userData.isJoint);
+    const jointChain = finalFullPath.filter(obj => obj.userData.isJoint);
+
+    // 8. パスが有効か基本的な検証を行う
     if (pathFromRoot.length < 2 || jointChain.length < 1) {
-        console.error("Failed to resolve a valid IK chain.", {pathFromRoot, jointChain});
+        console.error("Failed to resolve a valid IK chain.", { pathFromRoot, jointChain });
         return null;
     }
 
     return {
-        root: root,
+        root: finalRoot,
         path: pathFromRoot,
         joints: jointChain,
     };
 }
-
 
 // =====================================================================
 // === 2. IK操作のメインフロー
