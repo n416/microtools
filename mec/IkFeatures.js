@@ -254,35 +254,84 @@ function solveCCD_IK() {
 
     for (let iter = 0; iter < iterations; iter++) {
         if (effector.position.distanceTo(target) < tolerance) break;
+
         for (let i = joints.length - 1; i >= 0; i--) {
             const joint = joints[i];
             const pivot = joint.position.clone();
-            const jointAxisLocal = joint.userData.axis || new THREE.Vector3(0, 1, 0);
-            const jointAxisWorld = jointAxisLocal.clone().applyQuaternion(joint.quaternion).normalize();
             const toEffector = new THREE.Vector3().subVectors(effector.position, pivot);
             const toTarget = new THREE.Vector3().subVectors(target, pivot);
-            const toEffectorProjected = toEffector.clone().projectOnPlane(jointAxisWorld).normalize();
-            const toTargetProjected = toTarget.clone().projectOnPlane(jointAxisWorld).normalize();
-            let angle = Math.acos(toEffectorProjected.dot(toTargetProjected));
-            const cross = new THREE.Vector3().crossVectors(toEffectorProjected, toTargetProjected);
-            if (cross.dot(jointAxisWorld) < 0) {
-                angle = -angle;
+
+            let deltaQuat = new THREE.Quaternion(); // 回転量のデフォルト
+            let deltaPos = new THREE.Vector3(); // 移動量のデフォルト
+
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ 修正箇所：ジョイントタイプによって処理を分岐 ★★★
+            switch (joint.userData.type) {
+                case 'sphere':
+                    // 球ジョイントの場合：自由に回転させる
+                    deltaQuat.setFromUnitVectors(
+                        toEffector.clone().normalize(),
+                        toTarget.clone().normalize()
+                    );
+                    break;
+
+                case 'slide':
+                    // スライドジョイントの場合: 軸に沿って移動させる
+                    const slideAxisLocal = joint.userData.axis || new THREE.Vector3(1, 0, 0); // デフォルトはX軸
+                    const slideAxisWorld = slideAxisLocal.clone().applyQuaternion(joint.quaternion).normalize();
+
+                    const requiredTranslation = new THREE.Vector3().subVectors(toTarget, toEffector);
+                    const projection = requiredTranslation.projectOnVector(slideAxisWorld);
+                    deltaPos.copy(projection);
+
+                    // 回転はさせない
+                    deltaQuat.identity();
+                    break;
+
+                default: // 'cylinder' など
+                    // 円柱ジョイントやその他の場合：単一軸で回転させる
+                    const jointAxisLocal = joint.userData.axis || new THREE.Vector3(0, 1, 0);
+                    const jointAxisWorld = jointAxisLocal.clone().applyQuaternion(joint.quaternion).normalize();
+
+                    const toEffectorProjected = toEffector.clone().projectOnPlane(jointAxisWorld).normalize();
+                    const toTargetProjected = toTarget.clone().projectOnPlane(jointAxisWorld).normalize();
+
+                    let angle = Math.acos(toEffectorProjected.dot(toTargetProjected));
+                    const cross = new THREE.Vector3().crossVectors(toEffectorProjected, toTargetProjected);
+
+                    if (cross.dot(jointAxisWorld) < 0) {
+                        angle = -angle;
+                    }
+
+                    if (isNaN(angle) || Math.abs(angle) < 0.001) {
+                        continue;
+                    }
+
+                    deltaQuat.setFromAxisAngle(jointAxisWorld, angle);
+                    break;
             }
-            if (isNaN(angle) || Math.abs(angle) < 0.001) {
-                continue;
-            }
-            const constrainedDeltaQuat = new THREE.Quaternion().setFromAxisAngle(jointAxisWorld, angle);
+            // ★★★ 修正はここまで ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+            // IKチェインの末端（エフェクタ側）から現在のジョイントまでの全てのオブジェクトとジョイントを変換
             for (let j = i; j < joints.length; j++) {
                 const currentJoint = joints[j];
-                const currentObject = chain[j + 1];
+                const currentObject = chain[j + 1]; // 対応するオブジェクト
+
+                // 回転を適用
                 currentObject.position.sub(pivot);
-                currentObject.position.applyQuaternion(constrainedDeltaQuat);
+                currentObject.position.applyQuaternion(deltaQuat);
                 currentObject.position.add(pivot);
-                currentObject.quaternion.premultiply(constrainedDeltaQuat);
+                currentObject.quaternion.premultiply(deltaQuat);
+
                 currentJoint.position.sub(pivot);
-                currentJoint.position.applyQuaternion(constrainedDeltaQuat);
+                currentJoint.position.applyQuaternion(deltaQuat);
                 currentJoint.position.add(pivot);
-                currentJoint.quaternion.premultiply(constrainedDeltaQuat);
+                currentJoint.quaternion.premultiply(deltaQuat);
+
+                // 移動を適用
+                currentObject.position.add(deltaPos);
+                currentJoint.position.add(deltaPos);
             }
         }
     }
@@ -297,23 +346,23 @@ function solveCCD_IK() {
         const allObjectsFromState = ikState.initialStates.map(s => s.object);
         const allJointsFromState = allObjectsFromState.filter(o => o.userData.isJoint);
         const graph = buildFullConnectionGraph(allObjectsFromState, allJointsFromState);
-        
+
         const descendants = new Set();
         const queue = [draggedObject.uuid];
-        
+
         const visited = new Set([draggedObject.uuid]);
         const draggedIndexInChain = chain.indexOf(draggedObject);
         for (let i = 0; i < draggedIndexInChain; i++) {
             visited.add(chain[i].uuid);
-            if(joints[i]) visited.add(joints[i].uuid);
+            if (joints[i]) visited.add(joints[i].uuid);
         }
-        
+
         const allObjectsMap = new Map(ikState.initialStates.map(s => [s.object.uuid, s.object]));
 
         while (queue.length > 0) {
             const currentUuid = queue.shift();
             const neighbors = graph.get(currentUuid)?.neighbors || [];
-            
+
             for (const neighborUuid of neighbors) {
                 if (!visited.has(neighborUuid)) {
                     visited.add(neighborUuid);
@@ -325,7 +374,7 @@ function solveCCD_IK() {
                 }
             }
         }
-        
+
         descendants.forEach(descendant => {
             const descInitialState = ikState.initialStates.find(s => s.object === descendant);
             if (descInitialState) {
