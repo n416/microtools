@@ -3,22 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>点群ビューア</title>
+    <title>インタラクティブ・メッシュ化ツール</title>
     <style>
-        body { margin: 0; }
+        body { margin: 0; font-family: sans-serif; }
         canvas { display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; z-index: 10; background: rgba(0,0,0,0.7); padding: 10px; color: white; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
-        }
-    }
-    </script>
+    <div id="ui">
+        <h3>インタラクティブ・メッシュ化ツール</h3>
+        <p style="font-size: 12px;">点群を表示した後、見たい場所にカメラを近づけて<br>メッシュ化ボタンを押してください。</p>
+        <button id="reconstructButton">見えるとこだけメッシュ化！</button>
+        <hr>
+        <div>
+            <label for="distanceLimit">距離フィルター (m):</label>
+            <input type="range" id="distanceLimit" min="10" max="300" value="100" style="vertical-align: middle;">
+            <span id="distanceValue">100</span>
+        </div>
+        <div>
+            <label for="maxLength">最大エッジ長 (m):</label>
+            <input type="range" id="maxLength" min="1" max="50" value="20" style="vertical-align: middle;">
+            <span id="maxLengthValue">20</span>
+        </div>
+        <div>
+            <label for="minAngle">最小角度 (°):</label>
+            <input type="range" id="minAngle" min="0" max="30" value="15" style="vertical-align: middle;">
+            <span id="minAngleValue">15</span>
+        </div>
+        <div id="status" style="margin-top: 5px;">まず点群を読み込んでください...</div>
+    </div>
 
+    <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/" } }</script>
     <script type="module" src="main.js"></script>
 </body>
 </html>
