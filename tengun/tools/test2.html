@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Header Inclusion Test</title>
+</head>
+<body>
+    <h1>FEMTree.h Inclusion Test</h1>
+    <p>ブラウザの開発者ツールで、コンソールの出力を確認してください...</p>
+
+    <script type="module">
+        import createTestModule2 from './test2.js';
+
+        createTestModule2().then(Module => {
+            console.log("Wasmモジュール(test2)初期化完了。");
+            try {
+                // C++のテスト関数を呼び出す！
+                const resultMessage = Module.runHeaderInclusionTest();
+
+                // 結果をコンソールに表示
+                console.log(resultMessage);
+
+            } catch (e) {
+                console.error("テスト実行中にエラー:", e);
+            }
+        });
+    </script>
+</body>
+</html>
