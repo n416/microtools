@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>PoissonRecon WASM Test 5</title>
+</head>
+<body>
+    <h1>PoissonRecon WASM Test 5</h1>
+    <p>ブラウザのデベロッパーコンソール (F12キー) を開いて結果を確認してください。</p>
+    <p><b>Status:</b> <span id="status">Loading WASM module...</span></p>
+
+    <script>
+        var Module = {
+            print: (text) => { console.log(text); },
+            printErr: (text) => { console.error(text); },
+            setStatus: (text) => {
+                document.getElementById('status').innerText = text;
+            },
+            onRuntimeInitialized: () => {
+                Module.setStatus('Runtime initialized. Calling main() now...');
+                console.log("Wasmランタイムの準備が完了しました。");
+                
+                // ★★★ ここが最重要ポイント ★★★
+                // 準備が整ったので、C++のmain()関数を呼び出します。
+                try {
+                    Module.callMain(); // main() を実行
+                    Module.setStatus('C++ main() finished.');
+                    console.log("C++のmain()が完了しました。");
+                } catch (e) {
+                    Module.setStatus('An error occurred in main().');
+                    console.error("main()の実行中にエラーが発生しました:", e);
+                }
+            }
+        };
+        Module.setStatus('Module object created. Loading test5.js...');
+    </script>
+    
+    <script async src="test5.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Component Test 3: FEMTree Instantiation</title>
+</head>
+<body>
+    <h1>Component Test 3: FEMTree Instantiation</h1>
+    <p>ブラウザの開発者ツールで、コンソールの出力を確認してください...</p>
+
+    <script type="module">
+        import createTestModule3 from './test3.js';
+
+        createTestModule3().then(Module => {
+            console.log("Wasmモジュール(test3)初期化完了。");
+            try {
+                // C++のテスト関数を呼び出す！
+                const resultMessage = Module.runFemtreeTest();
+
+                // 結果をコンソールに表示
+                console.log(resultMessage);
+
+            } catch (e) {
+                console.error("テスト実行中にエラー:", e);
+            }
+        });
+    </script>
+</body>
+</html>

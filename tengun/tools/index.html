@@ -3,34 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>インタラクティブ・メッシュ化ツール</title>
+    <title>インタラクティブ・メッシュ化＆法線計算ツール</title>
     <style>
         body { margin: 0; font-family: sans-serif; }
         canvas { display: block; }
-        #ui { position: absolute; top: 10px; left: 10px; z-index: 10; background: rgba(0,0,0,0.7); padding: 10px; color: white; border-radius: 5px; }
+        #ui { position: absolute; top: 10px; left: 10px; z-index: 10; background: rgba(0,0,0,0.7); padding: 10px; color: white; border-radius: 5px; max-width: 300px; font-size: 14px; }
+        input[type="range"] { vertical-align: middle; width: 120px;}
+        label { display: inline-block; width: 130px; }
+        h4 { margin-top: 15px; margin-bottom: 5px; }
+        button { width: 100%; padding: 8px; margin-bottom: 10px; }
+        button:disabled { background: #555; color: #999; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <h3>インタラクティブ・メッシュ化ツール</h3>
-        <p style="font-size: 12px;">点群を表示した後、見たい場所にカメラを近づけて<br>メッシュ化ボタンを押してください。</p>
-        <button id="reconstructButton">見えるとこだけメッシュ化！</button>
+        <h3>インタラクティブ・ツール</h3>
+        <p style="font-size: 12px;">見たい場所にカメラを近づけて、各ボタンを押してください。</p>
+        
         <hr>
+        <h4>ステップ1：法線計算</h4>
+        <button id="calculateNormalsButton">法線ベクトルを計算</button>
         <div>
-            <label for="distanceLimit">距離フィルター (m):</label>
-            <input type="range" id="distanceLimit" min="10" max="300" value="100" style="vertical-align: middle;">
-            <span id="distanceValue">100</span>
+            <label for="kValue">近傍点の数 (k):</label>
+            <input type="range" id="kValue" min="3" max="50" value="20">
+            <span id="kValueSpan">20</span>
+        </div>
+         <div>
+            <label for="normalLength">法線表示長:</label>
+            <input type="range" id="normalLength" min="0.1" max="10" value="2.5" step="0.1">
+            <span id="normalLengthSpan">2.5</span>
+        </div>
+        
+        <hr>
+        <h4>ステップ2：ポアソン法メッシュ化</h4>
+        <p style-="font-size: 12px;">事前にステップ1の法線計算が必要です。</p>
+        <button id="poissonReconButton">本物のポアソン法でメッシュ化</button>
+        <div>
+            <label for="poissonDepth">オクツリー深度:</label>
+            <input type="range" id="poissonDepth" min="5" max="10" value="8">
+            <span id="poissonDepthSpan">8</span>
         </div>
         <div>
-            <label for="maxLength">最大エッジ長 (m):</label>
-            <input type="range" id="maxLength" min="1" max="50" value="20" style="vertical-align: middle;">
-            <span id="maxLengthValue">20</span>
+            <label for="poissonSamples">Samples/Node:</label>
+            <input type="range" id="poissonSamples" min="1.0" max="30.0" value="1.0" step="0.5">
+            <span id="poissonSamplesSpan">1.0</span>
         </div>
         <div>
-            <label for="minAngle">最小角度 (°):</label>
-            <input type="range" id="minAngle" min="0" max="30" value="15" style="vertical-align: middle;">
-            <span id="minAngleValue">15</span>
+            <label for="poissonScale">スケール係数:</label>
+            <input type="range" id="poissonScale" min="1.0" max="1.5" value="1.1" step="0.01">
+            <span id="poissonScaleSpan">1.1</span>
         </div>
+
+
+        <hr>
         <div id="status" style="margin-top: 5px;">まず点群を読み込んでください...</div>
     </div>
 
