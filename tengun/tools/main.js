@@ -1,28 +1,106 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// --- デバッグモードのスイッチ ---
-// trueにすると、メッシュが黄色のワイヤーフレームで表示されます。
-const DEBUG_MODE = false; 
-
 // --- グローバル変数 ---
 let scene, camera, renderer, controls;
 let fullPointCloud = null;
+let lastCalculatedNormals = null;
 
 // --- UI要素 ---
-const reconstructButton = document.getElementById('reconstructButton');
 const statusDiv = document.getElementById('status');
-const distanceLimitSlider = document.getElementById('distanceLimit');
-const distanceValueSpan = document.getElementById('distanceValue');
-const maxLengthSlider = document.getElementById('maxLength');
-const maxLengthValueSpan = document.getElementById('maxLengthValue');
-const minAngleSlider = document.getElementById('minAngle');
-const minAngleValueSpan = document.getElementById('minAngleValue');
+const calculateNormalsButton = document.getElementById('calculateNormalsButton');
+const kValueSlider = document.getElementById('kValue');
+const kValueSpan = document.getElementById('kValueSpan');
+const normalLengthSlider = document.getElementById('normalLength');
+const normalLengthSpan = document.getElementById('normalLengthSpan');
+const poissonReconButton = document.getElementById('poissonReconButton');
+const poissonDepthSlider = document.getElementById('poissonDepth');
+const poissonDepthSpan = document.getElementById('poissonDepthSpan');
+// ★★★ 追加 ★★★
+const poissonSamplesSlider = document.getElementById('poissonSamples');
+const poissonSamplesSpan = document.getElementById('poissonSamplesSpan');
+const poissonScaleSlider = document.getElementById('poissonScale');
+const poissonScaleSpan = document.getElementById('poissonScaleSpan');
+
 
 // --- Web Workerの初期化 ---
-let meshWorker = new Worker('./worker.js', { type: 'module' });
+let normalWorker = new Worker('./normal-worker.js');
+// ★★★ 修正: { type: 'module' } は不要な場合が多いので削除 ★★★
+let poissonWorker = new Worker('./poisson-worker.js');
 
-// --- メインの関数たち ---
+
+// --- Workerからのメッセージ受信ハンドラ ---
+
+// ★★★ 修正: 新しいpoisson-worker.jsの仕様に合わせる ★★★
+poissonWorker.onmessage = (event) => {
+    const data = event.data;
+    switch (data.type) {
+        case 'ready':
+            statusDiv.textContent = 'ポアソン法Worker準備完了。';
+            poissonReconButton.disabled = false;
+            break;
+        case 'result':
+            statusDiv.textContent = 'メッシュデータをThree.jsジオメトリに変換中...';
+            // displayPoissonMeshは { vertices, faces } という形式のオブジェクトを期待
+            displayPoissonMesh({ vertices: data.vertices, faces: data.faces });
+            statusDiv.textContent = 'ポアソンメッシュ生成完了！';
+            poissonReconButton.disabled = false;
+            break;
+        case 'error': // エラーハンドリングは念の為残す
+            statusDiv.textContent = `ポアソン法エラー: ${data.message}`;
+            poissonReconButton.disabled = false;
+            break;
+    }
+};
+
+
+normalWorker.onmessage = function (event) {
+    if (event.data.progress) {
+        const p = event.data.progress;
+        const percentage = ((p.processed / p.total) * 100).toFixed(1);
+        statusDiv.textContent = `法線を計算中... ${percentage}% (${p.processed.toLocaleString()} / ${p.total.toLocaleString()})`;
+        return;
+    }
+    if (event.data.error) {
+        statusDiv.textContent = `法線計算エラー: ${event.data.error}`;
+        calculateNormalsButton.disabled = false;
+        return;
+    }
+    if (event.data.normals) {
+        statusDiv.textContent = "法線データを表示します...";
+        const { positions, normals } = event.data;
+
+        // 古い法線を削除
+        const existingNormals = scene.getObjectByName("normals_visualizer");
+        if (existingNormals) scene.remove(existingNormals);
+
+        const normalLength = parseFloat(normalLengthSlider.value);
+        const lineVertices = [];
+        for (let i = 0; i < positions.length / 3; i++) {
+            const i3 = i * 3;
+            const p = new THREE.Vector3(positions[i3], positions[i3 + 1], positions[i3 + 2]);
+            const n = new THREE.Vector3(normals[i3], normals[i3 + 1], normals[i3 + 2]);
+            lineVertices.push(p.x, p.y, p.z);
+            const p2 = p.clone().add(n.multiplyScalar(normalLength));
+            lineVertices.push(p2.x, p2.y, p2.z);
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(lineVertices, 3));
+        const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+        const lines = new THREE.LineSegments(geometry, material);
+        lines.name = "normals_visualizer";
+        lines.position.copy(fullPointCloud.position);
+        scene.add(lines);
+
+        statusDiv.textContent = "法線計算完了！";
+
+        lastCalculatedNormals = { positions, normals };
+        calculateNormalsButton.disabled = false;
+    }
+};
+
+// --- メインロジック ---
 
 async function loadInitialPointCloud(filePath) {
     statusDiv.textContent = "点群データを読み込み中...";
@@ -36,7 +114,12 @@ async function loadInitialPointCloud(filePath) {
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3, true));
-        const material = new THREE.PointsMaterial({ size: 0.5, vertexColors: true });
+        //const material = new THREE.PointsMaterial({ size: 0.5, vertexColors: true });
+        const material = new THREE.PointsMaterial({
+            size: 3,          // この基本サイズを調整
+            vertexColors: true,
+            sizeAttenuation: true // ★★★ これが「遠近法を有効にする」スイッチです ★★★
+        });
         fullPointCloud = new THREE.Points(geometry, material);
         geometry.computeBoundingBox();
         const center = geometry.boundingBox.getCenter(new THREE.Vector3());
@@ -49,105 +132,95 @@ async function loadInitialPointCloud(filePath) {
     }
 }
 
-function handleReconstructVisible(event) {
-    event.preventDefault();
-    if (!fullPointCloud) return;
+function displayPoissonMesh({ vertices, faces }) {
+    const existingMesh = scene.getObjectByName("poisson_mesh");
+    if (existingMesh) scene.remove(existingMesh);
 
-    statusDiv.textContent = "見える範囲の点を抽出中...";
-    const frustum = new THREE.Frustum();
-    const cameraViewProjectionMatrix = new THREE.Matrix4();
-    camera.updateMatrixWorld(); 
-    cameraViewProjectionMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-    frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
-
-    const originalPositions = fullPointCloud.geometry.attributes.position.array;
-    const originalColors = fullPointCloud.geometry.attributes.color.array;
-    
-    const visiblePoints_positions = [];
-    const visiblePoints_colors = [];
-    const point = new THREE.Vector3();
-    const distanceLimit = parseFloat(distanceLimitSlider.value);
-
-    for (let i = 0; i < originalPositions.length / 3; i++) {
-        const i3 = i * 3;
-        point.set(originalPositions[i3], originalPositions[i3+1], originalPositions[i3+2]);
-        point.applyMatrix4(fullPointCloud.matrixWorld);
-
-        if (frustum.containsPoint(point) && camera.position.distanceTo(point) < distanceLimit) {
-            visiblePoints_positions.push(originalPositions[i3], originalPositions[i3+1], originalPositions[i3+2]);
-            visiblePoints_colors.push(originalColors[i3], originalColors[i3+1], originalColors[i3+2]);
-        }
-    }
-    
-    if (visiblePoints_positions.length === 0) {
-        statusDiv.textContent = "対象の点が見つかりません。";
+    // Workerから来たデータが空でないか確認
+    if (!vertices || vertices.length === 0 || !faces || faces.length === 0) {
+        console.warn("Poisson Recon returned empty mesh.");
         return;
     }
-    
-    statusDiv.textContent = `${(visiblePoints_positions.length / 3).toLocaleString()} 点のメッシュ化を依頼...`;
-    
-    const positionsArray = new Float32Array(visiblePoints_positions);
-    const colorsArray = new Uint8Array(visiblePoints_colors);
-    const maxLength = parseFloat(maxLengthSlider.value);
-    const minAngle = parseFloat(minAngleSlider.value);
-    
-    meshWorker.postMessage({
-        positions: positionsArray,
-        colors: colorsArray,
-        maxLength: maxLength,
-        minAngle: minAngle
+
+    const geometry = new THREE.BufferGeometry();
+    // ★★★ Workerから来るデータはArrayなので、Float32Array/Uint32Arrayに変換 ★★★
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+    geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(faces), 1));
+    geometry.computeVertexNormals();
+
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x88aaff, side: THREE.DoubleSide, flatShading: false
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = "poisson_mesh";
+    mesh.position.copy(fullPointCloud.position);
+    scene.add(mesh);
+}
+
+
+// --- イベントハンドラ ---
+function handleCalculateNormals(event) {
+    if (!fullPointCloud) return;
+    event.preventDefault();
+    statusDiv.textContent = `約 ${(fullPointCloud.geometry.attributes.position.count).toLocaleString()} 点の法線計算を依頼...`;
+    lastCalculatedNormals = null;
+    calculateNormalsButton.disabled = true;
+
+    const k = parseInt(kValueSlider.value, 10);
+    const cameraWorldPosition = new THREE.Vector3();
+    camera.getWorldPosition(cameraWorldPosition);
+
+    normalWorker.postMessage({
+        positions: fullPointCloud.geometry.attributes.position.array,
+        cameraPosition: cameraWorldPosition.toArray(),
+        k: k
     });
 }
 
-meshWorker.onmessage = function(event) {
-    if (event.data.error) {
-        statusDiv.textContent = `エラー: ${event.data.error}`;
+// ★★★ 修正: Workerに渡すデータ形式を完全に変更 ★★★
+function handlePoissonReconstruct() {
+    if (!lastCalculatedNormals) {
+        statusDiv.textContent = '先にステップ1の法線計算を実行してください。';
         return;
     }
+    statusDiv.textContent = 'ポアソン法用データを作成・転送中...';
+    poissonReconButton.disabled = true;
 
-    if (event.data.success) {
-        const { positions, indices, colors } = event.data;
+    const { positions, normals } = lastCalculatedNormals;
+    const numPoints = positions.length / 3;
 
-        if (!indices || indices.length === 0) {
-            statusDiv.textContent = "メッシュを生成できませんでした。フィルタ値を調整してください。";
-            return;
-        }
-
-        statusDiv.textContent = "メッシュデータを表示します...";
-        
-        const existingMesh = scene.getObjectByName("partial_mesh");
-        if(existingMesh) {
-            existingMesh.geometry.dispose();
-            existingMesh.material.dispose();
-            scene.remove(existingMesh);
-        }
-
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3, true));
-        const indexArray = positions.length / 3 > 65535 ? new Uint32Array(indices) : new Uint16Array(indices);
-        geometry.setIndex(new THREE.BufferAttribute(indexArray, 1));
-        geometry.computeVertexNormals();
-
-        let material;
-        if (DEBUG_MODE) {
-            statusDiv.textContent = "処理完了！(デバッグ表示)";
-            material = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true });
-        } else {
-            statusDiv.textContent = "処理完了！";
-            material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, vertexColors: true });
-        }
-
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.name = "partial_mesh";
-        mesh.position.copy(fullPointCloud.position);
-        mesh.quaternion.copy(fullPointCloud.quaternion);
-        mesh.scale.copy(fullPointCloud.scale);
-        
-        scene.add(mesh);
+    // C++モジュールが期待する「位置, 法線, 位置, 法線...」と並んだ配列を作成
+    const interleavedPoints = new Float32Array(numPoints * 6);
+    for (let i = 0; i < numPoints; i++) {
+        const i3 = i * 3;
+        const i6 = i * 6;
+        // Position (x, y, z)
+        interleavedPoints[i6 + 0] = positions[i3 + 0];
+        interleavedPoints[i6 + 1] = positions[i3 + 1];
+        interleavedPoints[i6 + 2] = positions[i3 + 2];
+        // Normal (x, y, z)
+        interleavedPoints[i6 + 3] = normals[i3 + 0];
+        interleavedPoints[i6 + 4] = normals[i3 + 1];
+        interleavedPoints[i6 + 5] = normals[i3 + 2];
     }
-};
 
+    // UIからパラメータを取得
+    const depth = parseInt(poissonDepthSlider.value, 10);
+    const samples_per_node = parseFloat(poissonSamplesSlider.value);
+    const scale = parseFloat(poissonScaleSlider.value);
+
+    // 新しいWorkerの仕様に合わせたオブジェクトを送信
+    poissonWorker.postMessage({
+        points: interleavedPoints,
+        depth: depth,
+        samples_per_node: samples_per_node,
+        scale: scale
+    });
+}
+
+
+// --- 初期化とアニメーションループ ---
 function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xaaaaaa);
@@ -162,20 +235,20 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement);
-    
+
     loadInitialPointCloud('./points_textured.bin');
 
-    reconstructButton.addEventListener('click', handleReconstructVisible);
-    distanceLimitSlider.addEventListener('input', () => {
-        distanceValueSpan.textContent = distanceLimitSlider.value;
-    });
-    maxLengthSlider.addEventListener('input', () => {
-        maxLengthValueSpan.textContent = maxLengthSlider.value;
-    });
-    minAngleSlider.addEventListener('input', () => {
-        minAngleValueSpan.textContent = minAngleSlider.value;
-    });
-    
+    calculateNormalsButton.addEventListener('click', handleCalculateNormals);
+    poissonReconButton.addEventListener('click', handlePoissonReconstruct);
+    poissonReconButton.disabled = true;
+
+    kValueSlider.addEventListener('input', () => kValueSpan.textContent = kValueSlider.value);
+    normalLengthSlider.addEventListener('input', () => normalLengthSpan.textContent = normalLengthSlider.value);
+    poissonDepthSlider.addEventListener('input', () => poissonDepthSpan.textContent = poissonDepthSlider.value);
+    // ★★★ 追加 ★★★
+    poissonSamplesSlider.addEventListener('input', () => poissonSamplesSpan.textContent = poissonSamplesSlider.value);
+    poissonScaleSlider.addEventListener('input', () => poissonScaleSpan.textContent = poissonScaleSlider.value);
+
     animate();
     window.addEventListener('resize', onWindowResize);
 }

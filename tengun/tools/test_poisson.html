@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <title>PoissonRecon Wasm Test</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+
+    button {
+      font-size: 1.2em;
+      padding: 10px 20px;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>PoissonRecon Wasm Test</h1>
+  <p>下のボタンを押して、ブラウザのコンソールを開いて結果を確認してください。</p>
+  <button id="startButton" disabled>Wasmモジュールを初期化中...</button>
+  <div id="status"></div>
+
+  <script>
+    const startButton = document.getElementById('startButton');
+    const statusDiv = document.getElementById('status');
+
+    // Web Workerを起動
+    const worker = new Worker('poisson-worker.js');
+
+    // Workerからのメッセージを受信
+    worker.onmessage = (e) => {
+      const {
+        type,
+        vertices,
+        faces
+      } = e.data;
+
+      if (type === 'ready') {
+        startButton.disabled = false;
+        startButton.textContent = 'メッシュ生成を実行';
+        statusDiv.textContent = '準備完了';
+        console.log('Worker is ready.');
+      } else if (type === 'result') {
+        startButton.disabled = false;
+        statusDiv.textContent = `処理完了！ 頂点数: ${vertices.length / 3}, 面数: ${faces.length / 3}`;
+        console.log('✅ Mesh data received from worker:');
+        console.log('Vertices:', vertices);
+        console.log('Faces:', faces);
+      }
+    };
+
+    // ボタンがクリックされたら、テストデータをWorkerに送信
+    startButton.onclick = () => {
+      startButton.disabled = true;
+      statusDiv.textContent = 'メッシュを生成中...';
+      console.log('Sending point cloud data to worker...');
+
+      // 引継書にあった、面を認識しやすい12点のテストデータ
+      // (位置x,y,z, 法線x,y,z) の順でフラットに並べる
+      const testPoints = new Float32Array([
+        // Z=0 の面 (時計回り)
+        -1, -1, 0, 0, 0, 1,
+        1, -1, 0, 0, 0, 1,
+        1, 1, 0, 0, 0, 1,
+        -1, 1, 0, 0, 0, 1,
+        // Z=1 の面 (時計回り)
+        -1, -1, 1, 0, 0, -1,
+        1, -1, 1, 0, 0, -1,
+        1, 1, 1, 0, 0, -1,
+        -1, 1, 1, 0, 0, -1,
+        // 中央の点 (おまけ)
+        0, 0, 0.5, 1, 0, 0,
+        0, 0, 0.5, -1, 0, 0,
+        0, 0, 0.5, 0, 1, 0,
+        0, 0, 0.5, 0, -1, 0,
+      ]);
+
+      // パラメータ
+      const params = {
+        points: testPoints,
+        depth: 8,
+        samples_per_node: 1.0,
+        scale: 1.1
+      };
+
+      worker.postMessage(params);
+    };
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>PoissonRecon パラメータ評価ツール</title>
+    <style>
+        body { margin: 0; font-family: sans-serif; background: #333; }
+        #viewer { position: absolute; top: 0; left: 340px; right: 0; bottom: 0; }
+        #ui { position: absolute; top: 0; left: 0; width: 320px; bottom: 0; background: #1a1a1a; padding: 10px; color: white; overflow-y: auto; }
+        h3, h4 { border-bottom: 1px solid #555; padding-bottom: 5px; margin-top: 10px;}
+        p.desc { font-size: 12px; color: #aaa; margin: 5px 0 10px 0; }
+        button { width: 100%; padding: 10px; margin: 10px 0; font-size: 1em; background: #5a5a5a; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #6a6a6a; }
+        button:disabled { background: #333; color: #666; cursor: not-allowed; }
+        label { display: block; margin-top: 10px; }
+        input[type="range"] { width: 100%; }
+        #status { margin-top: 20px; font-size: 14px; font-weight: bold; color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h3>パラメータ評価ツール</h3>
+        <p class="desc">5万点のサンプルデータで高速にパラメータを評価します。</p>
+
+        <div id="status">準備中...</div>
+        
+        <hr>
+        <h4>ステップ1：法線計算</h4>
+        <p class="desc">点群の各点がどちらを向いているかを計算します。</p>
+        <button id="calculateNormalsButton" disabled>法線を計算</button>
+        
+        <label for="kValue">近傍点の数 (k): <span id="kValueSpan">20</span></label>
+        <p class="desc">平滑さ。値を大きくすると滑らかになり、ノイズに強くなりますが、細かいディテールが失われます。</p>
+        <input type="range" id="kValue" min="3" max="100" value="20">
+        
+        <label for="normalLength">法線表示長: <span id="normalLengthSpan">1.0</span></label>
+        <input type="range" id="normalLength" min="0.1" max="5" value="1.0" step="0.1">
+
+        <hr>
+        <h4>ステップ2：ポアソン法メッシュ化</h4>
+        <p class="desc">法線情報を元にサーフェスを生成します。</p>
+        <button id="poissonReconButton" disabled>メッシュ化実行</button>
+        
+        <label for="poissonDepth">オクツリー深度: <span id="poissonDepthSpan">7</span></label>
+        <p class="desc"><strong>解像度。</strong>最も重要なパラメータ。値を1上げるだけで計算量が指数関数的に増えますが、より詳細なメッシュが生成されます。</p>
+        <input type="range" id="poissonDepth" min="5" max="9" value="7">
+
+        <label for="poissonSamples">Samples/Node: <span id="poissonSamplesSpan">1.0</span></label>
+        <p class="desc">品質。点群がまばらな場合やノイズが多い場合に、値を大きくすると穴を埋める効果が期待できます。</p>
+        <input type="range" id="poissonSamples" min="1.0" max="30.0" value="1.0" step="0.5">
+
+        <label for="poissonScale">スケール係数: <span id="poissonScaleSpan">1.1</span></label>
+        <p class="desc"> bounding boxの倍率。メッシュの端が欠ける場合に少し大きくします。通常は1.1で問題ありません。</p>
+        <input type="range" id="poissonScale" min="1.0" max="1.5" value="1.1" step="0.01">
+    </div>
+
+    <div id="viewer"></div>
+
+    <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/" } }</script>
+    <script type="module" src="tester.js"></script>
+</body>
+</html>
