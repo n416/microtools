@@ -4,39 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PvEランキング 絞り込み・並び替え機能付き</title>
-  <style>
-    :root { --bg:#0b0f14; --card:#121821; --muted:#94a3b8; --text:#e5e7eb; --accent:#4f46e5; --border:#243041; }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; background: var(--bg); color: var(--text); }
-    header { padding: 24px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(79,70,229,.12), transparent 60%); }
-    h1 { margin: 0 0 6px; font-size: 20px; }
-    .container { padding: 20px 24px 40px; max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 900px) { .container { grid-template-columns: 300px 1fr; } }
-    .filters-panel { display: grid; grid-template-columns: 1fr; gap: 16px; align-content: start; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
-    .card h2 { font-size: 16px; margin: 0 0 8px; }
-    .card .body { padding: 14px; }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .checkboxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px 10px; max-height: 220px; overflow: auto; padding-right: 6px; }
-    .chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: #0f1520; font-size: 13px; }
-    .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    button { padding: 8px 12px; background: #0f1520; color: var(--text); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
-    button.primary { background: var(--accent); border-color: var(--accent); }
-    table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); background: #0b111a; }
-    thead th { position: sticky; top: 0; background: #0f1520; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); text-align: left; padding: 10px; }
-    thead th.sortable { cursor: pointer; user-select: none; }
-    thead th.sortable:hover { color: var(--text); }
-    thead th .sort-indicator { display: inline-block; width: 1em; text-align: center; color: var(--muted); }
-    thead th.sorted .sort-indicator { color: var(--text); }
-    tbody td { padding: 12px 10px; border-bottom: 1px solid rgba(36,48,65,.5); }
-    tbody tr.hide { display: none; }
-    .muted { color: var(--muted); font-size: 12px; }
-    .spacer { flex: 1; }
-    #rankTable td:first-child,
-    #rankTable th:first-child { text-align: center; }
-    footer { text-align: center; padding: 20px; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <div class="container">
     <aside class="filters-panel">
@@ -45,15 +15,9 @@
           <div class="row" style="align-items:flex-start">
             <div>
               <h2>サーバーで絞り込み</h2>
-              <div class="muted">（ ）は総所属数</div>
-            </div>
-            <span class="spacer"></span>
-            <div class="controls">
-              <button id="serverAll" class="primary">全選択</button>
-              <button id="serverNone">全解除</button>
             </div>
           </div>
-          <div id="serverBox" class="checkboxes" aria-label="サーバー選択"></div>
+          <div id="serverBox"></div>
         </div>
       </div>
 
@@ -61,21 +25,23 @@
         <div class="body">
           <div class="row" style="align-items:flex-start">
             <div>
-              <h2>ギルドで絞り込み</h2>
-              <div class="muted">（ ）は選択サーバー内での所属数</div>
-            </div>
-            <span class="spacer"></span>
-            <div class="controls">
-              <button id="guildAll" class="primary">全選択</button>
-              <button id="guildNone">全解除</button>
+              <div class="filter-header">
+                <h2>ギルドで絞り込み</h2>
+                <span class="text-links">
+                  （<a href="#" id="guildAll">全選択する</a> / <a href="#" id="guildNone">解除する</a>）
+                </span>
+              </div>
+              <div class="muted">（ ）内は選択サーバーでの所属数</div>
             </div>
           </div>
-          <div id="guildBox" class="checkboxes" aria-label="ギルド選択"></div>
+          <div id="guildBox" aria-label="ギルド選択"></div>
         </div>
       </div>
     </aside>
 
     <main class="content">
+      <div id="summary" class="summary-card"></div>
+      
       <div class="card">
         <div class="body" style="padding:0">
           <table id="rankTable">
@@ -87,264 +53,18 @@
                 <th class="sortable" data-column="server">サーバー<span class="sort-indicator"></span></th>
               </tr>
             </thead>
-            <tbody>
-              </tbody>
+            <tbody></tbody>
           </table>
         </div>
       </div>
     </main>
   </div>
-  
+
   <footer>
-      <button id="clearCacheBtn">キャッシュクリア</button>
+    <button id="clearCacheBtn">キャッシュクリア</button>
   </footer>
 
   <script src="data.js"></script>
-  
-  <script>
-    // ===== Utility helpers =====
-    const qs  = (s, el=document) => el.querySelector(s);
-    const qsa = (s, el=document) => Array.from(el.querySelectorAll(s));
-    const FILTER_STORAGE_KEY = 'pveRankingFilters';
-    const COUNT_CACHE_KEY = 'pveRankingCounts';
-
-    // ===== Server master list (固定) =====
-    const serverList = [
-      'Kiki1','Kiki2','Kiki3','Kiki4','Kiki5',
-      'Anica1','Anica2','Anica3','Anica4','Anica5',
-      'Hugo1','Hugo2','Hugo3','Hugo4','Hugo5'
-    ];
-    
-    // ===== Global State =====
-    const table = qs('#rankTable');
-    const tbody = table.tBodies[0];
-    const rows = [];
-    let serverMemberCounts, guildMemberCountsByServer;
-
-    // ===== Data Initialization and Pre-computation =====
-    // originalData is loaded from the external data.js file
-    originalData.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${item.rank}</td><td>${item.name}</td><td>${item.guild}</td><td>${item.server}</td>`;
-        rows.push({ ...item, tr });
-    });
-
-    const cachedCounts = localStorage.getItem(COUNT_CACHE_KEY);
-    if (cachedCounts) {
-        const parsed = JSON.parse(cachedCounts);
-        serverMemberCounts = parsed.serverCounts;
-        guildMemberCountsByServer = parsed.guildCounts;
-    } else {
-        serverMemberCounts = {};
-        guildMemberCountsByServer = {};
-        originalData.forEach(p => {
-            serverMemberCounts[p.server] = (serverMemberCounts[p.server] || 0) + 1;
-            if (!guildMemberCountsByServer[p.guild]) {
-                guildMemberCountsByServer[p.guild] = {};
-            }
-            guildMemberCountsByServer[p.guild][p.server] = (guildMemberCountsByServer[p.guild][p.server] || 0) + 1;
-        });
-        localStorage.setItem(COUNT_CACHE_KEY, JSON.stringify({
-            serverCounts: serverMemberCounts,
-            guildCounts: guildMemberCountsByServer
-        }));
-    }
-
-    // ===== Build filter UIs =====
-    const allGuilds = Array.from(new Set(rows.map(r => r.guild))).sort((a,b)=>a.localeCompare(b, 'ja'));
-    const serverBox = qs('#serverBox');
-    const guildBox  = qs('#guildBox');
-
-    function makeCheckbox(id, labelText, checked = true) {
-      const label = document.createElement('label');
-      label.className = 'chip';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.value = id;
-      cb.checked = checked;
-      const span = document.createElement('span');
-      span.textContent = labelText;
-      label.append(cb, span);
-      return { wrapper: label, input: cb, text: span };
-    }
-    
-    const handleServerChange = () => {
-        updateGuildFilterList();
-        updateAndSortGuildList();
-        applyFilters();
-    };
-
-    const serverInputs = serverList.map(name => {
-      const count = serverMemberCounts[name] || 0;
-      const { wrapper, input } = makeCheckbox(name, `${name} (${count})`, true);
-      serverBox.appendChild(wrapper);
-      input.addEventListener('change', handleServerChange);
-      return input;
-    });
-
-    const guildUI = new Map();
-    const guildInputs = allGuilds.map(name => {
-      const { wrapper, input, text } = makeCheckbox(name, `${name} (0)`, true);
-      wrapper.dataset.guild = name;
-      guildBox.appendChild(wrapper);
-      input.addEventListener('change', applyFilters);
-      guildUI.set(name, { wrapper, input, text });
-      return input; 
-    });
-
-    // Bulk select/deselect buttons
-    qs('#serverAll').addEventListener('click', () => { serverInputs.forEach(i=>i.checked=true); handleServerChange(); });
-    qs('#serverNone').addEventListener('click', () => { serverInputs.forEach(i=>i.checked=false); handleServerChange(); });
-    qs('#guildAll').addEventListener('click',  () => { 
-        guildInputs.forEach(i => {
-            const wrapper = guildUI.get(i.value)?.wrapper;
-            if (wrapper && wrapper.style.display !== 'none') { i.checked = true; }
-        });
-        applyFilters(); 
-    });
-    qs('#guildNone').addEventListener('click',  () => { guildInputs.forEach(i=>i.checked=false); applyFilters(); });
-    qs('#clearCacheBtn').addEventListener('click', () => {
-        localStorage.removeItem(FILTER_STORAGE_KEY);
-        localStorage.removeItem(COUNT_CACHE_KEY);
-        alert('キャッシュをクリアしました。ページをリロードします。');
-        location.reload();
-    });
-
-    // ===== Local Storage for Filters =====
-    function saveFilters() {
-      const settings = {
-        selectedServers: serverInputs.filter(i => i.checked).map(i => i.value),
-        selectedGuilds: guildInputs.filter(i => i.checked).map(i => i.value),
-      };
-      localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(settings));
-    }
-
-    function loadFilters() {
-      const saved = localStorage.getItem(FILTER_STORAGE_KEY);
-      if (!saved) return;
-      try {
-        const settings = JSON.parse(saved);
-        if (settings.selectedServers) {
-          const serverSet = new Set(settings.selectedServers);
-          serverInputs.forEach(i => i.checked = serverSet.has(i.value));
-        }
-        if (settings.selectedGuilds) {
-          const guildSet = new Set(settings.selectedGuilds);
-          guildInputs.forEach(i => i.checked = guildSet.has(i.value));
-        }
-      } catch (e) { console.error("Failed to load filters", e); }
-    }
-    
-    // ===== Dynamic UI Updates =====
-    function updateGuildFilterList() {
-        const selServers = new Set(serverInputs.filter(i => i.checked).map(i => i.value));
-        const availableGuilds = new Set();
-        rows.forEach(r => {
-            if (selServers.has(r.server)) { availableGuilds.add(r.guild); }
-        });
-        guildUI.forEach((ui, guildName) => {
-            const isAvailable = availableGuilds.has(guildName);
-            ui.wrapper.style.display = isAvailable ? '' : 'none';
-            if (!isAvailable) { ui.input.checked = false; }
-        });
-    }
-    
-    function updateAndSortGuildList() {
-        const selServers = new Set(serverInputs.filter(i => i.checked).map(i => i.value));
-        const currentGuildCounts = {};
-
-        allGuilds.forEach(guildName => {
-            let count = 0;
-            const guildData = guildMemberCountsByServer[guildName];
-            if (guildData) {
-                selServers.forEach(serverName => {
-                    if (guildData[serverName]) { count += guildData[serverName]; }
-                });
-            }
-            currentGuildCounts[guildName] = count;
-            const ui = guildUI.get(guildName);
-            if(ui) ui.text.textContent = `${guildName} (${count})`;
-        });
-
-        const entries = Array.from(guildUI.values()).map(ui => ({
-            name: ui.input.value,
-            count: currentGuildCounts[ui.input.value] ?? 0,
-            ui: ui
-        }));
-      
-        entries.sort((a, b) => {
-            if (b.count !== a.count) return b.count - a.count;
-            return a.name.localeCompare(b.name, 'ja');
-        });
-
-        const frag = document.createDocumentFragment();
-        for (const e of entries) frag.appendChild(e.ui.wrapper);
-        guildBox.appendChild(frag);
-    }
-
-    // ===== Core filtering & Table Sorting =====
-    function applyFilters() {
-      const selServers = new Set(serverInputs.filter(i=>i.checked).map(i=>i.value));
-      const selGuilds  = new Set(guildInputs.filter(i=>i.checked).map(i=>i.value));
-      rows.forEach(r => {
-        const show = selServers.has(r.server) && selGuilds.has(r.guild);
-        r.tr.classList.toggle('hide', !show);
-      });
-      saveFilters();
-    }
-
-    let currentSort = { column: 'rank', direction: 'asc' };
-    function sortRows() {
-      const { column, direction } = currentSort;
-      const modifier = direction === 'asc' ? 1 : -1;
-      rows.sort((a, b) => {
-        const valA = a[column];
-        const valB = b[column];
-        if (column === 'rank') { return (valA - valB) * modifier; } 
-        else { return valA.localeCompare(valB, 'ja') * modifier; }
-      });
-      const frag = document.createDocumentFragment();
-      rows.forEach(r => frag.appendChild(r.tr));
-      tbody.appendChild(frag);
-      updateSortIndicators();
-    }
-    
-    function updateSortIndicators() {
-        qsa('thead th.sortable').forEach(th => {
-            const indicator = th.querySelector('.sort-indicator');
-            if (th.dataset.column === currentSort.column) {
-                th.classList.add('sorted');
-                indicator.textContent = currentSort.direction === 'asc' ? '▲' : '▼';
-            } else {
-                th.classList.remove('sorted');
-                indicator.textContent = '';
-            }
-        });
-    }
-
-    qsa('thead th.sortable').forEach(th => {
-      th.addEventListener('click', () => {
-        const column = th.dataset.column;
-        if (currentSort.column === column) {
-          currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-          currentSort.column = column;
-          currentSort.direction = 'asc';
-        }
-        sortRows();
-      });
-    });
-
-    // ===== App Initialization =====
-    function initialize() {
-      loadFilters();
-      updateGuildFilterList();
-      updateAndSortGuildList();
-      applyFilters();
-      sortRows();
-    }
-    
-    initialize();
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
