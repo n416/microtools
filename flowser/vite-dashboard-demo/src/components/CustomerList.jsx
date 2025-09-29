@@ -4,7 +4,7 @@ import { styled } from '@mui/material/styles';
 
 const Pane = styled(Paper)({
   padding: '16px',
-  height: '100%', // ★★★ calc()を削除し、親のGridに高さを委ねる
+  height: '100%',
   overflow: 'auto',
 });
 
