@@ -6,29 +6,47 @@ import CustomerDetail from '../components/CustomerDetail';
 import WorkflowList from '../components/WorkflowList';
 import TaskDetailPane from '../components/TaskDetailPane';
 
+// ▼▼▼ 修正箇所 ▼▼▼
 const initialWorkflowLibrary = [
   {
-    id: 'wf001', name: '新規・コスト重視顧客向けフロー', description: '競合からの乗り換えで、初期費用を抑えたい顧客向けの標準フローです。',
+    id: 'wf001', name: '【標準】新車販売フロー', description: '新車のキャンピングカーを販売する際の標準的な業務フローです。',
     tasks: [
-      { id: 1, text: 'X社製品との機能比較表を提示する', refId: 'K004', completed: false, details: '顧客が気にしているポイント（価格、サポート体制）を中心に、X社製品との優位性をまとめた比較表を提示します。', documents: [{ name: '機能比較表_template.xlsx', url: '#', checked: false }, { name: '競合X社_最新情報.pdf', url: '#', checked: false }] },
-      { id: 2, text: '初期費用割引キャンペーンを適用する', refId: 'K005', completed: false, details: '現在適用可能なキャンペーンの中から、顧客にとって最もメリットの大きいものを選択して適用します。' },
-      { id: 3, text: '導入後のサポート体制を説明する', refId: 'AI', completed: false, details: '24時間365日のサポート体制と、専任担当者がつくことをアピールします。' },
+      { id: 1, text: '顧客要望ヒアリングと車種選定', refId: 'AI', completed: false, details: '顧客の利用用途、予算、希望装備などを詳しくヒアリングし、最適な車種を提案します。パンフレットやデモカーを活用します。', documents: [{ name: '車種カタログ.pdf', url: '#', checked: false }] },
+      { id: 2, text: '見積書作成とオプション確認', refId: 'K001', completed: false, details: '選択された車種をベースに、追加オプション（ソーラーパネル、FFヒーター、ナビ等）を含めた正式な見積書を作成し、提示します。' },
+      { id: 3, text: '注文書作成と契約締結', refId: 'K002', completed: false, details: '見積内容に合意後、注文書を作成します。契約内容を丁寧に説明し、署名・捺印をいただきます。', documents: [{ name: '売買契約書テンプレート.docx', url: '#', checked: false }] },
+      { id: 4, text: '納車前整備と最終点検', refId: 'K003', completed: false, details: 'メーカーから車両が到着後、専門スタッフがオプションの取り付け、内外装の最終チェック、清掃を行います。' },
+      { id: 5, text: '納車および操作説明', refId: 'AI', completed: false, details: '顧客に来店いただき、車両の最終確認を行います。各種装備の詳しい操作方法を実演しながら説明し、キーをお渡しします。' },
     ]
   },
   {
-    id: 'wf002', name: '既存・品質重視顧客向けフロー', description: 'システム障害を経験し、品質を最重要視する既存顧客向けのフローです。',
+    id: 'wf002', name: '【標準】中古車買取フロー', description: '顧客からキャンピングカーを買い取る際の標準的な業務フローです。',
     tasks: [
-      { id: 1, text: '定例会で品質レポートを提出する', refId: 'K002', completed: true, details: '先月の稼働率、インシデント件数、解決までの平均時間をまとめたレポートを提出します。' },
-      { id: 2, text: '次期製品の先行プレビューを案内する', refId: 'K003', completed: false, details: '開発中の次期製品について、NDA締結の上で先行プレビューの機会を提供し、特別感を演出します。' },
-      { id: 3, text: '障害の再発防止策を改めて説明する', refId: 'K001', completed: false, details: '先日発生した障害の根本原因と、恒久的な再発防止策について、担当役員レベルで再度説明の場を設けます。', documents: [{ name: '再発防止策ご説明資料.pdf', url: '#', checked: true }] },
+      { id: 1, text: '査定予約の受付と車両情報確認', refId: 'AI', completed: true, details: '電話またはウェブサイトから査定予約を受け付けます。車種、年式、走行距離、装備などの基本情報を事前にヒアリングします。' },
+      { id: 2, text: '実車査定と査定額の提示', refId: 'K004', completed: false, details: '予約日に顧客に来店いただき、車両の状態（内外装、エンジン、電装系）を詳細にチェックします。市場価格と車両状態を基に、適正な査定額を算出・提示します。', documents: [{ name: '中古車査定チェックシート.xlsx', url: '#', checked: true }] },
+      { id: 3, text: '必要書類の案内と準備依頼', refId: 'K005', completed: false, details: '契約に必要な書類（車検証、自賠責保険証、印鑑証明書など）のリストをお渡しし、準備を依頼します。' },
+      { id: 4, text: '買取契約の締結と車両引き取り', refId: 'K002', completed: false, details: '書類が揃い次第、買取契約書に署名・捺印をいただきます。車両の引き取り日を調整し、車両をお預かりします。' },
+      { id: 5, text: '名義変更手続きと入金処理', refId: 'K006', completed: false, details: '引き取った車両の名義変更手続きを速やかに行い、指定の口座へ買取金額を振り込みます。' },
+    ]
+  },
+  {
+    id: 'wf003', name: '【緊急】重大クレーム対応フロー', description: '雨漏りやエンジン不動など、顧客満足度に大きく影響する重大なクレームに対応するためのフローです。',
+    tasks: [
+      { id: 1, text: '第一次受付と状況ヒアリング', refId: 'AI', completed: false, details: '顧客からのクレーム連絡を最優先で受け付け、冷静に状況をヒアリングします。感情的にならず、事実確認に徹します。' },
+      { id: 2, text: '車両の緊急引き取りまたは出張点検', refId: 'K007', completed: false, details: '車両が自走不能な場合は積載車を手配します。自走可能な場合でも、迅速に車両をお預かりするか、サービスカーで現地へ向かいます。' },
+      { id: 3, text: '原因の徹底調査と特定', refId: 'K008', completed: false, details: 'サービス部門が総出で不具合の原因を調査・特定します。必要であればメーカーにも問い合わせ、情報を収集します。', documents: [{ name: '故障探求マニュアル.pdf', url: '#', checked: false }] },
+      { id: 4, text: '顧客への経過報告と対応策の提案', refId: 'AI', completed: false, details: '調査状況を定期的に顧客へ報告し、不安を和らげます。原因が特定でき次第、修理内容、期間、費用（保証適用の有無）について正式に提案します。' },
+      { id: 5, text: '修理・交換作業と最終テスト', refId: 'K003', completed: false, details: '提案内容に合意後、修理・交換作業を実施します。作業完了後、複数回の走行テストや漏水テストを行い、不具合が完全に解消されたことを確認します。' },
+      { id: 6, text: '納車および謝罪と再発防止策の説明', refId: 'AI', completed: false, details: '車両を納車する際、改めて謝罪するとともに、今回の原因と実施した対策、今後の再発防止策について丁寧に説明します。' },
     ]
   },
 ];
+// ▲▲▲ 修正箇所 ▲▲▲
+
 const initialCustomerData = [
-  { id: 1, name: '山田 太郎', company: '株式会社A', status: 'critical', assignedFlowId: 'wf002' },
-  { id: 2, name: '田中 次郎', company: '株式会社B', status: 'progress', assignedFlowId: null },
+  { id: 1, name: '山田 太郎', company: '株式会社A', status: 'critical', assignedFlowId: 'wf003' },
+  { id: 2, name: '田中 次郎', company: '株式会社B', status: 'progress', assignedFlowId: 'wf001' },
   { id: 3, name: '鈴木 三郎', company: '株式会社C', status: 'success', assignedFlowId: null },
-  { id: 4, name: '佐藤 四郎', company: '株式会社D', status: 'new', assignedFlowId: 'wf001' },
+  { id: 4, name: '佐藤 四郎', company: '株式会社D', status: 'new', assignedFlowId: 'wf002' },
 ];
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
