@@ -23,22 +23,28 @@ function Header({ onResetData, isLocked, onToggleLock }) {
         <Typography variant="h5" component="h1">
           業務改善デモアプリ
         </Typography>
-        <Tabs value={location.pathname} sx={{ minHeight: 0, '& .MuiTabs-indicator': { height: 3 } }}>
-          <Tab 
-            label="顧客管理" 
-            value="/" 
-            to="/" 
-            component={Link} 
-            sx={{ py: 1, minHeight: 0 }}
-          />
-          <Tab 
-            label="AIフロー設計" 
-            value="/designer" 
-            to="/designer" 
-            component={Link}
-            sx={{ py: 1, minHeight: 0 }}
-          />
-        </Tabs>
+
+        {/* ▼▼▼ 修正点: isLockedがtrueの時にTabsを非表示にする ▼▼▼ */}
+        {!isLocked && (
+          <Tabs value={location.pathname} sx={{ minHeight: 0, '& .MuiTabs-indicator': { height: 3 } }}>
+            <Tab 
+              label="顧客管理" 
+              value="/" 
+              to="/" 
+              component={Link} 
+              sx={{ py: 1, minHeight: 0 }}
+            />
+            <Tab 
+              label="AIフロー設計" 
+              value="/designer" 
+              to="/designer" 
+              component={Link}
+              sx={{ py: 1, minHeight: 0 }}
+            />
+          </Tabs>
+        )}
+        {/* ▲▲▲ 修正点 ▲▲▲ */}
+
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         {location.pathname === '/' && onToggleLock && (
