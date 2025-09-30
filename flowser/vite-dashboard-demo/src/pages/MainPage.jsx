@@ -7,30 +7,38 @@ import WorkflowList from '../components/WorkflowList';
 import TaskDetailPane from '../components/TaskDetailPane';
 import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined';
 import ClearIcon from '@mui/icons-material/Clear';
-import { useAppContext } from '../context/AppContext';
+
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  setSelectedCustomerId,
+  setSelectedWorkflowId,
+  setSelectedTaskId,
+  assignWorkflowToCustomer,
+  unassignWorkflowFromCustomer,
+  updateTaskMemo,
+  toggleTask,
+  selectBranch,
+} from '../store/workflowSlice';
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
   width: 600, bgcolor: 'background.paper', border: '2px solid #000', boxShadow: 24, p: 4,
 };
-
 const keypadModalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
+  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
 };
 const PASSCODE = '1234';
 
 function MainPage() {
+  const dispatch = useDispatch();
+
   const {
     customerData,
-    selectedCustomerId, setSelectedCustomerId,
-    selectedWorkflowId, setSelectedWorkflowId,
-    selectedTaskIdentifier, setSelectedTaskIdentifier, // AppContextから取得
-    workflowLibrary, assignWorkflowToCustomer, unassignWorkflowFromCustomer,
-    handleUpdateTaskMemo, handleToggleTask, handleToggleDocument, proceedWithBranchChange
-  } = useAppContext();
+    workflowLibrary,
+    selectedCustomerId,
+    selectedWorkflowId,
+    selectedTaskId,
+  } = useSelector((state) => state.workflow);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCustomerListLocked, setIsCustomerListLocked] = useState(() => JSON.parse(localStorage.getItem('isCustomerListLocked')) || false);
@@ -39,84 +47,55 @@ function MainPage() {
   const [passcodeInput, setPasscodeInput] = useState('');
   const [isBranchConfirmModalOpen, setIsBranchConfirmModalOpen] = useState(false);
   const [branchChangeContext, setBranchChangeContext] = useState(null);
-  
-  useEffect(() => { localStorage.setItem('isCustomerListLocked', JSON.stringify(isCustomerListLocked)); }, [isCustomerListLocked]);
-  
-  const handleVisibilityChange = useCallback(() => {
-    const securityModeEnabled = JSON.parse(localStorage.getItem('securityMode')) || false;
-    if (securityModeEnabled && document.visibilityState === 'hidden' && !isCustomerListLocked) {
-      setIsCustomerListLocked(true);
-    }
-  }, [isCustomerListLocked]);
 
-  useEffect(() => {
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [handleVisibilityChange]);
+  const selectedCustomer = useMemo(() => customerData.find(c => c.id === selectedCustomerId), [customerData, selectedCustomerId]);
+  const assignedFlows = useMemo(() => selectedCustomer?.assignedWorkflows || [], [selectedCustomer]);
 
-  const selectedCustomer = customerData.find(c => c.id === selectedCustomerId);
-  const assignedFlows = selectedCustomer?.assignedWorkflows || [];
-  
   const validSelectedWorkflowId = useMemo(() => {
     if (!assignedFlows || assignedFlows.length === 0) return null;
     const isIdValid = assignedFlows.some(wf => wf.instanceId === selectedWorkflowId);
-    if (isIdValid) {
-      return selectedWorkflowId;
-    }
-    return assignedFlows.length > 0 ? assignedFlows[0].instanceId : null;
+    if (isIdValid) return selectedWorkflowId;
+    return assignedFlows[0]?.instanceId || null;
   }, [assignedFlows, selectedWorkflowId]);
 
   useEffect(() => {
     if (validSelectedWorkflowId !== selectedWorkflowId) {
-      setSelectedWorkflowId(validSelectedWorkflowId);
+      dispatch(setSelectedWorkflowId(validSelectedWorkflowId));
     }
-  }, [validSelectedWorkflowId, selectedWorkflowId, setSelectedWorkflowId]);
+  }, [validSelectedWorkflowId, selectedWorkflowId, dispatch]);
 
-  const currentWorkflow = assignedFlows.find(wf => wf.instanceId === validSelectedWorkflowId);
-
-  useEffect(() => {
-    if (currentWorkflow && currentWorkflow.tasks.length > 0) {
-      const findTaskRecursive = (tasks, taskId) => {
-        for (const task of tasks) {
-          if (task.id === taskId) return true;
-          if (task.type === 'nested_branch' && task.selectedOption && task.options[task.selectedOption]) {
-            if (findTaskRecursive(task.options[task.selectedOption].tasks, taskId)) return true;
-          }
-        }
-        return false;
-      };
-      const currentTaskExists = selectedTaskIdentifier && findTaskRecursive(currentWorkflow.tasks, selectedTaskIdentifier.taskId);
-      if (!currentTaskExists) {
-        const firstTask = currentWorkflow.tasks[0];
-        if (firstTask) {
-           setSelectedTaskIdentifier({ taskId: firstTask.id });
-        }
-      }
-    } else {
-      setSelectedTaskIdentifier(null);
-    }
-  }, [currentWorkflow, selectedTaskIdentifier, setSelectedTaskIdentifier]);
+  const currentWorkflow = useMemo(() => assignedFlows.find(wf => wf.instanceId === validSelectedWorkflowId), [assignedFlows, validSelectedWorkflowId]);
 
   const selectedTask = useMemo(() => {
-    if (!selectedTaskIdentifier || !currentWorkflow) return null;
-     const findTask = (tasks, taskId) => {
+    if (!selectedTaskId || !currentWorkflow) return null;
+    const findTask = (tasks, id) => {
       for (const task of tasks) {
-        if (task.id === taskId) return task;
+        if (task.id === id) return task;
         if (task.type === 'nested_branch' && task.selectedOption && task.options[task.selectedOption]) {
-          const foundInSub = findTask(task.options[task.selectedOption].tasks || [], taskId);
+          const foundInSub = findTask(task.options[task.selectedOption].tasks || [], id);
           if (foundInSub) return foundInSub;
         }
       }
       return null;
     };
-    return findTask(currentWorkflow.tasks, selectedTaskIdentifier.taskId);
-  }, [selectedTaskIdentifier, currentWorkflow]);
+    return findTask(currentWorkflow.tasks, selectedTaskId);
+  }, [selectedTaskId, currentWorkflow]);
 
   const handleAssignFlow = (workflowTemplateId) => {
-    assignWorkflowToCustomer(selectedCustomerId, workflowTemplateId);
+    dispatch(assignWorkflowToCustomer({ customerId: selectedCustomerId, workflowTemplateId }));
     setIsModalOpen(false);
   };
-  
+  const handleUnassignFlow = (workflowInstanceId) => {
+    dispatch(unassignWorkflowFromCustomer({ customerId: selectedCustomerId, workflowInstanceId }));
+  };
+  const handleUpdateTaskMemo = (taskId, memo) => {
+    dispatch(updateTaskMemo({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId, memo }));
+  };
+  const handleToggleTask = (taskId) => {
+    dispatch(toggleTask({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId }));
+  };
+
+  // ▼▼▼ 修正: 分岐選択のロジックを、Reduxの作法に合わせて修正 ▼▼▼
   const handleSelectBranch = (taskId, newOptionKey) => {
     const behavior = localStorage.getItem('branchResetBehavior') || 'confirm';
     if (!currentWorkflow) return;
@@ -139,7 +118,7 @@ function MainPage() {
 
     const isSwitching = targetTask.selectedOption && targetTask.selectedOption !== newOptionKey;
     if (!isSwitching) {
-      proceedWithBranchChange(selectedCustomerId, validSelectedWorkflowId, taskId, newOptionKey, false);
+      dispatch(selectBranch({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId, optionKey: newOptionKey, shouldReset: false }));
       return;
     }
 
@@ -160,28 +139,35 @@ function MainPage() {
 
     const hasProgress = hasCompletedSubTasksRecursive(prevSubTasks);
 
-    if (!hasProgress) {
-      proceedWithBranchChange(selectedCustomerId, validSelectedWorkflowId, taskId, newOptionKey, false);
+    if (!hasProgress || behavior === 'keep') {
+      dispatch(selectBranch({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId, optionKey: newOptionKey, shouldReset: false }));
+      return;
+    }
+    if (behavior === 'clear') {
+      dispatch(selectBranch({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId, optionKey: newOptionKey, shouldReset: true }));
       return;
     }
 
-    if (behavior === 'confirm') {
-      setBranchChangeContext({ taskId, newOptionKey });
-      setIsBranchConfirmModalOpen(true);
-      return;
-    }
-    
-    proceedWithBranchChange(selectedCustomerId, validSelectedWorkflowId, taskId, newOptionKey, behavior === 'clear');
+    // behavior === 'confirm' の場合のみモーダルを表示
+    setBranchChangeContext({ taskId, newOptionKey });
+    setIsBranchConfirmModalOpen(true);
   };
 
   const handleConfirmBranchChange = (shouldReset) => {
     if (branchChangeContext) {
       const { taskId, newOptionKey } = branchChangeContext;
-      proceedWithBranchChange(selectedCustomerId, validSelectedWorkflowId, taskId, newOptionKey, shouldReset);
+      dispatch(selectBranch({
+        customerId: selectedCustomerId,
+        workflowInstanceId: validSelectedWorkflowId,
+        taskId,
+        optionKey: newOptionKey,
+        shouldReset
+      }));
     }
     setIsBranchConfirmModalOpen(false);
     setBranchChangeContext(null);
   };
+
 
   const handleToggleLock = () => {
     if (isCustomerListLocked) {
@@ -191,16 +177,13 @@ function MainPage() {
       setIsLockConfirmOpen(true);
     }
   };
-  
   const handleConfirmLock = () => {
     setIsCustomerListLocked(true);
     setIsLockConfirmOpen(false);
   };
-
   const handleKeypadInput = (num) => setPasscodeInput(prev => prev + num);
   const handleKeypadBackspace = () => setPasscodeInput(prev => prev.slice(0, -1));
   const handleKeypadClear = () => setPasscodeInput('');
-
   useEffect(() => {
     if (passcodeInput === PASSCODE) {
       setIsCustomerListLocked(false);
@@ -208,7 +191,6 @@ function MainPage() {
       setPasscodeInput('');
     }
   }, [passcodeInput]);
-
   const keypadItems = [
     { type: 'num', value: 1 }, { type: 'num', value: 2 }, { type: 'num', value: 3 },
     { type: 'num', value: 4 }, { type: 'num', value: 5 }, { type: 'num', value: 6 },
@@ -221,53 +203,49 @@ function MainPage() {
       <Box sx={{ p: '0 24px' }}><Header isLocked={isCustomerListLocked} onToggleLock={handleToggleLock} /></Box>
       <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
         {!isCustomerListLocked && (
-            <Box sx={{ flex: '0 1 320px', minWidth: 280, transition: 'all 0.3s ease' }}>
-                <CustomerList customers={customerData} selectedCustomerId={selectedCustomerId} onSelectCustomer={setSelectedCustomerId} />
-            </Box>
+          <Box sx={{ flex: '0 1 320px', minWidth: 280, transition: 'all 0.3s ease' }}>
+            <CustomerList customers={customerData} selectedCustomerId={selectedCustomerId} onSelectCustomer={(id) => dispatch(setSelectedCustomerId(id))} />
+          </Box>
         )}
         <Box sx={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', gap: 2, minHeight: 'fit-content', minWidth: 400 }}>
-          <CustomerDetail 
-            customer={selectedCustomer} 
-            assignedFlows={assignedFlows} 
-            onUnassignFlow={(instanceId) => unassignWorkflowFromCustomer(selectedCustomerId, instanceId)} 
-            onOpenModal={() => setIsModalOpen(true)} 
+          <CustomerDetail
+            customer={selectedCustomer}
+            assignedFlows={assignedFlows}
+            onUnassignFlow={handleUnassignFlow}
+            onOpenModal={() => setIsModalOpen(true)}
           />
-          <WorkflowList 
-            assignedFlows={assignedFlows} 
-            selectedWorkflowId={validSelectedWorkflowId} 
-            onSelectWorkflow={setSelectedWorkflowId} 
-            currentWorkflow={currentWorkflow} 
-            onSelectTask={(taskId) => setSelectedTaskIdentifier({ taskId })}
-            selectedTaskId={selectedTaskIdentifier?.taskId} 
+          <WorkflowList
+            assignedFlows={assignedFlows}
+            selectedWorkflowId={validSelectedWorkflowId}
+            onSelectWorkflow={(id) => dispatch(setSelectedWorkflowId(id))}
+            currentWorkflow={currentWorkflow}
+            onSelectTask={(id) => dispatch(setSelectedTaskId(id))}
+            selectedTaskId={selectedTaskId}
           />
         </Box>
         <Box sx={{ flex: '0 1 35%', minWidth: 320 }}>
           <TaskDetailPane
-            key={selectedTask ? `${validSelectedWorkflowId}-${selectedTaskIdentifier.taskId}` : 'no-task-selected'}
+            key={selectedTask ? `${validSelectedWorkflowId}-${selectedTaskId}` : 'no-task-selected'}
             task={selectedTask}
-            customerId={selectedCustomerId}
-            workflowInstanceId={validSelectedWorkflowId}
-            onToggleDocument={(docName) => selectedTask && handleToggleDocument(selectedCustomerId, validSelectedWorkflowId, selectedTask.id, docName)}
-            onToggleTask={() => selectedTask && handleToggleTask(selectedCustomerId, validSelectedWorkflowId, selectedTask.id)}
-            onSelectBranch={handleSelectBranch}
-            onUpdateTaskMemo={(memo) => selectedTask && handleUpdateTaskMemo(selectedCustomerId, validSelectedWorkflowId, selectedTask.id, memo)}
+            onUpdateTaskMemo={(memo) => selectedTask && handleUpdateTaskMemo(selectedTask.id, memo)}
+            onToggleTask={() => selectedTask && handleToggleTask(selectedTask.id)}
+            onSelectBranch={(optionKey) => selectedTask && handleSelectBranch(selectedTask.id, optionKey)}
           />
         </Box>
       </Box>
-
       <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <Box sx={modalStyle}>
           <Typography variant="h6" component="h2" gutterBottom>業務フローを選択</Typography>
           <List>
             {workflowLibrary.map(wf => (
-              <ListItemButton key={wf.id} onClick={() => handleAssignFlow(wf.id)}>
+              <ListItemButton key={wf.id} onClick={() => handleAssignFlow(wf.id)} disabled={assignedFlows.some(af => af.templateId === wf.id)}>
                 <ListItemText primary={wf.name} secondary={wf.description} />
               </ListItemButton>
             ))}
           </List>
         </Box>
       </Modal>
-      
+
       <Modal open={isLockConfirmOpen} onClose={() => setIsLockConfirmOpen(false)}>
         <Box sx={modalStyle} style={{ width: 400 }}>
           <Typography variant="h6" component="h2">顧客リストをロックしますか？</Typography>
@@ -278,27 +256,29 @@ function MainPage() {
           </Box>
         </Box>
       </Modal>
-      
+
       <Modal open={isBranchConfirmModalOpen} onClose={() => { setIsBranchConfirmModalOpen(false); setBranchChangeContext(null); }}>
-         <Box sx={{ ...modalStyle, width: 500 }}>
-           <Typography variant="h6" component="h2">プラン変更時の進捗の扱いを選択</Typography>
-           <Typography sx={{ mt: 2 }}>
-             以前のプランには完了済みのサブタスクが存在します。新しいプランに切り替える際に、以前のプランの進捗をどう扱いますか？
-           </Typography>
-           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-             <Button variant="outlined" color="secondary" onClick={() => { setIsBranchConfirmModalOpen(false); setBranchChangeContext(null); }}>
-               キャンセル
-             </Button>
-             <Button variant="outlined" color="primary" onClick={() => handleConfirmBranchChange(false)}>
-               はい (進捗を維持)
-             </Button>
-             <Button variant="contained" color="primary" onClick={() => handleConfirmBranchChange(true)}>
-               はい (進捗をクリア)
-             </Button>
-           </Box>
-         </Box>
-       </Modal>
-       
+        <Box sx={{ ...modalStyle, width: 500 }}>
+          <Typography variant="h6" component="h2">プラン変更時の進捗の扱いを選択</Typography>
+          <Typography sx={{ mt: 2 }}>
+            以前のプランには完了済みのサブタスクが存在します。新しいプランに切り替える際に、以前のプランの進捗をどう扱いますか？
+          </Typography>
+          {/* ▼▼▼ ここからボタンの定義を修正 ▼▼▼ */}
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button variant="outlined" onClick={() => { setIsBranchConfirmModalOpen(false); setBranchChangeContext(null); }}>
+              キャンセル
+            </Button>
+            <Button variant="outlined" color="primary" onClick={() => handleConfirmBranchChange(false)}>
+              はい (進捗を維持)
+            </Button>
+            <Button variant="contained" color="error" onClick={() => handleConfirmBranchChange(true)}>
+              はい (進捗をクリア)
+            </Button>
+          </Box>
+          {/* ▲▲▲ ここまで修正 ▲▲▲ */}
+        </Box>
+      </Modal>
+
       <Modal open={isKeypadOpen} onClose={() => setIsKeypadOpen(false)}>
         <Box sx={keypadModalStyle}>
           <Paper sx={{ p: 2, borderRadius: 2, boxShadow: 24, border: '2px solid #000' }}>
