@@ -6,18 +6,18 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 const Pane = styled(Paper)({
   padding: '16px',
-  // ★★★ このパネルが伸び縮みしないように固定 ★★★
   flexShrink: 0,
 });
 
 const statusConfig = {
-    critical: { label: '要対応', color: 'error' },
-    progress: { label: '対応中', color: 'warning' },
-    success: { label: '完了', color: 'success' },
-    new: { label: '新規', color: 'default' },
+  critical: { label: '要対応', color: 'error' },
+  progress: { label: '対応中', color: 'warning' },
+  success: { label: '完了', color: 'success' },
+  new: { label: '新規', color: 'default' },
 };
 
-function CustomerDetail({ customer, onOpenModal }) {
+// ▼▼▼ 修正: propsに assignedFlows と onUnassignFlow を追加 ▼▼▼
+function CustomerDetail({ customer, assignedFlows, onUnassignFlow, onOpenModal }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (!customer) {
@@ -32,7 +32,7 @@ function CustomerDetail({ customer, onOpenModal }) {
           {isCollapsed ? <KeyboardArrowDownIcon /> : <KeyboardArrowUpIcon />}
         </IconButton>
       </Box>
-      
+
       {!isCollapsed && (
         <Box sx={{ mt: 1 }}>
           <Typography variant="h5">{customer.name}</Typography>
@@ -45,6 +45,30 @@ function CustomerDetail({ customer, onOpenModal }) {
             />
           )}
           <Divider sx={{ my: 2 }} />
+
+          {/* ▼▼▼ 修正: 割り当てられたフローをチップで表示 ▼▼▼ */}
+          <Typography variant="subtitle2" gutterBottom>
+            割り当て済みフロー
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+            {assignedFlows && assignedFlows.length > 0 ? (
+              assignedFlows.map(flow => (
+                <Chip
+                  key={flow.id}
+                  label={flow.name}
+                  onDelete={() => onUnassignFlow(flow.id)}
+                  color="primary"
+                  variant="outlined"
+                />
+              ))
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                (なし)
+              </Typography>
+            )}
+          </Box>
+          {/* ▲▲▲ 修正 ▲▲▲ */}
+
           <Button variant="contained" onClick={onOpenModal}>
             業務フローを割り当て
           </Button>
