@@ -4,28 +4,18 @@ import Header from '../components/Header';
 import { GeminiApiClient } from '../api/geminiApiClient.js';
 
 function FlowDesignerPage() {
-  // 状態管理
   const [knowledgeBase, setKnowledgeBase] = useState([]);
   const [newKnowledgeText, setNewKnowledgeText] = useState('');
   const [instruction, setInstruction] = useState('');
-  const [apiKey, setApiKey] = useState('');
   const [generatedTasks, setGeneratedTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [newFlowName, setNewFlowName] = useState('');
 
-  // 初期化時にlocalStorageからデータを読み込む
+  // 初期化時にlocalStorageから知識ベースを読み込む
   useEffect(() => {
     const savedKnowledge = JSON.parse(localStorage.getItem('knowledgeBase')) || [];
     setKnowledgeBase(savedKnowledge);
-    const savedApiKey = localStorage.getItem('geminiApiKey') || '';
-    setApiKey(savedApiKey);
   }, []);
-
-  // APIキーを保存するハンドラ
-  const handleSaveApiKey = () => {
-    localStorage.setItem('geminiApiKey', apiKey);
-    alert('APIキーを保存しました。');
-  };
 
   // 新しい知識を登録するハンドラ
   const handleAddKnowledge = () => {
@@ -51,14 +41,13 @@ function FlowDesignerPage() {
     try {
         const gemini = new GeminiApiClient();
         if (!gemini.isAvailable) {
-            throw new Error('APIキーが未設定です。');
+            // ▼▼▼ 修正: エラーメッセージを分かりやすく ▼▼▼
+            throw new Error('APIキーが未設定です。右上の設定アイコンからAPIキーを登録してください。');
         }
         const knowledgeText = knowledgeBase.map(k => `${k.id}: ${k.text}`).join('\n');
         const prompt = `あなたは優秀な業務コンサルタントです。以下の【知識リスト】を制約条件として厳守し、ユーザーからの【指示】に合致する業務フローを、論理的に矛盾のないステップ・バイ・ステップのリスト形式で提案してください。各ステップがどの知識に基づいているか、IDを明記してください。\n\n【知識リスト】\n${knowledgeText}\n\n【指示】\n${instruction}\n\n【出力形式】\n- (タスク内容1) (根拠: KXXX)\n- (タスク内容2) (根拠: KXXX)\n- (AIが補完したタスク内容)`;
         
-        // ▼▼▼ 修正点: 元のscript.jsの記述に完全に戻しました ▼▼▼
-        const modelName = 'gemini-pro-latest'; 
-        // ▲▲▲ 修正点 ▲▲▲
+        const modelName = 'gemini-pro'; 
         const resultText = await gemini.generateContent(prompt, modelName);
         
         const tasks = resultText.split('\n').filter(line => line.trim().startsWith('-')).map((line, index) => {
@@ -115,7 +104,7 @@ function FlowDesignerPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}>
       <Box sx={{ p: '0 24px' }}>
-         <Header onResetData={handleResetData} /> 
+         <Header onResetData={handleResetData} isLocked={false} /> 
       </Box>
       
       <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
@@ -123,20 +112,11 @@ function FlowDesignerPage() {
           <Grid item xs={12} md={5}>
             <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Typography variant="h6" gutterBottom>① 知識ベース</Typography>
-              <TextField
-                label="Gemini API Key"
-                variant="outlined"
-                fullWidth
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                sx={{ mb: 1 }}
-                type="password"
-              />
-              <Button variant="outlined" onClick={handleSaveApiKey} sx={{ mb: 2 }}>APIキーを保存</Button>
+              {/* ▼▼▼ 修正: APIキーの入力欄を削除 ▼▼▼ */}
               <TextField
                 label="新しい知識"
                 multiline
-                rows={3}
+                rows={4}
                 variant="outlined"
                 fullWidth
                 value={newKnowledgeText}
@@ -145,6 +125,7 @@ function FlowDesignerPage() {
                 sx={{ mb: 1 }}
               />
               <Button variant="contained" onClick={handleAddKnowledge} sx={{ mb: 2 }}>知識を登録</Button>
+              {/* ▲▲▲ 修正 ▲▲▲ */}
               <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
                 {knowledgeBase.map(item => (
                     <Paper key={item.id} variant="outlined" sx={{ p: 1, mb: 1 }}>
