@@ -18,6 +18,7 @@ import {
   updateTaskMemo,
   toggleTask,
   selectBranch,
+  toggleDocument,
 } from '../store/workflowSlice';
 
 const modalStyle = {
@@ -48,6 +49,23 @@ function MainPage() {
   const [isBranchConfirmModalOpen, setIsBranchConfirmModalOpen] = useState(false);
   const [branchChangeContext, setBranchChangeContext] = useState(null);
 
+  // ▼▼▼ 修正: 抜け落ちていたlocalStorageへの保存処理を復活 ▼▼▼
+  useEffect(() => {
+    localStorage.setItem('isCustomerListLocked', JSON.stringify(isCustomerListLocked));
+  }, [isCustomerListLocked]);
+
+  const handleVisibilityChange = useCallback(() => {
+    const securityModeEnabled = JSON.parse(localStorage.getItem('securityMode')) || false;
+    if (securityModeEnabled && document.visibilityState === 'hidden' && !isCustomerListLocked) {
+      setIsCustomerListLocked(true);
+    }
+  }, [isCustomerListLocked]);
+
+  useEffect(() => {
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [handleVisibilityChange]);
+
   const selectedCustomer = useMemo(() => customerData.find(c => c.id === selectedCustomerId), [customerData, selectedCustomerId]);
   const assignedFlows = useMemo(() => selectedCustomer?.assignedWorkflows || [], [selectedCustomer]);
 
@@ -65,6 +83,34 @@ function MainPage() {
   }, [validSelectedWorkflowId, selectedWorkflowId, dispatch]);
 
   const currentWorkflow = useMemo(() => assignedFlows.find(wf => wf.instanceId === validSelectedWorkflowId), [assignedFlows, validSelectedWorkflowId]);
+
+  useEffect(() => {
+    if (currentWorkflow && currentWorkflow.tasks.length > 0) {
+      const findTaskRecursive = (tasks, id) => {
+        for (const task of tasks) {
+          if (task.id === id) return true;
+          if (task.type === 'nested_branch' && task.selectedOption && task.options[task.selectedOption]) {
+            if (findTaskRecursive(task.options[task.selectedOption].tasks, id)) return true;
+          }
+        }
+        return false;
+      };
+
+      const currentTaskExists = selectedTaskId && findTaskRecursive(currentWorkflow.tasks, selectedTaskId);
+
+      if (!currentTaskExists) {
+        const firstTask = currentWorkflow.tasks[0];
+        if (firstTask) {
+          dispatch(setSelectedTaskId(firstTask.id));
+        }
+      }
+    } else {
+      if (selectedTaskId !== null) {
+        dispatch(setSelectedTaskId(null));
+      }
+    }
+  }, [currentWorkflow, selectedTaskId, dispatch]);
+
 
   const selectedTask = useMemo(() => {
     if (!selectedTaskId || !currentWorkflow) return null;
@@ -94,8 +140,9 @@ function MainPage() {
   const handleToggleTask = (taskId) => {
     dispatch(toggleTask({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId }));
   };
-
-  // ▼▼▼ 修正: 分岐選択のロジックを、Reduxの作法に合わせて修正 ▼▼▼
+  const handleToggleDocument = (taskId, docName) => {
+    dispatch(toggleDocument({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId, docName }));
+  };
   const handleSelectBranch = (taskId, newOptionKey) => {
     const behavior = localStorage.getItem('branchResetBehavior') || 'confirm';
     if (!currentWorkflow) return;
@@ -148,7 +195,6 @@ function MainPage() {
       return;
     }
 
-    // behavior === 'confirm' の場合のみモーダルを表示
     setBranchChangeContext({ taskId, newOptionKey });
     setIsBranchConfirmModalOpen(true);
   };
@@ -167,7 +213,6 @@ function MainPage() {
     setIsBranchConfirmModalOpen(false);
     setBranchChangeContext(null);
   };
-
 
   const handleToggleLock = () => {
     if (isCustomerListLocked) {
@@ -230,6 +275,7 @@ function MainPage() {
             onUpdateTaskMemo={(memo) => selectedTask && handleUpdateTaskMemo(selectedTask.id, memo)}
             onToggleTask={() => selectedTask && handleToggleTask(selectedTask.id)}
             onSelectBranch={(optionKey) => selectedTask && handleSelectBranch(selectedTask.id, optionKey)}
+            onToggleDocument={(docName) => selectedTask && handleToggleDocument(selectedTask.id, docName)}
           />
         </Box>
       </Box>
@@ -263,7 +309,6 @@ function MainPage() {
           <Typography sx={{ mt: 2 }}>
             以前のプランには完了済みのサブタスクが存在します。新しいプランに切り替える際に、以前のプランの進捗をどう扱いますか？
           </Typography>
-          {/* ▼▼▼ ここからボタンの定義を修正 ▼▼▼ */}
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
             <Button variant="outlined" onClick={() => { setIsBranchConfirmModalOpen(false); setBranchChangeContext(null); }}>
               キャンセル
@@ -275,7 +320,6 @@ function MainPage() {
               はい (進捗をクリア)
             </Button>
           </Box>
-          {/* ▲▲▲ ここまで修正 ▲▲▲ */}
         </Box>
       </Modal>
 
