@@ -2,7 +2,15 @@ import React, { Suspense, lazy, useState } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeProvider, Box, CircularProgress, Modal, Typography, TextField, Button, LinearProgress, Grid } from '@mui/material';
 import { theme } from './theme';
-import { useAppContext } from './context/AppContext';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  closeAiModal,
+  updateAiSuggestion,
+  updateTaskMemo,
+  setSelectedCustomerId,
+  setSelectedWorkflowId,
+  setSelectedTaskId
+} from './store/workflowSlice';
 
 const MainPage = lazy(() => import('./pages/MainPage'));
 const FlowDesignerPage = lazy(() => import('./pages/FlowDesignerPage'));
@@ -20,23 +28,12 @@ const modalStyle = {
   p: 4,
 };
 
-
 function App() {
-  const {
-    isAiModalOpen,
-    aiSuggestion,
-    closeAiModal,
-    updateAiSuggestion,
-    refiningTask,
-    isApiCommunicating,
-    handleUpdateTaskMemo,
-    setSelectedCustomerId,
-    setSelectedWorkflowId,
-    setSelectedTaskIdentifier, // AppContextから取得
-  } = useAppContext();
-
-  const location = useLocation();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const { isAiModalOpen, aiSuggestion, refiningTask, originalMemo, isApiCommunicating } = useSelector((state) => state.workflow);
 
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [navigationContext, setNavigationContext] = useState(null);
@@ -44,14 +41,11 @@ function App() {
   const handleAcceptSuggestion = () => {
     if (refiningTask) {
       const { task, customerId, workflowInstanceId } = refiningTask;
-      handleUpdateTaskMemo(customerId, workflowInstanceId, task.id, aiSuggestion);
-      // ▼▼▼ 修正: task.id も遷移情報に含める ▼▼▼
+      dispatch(updateTaskMemo({ customerId, workflowInstanceId, taskId: task.id, memo: aiSuggestion }));
       setNavigationContext({ customerId, workflowInstanceId, taskId: task.id });
     }
-
     const wasOnMainPage = location.pathname === '/';
-    closeAiModal();
-
+    dispatch(closeAiModal());
     if (!wasOnMainPage) {
       setShowConfirmationModal(true);
     }
@@ -59,16 +53,15 @@ function App() {
 
   const handleConfirmNavigation = () => {
     if (navigationContext) {
-      setSelectedCustomerId(navigationContext.customerId);
-      setSelectedWorkflowId(navigationContext.workflowInstanceId);
-      // ▼▼▼ 修正: 選択するタスクIDをセットする ▼▼▼
-      setSelectedTaskIdentifier({ taskId: navigationContext.taskId });
+      dispatch(setSelectedCustomerId(navigationContext.customerId));
+      dispatch(setSelectedWorkflowId(navigationContext.workflowInstanceId));
+      dispatch(setSelectedTaskId(navigationContext.taskId));
     }
     setShowConfirmationModal(false);
     navigate('/');
     setNavigationContext(null);
   };
-
+  
   const handleDeclineNavigation = () => {
     setShowConfirmationModal(false);
     setNavigationContext(null);
@@ -78,14 +71,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}>
         {isApiCommunicating && <LinearProgress sx={{ position: 'absolute', width: '100%', zIndex: 1300 }} />}
-
-        <Suspense
-          fallback={
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-              <CircularProgress />
-            </Box>
-          }
-        >
+        <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><CircularProgress /></Box>}>
           <Routes>
             <Route path="/" element={<MainPage />} />
             <Route path="/designer" element={<FlowDesignerPage />} />
@@ -94,85 +80,37 @@ function App() {
         </Suspense>
       </Box>
 
-      <Modal
-        open={isAiModalOpen}
-        onClose={(event, reason) => {
-          if (reason !== 'backdropClick') {
-            closeAiModal();
-          }
-        }}
-        disableEscapeKeyDown
-      >
+      <Modal open={isAiModalOpen} onClose={() => dispatch(closeAiModal())} disableEscapeKeyDown>
         <Box sx={modalStyle}>
-          <Typography variant="h6" component="h2">
-            AIによる整形案
-          </Typography>
-          <Typography sx={{ mt: 1, mb: 2 }} color="text.secondary">
-            AIが生成した以下の内容でメモを上書きしますか？（内容は編集できます）
-          </Typography>
-
+          <Typography variant="h6" component="h2">AIによる整形案</Typography>
+          <Typography sx={{ mt: 1, mb: 2 }} color="text.secondary">AIが生成した以下の内容でメモを上書きしますか？（内容は編集できます）</Typography>
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <Typography variant="subtitle2" gutterBottom>変換前のメモ</Typography>
-              <TextField
-                fullWidth
-                multiline
-                rows={5}
-                value={refiningTask?.originalMemo || ''}
-                InputProps={{
-                  readOnly: true,
-                }}
-                variant="outlined"
-                sx={{ bgcolor: 'grey.100' }}
-              />
+              <TextField fullWidth multiline rows={5} value={originalMemo || ''} InputProps={{ readOnly: true }} variant="outlined" sx={{ bgcolor: 'grey.100' }} />
             </Grid>
             <Grid item xs={6}>
               <Typography variant="subtitle2" gutterBottom>AIの提案</Typography>
-              <TextField
-                fullWidth
-                multiline
-                rows={5}
-                value={aiSuggestion}
-                onChange={(e) => updateAiSuggestion(e.target.value)}
-                variant="outlined"
-                autoFocus
-              />
+              <TextField fullWidth multiline rows={5} value={aiSuggestion} onChange={(e) => dispatch(updateAiSuggestion(e.target.value))} variant="outlined" autoFocus />
             </Grid>
           </Grid>
-
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-            <Button variant="outlined" onClick={closeAiModal}>
-              キャンセル
-            </Button>
-            <Button variant="contained" onClick={handleAcceptSuggestion}>
-              この内容で上書き
-            </Button>
+            <Button variant="outlined" onClick={() => dispatch(closeAiModal())}>キャンセル</Button>
+            <Button variant="contained" onClick={handleAcceptSuggestion}>この内容で上書き</Button>
           </Box>
         </Box>
       </Modal>
 
-      <Modal
-        open={showConfirmationModal}
-        onClose={handleDeclineNavigation}
-      >
+       <Modal open={showConfirmationModal} onClose={handleDeclineNavigation}>
         <Box sx={{ ...modalStyle, width: 400 }}>
-          <Typography variant="h6" component="h2">
-            更新完了
-          </Typography>
-          <Typography sx={{ mt: 2 }}>
-            タスクのメモを更新しました。顧客管理画面に移動して確認しますか？
-          </Typography>
+          <Typography variant="h6" component="h2">更新完了</Typography>
+          <Typography sx={{ mt: 2 }}>タスクのメモを更新しました。顧客管理画面に移動して確認しますか？</Typography>
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-            <Button variant="outlined" onClick={handleDeclineNavigation}>
-              いいえ
-            </Button>
-            <Button variant="contained" onClick={handleConfirmNavigation}>
-              はい
-            </Button>
+            <Button variant="outlined" onClick={handleDeclineNavigation}>いいえ</Button>
+            <Button variant="contained" onClick={handleConfirmNavigation}>はい</Button>
           </Box>
         </Box>
       </Modal>
-
     </ThemeProvider>
   );
 }

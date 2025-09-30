@@ -7,7 +7,8 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { styled } from '@mui/material/styles';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { GeminiApiClient } from '../api/geminiApiClient.js';
-import { useAppContext } from '../context/AppContext';
+import { useSelector, useDispatch } from 'react-redux';
+import { startAiRefinement, setApiCommunicating } from '../store/workflowSlice';
 
 const Pane = styled(Paper)({
   padding: '16px',
@@ -16,12 +17,14 @@ const Pane = styled(Paper)({
   flexDirection: 'column',
 });
 
-function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, onUpdateTaskMemo, customerId, workflowInstanceId }) {
+function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, onUpdateTaskMemo }) {
+  const dispatch = useDispatch();
   const [memo, setMemo] = useState('');
   const [isGeminiAvailable, setIsGeminiAvailable] = useState(false);
   const [isAiRefining, setIsAiRefining] = useState(false);
 
-  const { startAiRefinement, isApiCommunicating, setIsApiCommunicating } = useAppContext();
+  // AI整形に関わるグローバルな状態は、ここでも直接Storeから取得できる
+  const { isApiCommunicating, selectedCustomerId, selectedWorkflowId } = useSelector(state => state.workflow);
 
   useEffect(() => {
     if (task) {
@@ -43,19 +46,25 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, 
       return;
     }
     setIsAiRefining(true);
-    setIsApiCommunicating(true);
+    dispatch(setApiCommunicating(true));
     try {
       const gemini = new GeminiApiClient();
       const prompt = `あなたは優秀なアシスタントです。以下のタスク内容を踏まえ、メモの内容をより分かりやすく、簡潔に、かつ丁寧な言葉遣いに修正してください。\n\n# タスク内容\n${task.text}\n\n# メモの原文\n${memo}\n\n# 指示\n- 修正後のメモのテキストだけを出力してください。\n- 挨拶や前置き、「修正後のメモ:」といった見出し、markdownの装飾などは一切含めないでください。`;
 
       const resultText = await gemini.generateContent(prompt);
-      
-      startAiRefinement({ task, customerId, workflowInstanceId }, memo, resultText.trim());
+
+      dispatch(startAiRefinement({
+        task,
+        customerId: selectedCustomerId,
+        workflowInstanceId: selectedWorkflowId,
+        originalMemo: memo,
+        suggestion: resultText.trim()
+      }));
 
     } catch (error) {
       console.error('AI memo refinement failed:', error);
       alert(`AIによる整形に失敗しました: ${error.message}`);
-      setIsApiCommunicating(false);
+      dispatch(setApiCommunicating(false));
     } finally {
       setIsAiRefining(false);
     }
@@ -87,7 +96,7 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, 
                 <Button
                   key={key}
                   variant={task.selectedOption === key ? "contained" : "outlined"}
-                  onClick={() => onSelectBranch(task.id, key)}
+                  onClick={() => onSelectBranch(key)}
                 >
                   {option.label}
                 </Button>
@@ -96,7 +105,7 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, 
           </Box>
         ) : (
           <ListItemButton
-            onClick={() => onToggleTask && onToggleTask()}
+            onClick={onToggleTask}
             sx={{ borderRadius: 1, p: '4px 8px' }}
           >
             <ListItemIcon sx={{ minWidth: 40 }}>
@@ -163,7 +172,7 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, 
                     </IconButton>
                   }
                 >
-                  <ListItemButton onClick={() => onToggleDocument(doc.name)} sx={{ pr: '48px' }}>
+                  <ListItemButton onClick={() => onToggleDocument && onToggleDocument(doc.name)} sx={{ pr: '48px' }}>
                     <ListItemIcon>
                       <Checkbox
                         edge="start"
