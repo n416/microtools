@@ -16,7 +16,6 @@ const statusConfig = {
   new: { label: '新規', color: 'default' },
 };
 
-// ▼▼▼ 修正: propsに assignedFlows と onUnassignFlow を追加 ▼▼▼
 function CustomerDetail({ customer, assignedFlows, onUnassignFlow, onOpenModal }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -46,7 +45,6 @@ function CustomerDetail({ customer, assignedFlows, onUnassignFlow, onOpenModal }
           )}
           <Divider sx={{ my: 2 }} />
 
-          {/* ▼▼▼ 修正: 割り当てられたフローをチップで表示 ▼▼▼ */}
           <Typography variant="subtitle2" gutterBottom>
             割り当て済みフロー
           </Typography>
@@ -54,9 +52,9 @@ function CustomerDetail({ customer, assignedFlows, onUnassignFlow, onOpenModal }
             {assignedFlows && assignedFlows.length > 0 ? (
               assignedFlows.map(flow => (
                 <Chip
-                  key={flow.id}
+                  key={flow.instanceId}
                   label={flow.name}
-                  onDelete={() => onUnassignFlow(flow.id)}
+                  onDelete={() => onUnassignFlow(flow.instanceId)}
                   color="primary"
                   variant="outlined"
                 />
@@ -67,7 +65,6 @@ function CustomerDetail({ customer, assignedFlows, onUnassignFlow, onOpenModal }
               </Typography>
             )}
           </Box>
-          {/* ▲▲▲ 修正 ▲▲▲ */}
 
           <Button variant="contained" onClick={onOpenModal}>
             業務フローを割り当て

@@ -41,13 +41,12 @@ function FlowDesignerPage() {
     try {
         const gemini = new GeminiApiClient();
         if (!gemini.isAvailable) {
-            throw new Error('APIキーが未設定です。右上の設定アイコンからAPIキーを登録してください。');
+            throw new Error('APIキーと使用モデルが未設定です。右上の設定アイコンから登録・選択してください。');
         }
         const knowledgeText = knowledgeBase.map(k => `${k.id}: ${k.text}`).join('\n');
         const prompt = `あなたは優秀な業務コンサルタントです。以下の【知識リスト】を制約条件として厳守し、ユーザーからの【指示】に合致する業務フローを、論理的に矛盾のないステップ・バイ・ステップのリスト形式で提案してください。各ステップがどの知識に基づいているか、IDを明記してください。\n\n【知識リスト】\n${knowledgeText}\n\n【指示】\n${instruction}\n\n【出力形式】\n- (タスク内容1) (根拠: KXXX)\n- (タスク内容2) (根拠: KXXX)\n- (AIが補完したタスク内容)`;
         
-        const modelName = 'gemini-pro'; 
-        const resultText = await gemini.generateContent(prompt, modelName);
+        const resultText = await gemini.generateContent(prompt);
         
         const tasks = resultText.split('\n').filter(line => line.trim().startsWith('-')).map((line, index) => {
             const match = line.match(/- (.+?) \(根拠: (K\d+)\)/);
@@ -96,13 +95,12 @@ function FlowDesignerPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}>
       <Box sx={{ p: '0 24px' }}>
-         {/* ▼▼▼ 修正: isLocked={false} を追加し、onResetDataを削除 ▼▼▼ */}
          <Header isLocked={false} /> 
       </Box>
       
       <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={5}>
+          <Grid xs={12} md={5}>
             <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Typography variant="h6" gutterBottom>① 知識ベース</Typography>
               <TextField
@@ -127,7 +125,7 @@ function FlowDesignerPage() {
               </Box>
             </Paper>
           </Grid>
-          <Grid item xs={12} md={7}>
+          <Grid xs={12} md={7}>
              <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
                <Typography variant="h6" gutterBottom>② フロー生成</Typography>
                <TextField
