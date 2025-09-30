@@ -78,18 +78,18 @@ const initialWorkflowLibrary = [
 ];
 
 const createInitialCustomerData = () => {
-    const wf1 = JSON.parse(JSON.stringify(initialWorkflowLibrary.find(w => w.id === 'wf001')));
-    wf1.instanceId = uuidv4();
-    wf1.templateId = 'wf001';
-    const wf3 = JSON.parse(JSON.stringify(initialWorkflowLibrary.find(w => w.id === 'wf003')));
-    wf3.instanceId = uuidv4();
-    wf3.templateId = 'wf003';
-    return [
-        { id: 1, name: '山田 太郎', company: '株式会社A', status: 'critical', assignedWorkflows: [wf3] },
-        { id: 2, name: '田中 次郎', company: '株式会社B', status: 'progress', assignedWorkflows: [wf1] },
-        { id: 3, name: '鈴木 三郎', company: '株式会社C', status: 'success', assignedWorkflows: [] },
-        { id: 4, name: '佐藤 四郎', company: '株式会社D', status: 'new', assignedWorkflows: [] },
-    ];
+  const wf1 = JSON.parse(JSON.stringify(initialWorkflowLibrary.find(w => w.id === 'wf001')));
+  wf1.instanceId = uuidv4();
+  wf1.templateId = 'wf001';
+  const wf3 = JSON.parse(JSON.stringify(initialWorkflowLibrary.find(w => w.id === 'wf003')));
+  wf3.instanceId = uuidv4();
+  wf3.templateId = 'wf003';
+  return [
+    { id: 1, name: '山田 太郎', company: '株式会社A', status: 'critical', assignedWorkflows: [wf3] },
+    { id: 2, name: '田中 次郎', company: '株式会社B', status: 'progress', assignedWorkflows: [wf1] },
+    { id: 3, name: '鈴木 三郎', company: '株式会社C', status: 'success', assignedWorkflows: [] },
+    { id: 4, name: '佐藤 四郎', company: '株式会社D', status: 'new', assignedWorkflows: [] },
+  ];
 };
 
 export const workflowSlice = createSlice({
@@ -117,133 +117,159 @@ export const workflowSlice = createSlice({
       state.selectedTaskId = action.payload;
     },
     assignWorkflowToCustomer: (state, action) => {
-        const { customerId, workflowTemplateId } = action.payload;
-        const template = state.workflowLibrary.find(wf => wf.id === workflowTemplateId);
-        if (template) {
-            const customer = state.customerData.find(c => c.id === customerId);
-            if (customer) {
-                const instance = JSON.parse(JSON.stringify(template));
-                instance.instanceId = uuidv4();
-                instance.templateId = workflowTemplateId;
-                customer.assignedWorkflows.push(instance);
-            }
+      const { customerId, workflowTemplateId } = action.payload;
+      const template = state.workflowLibrary.find(wf => wf.id === workflowTemplateId);
+      if (template) {
+        const customer = state.customerData.find(c => c.id === customerId);
+        if (customer) {
+          const instance = JSON.parse(JSON.stringify(template));
+          instance.instanceId = uuidv4();
+          instance.templateId = workflowTemplateId;
+          customer.assignedWorkflows.push(instance);
         }
+      }
     },
     unassignWorkflowFromCustomer: (state, action) => {
-        const { customerId, workflowInstanceId } = action.payload;
-        const customer = state.customerData.find(c => c.id === customerId);
-        if (customer) {
-            customer.assignedWorkflows = customer.assignedWorkflows.filter(wf => wf.instanceId !== workflowInstanceId);
-        }
+      const { customerId, workflowInstanceId } = action.payload;
+      const customer = state.customerData.find(c => c.id === customerId);
+      if (customer) {
+        customer.assignedWorkflows = customer.assignedWorkflows.filter(wf => wf.instanceId !== workflowInstanceId);
+      }
     },
     updateTaskMemo: (state, action) => {
-        const { customerId, workflowInstanceId, taskId, memo } = action.payload;
-        const customer = state.customerData.find(c => c.id === customerId);
-        if (customer) {
-            const workflow = customer.assignedWorkflows.find(wf => wf.instanceId === workflowInstanceId);
-            if (workflow) {
-                const findTaskAndUpdate = (tasks) => {
-                    for (const task of tasks) {
-                        if (task.id === taskId) {
-                            task.memo = memo;
-                            return true;
-                        }
-                        if (task.type === 'nested_branch' && task.options) {
-                            for (const key in task.options) {
-                                if (findTaskAndUpdate(task.options[key].tasks || [])) return true;
-                            }
-                        }
-                    }
-                    return false;
-                };
-                findTaskAndUpdate(workflow.tasks);
+      const { customerId, workflowInstanceId, taskId, memo } = action.payload;
+      const customer = state.customerData.find(c => c.id === customerId);
+      if (customer) {
+        const workflow = customer.assignedWorkflows.find(wf => wf.instanceId === workflowInstanceId);
+        if (workflow) {
+          const findTaskAndUpdate = (tasks) => {
+            for (const task of tasks) {
+              if (task.id === taskId) {
+                task.memo = memo;
+                return true;
+              }
+              if (task.type === 'nested_branch' && task.options) {
+                for (const key in task.options) {
+                  if (findTaskAndUpdate(task.options[key].tasks || [])) return true;
+                }
+              }
             }
+            return false;
+          };
+          findTaskAndUpdate(workflow.tasks);
         }
+      }
     },
     toggleTask: (state, action) => {
-        const { customerId, workflowInstanceId, taskId } = action.payload;
-        const customer = state.customerData.find(c => c.id === customerId);
-        if (customer) {
-            const workflow = customer.assignedWorkflows.find(wf => wf.instanceId === workflowInstanceId);
-            if (workflow) {
-                const findAndToggle = (tasks) => {
-                    for (const task of tasks) {
-                        if (task.id === taskId) {
-                            task.completed = !task.completed;
-                            return true;
-                        }
-                        if (task.type === 'nested_branch' && task.options) {
-                            for (const key in task.options) {
-                                if (findAndToggle(task.options[key].tasks || [])) return true;
-                            }
-                        }
-                    }
-                    return false;
-                };
-                findAndToggle(workflow.tasks);
+      const { customerId, workflowInstanceId, taskId } = action.payload;
+      const customer = state.customerData.find(c => c.id === customerId);
+      if (customer) {
+        const workflow = customer.assignedWorkflows.find(wf => wf.instanceId === workflowInstanceId);
+        if (workflow) {
+          const findAndToggle = (tasks) => {
+            for (const task of tasks) {
+              if (task.id === taskId) {
+                task.completed = !task.completed;
+                return true;
+              }
+              if (task.type === 'nested_branch' && task.options) {
+                for (const key in task.options) {
+                  if (findAndToggle(task.options[key].tasks || [])) return true;
+                }
+              }
             }
+            return false;
+          };
+          findAndToggle(workflow.tasks);
         }
+      }
     },
-    // ▼▼▼ 修正: selectBranch Reducerを、リセット機能付きで正しく実装 ▼▼▼
     selectBranch: (state, action) => {
-        const { customerId, workflowInstanceId, taskId, optionKey, shouldReset } = action.payload;
-        const customer = state.customerData.find(c => c.id === customerId);
-         if (customer) {
-            const workflow = customer.assignedWorkflows.find(wf => wf.instanceId === workflowInstanceId);
-            if (workflow) {
-                const resetSubTasksRecursive = (tasks) => {
-                    for (const task of tasks) {
-                        task.completed = false;
-                        if (task.type === 'nested_branch') {
-                            task.selectedOption = null;
-                            for (const key in task.options) {
-                                resetSubTasksRecursive(task.options[key].tasks || []);
-                            }
-                        }
-                    }
-                };
-
-                 const findAndSelect = (tasks) => {
-                    for (const task of tasks) {
-                        if (task.id === taskId) {
-                            if (shouldReset && task.selectedOption) {
-                                const previousOptionTasks = task.options[task.selectedOption]?.tasks || [];
-                                resetSubTasksRecursive(previousOptionTasks);
-                            }
-                            task.selectedOption = optionKey;
-                            return true;
-                        }
-                        if (task.type === 'nested_branch' && task.options) {
-                            for (const key in task.options) {
-                                if (findAndSelect(task.options[key].tasks || [])) return true;
-                            }
-                        }
-                    }
-                    return false;
-                };
-                findAndSelect(workflow.tasks);
+      const { customerId, workflowInstanceId, taskId, optionKey, shouldReset } = action.payload;
+      const customer = state.customerData.find(c => c.id === customerId);
+      if (customer) {
+        const workflow = customer.assignedWorkflows.find(wf => wf.instanceId === workflowInstanceId);
+        if (workflow) {
+          const resetSubTasksRecursive = (tasks) => {
+            for (const task of tasks) {
+              task.completed = false;
+              if (task.type === 'nested_branch') {
+                task.selectedOption = null;
+                for (const key in task.options) {
+                  resetSubTasksRecursive(task.options[key].tasks || []);
+                }
+              }
             }
+          };
+          const findAndSelect = (tasks) => {
+            for (const task of tasks) {
+              if (task.id === taskId) {
+                if (shouldReset && task.selectedOption) {
+                  const previousOptionTasks = task.options[task.selectedOption]?.tasks || [];
+                  resetSubTasksRecursive(previousOptionTasks);
+                }
+                task.selectedOption = optionKey;
+                return true;
+              }
+              if (task.type === 'nested_branch' && task.options) {
+                for (const key in task.options) {
+                  if (findAndSelect(task.options[key].tasks || [])) return true;
+                }
+              }
+            }
+            return false;
+          };
+          findAndSelect(workflow.tasks);
         }
+      }
+    },
+    // ▼▼▼ 追加: 書類のチェック状態を切り替えるReducer ▼▼▼
+    toggleDocument: (state, action) => {
+      const { customerId, workflowInstanceId, taskId, docName } = action.payload;
+      const customer = state.customerData.find(c => c.id === customerId);
+      if (customer) {
+        const workflow = customer.assignedWorkflows.find(wf => wf.instanceId === workflowInstanceId);
+        if (workflow) {
+          const findAndToggle = (tasks) => {
+            for (const task of tasks) {
+              if (task.id === taskId && task.documents) {
+                const doc = task.documents.find(d => d.name === docName);
+                if (doc) {
+                  doc.checked = !doc.checked;
+                }
+                return true;
+              }
+              if (task.type === 'nested_branch' && task.options) {
+                for (const key in task.options) {
+                  if (findAndToggle(task.options[key].tasks || [])) return true;
+                }
+              }
+            }
+            return false;
+          };
+          findAndToggle(workflow.tasks);
+        }
+      }
     },
     startAiRefinement: (state, action) => {
-        const { task, customerId, workflowInstanceId, originalMemo, suggestion } = action.payload;
-        state.refiningTask = { task, customerId, workflowInstanceId };
-        state.originalMemo = originalMemo;
-        state.aiSuggestion = suggestion;
-        state.isAiModalOpen = true;
+      const { task, customerId, workflowInstanceId, originalMemo, suggestion } = action.payload;
+      state.refiningTask = { task, customerId, workflowInstanceId };
+      state.originalMemo = originalMemo;
+      state.aiSuggestion = suggestion;
+      state.isAiModalOpen = true;
     },
     closeAiModal: (state) => {
-        state.isAiModalOpen = false;
-        state.aiSuggestion = '';
-        state.refiningTask = null;
-        state.originalMemo = '';
-        state.isApiCommunicating = false;
+      state.isAiModalOpen = false;
+      state.aiSuggestion = '';
+      state.refiningTask = null;
+      state.originalMemo = '';
+      state.isApiCommunicating = false;
     },
     updateAiSuggestion: (state, action) => {
-        state.aiSuggestion = action.payload;
+      state.aiSuggestion = action.payload;
     },
     setApiCommunicating: (state, action) => {
-        state.isApiCommunicating = action.payload;
+      state.isApiCommunicating = action.payload;
     },
   },
 });
@@ -257,6 +283,7 @@ export const {
   updateTaskMemo,
   toggleTask,
   selectBranch,
+  toggleDocument, // Actionとしてエクスポート
   startAiRefinement,
   closeAiModal,
   updateAiSuggestion,
