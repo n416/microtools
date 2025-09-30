@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material';
 import { theme } from './theme';
 import MainPage from './pages/MainPage';
 import FlowDesignerPage from './pages/FlowDesignerPage';
+import SettingsPage from './pages/SettingsPage'; // ▼▼▼ 追加 ▼▼▼
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/designer" element={<FlowDesignerPage />} />
+        <Route path="/settings" element={<SettingsPage />} /> {/* ▼▼▼ 追加 ▼▼▼ */}
       </Routes>
     </ThemeProvider>
   );
