@@ -1,7 +1,8 @@
 export class GeminiApiClient {
     #geminiApiKey = null;
     #isKeyValid = false;
-    // ★★★ 宛先をGoogle AI Studio (Generative Language API) の形式に変更 ★★★
+    // ▼▼▼ 追加: モデルIDをクラス内で保持 ▼▼▼
+    #modelId = null;
     #baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 
     constructor() {
@@ -13,22 +14,20 @@ export class GeminiApiClient {
             } else {
                 this.#isKeyValid = false;
             }
+            // ▼▼▼ 追加: 保存されたモデルIDを読み込む ▼▼▼
+            this.#modelId = localStorage.getItem('geminiModelId');
+
         } catch (e) {
-            console.error('Failed to access localStorage for API Key:', e);
+            console.error('Failed to access localStorage:', e);
             this.#isKeyValid = false;
         }
     }
 
     get isAvailable() {
-        return this.#isKeyValid;
+        // ▼▼▼ 修正: モデルIDも設定されているかチェック ▼▼▼
+        return this.#isKeyValid && !!this.#modelId;
     }
 
-    /**
-     * 利用可能なモデルのリストを取得します。
-     * @static
-     * @param {string} apiKey 
-     * @returns {Promise<Array<any>>}
-     */
     static async listAvailableModels(apiKey) {
         if (!apiKey) {
             throw new Error('APIキーがありません。');
@@ -43,23 +42,19 @@ export class GeminiApiClient {
         return data.models;
     }
 
-
     /**
-     * 指定されたプロンプトとモデルでコンテンツを生成します。
+     * 指定されたプロンプトでコンテンツを生成します。
      * @param {string} prompt 
-     * @param {string} modelId 
      * @returns {Promise<string>}
      */
-    async generateContent(prompt, modelId) {
+    // ▼▼▼ 修正: modelId引数を削除 ▼▼▼
+    async generateContent(prompt) {
         if (!this.isAvailable) {
-            throw new Error('Gemini APIキーが設定されていません。');
+            throw new Error('Gemini APIキーまたはモデルIDが設定されていません。');
         }
 
-        // ▼▼▼ プロジェクトIDは不要になったため削除 ▼▼▼
-
-        // Generative Language API用の正しいURLを組み立て
-        const cleanModelId = modelId.startsWith('models/') ? modelId.split('/')[1] : modelId;
-        // ★★★ APIキーをURLのクエリパラメータとして付与 ★★★
+        // ▼▼▼ 修正: クラス内のモデルIDを使用する ▼▼▼
+        const cleanModelId = this.#modelId.startsWith('models/') ? this.#modelId.split('/')[1] : this.#modelId;
         const apiUrl = `${this.#baseUrl}/${cleanModelId}:generateContent?key=${this.#geminiApiKey}`;
 
         const requestBody = {
@@ -72,12 +67,9 @@ export class GeminiApiClient {
             ]
         };
 
-        // ★★★ ヘッダーから 'X-Goog-Api-Key' を削除 ★★★
         const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody),
         });
 
@@ -89,9 +81,8 @@ export class GeminiApiClient {
         }
 
         if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-            // エラーの詳細をより分かりやすく表示
-            if(data.candidates?.[0]?.finishReason === 'SAFETY') {
-                 throw new Error(`AIから有効な応答が得られませんでした。理由: 安全性設定によりブロックされました。`);
+            if (data.candidates?.[0]?.finishReason === 'SAFETY') {
+                throw new Error(`AIから有効な応答が得られませんでした。理由: 安全性設定によりブロックされました。`);
             }
             const reason = data.promptFeedback?.blockReason || data.candidates?.[0]?.finishReason || '不明';
             throw new Error(`AIから有効な応答が得られませんでした。理由: ${reason}`);
