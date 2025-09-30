@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Paper, Box, Typography, IconButton, Divider, List, ListItem,
-  ListItemIcon, Checkbox, ListItemText, ListItemButton
+  ListItemIcon, Checkbox, ListItemText, ListItemButton, Stack, Button, TextField
 } from '@mui/material';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { styled } from '@mui/material/styles';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import { GeminiApiClient } from '../api/geminiApiClient.js';
+import { useAppContext } from '../context/AppContext';
 
 const Pane = styled(Paper)({
   padding: '16px',
@@ -13,7 +16,51 @@ const Pane = styled(Paper)({
   flexDirection: 'column',
 });
 
-function TaskDetailPane({ task, onToggleDocument, onToggleTask }) {
+function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, onUpdateTaskMemo, customerId, workflowInstanceId }) {
+  const [memo, setMemo] = useState('');
+  const [isGeminiAvailable, setIsGeminiAvailable] = useState(false);
+  const [isAiRefining, setIsAiRefining] = useState(false);
+
+  const { startAiRefinement, isApiCommunicating, setIsApiCommunicating } = useAppContext();
+
+  useEffect(() => {
+    if (task) {
+      setMemo(task.memo || '');
+    }
+    const gemini = new GeminiApiClient();
+    setIsGeminiAvailable(gemini.isAvailable);
+  }, [task]);
+
+  const handleMemoBlur = () => {
+    if (task && task.memo !== memo) {
+      onUpdateTaskMemo(memo);
+    }
+  };
+
+  const handleAiRefineMemo = async () => {
+    if (!task || !memo.trim()) {
+      alert('メモ内容が空です。');
+      return;
+    }
+    setIsAiRefining(true);
+    setIsApiCommunicating(true);
+    try {
+      const gemini = new GeminiApiClient();
+      const prompt = `あなたは優秀なアシスタントです。以下のタスク内容を踏まえ、メモの内容をより分かりやすく、簡潔に、かつ丁寧な言葉遣いに修正してください。\n\n# タスク内容\n${task.text}\n\n# メモの原文\n${memo}\n\n# 指示\n- 修正後のメモのテキストだけを出力してください。\n- 挨拶や前置き、「修正後のメモ:」といった見出し、markdownの装飾などは一切含めないでください。`;
+
+      const resultText = await gemini.generateContent(prompt);
+      
+      startAiRefinement({ task, customerId, workflowInstanceId }, memo, resultText.trim());
+
+    } catch (error) {
+      console.error('AI memo refinement failed:', error);
+      alert(`AIによる整形に失敗しました: ${error.message}`);
+      setIsApiCommunicating(false);
+    } finally {
+      setIsAiRefining(false);
+    }
+  };
+
   if (!task) {
     return (
       <Pane>
@@ -31,28 +78,75 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask }) {
       <Box>
         <Typography variant="h6">{task.text}</Typography>
         <Divider sx={{ my: 1 }} />
-        {/* ▼▼▼ 修正: ListItemButtonで行全体をクリック可能に修正 ▼▼▼ */}
-        <ListItemButton 
-          onClick={() => onToggleTask && onToggleTask(task.id)}
-          sx={{ borderRadius: 1, p: '4px 8px' }}
-        >
-          <ListItemIcon sx={{minWidth: 40}}>
-             <Checkbox
+
+        {task.type === 'nested_branch' ? (
+          <Box>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">プランを選択してください:</Typography>
+              {Object.entries(task.options).map(([key, option]) => (
+                <Button
+                  key={key}
+                  variant={task.selectedOption === key ? "contained" : "outlined"}
+                  onClick={() => onSelectBranch(task.id, key)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </Stack>
+          </Box>
+        ) : (
+          <ListItemButton
+            onClick={() => onToggleTask && onToggleTask()}
+            sx={{ borderRadius: 1, p: '4px 8px' }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <Checkbox
                 edge="start"
                 checked={!!task.completed}
                 tabIndex={-1}
                 disableRipple
               />
-          </ListItemIcon>
-          <ListItemText primary="このタスクを完了済みにする" />
-        </ListItemButton>
-        {/* ▲▲▲ 修正 ▲▲▲ */}
+            </ListItemIcon>
+            <ListItemText primary="このタスクを完了済みにする" />
+          </ListItemButton>
+        )}
+
       </Box>
       <Divider sx={{ my: 1 }} />
       <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
         <Typography variant="body1" sx={{ my: 2, whiteSpace: 'pre-wrap' }}>
           {task.details}
         </Typography>
+
+        <Box sx={{ my: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="subtitle2" gutterBottom sx={{ mb: 0 }}>
+              📝 タスクメモ
+            </Typography>
+            {isGeminiAvailable && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AutoFixHighIcon />}
+                onClick={handleAiRefineMemo}
+                disabled={isAiRefining || isApiCommunicating}
+              >
+                {isAiRefining || isApiCommunicating ? '処理中...' : 'AI整形'}
+              </Button>
+            )}
+          </Box>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            variant="outlined"
+            placeholder="このタスクに関するメモを入力..."
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            onBlur={handleMemoBlur}
+          />
+        </Box>
+
         {task.documents && task.documents.length > 0 && (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
@@ -69,8 +163,7 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask }) {
                     </IconButton>
                   }
                 >
-                  {/* ▼▼▼ 修正: ListItemButtonで行全体をクリック可能に修正 ▼▼▼ */}
-                  <ListItemButton onClick={() => onToggleDocument(task.id, doc.name)} sx={{ pr: '48px' }}>
+                  <ListItemButton onClick={() => onToggleDocument(doc.name)} sx={{ pr: '48px' }}>
                     <ListItemIcon>
                       <Checkbox
                         edge="start"
@@ -81,7 +174,6 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask }) {
                     </ListItemIcon>
                     <ListItemText primary={doc.name} />
                   </ListItemButton>
-                  {/* ▲▲▲ 修正 ▲▲▲ */}
                 </ListItem>
               ))}
             </List>
