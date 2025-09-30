@@ -1,1 +1,0 @@
-import{T as e,b as t,y as n}from"./index-DINKIo3A.js";var r=t();function i(e){let{theme:t,name:r,props:i}=e;return!t||!t.components||!t.components[r]||!t.components[r].defaultProps?i:n(t.components[r].defaultProps,i)}function a({props:t,name:n,defaultTheme:r,themeId:a}){let o=e(r);return a&&(o=o[a]||o),i({theme:o,name:n,props:t})}export{r as n,a as t};
