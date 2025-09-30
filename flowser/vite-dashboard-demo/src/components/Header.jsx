@@ -1,13 +1,13 @@
 import React from 'react';
-import { Paper, Typography, Button, Box, IconButton, Tabs, Tab, Chip, Avatar } from '@mui/material';
+import { Paper, Typography, Box, IconButton, Tabs, Tab, Chip } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
-import SettingsIcon from '@mui/icons-material/Settings'; // ▼▼▼ 追加 ▼▼▼
-import AccountCircleIcon from '@mui/icons-material/AccountCircle'; // ▼▼▼ 追加 ▼▼▼
+import SettingsIcon from '@mui/icons-material/Settings';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
-function Header({ onResetData, isLocked, onToggleLock }) {
+// ▼▼▼ 修正: onResetDataをpropsから削除 ▼▼▼
+function Header({ isLocked, onToggleLock }) {
   const location = useLocation();
   const TABS = ['/', '/designer'];
 
@@ -21,7 +21,6 @@ function Header({ onResetData, isLocked, onToggleLock }) {
           業務改善デモアプリ
         </Typography>
 
-        {/* ▼▼▼ 修正: isLockedがtrueの時にTabsと新しいアイコンを非表示にする ▼▼▼ */}
         {!isLocked && (
           <Tabs value={TABS.includes(location.pathname) ? location.pathname : false} sx={{ minHeight: 0, '& .MuiTabs-indicator': { height: 3 } }}>
             <Tab label="顧客管理" value="/" to="/" component={Link} sx={{ py: 1, minHeight: 0 }} />
@@ -38,20 +37,13 @@ function Header({ onResetData, isLocked, onToggleLock }) {
                 </IconButton>
             </>
         )}
-        {/* ▲▲▲ 修正 ▲▲▲ */}
         {location.pathname === '/' && onToggleLock && (
            <IconButton onClick={onToggleLock} aria-label="toggle customer list lock">
              {isLocked ? <LockIcon /> : <LockOpenIcon />}
            </IconButton>
         )}
-        <Button
-          variant="outlined"
-          color="error"
-          startIcon={<RestartAltIcon />}
-          onClick={onResetData}
-        >
-          データリセット
-        </Button>
+        {/* ▼▼▼ 修正: データリセットボタンを削除 ▼▼▼ */}
+        {/* ▲▲▲ 修正 ▲▲▲ */}
       </Box>
     </Paper>
   );
