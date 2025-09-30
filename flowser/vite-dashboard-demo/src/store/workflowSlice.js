@@ -92,20 +92,75 @@ const createInitialCustomerData = () => {
   ];
 };
 
+// ▼▼▼ 修正: localStorageからデータを読み込むための関数 ▼▼▼
+const loadStateFromLocalStorage = () => {
+  try {
+    const savedCustomerData = localStorage.getItem('customerData');
+    const savedWorkflowLibrary = localStorage.getItem('workflowLibrary');
+    const savedSelectedCustomerId = localStorage.getItem('selectedCustomerId');
+
+    let customerData = createInitialCustomerData();
+    if (savedCustomerData) {
+      let parsedData = JSON.parse(savedCustomerData);
+      customerData = parsedData.map(c => {
+        if (c.assignedFlowIds && !c.assignedWorkflows) {
+          const newWorkflows = c.assignedFlowIds.map(templateId => {
+            const template = initialWorkflowLibrary.find(wf => wf.id === templateId);
+            if (!template) return null;
+            const instance = JSON.parse(JSON.stringify(template));
+            instance.instanceId = uuidv4();
+            instance.templateId = templateId;
+            return instance;
+          }).filter(Boolean);
+          const newCustomer = { ...c, assignedWorkflows: newWorkflows };
+          delete newCustomer.assignedFlowIds;
+          delete newCustomer.assignedFlowId;
+          return newCustomer;
+        }
+        if (!c.assignedWorkflows) {
+          return { ...c, assignedWorkflows: [] };
+        }
+        return c;
+      });
+    }
+
+    const workflowLibrary = savedWorkflowLibrary ? JSON.parse(savedWorkflowLibrary) : initialWorkflowLibrary;
+    const selectedCustomerId = savedSelectedCustomerId ? JSON.parse(savedSelectedCustomerId) : 1;
+
+    return {
+      customerData,
+      workflowLibrary,
+      selectedCustomerId,
+      selectedWorkflowId: null,
+      selectedTaskId: null,
+      isAiModalOpen: false,
+      aiSuggestion: '',
+      refiningTask: null,
+      originalMemo: '',
+      isApiCommunicating: false,
+    };
+  } catch (e) {
+    console.error("Could not load state from localStorage", e);
+    // エラー発生時はデフォルトの初期状態を返す
+    return {
+      customerData: createInitialCustomerData(),
+      workflowLibrary: initialWorkflowLibrary,
+      selectedCustomerId: 1,
+      selectedWorkflowId: null,
+      selectedTaskId: null,
+      isAiModalOpen: false,
+      aiSuggestion: '',
+      refiningTask: null,
+      originalMemo: '',
+      isApiCommunicating: false,
+    };
+  }
+};
+
+
 export const workflowSlice = createSlice({
   name: 'workflow',
-  initialState: {
-    customerData: createInitialCustomerData(),
-    workflowLibrary: initialWorkflowLibrary,
-    selectedCustomerId: 1,
-    selectedWorkflowId: null,
-    selectedTaskId: null,
-    isAiModalOpen: false,
-    aiSuggestion: '',
-    refiningTask: null,
-    originalMemo: '',
-    isApiCommunicating: false,
-  },
+  initialState: loadStateFromLocalStorage(), // 関数を呼び出して初期状態を設定
   reducers: {
     setSelectedCustomerId: (state, action) => {
       state.selectedCustomerId = action.payload;
@@ -223,7 +278,6 @@ export const workflowSlice = createSlice({
         }
       }
     },
-    // ▼▼▼ 追加: 書類のチェック状態を切り替えるReducer ▼▼▼
     toggleDocument: (state, action) => {
       const { customerId, workflowInstanceId, taskId, docName } = action.payload;
       const customer = state.customerData.find(c => c.id === customerId);
@@ -283,7 +337,7 @@ export const {
   updateTaskMemo,
   toggleTask,
   selectBranch,
-  toggleDocument, // Actionとしてエクスポート
+  toggleDocument,
   startAiRefinement,
   closeAiModal,
   updateAiSuggestion,
