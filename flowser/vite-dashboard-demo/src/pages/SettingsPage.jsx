@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Paper, Typography, Button, TextField, FormControlLabel, Switch, Divider } from '@mui/material';
 import Header from '../components/Header';
-import RestartAltIcon from '@mui/icons-material/RestartAlt'; // ▼▼▼ 追加 ▼▼▼
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 function SettingsPage() {
   const [apiKey, setApiKey] = useState('');
@@ -26,18 +26,17 @@ function SettingsPage() {
     alert('設定を保存しました。');
   };
 
-  // ▼▼▼ 追加: データリセットのハンドラ ▼▼▼
   const handleResetData = () => {
     if (window.confirm('アプリケーションの全てのデータがリセットされます。この操作は元に戻せません。よろしいですか？')) {
       localStorage.clear();
       window.location.reload();
     }
   };
-  // ▲▲▲ 追加 ▲▲▲
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}>
       <Box sx={{ p: '0 24px' }}>
+        {/* ▼▼▼ 修正: onResetDataを削除 ▼▼▼ */}
         <Header isLocked={false} />
       </Box>
 
@@ -85,7 +84,6 @@ function SettingsPage() {
             </Button>
           </Box>
 
-          {/* ▼▼▼ 追加: データリセットのセクション ▼▼▼ */}
           <Divider sx={{ my: 4 }} />
 
           <Box sx={{ my: 3 }}>
@@ -104,7 +102,6 @@ function SettingsPage() {
               全データをリセット
             </Button>
           </Box>
-          {/* ▲▲▲ 追加 ▲▲▲ */}
         </Paper>
       </Box>
     </Box>
