@@ -1,9 +1,10 @@
 import React from 'react';
 import { 
   Paper, Typography, Box, List, ListItem, 
-  ListItemText, Checkbox, Button, ListItemButton, ListItemIcon
+  ListItemText, ListItemButton, ListItemIcon
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import AttachmentIcon from '@mui/icons-material/Attachment';
 
 const Pane = styled(Paper)({
   padding: '16px',
@@ -13,7 +14,24 @@ const Pane = styled(Paper)({
   minHeight: 0, 
 });
 
-function WorkflowList({ workflow, onToggleTask, onSelectTask }) {
+// ▼▼▼ 修正: 「済」スタンプのスタイルを定義 ▼▼▼
+const Stamp = styled('div')({
+  width: '28px',
+  height: '28px',
+  borderRadius: '50%',
+  border: '2px solid #e53935', // 赤色
+  color: '#e53935',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontWeight: 'bold',
+  fontSize: '14px',
+  transform: 'rotate(-10deg)', // 少し傾ける
+  fontFamily: '"Helvetica Neue", Arial, sans-serif',
+});
+// ▲▲▲ 修正 ▲▲▲
+
+function WorkflowList({ workflow, onSelectTask, selectedTaskId }) {
   if (!workflow) {
     return (
       <Pane>
@@ -36,49 +54,30 @@ function WorkflowList({ workflow, onToggleTask, onSelectTask }) {
           {workflow.tasks.map((task) => {
             const labelId = `checkbox-list-label-${task.id}`;
             return (
-              // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-              //
-              // MUIの secondaryAction を完全に捨て去り、
-              // 内部を純粋な Flexbox で再構築しました。
-              // これで、二度とレイアウトは破綻しません。
-              //
-              // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
               <ListItem
                 key={`${workflow.id}-${task.id}`}
                 disablePadding
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', pl: 1 }}>
-                  {/* --- クリック可能なテキスト部分 --- */}
-                  <ListItemButton 
-                    role={undefined} 
-                    onClick={() => onToggleTask(task.id)}
-                    sx={{ flexGrow: 1, p: '4px 8px' }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      <Checkbox
-                        edge="start"
-                        checked={task.completed}
-                        tabIndex={-1}
-                        disableRipple
-                        inputProps={{ 'aria-labelledby': labelId }}
-                      />
+                <ListItemButton 
+                  selected={selectedTaskId === task.id}
+                  onClick={() => onSelectTask(task.id)}
+                  sx={{ p: '4px 8px' }}
+                >
+                  {/* ▼▼▼ 修正: Checkboxを「済」スタンプに置き換え ▼▼▼ */}
+                  <ListItemIcon sx={{ minWidth: 40, height: 28, alignItems: 'center', justifyContent: 'center' }}>
+                    {task.completed ? <Stamp>済</Stamp> : <Box sx={{ width: 28 }} />}
+                  </ListItemIcon>
+                  {/* ▲▲▲ 修正 ▲▲▲ */}
+                  <ListItemText 
+                    id={labelId} 
+                    primary={task.text} 
+                  />
+                  {task.documents && task.documents.length > 0 && (
+                    <ListItemIcon sx={{ minWidth: 'auto' }}>
+                       <AttachmentIcon fontSize="small" color="action" />
                     </ListItemIcon>
-                    <ListItemText 
-                      id={labelId} 
-                      primary={task.text} 
-                    />
-                  </ListItemButton>
-                  
-                  {/* --- 詳細ボタン --- */}
-                  <Button 
-                    variant="outlined" 
-                    size="small" 
-                    onClick={() => onSelectTask(task.id)}
-                    sx={{ flexShrink: 0, ml: 1, mr: 1 }}
-                  >
-                    詳細
-                  </Button>
-                </Box>
+                  )}
+                </ListItemButton>
               </ListItem>
             );
           })}
