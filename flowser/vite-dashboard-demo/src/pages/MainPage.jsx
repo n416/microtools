@@ -6,7 +6,6 @@ import CustomerDetail from '../components/CustomerDetail';
 import WorkflowList from '../components/WorkflowList';
 import TaskDetailPane from '../components/TaskDetailPane';
 
-// ▼▼▼ 修正箇所 ▼▼▼
 const initialWorkflowLibrary = [
   {
     id: 'wf001', name: '【標準】新車販売フロー', description: '新車のキャンピングカーを販売する際の標準的な業務フローです。',
@@ -40,7 +39,6 @@ const initialWorkflowLibrary = [
     ]
   },
 ];
-// ▲▲▲ 修正箇所 ▲▲▲
 
 const initialCustomerData = [
   { id: 1, name: '山田 太郎', company: '株式会社A', status: 'critical', assignedFlowId: 'wf003' },
@@ -91,6 +89,26 @@ function MainPage() {
 
   const selectedCustomer = customerData.find(c => c.id === selectedCustomerId);
   const currentWorkflow = workflowLibrary.find(wf => wf.id === selectedCustomer?.assignedFlowId);
+
+  // ▼▼▼ 修正箇所 ▼▼▼
+  // 顧客が切り替わった際に、最初の未完了タスクを自動で選択する。
+  // タスクの完了状態を変更してもこのeffectが再実行されないよう、
+  // 依存配列を`selectedCustomerId`のみに変更。
+  useEffect(() => {
+    if (currentWorkflow && currentWorkflow.tasks.length > 0) {
+      const firstUncompletedTask = currentWorkflow.tasks.find(t => !t.completed);
+      if (firstUncompletedTask) {
+        setSelectedTaskIdentifier({ workflowId: currentWorkflow.id, taskId: firstUncompletedTask.id });
+      } else {
+        // 全て完了済みの場合は最初のタスクを選択
+        setSelectedTaskIdentifier({ workflowId: currentWorkflow.id, taskId: currentWorkflow.tasks[0].id });
+      }
+    } else {
+      setSelectedTaskIdentifier(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCustomerId]);
+  // ▲▲▲ 修正箇所 ▲▲▲
 
   const selectedTask = React.useMemo(() => {
     if (!selectedTaskIdentifier) return null;
@@ -180,83 +198,88 @@ function MainPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}>
-        <Box sx={{ p: '0 24px' }}>
-            <Header
-            onResetData={handleResetData}
-            isLocked={isCustomerListLocked}
-            onToggleLock={handleToggleLock}
+      <Box sx={{ p: '0 24px' }}>
+        <Header
+          onResetData={handleResetData}
+          isLocked={isCustomerListLocked}
+          onToggleLock={handleToggleLock}
+        />
+      </Box>
+      <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
+
+        {!isCustomerListLocked && (
+          <Box sx={{ flex: '0 1 320px', minWidth: 280, transition: 'all 0.3s ease' }}>
+            <CustomerList
+              customers={customerData}
+              selectedCustomerId={selectedCustomerId}
+              onSelectCustomer={handleSelectCustomer}
             />
-        </Box>
-        <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
+          </Box>
+        )}
 
-            {!isCustomerListLocked && (
-            <Box sx={{ flex: '0 1 320px', minWidth: 280, transition: 'all 0.3s ease' }}>
-                <CustomerList
-                customers={customerData}
-                selectedCustomerId={selectedCustomerId}
-                onSelectCustomer={handleSelectCustomer}
-                />
-            </Box>
-            )}
-
-            <Box sx={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', gap: 2, minHeight: 'fit-content', minWidth: 400 }}>
-            <CustomerDetail customer={selectedCustomer} onOpenModal={() => setIsModalOpen(true)} />
-            <WorkflowList workflow={currentWorkflow} onToggleTask={handleToggleTask} onSelectTask={handleSelectTask} />
-            </Box>
-
-            <Box sx={{ flex: '0 1 35%', minWidth: 320 }}>
-            <TaskDetailPane
-                key={selectedTask ? `${selectedTaskIdentifier.workflowId}-${selectedTaskIdentifier.taskId}` : 'no-task-selected'}
-                task={selectedTask}
-                onToggleDocument={handleToggleDocument}
-            />
-            </Box>
+        <Box sx={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', gap: 2, minHeight: 'fit-content', minWidth: 400 }}>
+          <CustomerDetail customer={selectedCustomer} onOpenModal={() => setIsModalOpen(true)} />
+          <WorkflowList
+            workflow={currentWorkflow}
+            onSelectTask={handleSelectTask}
+            selectedTaskId={selectedTaskIdentifier?.taskId}
+          />
         </Box>
 
-        <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
-            <Box sx={modalStyle}>
-            <Typography variant="h6" component="h2" gutterBottom>業務フローを選択</Typography>
-            <List>{workflowLibrary.map(wf => (<ListItemButton key={wf.id} onClick={() => handleAssignFlow(wf.id)}><ListItemText primary={wf.name} secondary={wf.description} /></ListItemButton>))}</List>
-            </Box>
-        </Modal>
+        <Box sx={{ flex: '0 1 35%', minWidth: 320 }}>
+          <TaskDetailPane
+            key={selectedTask ? `${selectedTaskIdentifier.workflowId}-${selectedTaskIdentifier.taskId}` : 'no-task-selected'}
+            task={selectedTask}
+            onToggleDocument={handleToggleDocument}
+            onToggleTask={handleToggleTask}
+          />
+        </Box>
+      </Box>
 
-        <Modal open={isLockConfirmOpen} onClose={() => setIsLockConfirmOpen(false)}>
-            <Box sx={modalStyle} style={{ width: 400 }}>
-            <Typography variant="h6" component="h2">顧客リストをロックしますか？</Typography>
-            <Typography sx={{ mt: 2 }}>
-                ロックすると、パスコードを入力するまでリストは表示されません。
-            </Typography>
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                <Button variant="outlined" onClick={() => setIsLockConfirmOpen(false)}>キャンセル</Button>
-                <Button variant="contained" color="primary" onClick={handleConfirmLock}>リストをロック</Button>
-            </Box>
-            </Box>
-        </Modal>
+      <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <Box sx={modalStyle}>
+          <Typography variant="h6" component="h2" gutterBottom>業務フローを選択</Typography>
+          <List>{workflowLibrary.map(wf => (<ListItemButton key={wf.id} onClick={() => handleAssignFlow(wf.id)}><ListItemText primary={wf.name} secondary={wf.description} /></ListItemButton>))}</List>
+        </Box>
+      </Modal>
 
-        <Modal open={isKeypadOpen} onClose={() => setIsKeypadOpen(false)}>
-            <Box sx={keypadModalStyle}>
-            <Typography variant="h6" align="center">パスコード入力</Typography>
-            <Paper variant="outlined" sx={{ p: 1, my: 2, textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.5rem', minHeight: '2.5rem' }}>
-                {passcodeInput.replace(/./g, '*')}
-            </Paper>
-            <Grid container spacing={1}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                <Grid item xs={4} key={num}>
-                    <Button fullWidth variant="outlined" onClick={() => handleKeypadInput(num.toString())} sx={{ height: '50px', fontSize: '1.2rem' }}>{num}</Button>
-                </Grid>
-                ))}
-                <Grid item xs={4}>
-                <Button fullWidth variant="outlined" onClick={handleKeypadClear} sx={{ height: '50px' }}>クリア</Button>
-                </Grid>
-                <Grid item xs={4}>
-                <Button fullWidth variant="outlined" onClick={() => handleKeypadInput('0')} sx={{ height: '50px', fontSize: '1.2rem' }}>0</Button>
-                </Grid>
-                <Grid item xs={4}>
-                <Button fullWidth variant="outlined" onClick={handleKeypadBackspace} sx={{ height: '50px' }}>BS</Button>
-                </Grid>
+      <Modal open={isLockConfirmOpen} onClose={() => setIsLockConfirmOpen(false)}>
+        <Box sx={modalStyle} style={{ width: 400 }}>
+          <Typography variant="h6" component="h2">顧客リストをロックしますか？</Typography>
+          <Typography sx={{ mt: 2 }}>
+            ロックすると、パスコードを入力するまでリストは表示されません。
+          </Typography>
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button variant="outlined" onClick={() => setIsLockConfirmOpen(false)}>キャンセル</Button>
+            <Button variant="contained" color="primary" onClick={handleConfirmLock}>リストをロック</Button>
+          </Box>
+        </Box>
+      </Modal>
+
+      <Modal open={isKeypadOpen} onClose={() => setIsKeypadOpen(false)}>
+        <Box sx={keypadModalStyle}>
+          <Typography variant="h6" align="center">パスコード入力</Typography>
+          <Paper variant="outlined" sx={{ p: 1, my: 2, textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.5rem', minHeight: '2.5rem' }}>
+            {passcodeInput.replace(/./g, '*')}
+          </Paper>
+          <Grid container spacing={1}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+              <Grid item xs={4} key={num}>
+                <Button fullWidth variant="outlined" onClick={() => handleKeypadInput(num.toString())} sx={{ height: '50px', fontSize: '1.2rem' }}>{num}</Button>
+              </Grid>
+            ))}
+            <Grid item xs={4}>
+              <Button fullWidth variant="outlined" onClick={handleKeypadClear} sx={{ height: '50px' }}>クリア</Button>
             </Grid>
-            </Box>
-        </Modal>
+            <Grid item xs={4}>
+              <Button fullWidth variant="outlined" onClick={() => handleKeypadInput('0')} sx={{ height: '50px', fontSize: '1.2rem' }}>0</Button>
+            </Grid>
+            <Grid item xs={4}>
+              <Button fullWidth variant="outlined" onClick={handleKeypadBackspace} sx={{ height: '50px' }}>BS</Button>
+            </Grid>
+          </Grid>
+        </Box>
+      </Modal>
     </Box>
   );
 }
