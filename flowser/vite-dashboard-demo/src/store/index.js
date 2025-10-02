@@ -1,13 +1,14 @@
 import { configureStore } from '@reduxjs/toolkit';
 import workflowReducer from './workflowSlice';
+import knowledgeReducer from './knowledgeSlice'; // インポート
 
 export const store = configureStore({
   reducer: {
     workflow: workflowReducer,
+    knowledge: knowledgeReducer, // 追加
   },
 });
 
-// ▼▼▼ 修正: Storeが更新されるたびに、選択中のIDもlocalStorageに保存する ▼▼▼
 store.subscribe(() => {
   try {
     const state = store.getState();
@@ -17,6 +18,8 @@ store.subscribe(() => {
     localStorage.setItem('selectedCustomerId', JSON.stringify(state.workflow.selectedCustomerId));
     localStorage.setItem('selectedWorkflowId', JSON.stringify(state.workflow.selectedWorkflowId));
     localStorage.setItem('selectedTaskId', JSON.stringify(state.workflow.selectedTaskId));
+    // 新しい知識ライブラリも保存
+    localStorage.setItem('knowledgeLibrary', JSON.stringify(state.knowledge.library));
   } catch (e) {
     console.error("Could not save state to localStorage", e);
   }
