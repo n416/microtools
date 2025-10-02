@@ -5,15 +5,16 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+// ▼▼▼ 新しいアイコンをインポート ▼▼▼
+import DnsIcon from '@mui/icons-material/Dns';
 
-// ▼▼▼ 修正: onResetDataをpropsから削除 ▼▼▼
 function Header({ isLocked, onToggleLock }) {
   const location = useLocation();
   const TABS = ['/', '/designer'];
 
   return (
-    <Paper 
-      elevation={2} 
+    <Paper
+      elevation={2}
       sx={{ p: '12px 24px', mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -30,20 +31,22 @@ function Header({ isLocked, onToggleLock }) {
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         {!isLocked && (
-            <>
-                <Chip icon={<AccountCircleIcon />} label="ログイン中" variant="outlined" size="small" />
-                <IconButton component={Link} to="/settings" aria-label="settings">
-                    <SettingsIcon />
-                </IconButton>
-            </>
+          <>
+            <Chip icon={<AccountCircleIcon />} label="ログイン中" variant="outlined" size="small" />
+            <IconButton component={Link} to="/settings" aria-label="user settings">
+              <SettingsIcon />
+            </IconButton>
+            {/* ▼▼▼ システム設定へのリンクアイコンを追加 ▼▼▼ */}
+            <IconButton component={Link} to="/system-settings" aria-label="system settings">
+              <DnsIcon />
+            </IconButton>
+          </>
         )}
         {location.pathname === '/' && onToggleLock && (
-           <IconButton onClick={onToggleLock} aria-label="toggle customer list lock">
-             {isLocked ? <LockIcon /> : <LockOpenIcon />}
-           </IconButton>
+          <IconButton onClick={onToggleLock} aria-label="toggle customer list lock">
+            {isLocked ? <LockIcon /> : <LockOpenIcon />}
+          </IconButton>
         )}
-        {/* ▼▼▼ 修正: データリセットボタンを削除 ▼▼▼ */}
-        {/* ▲▲▲ 修正 ▲▲▲ */}
       </Box>
     </Paper>
   );
