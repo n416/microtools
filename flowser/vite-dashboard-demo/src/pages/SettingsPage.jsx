@@ -22,8 +22,11 @@ function SettingsPage() {
     setModels([]);
     try {
       const availableModels = await GeminiApiClient.listAvailableModels(key);
+      // ▼▼▼ 【修正】 モデルの絞り込み条件をより厳密に修正 ▼▼▼
       const supportedModels = availableModels.filter(m =>
-        m.supportedGenerationMethods.includes('generateContent')
+        m.supportedGenerationMethods.includes('generateContent') &&
+        m.name.includes('pro') && // "pro" モデルのみを対象
+        !m.name.includes('vision') // "vision" (画像認識) モデルを除外
       );
       setModels(supportedModels);
       setTestSuccess(true);
