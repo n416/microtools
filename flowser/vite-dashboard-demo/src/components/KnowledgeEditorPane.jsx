@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Paper, Typography, Box, Button, TextField, RadioGroup, FormControlLabel, Radio, IconButton } from '@mui/material';
-import { addKnowledge, updateKnowledge, deleteKnowledge, finishEditing } from '../store/knowledgeSlice';
+import { addKnowledge, updateKnowledge, deleteKnowledge, finishEditing } from '../store/knowledgeSlice'; // <- 修正: 念のため確認・修正
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { nanoid } from '@reduxjs/toolkit';
 
-// ▼▼▼ 【修正】detailsプロパティを追加 ▼▼▼
 const initialFormState = { id: null, text: '', details: '', type: 'task', options: [] };
 
 function KnowledgeEditorPane() {
@@ -22,7 +21,6 @@ function KnowledgeEditorPane() {
     .find(k => k.id === selectedKnowledgeId);
 
   useEffect(() => {
-    // ▼▼▼ 【修正】isAddingNewKnowledgeの時も初期フォーム state を使うように修正 ▼▼▼
     if (isAddingNewKnowledge) {
       setFormState(initialFormState);
     } else if (activeKnowledge) {
@@ -123,10 +121,7 @@ function KnowledgeEditorPane() {
       <Typography variant="h6" gutterBottom>{editorTitle}</Typography>
       <Box sx={{ overflow: 'auto', flexGrow: 1, pt: 1 }}>
         <TextField label="知識テキスト" fullWidth multiline rows={4} name="text" value={formState.text} onChange={handleChange} sx={{ mb: 2 }} />
-
-        {/* ▼▼▼ 【追加】説明のテキストフィールド ▼▼▼ */}
         <TextField label="説明" fullWidth multiline rows={3} name="details" value={formState.details || ''} onChange={handleChange} sx={{ mb: 2 }} />
-
         <RadioGroup row name="type" value={formState.type} onChange={handleChange}>
           <FormControlLabel value="task" control={<Radio />} label="Task" />
           <FormControlLabel value="branch" control={<Radio />} label="Branch" />

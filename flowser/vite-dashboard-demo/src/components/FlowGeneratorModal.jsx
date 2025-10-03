@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { GeminiApiClient } from '../api/geminiApiClient.js';
-import { addWorkflow, setApiCommunicating } from '../store/workflowSlice';
+import { addFlow, setApiCommunicating } from '../store/caseSlice';
 import { v4 as uuidv4 } from 'uuid';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -26,33 +26,32 @@ const modalStyle = {
     maxHeight: '90vh',
 };
 
-function AiFlowGeneratorModal({ open, onClose }) {
+function FlowGeneratorModal({ open, onClose }) {
     const dispatch = useDispatch();
     const { library: knowledgeLibrary } = useSelector(state => state.knowledge);
-    const { isApiCommunicating } = useSelector(state => state.workflow);
+    const { isApiCommunicating } = useSelector(state => state.case);
 
-    const [workflowName, setWorkflowName] = useState('');
+    const [flowName, setFlowName] = useState('');
     const [userPrompt, setUserPrompt] = useState('');
     const [generatedTasks, setGeneratedTasks] = useState([]);
 
     useEffect(() => {
         if (!open) {
-            setWorkflowName('');
+            setFlowName('');
             setUserPrompt('');
             setGeneratedTasks([]);
         }
     }, [open]);
 
     const handleGenerateFlow = async () => {
-        if (!workflowName.trim() || !userPrompt.trim()) {
-            alert('ワークフロー名とプロンプトの両方を入力してください。');
+        if (!flowName.trim() || !userPrompt.trim()) {
+            alert('フロー名とプロンプトの両方を入力してください。');
             return;
         }
 
         dispatch(setApiCommunicating(true));
         setGeneratedTasks([]);
 
-        // ▼▼▼ 【修正】プロンプトの指示をより厳格に修正 ▼▼▼
         const systemPrompt = `あなたは優秀な業務コンサルタントです。あなたは以下の「知識ライブラリ」に含まれる知識項目だけを使い、ユーザーの要望に沿った業務フローを提案するタスクを実行します。
 
 # 知識ライブラリ
@@ -79,7 +78,6 @@ ${userPrompt}
   }
 ]
 `;
-        // ▲▲▲ ここまで修正 ▲▲▲
 
         try {
             const gemini = new GeminiApiClient();
@@ -88,16 +86,15 @@ ${userPrompt}
                 throw new Error('API not available');
             }
             const resultText = await gemini.generateContent(systemPrompt);
-            
+
             const cleanedJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
             const parsedTasks = JSON.parse(cleanedJson);
 
-            // 生成された各タスクにユニークなIDを再割り当て
             const tasksWithUniqueIds = parsedTasks.map(task => ({
                 ...task,
-                id: uuidv4(), 
-                completed: false, // デフォルト値を追加
-                memo: '', // デフォルト値を追加
+                id: uuidv4(),
+                completed: false,
+                memo: '',
             }));
 
             setGeneratedTasks(tasksWithUniqueIds);
@@ -109,21 +106,21 @@ ${userPrompt}
         }
     };
 
-    const handleSaveWorkflow = () => {
-        if (!workflowName.trim() || generatedTasks.length === 0) {
-            alert('ワークフロー名を入力し、タスクを1つ以上生成してください。');
+    const handleSaveFlow = () => {
+        if (!flowName.trim() || generatedTasks.length === 0) {
+            alert('フロー名を入力し、タスクを1つ以上生成してください。');
             return;
         }
 
-        const newWorkflow = {
-            id: `wf-${uuidv4()}`,
-            name: workflowName,
+        const newFlow = {
+            id: `flow-${uuidv4()}`,
+            name: flowName,
             description: `AIが「${userPrompt}」という指示を基に生成しました。`,
             tasks: generatedTasks,
         };
 
-        dispatch(addWorkflow(newWorkflow));
-        alert(`新しいワークフロー「${workflowName}」を保存しました。`);
+        dispatch(addFlow(newFlow));
+        alert(`新しいフロー「${flowName}」を保存しました。`);
         onClose();
     };
 
@@ -155,16 +152,16 @@ ${userPrompt}
         <Modal open={open} onClose={onClose}>
             <Box sx={modalStyle}>
                 <Typography variant="h6" component="h2" gutterBottom>
-                    AIによる業務フロー自動生成
+                    AIによるフロー自動生成
                 </Typography>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
                     <TextField
-                        label="ワークフロー名"
+                        label="フロー名"
                         variant="outlined"
                         fullWidth
-                        value={workflowName}
-                        onChange={(e) => setWorkflowName(e.target.value)}
+                        value={flowName}
+                        onChange={(e) => setFlowName(e.target.value)}
                     />
                     <TextField
                         label="プロンプト (どのようなフローを生成したいですか？)"
@@ -238,17 +235,17 @@ ${userPrompt}
                         </DragDropContext>
                     )}
                 </Box>
-                 <Button onClick={handleAddTask} sx={{ mt: 1 }}>項目を追加</Button>
+                <Button onClick={handleAddTask} sx={{ mt: 1 }}>項目を追加</Button>
 
 
                 <Box sx={{ mt: 'auto', pt: 2, display: 'flex', justifyContent: 'flex-end' }}>
                     <Button
                         variant="contained"
                         color="primary"
-                        onClick={handleSaveWorkflow}
+                        onClick={handleSaveFlow}
                         disabled={isApiCommunicating || generatedTasks.length === 0}
                     >
-                        ワークフローとして保存
+                        フローとして保存
                     </Button>
                 </Box>
             </Box>
@@ -256,4 +253,4 @@ ${userPrompt}
     );
 }
 
-export default AiFlowGeneratorModal;
+export default FlowGeneratorModal;

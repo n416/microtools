@@ -16,7 +16,7 @@ const statusConfig = {
   new: { label: '新規', color: 'default' },
 };
 
-function CustomerDetail({ customer, assignedFlows, onUnassignFlow, onOpenModal }) {
+function CustomerDetail({ customer, assignedCases, onUnassignCase, onOpenModal }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (!customer) {
@@ -46,15 +46,15 @@ function CustomerDetail({ customer, assignedFlows, onUnassignFlow, onOpenModal }
           <Divider sx={{ my: 2 }} />
 
           <Typography variant="subtitle2" gutterBottom>
-            割り当て済みフロー
+            割り当て済みケース
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-            {assignedFlows && assignedFlows.length > 0 ? (
-              assignedFlows.map(flow => (
+            {assignedCases && assignedCases.length > 0 ? (
+              assignedCases.map(flow => (
                 <Chip
                   key={flow.instanceId}
                   label={flow.name}
-                  onDelete={() => onUnassignFlow(flow.instanceId)}
+                  onDelete={() => onUnassignCase(flow.instanceId)}
                   color="primary"
                   variant="outlined"
                 />
@@ -67,7 +67,7 @@ function CustomerDetail({ customer, assignedFlows, onUnassignFlow, onOpenModal }
           </Box>
 
           <Button variant="contained" onClick={onOpenModal}>
-            業務フローを割り当て
+            ケースを割り当て
           </Button>
         </Box>
       )}

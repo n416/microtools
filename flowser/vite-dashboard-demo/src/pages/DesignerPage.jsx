@@ -1,27 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux'; // <- "redux-react" から "react-redux" に修正
 import { Box, ToggleButtonGroup, ToggleButton, Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import Header from '../components/Header';
 import PhaseHierarchyPane from '../components/PhaseHierarchyPane';
 import KnowledgeListPane from '../components/KnowledgeListPane';
 import KnowledgeEditorPane from '../components/KnowledgeEditorPane';
-import AiFlowGeneratorModal from '../components/AiFlowGeneratorModal';
+import FlowGeneratorModal from '../components/FlowGeneratorModal';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import CategoryManagementPane from '../components/CategoryManagementPane';
-import TemplateListPane from '../components/TemplateListPane';
-import DesignServicesIcon from '@mui/icons-material/DesignServices';
+import FlowListPane from '../components/FlowListPane';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import FolderCopyIcon from '@mui/icons-material/FolderCopy';
 import MarkUnreadChatAltIcon from '@mui/icons-material/MarkUnreadChatAlt';
 import AiChatView from '../components/AiChatView';
 import { GeminiApiClient } from '../api/geminiApiClient.js';
-import { addWorkflow } from '../store/workflowSlice';
+import { addFlow } from '../store/caseSlice';
 import { v4 as uuidv4 } from 'uuid';
 
-function FlowDesignerPage() {
+function DesignerPage() {
   const dispatch = useDispatch();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [mode, setMode] = useState('design');
+  const [mode, setMode] = useState('knowledge'); // 'knowledge', 'flow-management', 'flow-ai-chat'
 
   const { library: knowledgeLibrary } = useSelector(state => state.knowledge);
   const [chatHistory, setChatHistory] = useState([]);
@@ -31,10 +31,10 @@ function FlowDesignerPage() {
   const [isWaitingForAiResponse, setIsWaitingForAiResponse] = useState(false);
 
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-  const [workflowName, setWorkflowName] = useState('');
+  const [flowName, setFlowName] = useState('');
 
   useEffect(() => {
-    if (mode === 'ai-chat' && chatHistory.length === 0) {
+    if (mode === 'flow-ai-chat' && chatHistory.length === 0) {
       setChatHistory([{
         sender: 'ai',
         text: 'こんにちは！どのような業務フローを設計しますか？\n例：「新車販売のフローを開始」',
@@ -58,7 +58,6 @@ function FlowDesignerPage() {
     return null;
   }, [knowledgeLibrary]);
 
-  // ▼▼▼ 【修正】 プロンプトに削除・修正の指示形式を追加 ▼▼▼
   const generatePrompt = (userMessage) => {
     const systemPrompt = `あなたは優秀な業務コンサルタントです。ユーザーの指示に基づき、提示された知識ライブラリの項目だけを使って対話的に業務フローを構築します。
 
@@ -80,14 +79,13 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
 "${userMessage}"
 
 # 出力JSONフォーマット (配列形式)
-// 各オブジェクトは1つのアクションを表します。追加・削除・変更を組み合わせてください。
 [
   {
     "action": "ADD" | "DELETE" | "UPDATE",
     "newNode": { "knowledgeId": "k-001", "position": { "x": 250, "y": 50 } },
     "newEdge": { "source": "k-001", "target": "k-002" },
     "deleteNodeId": "k-007",
-    "updateEdge": { "source": "k-006", "target": "k-008" }, // 既存の "k-006" -> "k-007" などを k-008 に繋ぎ変える場合
+    "updateEdge": { "source": "k-006", "target": "k-008" },
     "aiResponse": {
       "text": "ユーザーへの返答メッセージ",
       "options": []
@@ -98,7 +96,6 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
     return systemPrompt;
   }
 
-  // ▼▼▼ 【修正】 AIからの削除・修正指示を処理するロジックを追加 ▼▼▼
   const handleSendMessage = async (message) => {
     const newUserMessage = { sender: 'user', text: message };
     setChatHistory(prev => [...prev, newUserMessage]);
@@ -127,7 +124,7 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
 
         if (action === 'UPDATE' && updateEdge) {
             setEdges(prev => prev.map(edge => 
-                (edge.source === updateEdge.source || edge.target === updateEdge.target) // 簡易的な更新判定
+                (edge.source === updateEdge.source || edge.target === updateEdge.target)
                 ? { ...edge, target: updateEdge.target } 
                 : edge
             ));
@@ -169,9 +166,9 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
     }
   };
 
-  const handleSaveWorkflow = () => {
-    if (!workflowName.trim()) {
-      alert('ワークフロー名を入力してください。');
+  const handleSaveFlow = () => {
+    if (!flowName.trim()) {
+      alert('フロー名を入力してください。');
       return;
     }
     const newTasks = nodes.map(node => {
@@ -188,17 +185,17 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
       };
     });
 
-    const newWorkflow = {
-      id: `wf-${uuidv4()}`,
-      name: workflowName,
+    const newFlow = {
+      id: `flow-${uuidv4()}`,
+      name: flowName,
       description: 'AIチャット設計機能で作成されました。',
       tasks: newTasks,
     };
 
-    dispatch(addWorkflow(newWorkflow));
-    alert(`新しいワークフロー「${workflowName}」を保存しました。`);
+    dispatch(addFlow(newFlow));
+    alert(`新しいフロー「${flowName}」を保存しました。`);
     setIsSaveModalOpen(false);
-    setWorkflowName('');
+    setFlowName('');
   };
 
   const handleModeChange = (event, newMode) => {
@@ -220,39 +217,41 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
           onChange={handleModeChange}
           aria-label="designer mode"
         >
-          <ToggleButton value="design" aria-label="design mode">
-            <DesignServicesIcon sx={{ mr: 1 }} />
-            知識ライブラリ設計
+          <ToggleButton value="knowledge" aria-label="knowledge editing mode">
+            <EditNoteIcon sx={{ mr: 1 }} />
+            知識編集
           </ToggleButton>
-          <ToggleButton value="template" aria-label="template mode">
+          <ToggleButton value="flow-management" aria-label="flow management mode">
             <FolderCopyIcon sx={{ mr: 1 }} />
-            テンプレート管理
+            フロー管理
           </ToggleButton>
-          <ToggleButton value="ai-chat" aria-label="ai chat mode">
+          <ToggleButton value="flow-ai-chat" aria-label="ai chat design mode">
             <MarkUnreadChatAltIcon sx={{ mr: 1 }} />
-            AIチャット設計
+            AIフロー設計
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
 
-      {mode === 'design' && (
-        <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
-          <Box sx={{ flex: '0 1 320px', minWidth: 280 }}><PhaseHierarchyPane /></Box>
-          <Box sx={{ flex: '1 1 40%', minWidth: 300 }}><KnowledgeListPane onOpenAiModal={() => setIsAiModalOpen(true)} /></Box>
-          <Box sx={{ flex: '1 1 60%', minWidth: 400 }}><KnowledgeEditorPane /></Box>
-        </Box>
+      {mode === 'knowledge' && (
+        <DndProvider backend={HTML5Backend}>
+          <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
+            <Box sx={{ flex: '0 1 320px', minWidth: 280 }}><PhaseHierarchyPane /></Box>
+            <Box sx={{ flex: '1 1 40%', minWidth: 300 }}><KnowledgeListPane onOpenAiModal={() => setIsAiModalOpen(true)} /></Box>
+            <Box sx={{ flex: '1 1 60%', minWidth: 400 }}><KnowledgeEditorPane /></Box>
+          </Box>
+        </DndProvider>
       )}
       
-      {mode === 'template' && (
+      {mode === 'flow-management' && (
         <DndProvider backend={HTML5Backend}>
             <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
                 <Box sx={{ flex: '0 1 320px', minWidth: 280 }}><CategoryManagementPane /></Box>
-                <Box sx={{ flex: '1 1 70%', minWidth: 400 }}><TemplateListPane /></Box>
+                <Box sx={{ flex: '1 1 70%', minWidth: 400 }}><FlowListPane /></Box>
             </Box>
         </DndProvider>
       )}
 
-      {mode === 'ai-chat' && (
+      {mode === 'flow-ai-chat' && (
         <>
             <AiChatView
                 chatHistory={chatHistory}
@@ -264,35 +263,35 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
             />
             <Box sx={{ p: '0 24px 24px', textAlign: 'right' }}>
                 <Button variant="contained" onClick={() => setIsSaveModalOpen(true)} disabled={nodes.length === 0}>
-                    テンプレートとして保存
+                    フローとして保存
                 </Button>
             </Box>
         </>
       )}
 
-      <AiFlowGeneratorModal open={isAiModalOpen} onClose={() => setIsAiModalOpen(false)} />
+      <FlowGeneratorModal open={isAiModalOpen} onClose={() => setIsAiModalOpen(false)} />
 
       <Dialog open={isSaveModalOpen} onClose={() => setIsSaveModalOpen(false)}>
-        <DialogTitle>新しいワークフローとして保存</DialogTitle>
+        <DialogTitle>新しいフローとして保存</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            label="ワークフロー名"
+            label="フロー名"
             type="text"
             fullWidth
             variant="standard"
-            value={workflowName}
-            onChange={(e) => setWorkflowName(e.target.value)}
+            value={flowName}
+            onChange={(e) => setFlowName(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsSaveModalOpen(false)}>キャンセル</Button>
-          <Button onClick={handleSaveWorkflow}>保存</Button>
+          <Button onClick={handleSaveFlow}>保存</Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
 }
 
-export default FlowDesignerPage;
+export default DesignerPage;
