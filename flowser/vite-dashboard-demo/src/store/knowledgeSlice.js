@@ -1,18 +1,107 @@
 import { createSlice, nanoid } from '@reduxjs/toolkit';
 
+// ▼▼▼ 【修正】キャンピングカー販売フローの知識を初期データとして追加 ▼▼▼
 const initialKnowledgeLibrary = [
   {
     id: "phase-001",
-    name: "第一フェイズ",
-    knowledges: [],
+    name: "商談フェーズ",
     subPhases: [
-      { id: "subphase-001a", name: "初期接触", knowledges: [] },
-      { id: "subphase-001b", name: "ヒアリング", knowledges: [] }
+      { 
+        id: "subphase-001a", 
+        name: "初期接触・ヒアリング", 
+        knowledges: [
+          {
+            id: 'k-001',
+            text: '顧客要望ヒアリングと車種選定',
+            details: '顧客の利用用途、予算、希望装備などを詳しくヒアリングし、最適な車種を提案します。パンフレットやデモカーを活用して、顧客のイメージを具体化させることが重要です。',
+            type: 'task',
+            options: [],
+          }
+        ] 
+      },
+      { 
+        id: "subphase-001b", 
+        name: "提案・プラン選択", 
+        knowledges: [
+          {
+            id: 'k-002',
+            text: '見積書作成とオプション確認',
+            details: '選択された車種をベースに、追加オプション（ソーラーパネル、FFヒーター、ナビ等）を含めた正式な見積書を作成し、提示します。オプションのメリット・デメリットを丁寧に説明します。',
+            type: 'task',
+            options: [],
+          },
+          {
+            id: 'k-003',
+            text: '販売プランの選択',
+            details: '顧客の希望に応じて、販売プランを選択してもらいます。即納可能な在庫車か、カスタムオーダーかによって後続のタスクが分岐します。',
+            type: 'branch',
+            options: [
+              { id: 'opt-001', label: 'Aプラン（即時販売）'},
+              { id: 'opt-002', label: 'Bプラン（カスタムオーダー）'},
+            ],
+          }
+        ] 
+      }
     ]
   },
-  { id: "phase-002", name: "第二フェイズ", knowledges: [], subPhases: [] },
-  { id: "phase-003", name: "第三フェイズ", knowledges: [], subPhases: [] }
+  { 
+    id: "phase-002", 
+    name: "契約フェーズ", 
+    subPhases: [],
+    knowledges: [
+      {
+        id: 'k-004',
+        text: '注文書作成と契約締結',
+        details: '見積内容に合意後、注文書を作成します。契約内容（支払い条件、納期、保証など）を丁寧に説明し、署名・捺印をいただきます。',
+        type: 'task',
+        options: [],
+      }
+    ]
+  },
+  { 
+    id: "phase-003", 
+    name: "納車準備フェーズ", 
+    subPhases: [],
+    knowledges: [
+      {
+        id: 'k-005',
+        text: '在庫確認と車両確保',
+        details: '即時販売プランの場合、指定された車種の在庫を再確認し、顧客のために車両を確保（引き当て）します。',
+        type: 'task',
+        options: [],
+      },
+      {
+        id: 'k-006',
+        text: 'メーカーへの発注と納期確認',
+        details: 'カスタムオーダープランの場合、確定した仕様でメーカーに車両を発注し、おおよその納期を確認して顧客と共有します。',
+        type: 'task',
+        options: [],
+      },
+      {
+        id: 'k-007',
+        text: '進捗の定期報告',
+        details: '特にカスタムオーダーの場合、納車までの間、定期的に顧客へ生産状況や輸送状況を報告し、安心感を提供します。',
+        type: 'task',
+        options: [],
+      }
+    ]
+  },
+  {
+    id: "phase-004",
+    name: "納車フェーズ",
+    subPhases: [],
+    knowledges: [
+      {
+        id: 'k-008',
+        text: '納車および操作説明',
+        details: '顧客に来店いただき、車両の最終確認を行います。各種装備の詳しい操作方法を実演しながら説明し、キーをお渡しして納車完了となります。',
+        type: 'task',
+        options: [],
+      }
+    ]
+  }
 ];
+// ▲▲▲ ここまで修正 ▲▲▲
 
 
 const loadState = () => {
@@ -22,9 +111,11 @@ const loadState = () => {
       return initialKnowledgeLibrary;
     }
     const parsed = JSON.parse(serializedState);
+    // データ構造が古い場合に備えて、knowledgesプロパティを保証する
     return parsed.map(phase => ({
       ...phase,
       knowledges: phase.knowledges || [],
+      subPhases: (phase.subPhases || []).map(sp => ({ ...sp, knowledges: sp.knowledges || [] })),
     }));
   } catch (err) {
     return initialKnowledgeLibrary;
@@ -66,7 +157,7 @@ const knowledgeSlice = createSlice({
       state.isAddingNewKnowledge = true;
     },
     finishEditing: (state) => {
-      state.selectedKnowledgeId = null; // 【修正】選択も解除
+      state.selectedKnowledgeId = null; 
       state.isAddingNewKnowledge = false;
     },
 
@@ -148,40 +239,51 @@ const knowledgeSlice = createSlice({
         : phase;
 
       if (target) {
+        if (!target.knowledges) {
+          target.knowledges = [];
+        }
         const newKnowledge = { ...knowledge, id: `knowledge-${nanoid()}` };
         target.knowledges.push(newKnowledge);
-        // ▼▼▼ 【重要】追加した知識を選択状態にし、isAddingNewKnowledgeをfalseにする ▼▼▼
         state.selectedKnowledgeId = newKnowledge.id;
         state.isAddingNewKnowledge = false;
       }
     },
     updateKnowledge: (state, action) => {
       const { phaseId, subPhaseId, knowledge } = action.payload;
-      const phase = state.library.find(p => p.id === phaseId);
-      if (!phase) return;
+      let parent = state.library.find(p => p.id === phaseId);
+      if (!parent) return;
 
-      const target = subPhaseId
-        ? phase.subPhases.find(sp => sp.id === subPhaseId)
-        : phase;
+      let targetList;
+      if (subPhaseId) {
+        const subPhase = parent.subPhases.find(sp => sp.id === subPhaseId);
+        if (subPhase) {
+          targetList = subPhase.knowledges;
+        }
+      } else {
+        targetList = parent.knowledges;
+      }
 
-      if (target && target.knowledges) {
-        const index = target.knowledges.findIndex(k => k.id === knowledge.id);
+      if (targetList) {
+        const index = targetList.findIndex(k => k.id === knowledge.id);
         if (index !== -1) {
-          target.knowledges[index] = knowledge;
+          targetList[index] = knowledge;
         }
       }
     },
     deleteKnowledge: (state, action) => {
       const { phaseId, subPhaseId, knowledgeId } = action.payload;
-      const phase = state.library.find(p => p.id === phaseId);
-      if (!phase) return;
+      let parent = state.library.find(p => p.id === phaseId);
+      if (!parent) return;
 
-      const target = subPhaseId
-        ? phase.subPhases.find(sp => sp.id === subPhaseId)
-        : phase;
-
-      if (target && target.knowledges) {
-        target.knowledges = target.knowledges.filter(k => k.id !== knowledgeId);
+      let targetListOwner;
+      if (subPhaseId) {
+        targetListOwner = parent.subPhases.find(sp => sp.id === subPhaseId);
+      } else {
+        targetListOwner = parent;
+      }
+      
+      if (targetListOwner && targetListOwner.knowledges) {
+        targetListOwner.knowledges = targetListOwner.knowledges.filter(k => k.id !== knowledgeId);
         if (state.selectedKnowledgeId === knowledgeId) {
           state.selectedKnowledgeId = null;
         }
