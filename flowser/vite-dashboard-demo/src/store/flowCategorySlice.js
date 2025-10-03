@@ -8,13 +8,16 @@ const initialCategories = [
 
 const loadState = () => {
   try {
-    const serializedCategories = localStorage.getItem('workflowCategories');
-    const serializedSelectedId = localStorage.getItem('selectedWorkflowCategoryId');
+    // ▼▼▼ 【修正】古いキー(workflowCategories)からもカテゴリリストを読み込むように修正 ▼▼▼
+    const serializedCategories = localStorage.getItem('flowCategories') || localStorage.getItem('workflowCategories');
+    const serializedSelectedId = localStorage.getItem('selectedFlowCategoryId') || localStorage.getItem('selectedWorkflowCategoryId');
     
     const categories = serializedCategories ? JSON.parse(serializedCategories) : initialCategories;
-    const selectedCategoryId = serializedSelectedId ? JSON.parse(serializedSelectedId) : 'cat-uncategorized';
 
-    // 初期データに「未分類」がなければ追加する
+    // ▼▼▼ 【修正】デフォルトで選択されるカテゴリIDを、保存されたものか、リストの先頭にするように修正 ▼▼▼
+    const defaultCategoryId = categories.length > 0 ? categories[0].id : null;
+    const selectedCategoryId = serializedSelectedId ? JSON.parse(serializedSelectedId) : defaultCategoryId;
+
     if (!categories.some(c => c.id === 'cat-uncategorized')) {
       categories.unshift({ id: 'cat-uncategorized', name: '未分類' });
     }
@@ -23,13 +26,13 @@ const loadState = () => {
   } catch (err) {
     return {
       categories: initialCategories,
-      selectedCategoryId: 'cat-uncategorized',
+      selectedCategoryId: initialCategories.length > 0 ? initialCategories[0].id : null,
     };
   }
 };
 
-const workflowCategorySlice = createSlice({
-  name: 'workflowCategory',
+const flowCategorySlice = createSlice({
+  name: 'flowCategory',
   initialState: loadState(),
   reducers: {
     addCategory: (state, action) => {
@@ -42,15 +45,13 @@ const workflowCategorySlice = createSlice({
       }
     },
     deleteCategory: (state, action) => {
-      // 「未分類」カテゴリは削除不可
       if (action.payload === 'cat-uncategorized') {
         alert('「未分類」カテゴリは削除できません。');
         return;
       }
       state.categories = state.categories.filter(c => c.id !== action.payload);
-      // 削除したカテゴリが選択されていたら、「未分類」を選択状態にする
       if (state.selectedCategoryId === action.payload) {
-        state.selectedCategoryId = 'cat-uncategorized';
+        state.selectedCategoryId = state.categories.length > 0 ? state.categories[0].id : null;
       }
     },
     selectCategoryId: (state, action) => {
@@ -59,6 +60,6 @@ const workflowCategorySlice = createSlice({
   },
 });
 
-export const { addCategory, updateCategory, deleteCategory, selectCategoryId } = workflowCategorySlice.actions;
+export const { addCategory, updateCategory, deleteCategory, selectCategoryId } = flowCategorySlice.actions;
 
-export default workflowCategorySlice.reducer;
+export default flowCategorySlice.reducer;

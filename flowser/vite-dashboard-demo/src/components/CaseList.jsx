@@ -101,19 +101,19 @@ const TaskItem = ({ task, selectedTaskId, onSelectTask, level = 0 }) => {
 };
 
 
-function WorkflowList({ assignedFlows, selectedWorkflowId, onSelectWorkflow, currentWorkflow, onSelectTask, selectedTaskId }) {
+function CaseList({ assignedCases, selectedCaseId, onSelectCase, currentCase, onSelectTask, selectedTaskId }) {
 
   const handleTabChange = (event, newValue) => {
-    onSelectWorkflow(newValue);
+    onSelectCase(newValue);
   };
 
-  if (!assignedFlows || assignedFlows.length === 0) {
+  if (!assignedCases || assignedCases.length === 0) {
     return (
       <Pane>
-        <Typography variant="h6" gutterBottom>🤖 業務フロー</Typography>
+        <Typography variant="h6" gutterBottom>🤖 実行中ケース</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
           <Typography variant="body2" color="text.secondary">
-            この顧客には業務フローが割り当てられていません。
+            この顧客には実行中のケースがありません。
           </Typography>
         </Box>
       </Pane>
@@ -122,20 +122,20 @@ function WorkflowList({ assignedFlows, selectedWorkflowId, onSelectWorkflow, cur
 
   return (
     <Pane>
-      <Typography variant="h6" gutterBottom>🤖 業務フロー</Typography>
+      <Typography variant="h6" gutterBottom>🤖 実行中ケース</Typography>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 1 }}>
-        <Tabs value={selectedWorkflowId || false} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
-          {assignedFlows.map(flow => (
+        <Tabs value={selectedCaseId || false} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+          {assignedCases.map(flow => (
             <Tab label={flow.name} value={flow.instanceId} key={flow.instanceId} />
           ))}
         </Tabs>
       </Box>
 
       <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
-        {currentWorkflow ? (
+        {currentCase ? (
           <List dense>
-            {currentWorkflow.tasks.map((task) => (
+            {currentCase.tasks.map((task) => (
               <TaskItem
                 key={task.id}
                 task={task}
@@ -146,11 +146,11 @@ function WorkflowList({ assignedFlows, selectedWorkflowId, onSelectWorkflow, cur
           </List>
         ) : (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <Typography variant="body2" color="text.secondary">フローを選択してください。</Typography>
+            <Typography variant="body2" color="text.secondary">ケースを選択してください。</Typography>
           </Box>
         )}
       </Box>
     </Pane>
   );
 }
-export default WorkflowList;
+export default CaseList;

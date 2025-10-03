@@ -12,12 +12,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   addPhase, deletePhase, updatePhase, reorderPhases,
   addSubPhase, deleteSubPhase, updateSubPhase, reorderSubPhases
-} from '../store/knowledgeSlice';
+} from '../store/knowledgeSlice'; // <- 修正：インポート元を caseSlice から knowledgeSlice に変更
 import { motion, AnimatePresence } from "framer-motion";
 import { styled } from '@mui/material/styles';
 
 
-// ▼▼▼ AccordionSummaryの代替となるカスタムコンポーネント ▼▼▼
 const CustomAccordionSummary = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
@@ -41,13 +40,11 @@ function SystemSettingsPage() {
     setExpanded(isExpanded ? panel : (expanded === panel ? null : panel));
   };
 
-  // --- State Hooks ---
   const [renameModal, setRenameModal] = useState({ open: false, item: null, type: '', parentId: null });
   const [newName, setNewName] = useState('');
   const [addModal, setAddModal] = useState({ open: false, type: '', parentId: null });
   const [newItemName, setNewItemName] = useState('');
 
-  // --- Rename Modal Logic ---
   useEffect(() => {
     if (renameModal.item) setNewName(renameModal.item.name);
   }, [renameModal.item]);
@@ -68,7 +65,6 @@ function SystemSettingsPage() {
     closeRenameModal();
   };
 
-  // --- Add Modal Logic ---
   const openAddModal = (type, parentId = null) => {
     setAddModal({ open: true, type, parentId });
   };
@@ -86,7 +82,6 @@ function SystemSettingsPage() {
     closeAddModal();
   };
 
-  // --- CRUD Handlers ---
   const handleDeletePhase = (phase) => {
     if (phase.subPhases.length > 0) {
       alert('サブフェーズが存在するため削除できません。');
@@ -209,8 +204,6 @@ function SystemSettingsPage() {
         </Paper>
       </Box>
 
-      {/* --- Dialogs --- */}
-      {/* ▼▼▼ 【修正】e.gbu.target.value を e.target.value に修正 ▼▼▼ */}
       <Dialog open={renameModal.open} onClose={closeRenameModal}><DialogTitle>名称の変更</DialogTitle><DialogContent><TextField autoFocus margin="dense" label="新しい名前" type="text" fullWidth variant="standard" value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleRename()} /></DialogContent><DialogActions><Button onClick={closeRenameModal}>キャンセル</Button><Button onClick={handleRename}>保存</Button></DialogActions></Dialog>
       <Dialog open={addModal.open} onClose={closeAddModal}><DialogTitle>{addModal.type === 'phase' ? '新しい業務フェーズの追加' : '新しいサブフェーズの追加'}</DialogTitle><DialogContent><TextField autoFocus margin="dense" label="名前" type="text" fullWidth variant="standard" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddItem()} /></DialogContent><DialogActions><Button onClick={closeAddModal}>キャンセル</Button><Button onClick={handleAddItem}>追加</Button></DialogActions></Dialog>
     </Box>

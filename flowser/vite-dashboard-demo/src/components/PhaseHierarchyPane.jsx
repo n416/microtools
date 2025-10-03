@@ -1,19 +1,60 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Paper, Typography, Box } from '@mui/material'; // ListItem, ListItemTextなどを削除
-import {
-  selectPhase, selectSubPhase
-} from '../store/knowledgeSlice';
+import { Paper, Typography, Box } from '@mui/material';
+import { selectPhase, selectSubPhase, moveKnowledge } from '../store/knowledgeSlice';
+import { useDrop } from 'react-dnd';
 
-// 項目（フェーズ・サブフェーズ）のスタイルを定義
 const itemSx = {
   display: 'flex',
   alignItems: 'center',
-  p: '6px 8px', // denseなリストの高さを再現
+  p: '6px 8px',
   cursor: 'pointer',
-  borderRadius: 1, // 角を丸くする
-  transition: 'background-color 0.2s',
+  borderRadius: 1,
+  transition: 'background-color 0.2s, border 0.2s',
+  // ▼▼▼ 【修正】常に2pxの透明な点線ボーダーを持つように変更 ▼▼▼
+  border: '2px dashed transparent',
 };
+
+function DroppableHierarchyItem({ children, phaseId, subPhaseId = null, selected, isAncestor, onClick }) {
+    const dispatch = useDispatch();
+    const [{ isOver, canDrop }, drop] = useDrop(() => ({
+        accept: 'knowledge',
+        drop: (item) => {
+            dispatch(moveKnowledge({
+                knowledgeId: item.id,
+                source: item.source,
+                target: { phaseId, subPhaseId }
+            }));
+        },
+        collect: (monitor) => ({
+            isOver: monitor.isOver(),
+            canDrop: monitor.canDrop(),
+        }),
+    }), [phaseId, subPhaseId]);
+
+    return (
+        <Box
+            ref={drop}
+            onClick={onClick}
+            sx={{
+                ...itemSx,
+                backgroundColor: selected
+                    ? 'rgba(25, 118, 210, 0.08)'
+                    : isAncestor
+                    ? 'action.hover'
+                    : 'transparent',
+                color: 'text.primary',
+                // ▼▼▼ 【修正】ドラッグ開始時(canDrop)に点線を表示し、重なった時(isOver)に色を変えるロジック ▼▼▼
+                borderColor: isOver ? 'primary.main' : canDrop ? '#ccc' : 'transparent',
+                '&:hover': {
+                    backgroundColor: 'action.hover',
+                }
+            }}
+        >
+            {children}
+        </Box>
+    );
+}
 
 function PhaseHierarchyPane() {
   const dispatch = useDispatch();
@@ -24,50 +65,41 @@ function PhaseHierarchyPane() {
       <Typography variant="h6" gutterBottom>① 階層管理エリア</Typography>
       <Box sx={{ overflow: 'auto', flexGrow: 1, mt: 1 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {library.map(phase => (
-            <React.Fragment key={phase.id}>
-              {/* フェーズ項目 */}
-              <Box
-                onClick={() => dispatch(selectPhase(phase.id))}
-                sx={{
-                  ...itemSx,
-                  // 選択状態のスタイル
-                  backgroundColor: (selectedPhaseId === phase.id && !selectedSubPhaseId) ? 'primary.main'
-                    : (selectedPhaseId === phase.id ? 'action.hover' : 'transparent'),
-                  color: (selectedPhaseId === phase.id && !selectedSubPhaseId) ? 'primary.contrastText' : 'text.primary',
-                  '&:hover': {
-                    backgroundColor: (selectedPhaseId === phase.id && !selectedSubPhaseId) ? 'primary.dark' : 'action.hover',
-                  }
-                }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: selectedPhaseId === phase.id ? 'bold' : 'normal' }}>
-                  {phase.name}
-                </Typography>
-              </Box>
+          {library.map(phase => {
+            const isDirectlySelected = selectedPhaseId === phase.id && !selectedSubPhaseId;
+            const isAncestorOfSelected = selectedPhaseId === phase.id && !!selectedSubPhaseId;
 
-              {/* サブフェーズ項目 */}
-              {phase.subPhases.map(subPhase => (
-                <Box
-                  key={subPhase.id}
-                  onClick={() => dispatch(selectSubPhase(subPhase.id))}
-                  sx={{
-                    ...itemSx,
-                    pl: 4, // インデント
-                    // 選択状態のスタイル
-                    backgroundColor: selectedSubPhaseId === subPhase.id ? 'primary.main' : 'transparent',
-                    color: selectedSubPhaseId === subPhase.id ? 'primary.contrastText' : 'text.primary',
-                    '&:hover': {
-                      backgroundColor: selectedSubPhaseId === subPhase.id ? 'primary.dark' : 'action.hover',
-                    }
-                  }}
+            return (
+              <React.Fragment key={phase.id}>
+                <DroppableHierarchyItem
+                  phaseId={phase.id}
+                  selected={isDirectlySelected}
+                  isAncestor={isAncestorOfSelected}
+                  onClick={() => dispatch(selectPhase(phase.id))}
                 >
-                  <Typography variant="body2">
-                    {subPhase.name}
+                  <Typography variant="body2" sx={{ fontWeight: selectedPhaseId === phase.id ? 'bold' : 'normal' }}>
+                    {phase.name}
                   </Typography>
-                </Box>
-              ))}
-            </React.Fragment>
-          ))}
+                </DroppableHierarchyItem>
+
+                {phase.subPhases.map(subPhase => (
+                  <Box key={subPhase.id} sx={{ pl: 4 }}>
+                    <DroppableHierarchyItem
+                      phaseId={phase.id}
+                      subPhaseId={subPhase.id}
+                      selected={selectedSubPhaseId === subPhase.id}
+                      isAncestor={false}
+                      onClick={() => dispatch(selectSubPhase(subPhase.id))}
+                    >
+                      <Typography variant="body2">
+                        {subPhase.name}
+                      </Typography>
+                    </DroppableHierarchyItem>
+                  </Box>
+                ))}
+              </React.Fragment>
+            )
+          })}
         </Box>
       </Box>
     </Paper>

@@ -3,7 +3,7 @@ import { Box, Modal, List, ListItemButton, ListItemText, Typography, Button, Pap
 import Header from '../components/Header';
 import CustomerList from '../components/CustomerList';
 import CustomerDetail from '../components/CustomerDetail';
-import WorkflowList from '../components/WorkflowList';
+import CaseList from '../components/CaseList';
 import TaskDetailPane from '../components/TaskDetailPane';
 import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -11,15 +11,15 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   setSelectedCustomerId,
-  setSelectedWorkflowId,
+  setSelectedCaseId,
   setSelectedTaskId,
-  assignWorkflowToCustomer,
-  unassignWorkflowFromCustomer,
+  assignFlowToCustomer,
+  unassignCaseFromCustomer,
   updateTaskMemo,
   toggleTask,
   selectBranch,
   toggleDocument,
-} from '../store/workflowSlice';
+} from '../store/caseSlice';
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -35,11 +35,11 @@ function MainPage() {
 
   const {
     customerData,
-    workflowLibrary,
+    flowLibrary,
     selectedCustomerId,
-    selectedWorkflowId,
+    selectedCaseId,
     selectedTaskId,
-  } = useSelector((state) => state.workflow);
+  } = useSelector((state) => state.case);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCustomerListLocked, setIsCustomerListLocked] = useState(() => JSON.parse(localStorage.getItem('isCustomerListLocked')) || false);
@@ -49,7 +49,6 @@ function MainPage() {
   const [isBranchConfirmModalOpen, setIsBranchConfirmModalOpen] = useState(false);
   const [branchChangeContext, setBranchChangeContext] = useState(null);
 
-  // ▼▼▼ 修正: 抜け落ちていたlocalStorageへの保存処理を復活 ▼▼▼
   useEffect(() => {
     localStorage.setItem('isCustomerListLocked', JSON.stringify(isCustomerListLocked));
   }, [isCustomerListLocked]);
@@ -67,25 +66,25 @@ function MainPage() {
   }, [handleVisibilityChange]);
 
   const selectedCustomer = useMemo(() => customerData.find(c => c.id === selectedCustomerId), [customerData, selectedCustomerId]);
-  const assignedFlows = useMemo(() => selectedCustomer?.assignedWorkflows || [], [selectedCustomer]);
+  const assignedCases = useMemo(() => selectedCustomer?.assignedCases || [], [selectedCustomer]);
 
-  const validSelectedWorkflowId = useMemo(() => {
-    if (!assignedFlows || assignedFlows.length === 0) return null;
-    const isIdValid = assignedFlows.some(wf => wf.instanceId === selectedWorkflowId);
-    if (isIdValid) return selectedWorkflowId;
-    return assignedFlows[0]?.instanceId || null;
-  }, [assignedFlows, selectedWorkflowId]);
+  const validSelectedCaseId = useMemo(() => {
+    if (!assignedCases || assignedCases.length === 0) return null;
+    const isIdValid = assignedCases.some(wf => wf.instanceId === selectedCaseId);
+    if (isIdValid) return selectedCaseId;
+    return assignedCases[0]?.instanceId || null;
+  }, [assignedCases, selectedCaseId]);
 
   useEffect(() => {
-    if (validSelectedWorkflowId !== selectedWorkflowId) {
-      dispatch(setSelectedWorkflowId(validSelectedWorkflowId));
+    if (validSelectedCaseId !== selectedCaseId) {
+      dispatch(setSelectedCaseId(validSelectedCaseId));
     }
-  }, [validSelectedWorkflowId, selectedWorkflowId, dispatch]);
+  }, [validSelectedCaseId, selectedCaseId, dispatch]);
 
-  const currentWorkflow = useMemo(() => assignedFlows.find(wf => wf.instanceId === validSelectedWorkflowId), [assignedFlows, validSelectedWorkflowId]);
+  const currentCase = useMemo(() => assignedCases.find(wf => wf.instanceId === validSelectedCaseId), [assignedCases, validSelectedCaseId]);
 
   useEffect(() => {
-    if (currentWorkflow && currentWorkflow.tasks.length > 0) {
+    if (currentCase && currentCase.tasks.length > 0) {
       const findTaskRecursive = (tasks, id) => {
         for (const task of tasks) {
           if (task.id === id) return true;
@@ -96,10 +95,10 @@ function MainPage() {
         return false;
       };
 
-      const currentTaskExists = selectedTaskId && findTaskRecursive(currentWorkflow.tasks, selectedTaskId);
+      const currentTaskExists = selectedTaskId && findTaskRecursive(currentCase.tasks, selectedTaskId);
 
       if (!currentTaskExists) {
-        const firstTask = currentWorkflow.tasks[0];
+        const firstTask = currentCase.tasks[0];
         if (firstTask) {
           dispatch(setSelectedTaskId(firstTask.id));
         }
@@ -109,11 +108,11 @@ function MainPage() {
         dispatch(setSelectedTaskId(null));
       }
     }
-  }, [currentWorkflow, selectedTaskId, dispatch]);
+  }, [currentCase, selectedTaskId, dispatch]);
 
 
   const selectedTask = useMemo(() => {
-    if (!selectedTaskId || !currentWorkflow) return null;
+    if (!selectedTaskId || !currentCase) return null;
     const findTask = (tasks, id) => {
       for (const task of tasks) {
         if (task.id === id) return task;
@@ -124,28 +123,28 @@ function MainPage() {
       }
       return null;
     };
-    return findTask(currentWorkflow.tasks, selectedTaskId);
-  }, [selectedTaskId, currentWorkflow]);
+    return findTask(currentCase.tasks, selectedTaskId);
+  }, [selectedTaskId, currentCase]);
 
-  const handleAssignFlow = (workflowTemplateId) => {
-    dispatch(assignWorkflowToCustomer({ customerId: selectedCustomerId, workflowTemplateId }));
+  const handleAssignFlow = (flowTemplateId) => {
+    dispatch(assignFlowToCustomer({ customerId: selectedCustomerId, flowTemplateId }));
     setIsModalOpen(false);
   };
-  const handleUnassignFlow = (workflowInstanceId) => {
-    dispatch(unassignWorkflowFromCustomer({ customerId: selectedCustomerId, workflowInstanceId }));
+  const handleUnassignCase = (caseInstanceId) => {
+    dispatch(unassignCaseFromCustomer({ customerId: selectedCustomerId, caseInstanceId }));
   };
   const handleUpdateTaskMemo = (taskId, memo) => {
-    dispatch(updateTaskMemo({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId, memo }));
+    dispatch(updateTaskMemo({ customerId: selectedCustomerId, caseInstanceId: validSelectedCaseId, taskId, memo }));
   };
   const handleToggleTask = (taskId) => {
-    dispatch(toggleTask({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId }));
+    dispatch(toggleTask({ customerId: selectedCustomerId, caseInstanceId: validSelectedCaseId, taskId }));
   };
   const handleToggleDocument = (taskId, docName) => {
-    dispatch(toggleDocument({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId, docName }));
+    dispatch(toggleDocument({ customerId: selectedCustomerId, caseInstanceId: validSelectedCaseId, taskId, docName }));
   };
   const handleSelectBranch = (taskId, newOptionKey) => {
     const behavior = localStorage.getItem('branchResetBehavior') || 'confirm';
-    if (!currentWorkflow) return;
+    if (!currentCase) return;
 
     let targetTask = null;
     const findTaskRecursive = (tasks, id) => {
@@ -160,12 +159,12 @@ function MainPage() {
       }
       return null;
     };
-    targetTask = findTaskRecursive(currentWorkflow.tasks, taskId);
+    targetTask = findTaskRecursive(currentCase.tasks, taskId);
     if (!targetTask) return;
 
     const isSwitching = targetTask.selectedOption && targetTask.selectedOption !== newOptionKey;
     if (!isSwitching) {
-      dispatch(selectBranch({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId, optionKey: newOptionKey, shouldReset: false }));
+      dispatch(selectBranch({ customerId: selectedCustomerId, caseInstanceId: validSelectedCaseId, taskId, optionKey: newOptionKey, shouldReset: false }));
       return;
     }
 
@@ -187,11 +186,11 @@ function MainPage() {
     const hasProgress = hasCompletedSubTasksRecursive(prevSubTasks);
 
     if (!hasProgress || behavior === 'keep') {
-      dispatch(selectBranch({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId, optionKey: newOptionKey, shouldReset: false }));
+      dispatch(selectBranch({ customerId: selectedCustomerId, caseInstanceId: validSelectedCaseId, taskId, optionKey: newOptionKey, shouldReset: false }));
       return;
     }
     if (behavior === 'clear') {
-      dispatch(selectBranch({ customerId: selectedCustomerId, workflowInstanceId: validSelectedWorkflowId, taskId, optionKey: newOptionKey, shouldReset: true }));
+      dispatch(selectBranch({ customerId: selectedCustomerId, caseInstanceId: validSelectedCaseId, taskId, optionKey: newOptionKey, shouldReset: true }));
       return;
     }
 
@@ -204,7 +203,7 @@ function MainPage() {
       const { taskId, newOptionKey } = branchChangeContext;
       dispatch(selectBranch({
         customerId: selectedCustomerId,
-        workflowInstanceId: validSelectedWorkflowId,
+        caseInstanceId: validSelectedCaseId,
         taskId,
         optionKey: newOptionKey,
         shouldReset
@@ -255,22 +254,22 @@ function MainPage() {
         <Box sx={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', gap: 2, minHeight: 'fit-content', minWidth: 400 }}>
           <CustomerDetail
             customer={selectedCustomer}
-            assignedFlows={assignedFlows}
-            onUnassignFlow={handleUnassignFlow}
+            assignedCases={assignedCases}
+            onUnassignCase={handleUnassignCase}
             onOpenModal={() => setIsModalOpen(true)}
           />
-          <WorkflowList
-            assignedFlows={assignedFlows}
-            selectedWorkflowId={validSelectedWorkflowId}
-            onSelectWorkflow={(id) => dispatch(setSelectedWorkflowId(id))}
-            currentWorkflow={currentWorkflow}
+          <CaseList
+            assignedCases={assignedCases}
+            selectedCaseId={validSelectedCaseId}
+            onSelectCase={(id) => dispatch(setSelectedCaseId(id))}
+            currentCase={currentCase}
             onSelectTask={(id) => dispatch(setSelectedTaskId(id))}
             selectedTaskId={selectedTaskId}
           />
         </Box>
         <Box sx={{ flex: '0 1 35%', minWidth: 320 }}>
           <TaskDetailPane
-            key={selectedTask ? `${validSelectedWorkflowId}-${selectedTaskId}` : 'no-task-selected'}
+            key={selectedTask ? `${validSelectedCaseId}-${selectedTaskId}` : 'no-task-selected'}
             task={selectedTask}
             onUpdateTaskMemo={(memo) => selectedTask && handleUpdateTaskMemo(selectedTask.id, memo)}
             onToggleTask={() => selectedTask && handleToggleTask(selectedTask.id)}
@@ -281,10 +280,10 @@ function MainPage() {
       </Box>
       <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <Box sx={modalStyle}>
-          <Typography variant="h6" component="h2" gutterBottom>業務フローを選択</Typography>
+          <Typography variant="h6" component="h2" gutterBottom>フローを選択</Typography>
           <List>
-            {workflowLibrary.map(wf => (
-              <ListItemButton key={wf.id} onClick={() => handleAssignFlow(wf.id)} disabled={assignedFlows.some(af => af.templateId === wf.id)}>
+            {flowLibrary.map(wf => (
+              <ListItemButton key={wf.id} onClick={() => handleAssignFlow(wf.id)} disabled={assignedCases.some(af => af.templateId === wf.id)}>
                 <ListItemText primary={wf.name} secondary={wf.description} />
               </ListItemButton>
             ))}
