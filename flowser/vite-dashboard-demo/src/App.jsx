@@ -8,14 +8,13 @@ import {
   updateAiSuggestion,
   updateTaskMemo,
   setSelectedCustomerId,
-  setSelectedWorkflowId,
+  setSelectedCaseId,
   setSelectedTaskId
-} from './store/workflowSlice';
+} from './store/caseSlice';
 
 const MainPage = lazy(() => import('./pages/MainPage'));
-const FlowDesignerPage = lazy(() => import('./pages/FlowDesignerPage'));
+const DesignerPage = lazy(() => import('./pages/DesignerPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-// ▼▼▼ 新しいページをインポート ▼▼▼
 const SystemSettingsPage = lazy(() => import('./pages/SystemSettingsPage'));
 
 
@@ -36,16 +35,16 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { isAiModalOpen, aiSuggestion, refiningTask, originalMemo, isApiCommunicating } = useSelector((state) => state.workflow);
+  const { isAiModalOpen, aiSuggestion, refiningTask, originalMemo, isApiCommunicating } = useSelector((state) => state.case);
 
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [navigationContext, setNavigationContext] = useState(null);
 
   const handleAcceptSuggestion = () => {
     if (refiningTask) {
-      const { task, customerId, workflowInstanceId } = refiningTask;
-      dispatch(updateTaskMemo({ customerId, workflowInstanceId, taskId: task.id, memo: aiSuggestion }));
-      setNavigationContext({ customerId, workflowInstanceId, taskId: task.id });
+      const { task, customerId, caseInstanceId } = refiningTask;
+      dispatch(updateTaskMemo({ customerId, caseInstanceId, taskId: task.id, memo: aiSuggestion }));
+      setNavigationContext({ customerId, caseInstanceId, taskId: task.id });
     }
     const wasOnMainPage = location.pathname === '/';
     dispatch(closeAiModal());
@@ -57,7 +56,7 @@ function App() {
   const handleConfirmNavigation = () => {
     if (navigationContext) {
       dispatch(setSelectedCustomerId(navigationContext.customerId));
-      dispatch(setSelectedWorkflowId(navigationContext.workflowInstanceId));
+      dispatch(setSelectedCaseId(navigationContext.caseInstanceId));
       dispatch(setSelectedTaskId(navigationContext.taskId));
     }
     setShowConfirmationModal(false);
@@ -77,15 +76,12 @@ function App() {
         <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><CircularProgress /></Box>}>
           <Routes>
             <Route path="/" element={<MainPage />} />
-            <Route path="/designer" element={<FlowDesignerPage />} />
+            <Route path="/designer" element={<DesignerPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            {/* ▼▼▼ 新しいルートを追加 ▼▼▼ */}
             <Route path="/system-settings" element={<SystemSettingsPage />} />
           </Routes>
         </Suspense>
       </Box>
-
-       {/* ... (モーダル部分は変更なし) ... */}
     </ThemeProvider>
   );
 }

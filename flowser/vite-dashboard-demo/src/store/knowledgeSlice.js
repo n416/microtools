@@ -1,6 +1,5 @@
 import { createSlice, nanoid } from '@reduxjs/toolkit';
 
-// ▼▼▼ 【修正】キャンピングカー販売フローの知識を初期データとして追加 ▼▼▼
 const initialKnowledgeLibrary = [
   {
     id: "phase-001",
@@ -101,7 +100,6 @@ const initialKnowledgeLibrary = [
     ]
   }
 ];
-// ▲▲▲ ここまで修正 ▲▲▲
 
 
 const loadState = () => {
@@ -111,7 +109,6 @@ const loadState = () => {
       return initialKnowledgeLibrary;
     }
     const parsed = JSON.parse(serializedState);
-    // データ構造が古い場合に備えて、knowledgesプロパティを保証する
     return parsed.map(phase => ({
       ...phase,
       knowledges: phase.knowledges || [],
@@ -160,7 +157,6 @@ const knowledgeSlice = createSlice({
       state.selectedKnowledgeId = null; 
       state.isAddingNewKnowledge = false;
     },
-
     addPhase: (state, action) => {
       state.library.push({
         id: `phase-${nanoid()}`,
@@ -188,7 +184,6 @@ const knowledgeSlice = createSlice({
       const [removed] = state.library.splice(sourceIndex, 1);
       state.library.splice(destinationIndex, 0, removed);
     },
-
     addSubPhase: (state, action) => {
       const phase = state.library.find(p => p.id === action.payload.phaseId);
       if (phase) {
@@ -228,7 +223,6 @@ const knowledgeSlice = createSlice({
         phase.subPhases.splice(destinationIndex, 0, removed);
       }
     },
-
     addKnowledge: (state, action) => {
       const { phaseId, subPhaseId, knowledge } = action.payload;
       const phase = state.library.find(p => p.id === phaseId);
@@ -289,6 +283,40 @@ const knowledgeSlice = createSlice({
         }
       }
     },
+    moveKnowledge: (state, action) => {
+      const { knowledgeId, source, target } = action.payload;
+      let knowledgeToMove = null;
+
+      const sourcePhase = state.library.find(p => p.id === source.phaseId);
+      if (sourcePhase) {
+        const sourceOwner = source.subPhaseId
+          ? sourcePhase.subPhases.find(sp => sp.id === source.subPhaseId)
+          : sourcePhase;
+        
+        if (sourceOwner && sourceOwner.knowledges) {
+          const index = sourceOwner.knowledges.findIndex(k => k.id === knowledgeId);
+          if (index > -1) {
+            [knowledgeToMove] = sourceOwner.knowledges.splice(index, 1);
+          }
+        }
+      }
+
+      if (knowledgeToMove) {
+        const targetPhase = state.library.find(p => p.id === target.phaseId);
+        if (targetPhase) {
+          const targetOwner = target.subPhaseId
+            ? targetPhase.subPhases.find(sp => sp.id === target.subPhaseId)
+            : targetPhase;
+          
+          if (targetOwner) {
+            if (!targetOwner.knowledges) {
+              targetOwner.knowledges = [];
+            }
+            targetOwner.knowledges.push(knowledgeToMove);
+          }
+        }
+      }
+    },
   }
 });
 
@@ -298,6 +326,7 @@ export const {
   addPhase, updatePhase, deletePhase, reorderPhases,
   addSubPhase, updateSubPhase, deleteSubPhase, reorderSubPhases,
   addKnowledge, updateKnowledge, deleteKnowledge,
+  moveKnowledge,
 } = knowledgeSlice.actions;
 
 export default knowledgeSlice.reducer;

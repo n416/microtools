@@ -5,7 +5,6 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-// ▼▼▼ 新しいアイコンをインポート ▼▼▼
 import DnsIcon from '@mui/icons-material/Dns';
 
 function Header({ isLocked, onToggleLock }) {
@@ -25,7 +24,7 @@ function Header({ isLocked, onToggleLock }) {
         {!isLocked && (
           <Tabs value={TABS.includes(location.pathname) ? location.pathname : false} sx={{ minHeight: 0, '& .MuiTabs-indicator': { height: 3 } }}>
             <Tab label="顧客管理" value="/" to="/" component={Link} sx={{ py: 1, minHeight: 0 }} />
-            <Tab label="AIフロー設計" value="/designer" to="/designer" component={Link} sx={{ py: 1, minHeight: 0 }} />
+            <Tab label="フロー設計" value="/designer" to="/designer" component={Link} sx={{ py: 1, minHeight: 0 }} />
           </Tabs>
         )}
       </Box>
@@ -36,7 +35,6 @@ function Header({ isLocked, onToggleLock }) {
             <IconButton component={Link} to="/settings" aria-label="user settings">
               <SettingsIcon />
             </IconButton>
-            {/* ▼▼▼ システム設定へのリンクアイコンを追加 ▼▼▼ */}
             <IconButton component={Link} to="/system-settings" aria-label="system settings">
               <DnsIcon />
             </IconButton>

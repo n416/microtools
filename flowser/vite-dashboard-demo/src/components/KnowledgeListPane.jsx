@@ -1,14 +1,58 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Paper, Typography, Box, Button, List, ListItemButton, ListItemText, Chip } from '@mui/material';
+import { Paper, Typography, Box, Button, List, ListItem, ListItemButton, ListItemText, Chip } from '@mui/material'; // ListItem をインポート
 import { selectKnowledge, startAddingKnowledge } from '../store/knowledgeSlice';
 import TaskIcon from '@mui/icons-material/Description';
 import BranchIcon from '@mui/icons-material/CallSplit';
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'; // AIアイコン
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import { useDrag } from 'react-dnd';
 
-function KnowledgeListPane({ onOpenAiModal }) { // onOpenAiModal を props として受け取る
+function KnowledgeItem({ knowledge, phaseId, subPhaseId }) {
     const dispatch = useDispatch();
-    const { library, selectedPhaseId, selectedSubPhaseId, selectedKnowledgeId } = useSelector(state => state.knowledge);
+    const { selectedKnowledgeId } = useSelector(state => state.knowledge);
+
+    const [{ isDragging }, drag] = useDrag(() => ({
+        type: 'knowledge',
+        item: { 
+            id: knowledge.id, 
+            source: { phaseId, subPhaseId } 
+        },
+        collect: (monitor) => ({
+            isDragging: !!monitor.isDragging(),
+        }),
+    }));
+
+    return (
+        // ▼▼▼ 【修正】 ListItemで全体をラップし、drag refをこちらに設定 ▼▼▼
+        <ListItem
+            ref={drag}
+            disablePadding
+            sx={{
+                cursor: 'move',
+                opacity: isDragging ? 0.5 : 1,
+                // ドロップターゲットに重なった時のボーダー表示との競合を避けるため、背景色を少しつける
+                bgcolor: 'background.paper', 
+                borderRadius: 1,
+                mb: 0.5,
+            }}
+        >
+            {/* ListItemButtonはクリックと選択状態の管理に専念させる */}
+            <ListItemButton
+                selected={selectedKnowledgeId === knowledge.id}
+                onClick={() => dispatch(selectKnowledge(knowledge.id))}
+                sx={{ borderRadius: 1 }}
+            >
+                {knowledge.type === 'task' ? <TaskIcon sx={{ mr: 1 }}/> : <BranchIcon sx={{ mr: 1 }}/>}
+                <ListItemText primary={knowledge.text} />
+                <Chip label={knowledge.type} size="small" />
+            </ListItemButton>
+        </ListItem>
+    );
+}
+
+function KnowledgeListPane({ onOpenAiModal }) {
+    const dispatch = useDispatch();
+    const { library, selectedPhaseId, selectedSubPhaseId } = useSelector(state => state.knowledge);
 
     let activeItem = null;
     if (selectedSubPhaseId) {
@@ -39,7 +83,6 @@ function KnowledgeListPane({ onOpenAiModal }) { // onOpenAiModal を props と�
         <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>② 知識リスト: {activeItem.name}</Typography>
-                {/* ▼▼▼ AIフロー生成ボタン ▼▼▼ */}
                 <Button
                     variant="outlined"
                     size="small"
@@ -52,15 +95,12 @@ function KnowledgeListPane({ onOpenAiModal }) { // onOpenAiModal を props と�
             <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
                 <List dense>
                     {(activeItem.knowledges || []).map(k => (
-                        <ListItemButton
-                            key={k.id}
-                            selected={selectedKnowledgeId === k.id}
-                            onClick={() => dispatch(selectKnowledge(k.id))}
-                        >
-                            {k.type === 'task' ? <TaskIcon sx={{ mr: 1 }}/> : <BranchIcon sx={{ mr: 1 }}/>}
-                            <ListItemText primary={k.text} />
-                            <Chip label={k.type} size="small" />
-                        </ListItemButton>
+                        <KnowledgeItem 
+                            key={k.id} 
+                            knowledge={k}
+                            phaseId={selectedPhaseId}
+                            subPhaseId={selectedSubPhaseId}
+                        />
                     ))}
                 </List>
             </Box>

@@ -8,7 +8,7 @@ import { styled } from '@mui/material/styles';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { GeminiApiClient } from '../api/geminiApiClient.js';
 import { useSelector, useDispatch } from 'react-redux';
-import { startAiRefinement, setApiCommunicating } from '../store/workflowSlice';
+import { startAiRefinement, setApiCommunicating } from '../store/caseSlice';
 
 const Pane = styled(Paper)({
   padding: '16px',
@@ -23,8 +23,7 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, 
   const [isGeminiAvailable, setIsGeminiAvailable] = useState(false);
   const [isAiRefining, setIsAiRefining] = useState(false);
 
-  // AI整形に関わるグローバルな状態は、ここでも直接Storeから取得できる
-  const { isApiCommunicating, selectedCustomerId, selectedWorkflowId } = useSelector(state => state.workflow);
+  const { isApiCommunicating, selectedCustomerId, selectedCaseId } = useSelector(state => state.case);
 
   useEffect(() => {
     if (task) {
@@ -56,7 +55,7 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, 
       dispatch(startAiRefinement({
         task,
         customerId: selectedCustomerId,
-        workflowInstanceId: selectedWorkflowId,
+        caseInstanceId: selectedCaseId,
         originalMemo: memo,
         suggestion: resultText.trim()
       }));

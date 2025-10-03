@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Box, Paper, Typography, TextField, Button, Avatar, Stack, Chip, CircularProgress } from '@mui/material'; // CircularProgress をインポート
+import { Box, Paper, Typography, TextField, Button, Avatar, Stack, Chip, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
@@ -34,7 +34,6 @@ const MessageContent = styled(Paper)(({ theme, sender }) => ({
   border: sender === 'ai' ? `1px solid ${theme.palette.divider}` : 'none',
 }));
 
-// ▼▼▼ 【修正】 isWaitingForAiResponse を props に追加 ▼▼▼
 function ChatPane({ chatHistory, onSendMessage, onOptionSelect, isWaitingForUserInput, isWaitingForAiResponse }) {
   const [userInput, setUserInput] = React.useState('');
   const messagesEndRef = useRef(null);
@@ -61,7 +60,7 @@ function ChatPane({ chatHistory, onSendMessage, onOptionSelect, isWaitingForUser
 
   return (
     <ChatContainer>
-      <Typography variant="h6" gutterBottom>AIチャット設計</Typography>
+      <Typography variant="h6" gutterBottom>AIフロー設計</Typography>
       <MessagesContainer>
         {chatHistory.map((msg, index) => (
           <MessageBubble key={index} sender={msg.sender}>
@@ -69,39 +68,38 @@ function ChatPane({ chatHistory, onSendMessage, onOptionSelect, isWaitingForUser
               {msg.sender === 'ai' ? <SmartToyIcon /> : <AccountCircleIcon />}
             </Avatar>
             <Box>
-                <MessageContent sender={msg.sender}>
-                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{msg.text}</Typography>
-                </MessageContent>
-                {msg.options && msg.options.length > 0 && (
-                    <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', justifyContent: 'flex-start', ml:1 }}>
-                        {msg.options.map((opt) => (
-                            <Chip
-                                key={opt.value}
-                                label={opt.label}
-                                onClick={() => onSendMessage(opt.label)} // オプションクリック時も onSendMessage を呼ぶ
-                                color="info"
-                                clickable={isWaitingForUserInput}
-                                disabled={!isWaitingForUserInput}
-                                variant="outlined"
-                            />
-                        ))}
-                    </Stack>
-                )}
+              <MessageContent sender={msg.sender}>
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{msg.text}</Typography>
+              </MessageContent>
+              {msg.options && msg.options.length > 0 && (
+                <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', justifyContent: 'flex-start', ml: 1 }}>
+                  {msg.options.map((opt) => (
+                    <Chip
+                      key={opt.value}
+                      label={opt.label}
+                      onClick={() => onSendMessage(opt.label)}
+                      color="info"
+                      clickable={isWaitingForUserInput}
+                      disabled={!isWaitingForUserInput}
+                      variant="outlined"
+                    />
+                  ))}
+                </Stack>
+              )}
             </Box>
           </MessageBubble>
         ))}
-        {/* ▼▼▼ 【追加】 AI応答待ちのインジケーター ▼▼▼ */}
         {isWaitingForAiResponse && (
-            <MessageBubble sender="ai">
-                <Avatar sx={{ mr: 1, bgcolor: 'secondary.main' }}>
-                    <SmartToyIcon />
-                </Avatar>
-                <Box>
-                    <MessageContent sender="ai">
-                        <CircularProgress size={20} />
-                    </MessageContent>
-                </Box>
-            </MessageBubble>
+          <MessageBubble sender="ai">
+            <Avatar sx={{ mr: 1, bgcolor: 'secondary.main' }}>
+              <SmartToyIcon />
+            </Avatar>
+            <Box>
+              <MessageContent sender="ai">
+                <CircularProgress size={20} />
+              </MessageContent>
+            </Box>
+          </MessageBubble>
         )}
         <div ref={messagesEndRef} />
       </MessagesContainer>
@@ -116,10 +114,10 @@ function ChatPane({ chatHistory, onSendMessage, onOptionSelect, isWaitingForUser
           disabled={!isWaitingForUserInput}
         />
         <Button
-            variant="contained"
-            onClick={handleSend}
-            sx={{ ml: 1 }}
-            disabled={!isWaitingForUserInput}
+          variant="contained"
+          onClick={handleSend}
+          sx={{ ml: 1 }}
+          disabled={!isWaitingForUserInput}
         >
           送信
         </Button>

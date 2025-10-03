@@ -1,29 +1,27 @@
 import { configureStore } from '@reduxjs/toolkit';
-import workflowReducer from './workflowSlice';
+import caseReducer from './caseSlice';
 import knowledgeReducer from './knowledgeSlice';
-import workflowCategoryReducer from './workflowCategorySlice'; // インポート
+import flowCategoryReducer from './flowCategorySlice';
 
 export const store = configureStore({
   reducer: {
-    workflow: workflowReducer,
+    case: caseReducer,
     knowledge: knowledgeReducer,
-    workflowCategory: workflowCategoryReducer, // 追加
+    flowCategory: flowCategoryReducer,
   },
 });
 
 store.subscribe(() => {
   try {
     const state = store.getState();
-    // UIの状態（モーダルの開閉など）は保存せず、データと選択状態のみを保存
-    localStorage.setItem('customerData', JSON.stringify(state.workflow.customerData));
-    localStorage.setItem('workflowLibrary', JSON.stringify(state.workflow.workflowLibrary));
-    localStorage.setItem('selectedCustomerId', JSON.stringify(state.workflow.selectedCustomerId));
-    localStorage.setItem('selectedWorkflowId', JSON.stringify(state.workflow.selectedWorkflowId));
-    localStorage.setItem('selectedTaskId', JSON.stringify(state.workflow.selectedTaskId));
+    localStorage.setItem('customerData', JSON.stringify(state.case.customerData));
+    localStorage.setItem('flowLibrary', JSON.stringify(state.case.flowLibrary));
+    localStorage.setItem('selectedCustomerId', JSON.stringify(state.case.selectedCustomerId));
+    localStorage.setItem('selectedCaseId', JSON.stringify(state.case.selectedCaseId));
+    localStorage.setItem('selectedTaskId', JSON.stringify(state.case.selectedTaskId));
     localStorage.setItem('knowledgeLibrary', JSON.stringify(state.knowledge.library));
-    // 新しいカテゴリ情報も保存
-    localStorage.setItem('workflowCategories', JSON.stringify(state.workflowCategory.categories));
-    localStorage.setItem('selectedWorkflowCategoryId', JSON.stringify(state.workflowCategory.selectedCategoryId));
+    localStorage.setItem('flowCategories', JSON.stringify(state.flowCategory.categories));
+    localStorage.setItem('selectedFlowCategoryId', JSON.stringify(state.flowCategory.selectedCategoryId));
   } catch (e) {
     console.error("Could not save state to localStorage", e);
   }
