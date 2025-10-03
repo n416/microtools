@@ -1,11 +1,12 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Paper, Typography, Box, Button, List, ListItemButton, ListItemText, Chip } from '@mui/material';
-import { selectKnowledge, startAddingKnowledge } from '../store/knowledgeSlice'; // startAddingKnowledge をインポート
+import { selectKnowledge, startAddingKnowledge } from '../store/knowledgeSlice';
 import TaskIcon from '@mui/icons-material/Description';
 import BranchIcon from '@mui/icons-material/CallSplit';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'; // AIアイコン
 
-function KnowledgeListPane() {
+function KnowledgeListPane({ onOpenAiModal }) { // onOpenAiModal を props として受け取る
     const dispatch = useDispatch();
     const { library, selectedPhaseId, selectedSubPhaseId, selectedKnowledgeId } = useSelector(state => state.knowledge);
 
@@ -23,7 +24,7 @@ function KnowledgeListPane() {
     }
 
     const handleAddNew = () => {
-        dispatch(startAddingKnowledge()); // 【修正】新規追加モードを開始するアクションを呼ぶ
+        dispatch(startAddingKnowledge());
     };
 
     if (!activeItem) {
@@ -36,8 +37,19 @@ function KnowledgeListPane() {
 
     return (
         <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" gutterBottom>② 知識リスト: {activeItem.name}</Typography>
-            <Box sx={{ overflow: 'auto' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>② 知識リスト: {activeItem.name}</Typography>
+                {/* ▼▼▼ AIフロー生成ボタン ▼▼▼ */}
+                <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<AutoFixHighIcon />}
+                    onClick={onOpenAiModal}
+                >
+                    AIでフローを生成
+                </Button>
+            </Box>
+            <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
                 <List dense>
                     {(activeItem.knowledges || []).map(k => (
                         <ListItemButton
