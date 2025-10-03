@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const initialWorkflowLibrary = [
   {
-    id: 'wf001', name: '【標準】新車販売フロー', description: '新車のキャンピングカーを販売する際の標準的な業務フローです。',
+    id: 'wf001', name: '【標準】新車販売フロー', description: '新車のキャンピングカーを販売する際の標準的な業務フローです。', categoryId: 'cat-sales',
     tasks: [
       { id: 1, text: '顧客要望ヒアリングと車種選定', refId: 'AI', completed: false, memo: '', details: '顧客の利用用途、予算、希望装備などを詳しくヒアリングし、最適な車種を提案します。パンフレットやデモカーを活用します。', documents: [{ name: '車種カタログ.pdf', url: '#', checked: false }] },
       { id: 2, text: '見積書作成とオプション確認', refId: 'K001', completed: false, memo: '', details: '選択された車種をベースに、追加オプション（ソーラーパネル、FFヒーター、ナビ等）を含めた正式な見積書を作成し、提示します。' },
@@ -55,7 +55,7 @@ const initialWorkflowLibrary = [
     ]
   },
   {
-    id: 'wf002', name: '【標準】中古車買取フロー', description: '顧客からキャンピングカーを買い取る際の標準的な業務フローです。',
+    id: 'wf002', name: '【標準】中古車買取フロー', description: '顧客からキャンピングカーを買い取る際の標準的な業務フローです。', categoryId: 'cat-sales',
     tasks: [
       { id: 1, text: '査定予約の受付と車両情報確認', refId: 'AI', completed: true, memo: '', details: '電話またはウェブサイトから査定予約を受け付けます。車種、年式、走行距離、装備などの基本情報を事前にヒアリングします。' },
       { id: 2, text: '実車査定と査定額の提示', refId: 'K004', completed: false, memo: '', details: '予約日に顧客に来店いただき、車両の状態（内外装、エンジン、電装系）を詳細にチェックします。市場価格と車両状態を基に、適正な査定額を算出・提示します。', documents: [{ name: '中古車査定チェックシート.xlsx', url: '#', checked: true }] },
@@ -65,7 +65,7 @@ const initialWorkflowLibrary = [
     ]
   },
   {
-    id: 'wf003', name: '【緊急】重大クレーム対応フロー', description: '雨漏りやエンジン不動など、顧客満足度に大きく影響する重大なクレームに対応するためのフローです。',
+    id: 'wf003', name: '【緊急】重大クレーム対応フロー', description: '雨漏りやエンジン不動など、顧客満足度に大きく影響する重大なクレームに対応するためのフローです。', categoryId: 'cat-support',
     tasks: [
       { id: 1, text: '第一次受付と状況ヒアリング', refId: 'AI', completed: false, memo: '', details: '顧客からのクレーム連絡を最優先で受け付け、冷静に状況をヒアリングします。感情的にならず、事実確認に徹します。' },
       { id: 2, text: '車両の緊急引き取りまたは出張点検', refId: 'K007', completed: false, memo: '', details: '車両が自走不能な場合は積載車を手配します。自走可能な場合でも、迅速に車両をお預かりするか、サービスカーで現地へ向かいま す。' },
@@ -126,6 +126,13 @@ const loadStateFromLocalStorage = () => {
         }
         
         const workflowLibrary = savedWorkflowLibrary ? JSON.parse(savedWorkflowLibrary) : initialWorkflowLibrary;
+        // カテゴリIDがない古いデータ形式への互換性対応
+        workflowLibrary.forEach(wf => {
+            if (!wf.categoryId) {
+                wf.categoryId = 'cat-uncategorized';
+            }
+        });
+
         const selectedCustomerId = savedSelectedCustomerId ? JSON.parse(savedSelectedCustomerId) : 1;
         const selectedWorkflowId = savedSelectedWorkflowId ? JSON.parse(savedSelectedWorkflowId) : null;
         const selectedTaskId = savedSelectedTaskId ? JSON.parse(savedSelectedTaskId) : null;
@@ -163,9 +170,28 @@ export const workflowSlice = createSlice({
   name: 'workflow',
   initialState: loadStateFromLocalStorage(),
   reducers: {
-    // ▼▼▼ 追加: 新しいワークフローをライブラリに追加するReducer ▼▼▼
     addWorkflow: (state, action) => {
-        state.workflowLibrary.push(action.payload);
+        const newWorkflow = { ...action.payload, categoryId: 'cat-uncategorized' };
+        state.workflowLibrary.push(newWorkflow);
+    },
+    // ▼▼▼ 追加: ワークフローのカテゴリを変更するReducer ▼▼▼
+    updateWorkflowCategory: (state, action) => {
+      const { workflowId, newCategoryId } = action.payload;
+      const workflow = state.workflowLibrary.find(wf => wf.id === workflowId);
+      if (workflow) {
+        workflow.categoryId = newCategoryId;
+      }
+    },
+    // ▼▼▼ 追加: ワークフローテンプレート自体を更新するReducer（将来用） ▼▼▼
+    updateWorkflowTemplate: (state, action) => {
+      const index = state.workflowLibrary.findIndex(wf => wf.id === action.payload.id);
+      if (index !== -1) {
+        state.workflowLibrary[index] = action.payload;
+      }
+    },
+    // ▼▼▼ 追加: ワークフローテンプレートを削除するReducer（将来用） ▼▼▼
+    deleteWorkflowTemplate: (state, action) => {
+      state.workflowLibrary = state.workflowLibrary.filter(wf => wf.id !== action.payload);
     },
     setSelectedCustomerId: (state, action) => {
       state.selectedCustomerId = action.payload;
@@ -334,7 +360,10 @@ export const workflowSlice = createSlice({
 });
 
 export const {
-  addWorkflow, // Actionとしてエクスポート
+  addWorkflow,
+  updateWorkflowCategory,
+  updateWorkflowTemplate,
+  deleteWorkflowTemplate,
   setSelectedCustomerId,
   setSelectedWorkflowId,
   setSelectedTaskId,

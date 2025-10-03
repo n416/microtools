@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import workflowReducer from './workflowSlice';
-import knowledgeReducer from './knowledgeSlice'; // インポート
+import knowledgeReducer from './knowledgeSlice';
+import workflowCategoryReducer from './workflowCategorySlice'; // インポート
 
 export const store = configureStore({
   reducer: {
     workflow: workflowReducer,
-    knowledge: knowledgeReducer, // 追加
+    knowledge: knowledgeReducer,
+    workflowCategory: workflowCategoryReducer, // 追加
   },
 });
 
@@ -18,8 +20,10 @@ store.subscribe(() => {
     localStorage.setItem('selectedCustomerId', JSON.stringify(state.workflow.selectedCustomerId));
     localStorage.setItem('selectedWorkflowId', JSON.stringify(state.workflow.selectedWorkflowId));
     localStorage.setItem('selectedTaskId', JSON.stringify(state.workflow.selectedTaskId));
-    // 新しい知識ライブラリも保存
     localStorage.setItem('knowledgeLibrary', JSON.stringify(state.knowledge.library));
+    // 新しいカテゴリ情報も保存
+    localStorage.setItem('workflowCategories', JSON.stringify(state.workflowCategory.categories));
+    localStorage.setItem('selectedWorkflowCategoryId', JSON.stringify(state.workflowCategory.selectedCategoryId));
   } catch (e) {
     console.error("Could not save state to localStorage", e);
   }
