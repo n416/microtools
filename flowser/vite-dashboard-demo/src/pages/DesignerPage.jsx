@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSelector, useDispatch } from 'react-redux'; // <- "redux-react" から "react-redux" に修正
-import { Box, ToggleButtonGroup, ToggleButton, Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { useSelector, useDispatch } from 'react-redux';
+import { Box, ToggleButtonGroup, ToggleButton, Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle, List, ListItemButton, ListItemText, Typography } from '@mui/material';
 import Header from '../components/Header';
 import PhaseHierarchyPane from '../components/PhaseHierarchyPane';
 import KnowledgeListPane from '../components/KnowledgeListPane';
@@ -8,77 +8,120 @@ import KnowledgeEditorPane from '../components/KnowledgeEditorPane';
 import FlowGeneratorModal from '../components/FlowGeneratorModal';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import CategoryManagementPane from '../components/CategoryManagementPane';
-import FlowListPane from '../components/FlowListPane';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import FolderCopyIcon from '@mui/icons-material/FolderCopy';
-import MarkUnreadChatAltIcon from '@mui/icons-material/MarkUnreadChatAlt';
-import AiChatView from '../components/AiChatView';
+import GavelIcon from '@mui/icons-material/Gavel';
+import RuleEditingPane from '../components/RuleEditingPane';
 import { GeminiApiClient } from '../api/geminiApiClient.js';
 import { addFlow } from '../store/caseSlice';
 import { v4 as uuidv4 } from 'uuid';
+import FlowManagementPane from '../components/FlowManagementPane.jsx';
+import FlowDesignPane from '../components/FlowDesignPane.jsx';
+
+function PhaseSelectionModal({ open, onClose, phases, onSelect }) {
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>起点フェーズの選択</DialogTitle>
+      <DialogContent>
+        <Typography gutterBottom>
+          これから作成するフローが、どの業務フェーズに主に関連しているかを選択してください。
+        </Typography>
+        <List>
+          {phases.map(phase => (
+            <ListItemButton key={phase.id} onClick={() => onSelect(phase.id)}>
+              <ListItemText primary={phase.name} />
+            </ListItemButton>
+          ))}
+        </List>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>キャンセル</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 
 function DesignerPage() {
   const dispatch = useDispatch();
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [mode, setMode] = useState('knowledge'); // 'knowledge', 'flow-management', 'flow-ai-chat'
+  const [isGeneratorModalOpen, setIsGeneratorModalOpen] = useState(false);
+  const [mode, setMode] = useState('knowledge');
 
   const { library: knowledgeLibrary } = useSelector(state => state.knowledge);
   const [chatHistory, setChatHistory] = useState([]);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
-  const [isWaitingForUserInput, setIsWaitingForUserInput] = useState(true);
+  const [isWaitingForUserInput, setIsWaitingForUserInput] = useState(false);
   const [isWaitingForAiResponse, setIsWaitingForAiResponse] = useState(false);
 
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [flowName, setFlowName] = useState('');
 
+  const [isPhaseModalOpen, setIsPhaseModalOpen] = useState(false);
+  const [selectedMainPhaseId, setSelectedMainPhaseId] = useState(null);
+
+  const isAiChatActive = selectedMainPhaseId !== null;
+
   useEffect(() => {
-    if (mode === 'flow-ai-chat' && chatHistory.length === 0) {
+    if (selectedMainPhaseId && chatHistory.length === 0) {
+      const phaseName = knowledgeLibrary.find(p => p.id === selectedMainPhaseId)?.name || '選択されたフェーズ';
       setChatHistory([{
         sender: 'ai',
-        text: 'こんにちは！どのような業務フローを設計しますか？\n例：「新車販売のフローを開始」',
+        text: `こんにちは！「${phaseName}」に関する業務フローを設計しますね。どのようなフローを作成しますか？`,
       }]);
       setNodes([]);
       setEdges([]);
       setIsWaitingForUserInput(true);
       setIsWaitingForAiResponse(false);
     }
-  }, [mode, chatHistory.length]);
+  }, [selectedMainPhaseId, chatHistory.length, knowledgeLibrary]);
 
   const findKnowledgeById = useCallback((id) => {
     for (const phase of knowledgeLibrary) {
-      const directKnowledge = phase.knowledges?.find(k => k.id === id);
-      if (directKnowledge) return directKnowledge;
-      for (const subPhase of phase.subPhases) {
-        const subKnowledge = subPhase.knowledges?.find(k => k.id === id);
-        if (subKnowledge) return subKnowledge;
-      }
+        const directKnowledge = (phase.knowledges || []).find(k => k.id === id);
+        if (directKnowledge) return { knowledge: directKnowledge, phaseId: phase.id, phaseName: phase.name };
+
+        for (const subPhase of phase.subPhases || []) {
+            const subKnowledge = (subPhase.knowledges || []).find(k => k.id === id);
+            if (subKnowledge) return { knowledge: subKnowledge, phaseId: phase.id, phaseName: phase.name };
+        }
     }
     return null;
   }, [knowledgeLibrary]);
 
   const generatePrompt = (userMessage) => {
+    const mainPhase = knowledgeLibrary.find(p => p.id === selectedMainPhaseId);
+
     const systemPrompt = `あなたは優秀な業務コンサルタントです。ユーザーの指示に基づき、提示された知識ライブラリの項目だけを使って対話的に業務フローを構築します。
 
-# あなたの思考プロセスとルール
-1.  ユーザーの指示を理解します。「削除」「変更」「繋ぎ変え」といった指示にも対応してください。
-2.  指示に従って、フローチャートを更新するためのアクション（追加、削除、変更）を決定します。
-3.  **削除の場合の重要ルール：** ユーザーからノードの削除指示があった場合、そのノードを削除するだけでなく、**フローが途切れないように、削除されたノードの前後のノードを新しいエッジで再接続してください。**
-4.  **宣言と実行の一致：** あなたがユーザーへの返答メッセージ（aiResponse.text）で述べた計画（追加、削除、変更）は、**必ず同じJSON応答に含めなければなりません。**
-5.  返答は、必ず以下のJSON形式の配列で出力してください。
-
-# 知識ライブラリ
+# 知識ライブラリ (全フェーズ)
 ${JSON.stringify(knowledgeLibrary, null, 2)}
+
+# あなたの思考プロセス (このセクションを厳密に守ってください)
+1.  **ユーザー指示の解釈**: ユーザーが何をしたいか分析する。どの知識項目(knowledgeId)について言及しているか特定する。
+2.  **逸脱チェック**:
+    a.  追加または言及された知識項目のIDを基に、それが属するフェーズを知識ライブラリから特定する。
+    b.  現在の起点フェーズは「${mainPhase?.name}」(ID: ${mainPhase?.id}) である。
+    c.  特定したタスクのフェーズは、起点フェーズと一致するか？
+    d.  一致しない場合、これは「逸脱」である。応答には **必ず [WARNING] 接頭辞を付ける必要がある** と結論付ける。
+3.  **アクションプラン**: 思考プロセスに基づき、フローチャートを更新するためのJSONアクション（ADD, DELETE, UPDATE）を計画する。
+4.  **応答メッセージ作成**: 思考プロセスに基づき、ユーザーへの返答メッセージを作成する。逸脱チェックで警告が必要と判断した場合、必ずメッセージの先頭に [WARNING] を付ける。
+
+# 逸脱に関する【最重要】ルール
+- **逸脱の定義**: あなたが提案、またはユーザーの指示で追加するタスクが、思考プロセスで確認した結果、起点フェーズである「${mainPhase?.name}」に属していない場合は、すべて「逸脱」とみなします。例外はありません。
+- **警告の義務**: あなたの提案が「逸脱」の定義に当てはまる場合、思考プロセスに従い、**必ず応答メッセージの先頭に [WARNING] という接頭辞を付けてください。**
+
+# フローチャートのレイアウトに関するルール
+- フローは上から下へ流れるように構築する。
+- 新しいノードを追加する場合、接続元のノードよりもY座標が必ず大きくなるように position を設定する (例: y: 元のy + 80)。
+- ノードが重ならないようにX座標を調整する。
 
 # 現在のフローの状態
 - ノード: ${JSON.stringify(nodes, null, 2)}
 - エッジ: ${JSON.stringify(edges, null, 2)}
+- ユーザーの最新の指示: "${userMessage}"
 
-# ユーザーの最新の指示
-"${userMessage}"
-
-# 出力JSONフォーマット (配列形式)
+# 出力JSONフォーマット (思考プロセスに基づき、以下の形式で出力してください)
 [
   {
     "action": "ADD" | "DELETE" | "UPDATE",
@@ -88,7 +131,7 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
     "updateEdge": { "source": "k-006", "target": "k-008" },
     "aiResponse": {
       "text": "ユーザーへの返答メッセージ",
-      "options": []
+      "options": [ { "label": "選択肢テキスト", "value": "choice_value" } ]
     }
   }
 ]
@@ -108,7 +151,7 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
 
       const prompt = generatePrompt(message);
       const resultText = await gemini.generateContent(prompt);
-      
+
       const cleanedJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
       const aiResponseArray = JSON.parse(cleanedJson);
 
@@ -118,41 +161,41 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
         const { action, newNode, newEdge, deleteNodeId, updateEdge, aiResponse } = responseObject;
 
         if (action === 'DELETE' && deleteNodeId) {
-            setNodes(prev => prev.filter(node => node.id !== deleteNodeId));
-            setEdges(prev => prev.filter(edge => edge.source !== deleteNodeId && edge.target !== deleteNodeId));
+          setNodes(prev => prev.filter(node => node.id !== deleteNodeId));
+          setEdges(prev => prev.filter(edge => edge.source !== deleteNodeId && edge.target !== deleteNodeId));
         }
 
         if (action === 'UPDATE' && updateEdge) {
-            setEdges(prev => prev.map(edge => 
-                (edge.source === updateEdge.source || edge.target === updateEdge.target)
-                ? { ...edge, target: updateEdge.target } 
-                : edge
-            ));
+          setEdges(prev => prev.map(edge =>
+            (edge.source === updateEdge.source || edge.target === updateEdge.target)
+              ? { ...edge, target: updateEdge.target }
+              : edge
+          ));
         }
 
         if (action === 'ADD') {
-            if (newNode && newNode.knowledgeId) {
-                const knowledge = findKnowledgeById(newNode.knowledgeId);
-                if (knowledge) {
-                    setNodes(prev => [...prev, {
-                        id: knowledge.id, position: newNode.position, data: { label: knowledge.text }
-                    }]);
-                }
+          if (newNode && newNode.knowledgeId) {
+            const found = findKnowledgeById(newNode.knowledgeId);
+            if (found) {
+              setNodes(prev => [...prev, {
+                id: found.knowledge.id, position: newNode.position, data: { label: found.knowledge.text }
+              }]);
             }
-            if (newEdge && newEdge.source && newEdge.target) {
-                setEdges(prev => [...prev, {
-                    id: `e-${newEdge.source}-${newEdge.target}-${uuidv4()}`,
-                    source: newEdge.source, target: newEdge.target, animated: true,
-                }]);
-            }
+          }
+          if (newEdge && newEdge.source && newEdge.target) {
+            setEdges(prev => [...prev, {
+              id: `e-${newEdge.source}-${newEdge.target}-${uuidv4()}`,
+              source: newEdge.source, target: newEdge.target, animated: true,
+            }]);
+          }
         }
-        
+
         if (aiResponse) {
           lastAiResponse = { sender: 'ai', ...aiResponse };
         }
       });
-      
-      if(lastAiResponse) {
+
+      if (lastAiResponse) {
         setChatHistory(prev => [...prev, lastAiResponse]);
       }
 
@@ -172,14 +215,15 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
       return;
     }
     const newTasks = nodes.map(node => {
-      const knowledge = findKnowledgeById(node.id);
+      const found = findKnowledgeById(node.id);
+      const knowledge = found ? found.knowledge : null;
       return {
         id: uuidv4(),
         text: knowledge?.text || '不明なタスク',
         details: knowledge?.details || '',
         refId: knowledge?.id,
         type: knowledge?.type || 'task',
-        options: knowledge?.options,
+        options: knowledge?.options || [],
         completed: false,
         memo: '',
       };
@@ -204,6 +248,18 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
     }
   };
 
+  const handleStartAiDesign = () => {
+    setIsPhaseModalOpen(true);
+  };
+
+  const handlePhaseSelected = (phaseId) => {
+    setSelectedMainPhaseId(phaseId);
+    setChatHistory([]);
+    setNodes([]);
+    setEdges([]);
+    setIsPhaseModalOpen(false);
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}>
       <Box sx={{ p: '0 24px' }}>
@@ -223,11 +279,11 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
           </ToggleButton>
           <ToggleButton value="flow-management" aria-label="flow management mode">
             <FolderCopyIcon sx={{ mr: 1 }} />
-            フロー管理
+            フロー編集
           </ToggleButton>
-          <ToggleButton value="flow-ai-chat" aria-label="ai chat design mode">
-            <MarkUnreadChatAltIcon sx={{ mr: 1 }} />
-            AIフロー設計
+          <ToggleButton value="rule-editing" aria-label="rule editing mode">
+            <GavelIcon sx={{ mr: 1 }} />
+            ルール編集
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
@@ -236,40 +292,41 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
         <DndProvider backend={HTML5Backend}>
           <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
             <Box sx={{ flex: '0 1 320px', minWidth: 280 }}><PhaseHierarchyPane /></Box>
-            <Box sx={{ flex: '1 1 40%', minWidth: 300 }}><KnowledgeListPane onOpenAiModal={() => setIsAiModalOpen(true)} /></Box>
+            <Box sx={{ flex: '1 1 40%', minWidth: 300 }}><KnowledgeListPane onOpenAiModal={() => setIsGeneratorModalOpen(true)} /></Box>
             <Box sx={{ flex: '1 1 60%', minWidth: 400 }}><KnowledgeEditorPane /></Box>
           </Box>
         </DndProvider>
       )}
-      
+
       {mode === 'flow-management' && (
         <DndProvider backend={HTML5Backend}>
-            <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
-                <Box sx={{ flex: '0 1 320px', minWidth: 280 }}><CategoryManagementPane /></Box>
-                <Box sx={{ flex: '1 1 70%', minWidth: 400 }}><FlowListPane /></Box>
+          <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
+            <Box sx={{ flex: '0 1 400px', minWidth: 320 }}>
+              <FlowManagementPane onStartAiDesign={handleStartAiDesign} />
             </Box>
-        </DndProvider>
-      )}
-
-      {mode === 'flow-ai-chat' && (
-        <>
-            <AiChatView
+            <Box sx={{ flex: '1 1 60%', minWidth: 500 }}>
+              <FlowDesignPane
+                isActive={isAiChatActive}
                 chatHistory={chatHistory}
                 nodes={nodes}
                 edges={edges}
                 onSendMessage={handleSendMessage}
                 isWaitingForUserInput={isWaitingForUserInput}
                 isWaitingForAiResponse={isWaitingForAiResponse}
-            />
-            <Box sx={{ p: '0 24px 24px', textAlign: 'right' }}>
-                <Button variant="contained" onClick={() => setIsSaveModalOpen(true)} disabled={nodes.length === 0}>
-                    フローとして保存
-                </Button>
+                onSave={() => setIsSaveModalOpen(true)}
+              />
             </Box>
-        </>
+          </Box>
+        </DndProvider>
       )}
 
-      <FlowGeneratorModal open={isAiModalOpen} onClose={() => setIsAiModalOpen(false)} />
+      {mode === 'rule-editing' && (
+        <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', minHeight: 0 }}>
+          <RuleEditingPane />
+        </Box>
+      )}
+
+      <FlowGeneratorModal open={isGeneratorModalOpen} onClose={() => setIsGeneratorModalOpen(false)} />
 
       <Dialog open={isSaveModalOpen} onClose={() => setIsSaveModalOpen(false)}>
         <DialogTitle>新しいフローとして保存</DialogTitle>
@@ -290,6 +347,13 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
           <Button onClick={handleSaveFlow}>保存</Button>
         </DialogActions>
       </Dialog>
+
+      <PhaseSelectionModal
+        open={isPhaseModalOpen}
+        onClose={() => setIsPhaseModalOpen(false)}
+        phases={knowledgeLibrary.filter(p => p.subPhases.length > 0 || (p.knowledges && p.knowledges.length > 0))}
+        onSelect={handlePhaseSelected}
+      />
     </Box>
   );
 }

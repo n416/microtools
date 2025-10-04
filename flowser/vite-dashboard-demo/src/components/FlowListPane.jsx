@@ -32,7 +32,7 @@ function FlowItem({ flow }) {
     );
 }
 
-function FlowListPane({ onOpenAiModal }) {
+function FlowListPane({ onStartAiDesign }) {
     const { flowLibrary } = useSelector(state => state.case);
     const { categories, selectedCategoryId } = useSelector(state => state.flowCategory);
 
@@ -53,11 +53,10 @@ function FlowListPane({ onOpenAiModal }) {
                 <Typography variant="h6">
                     フローリスト: {selectedCategory.name}
                 </Typography>
-                <Button variant="outlined" size="small" startIcon={<AutoFixHighIcon />} onClick={onOpenAiModal}>
-                    AIでフローを生成
+                <Button variant="outlined" size="small" startIcon={<AutoFixHighIcon />} onClick={onStartAiDesign}>
+                    AIで新しいフローを設計
                 </Button>
             </Box>
-            {/* ▼▼▼ 【修正】 Boxのスタイルを調整 ▼▼▼ */}
             <Box sx={{ overflow: 'auto', flexGrow: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                 {filteredFlows.length > 0 ? (
                     <List>
