@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+// src/components/TaskDetailPane.jsx
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Paper, Box, Typography, IconButton, Divider, List, ListItem,
-  ListItemIcon, Checkbox, ListItemText, ListItemButton, Stack, Button, TextField
+  ListItemIcon, Checkbox, ListItemText, ListItemButton, Stack, Button, TextField, Alert
 } from '@mui/material';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { styled } from '@mui/material/styles';
@@ -17,7 +18,28 @@ const Pane = styled(Paper)({
   flexDirection: 'column',
 });
 
-function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, onUpdateTaskMemo }) {
+const isLastTask = (task, taskList) => {
+    const findTaskAndCheckSuccessor = (currentTasks, targetId) => {
+        for (let i = 0; i < currentTasks.length; i++) {
+            const currentTask = currentTasks[i];
+            if (currentTask.id === targetId) {
+                return i === currentTasks.length - 1;
+            }
+            if (currentTask.type === 'nested_branch' && currentTask.selectedOption) {
+                const subTasks = currentTask.options[currentTask.selectedOption].tasks || [];
+                const result = findTaskAndCheckSuccessor(subTasks, targetId);
+                if (result !== null) {
+                    return result;
+                }
+            }
+        }
+        return null;
+    };
+    return findTaskAndCheckSuccessor(taskList, task.id);
+};
+
+
+function TaskDetailPane({ task, currentCase, flowLibrary, onToggleDocument, onToggleTask, onSelectBranch, onUpdateTaskMemo, onConcludeAndProceed }) {
   const dispatch = useDispatch();
   const [memo, setMemo] = useState('');
   const [isGeminiAvailable, setIsGeminiAvailable] = useState(false);
@@ -32,6 +54,18 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, 
     const gemini = new GeminiApiClient();
     setIsGeminiAvailable(gemini.isAvailable);
   }, [task]);
+
+  const isFinalTaskInCase = useMemo(() => {
+      if (!task || !currentCase || !currentCase.tasks) return false;
+      return isLastTask(task, currentCase.tasks);
+  }, [task, currentCase]);
+
+  const caseJoint = useMemo(() => {
+      if (!currentCase || !flowLibrary) return null;
+      const flowTemplate = flowLibrary.find(f => f.id === currentCase.templateId);
+      return flowTemplate?.joint || null;
+  }, [currentCase, flowLibrary]);
+
 
   const handleMemoBlur = () => {
     if (task && task.memo !== memo) {
@@ -68,6 +102,50 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, 
       setIsAiRefining(false);
     }
   };
+  
+  const renderExitUI = () => {
+    if (!task?.completed || !isFinalTaskInCase || !caseJoint) {
+        return null;
+    }
+
+    if (caseJoint.type === 'direct' && caseJoint.nextFlowId) {
+        const nextFlow = flowLibrary.find(f => f.id === caseJoint.nextFlowId);
+        return (
+            <Box sx={{ mt: 2 }}>
+                <Alert severity="info" sx={{mb: 1}}>このケースは完了しました。次のプロセスに進んでください。</Alert>
+                <Button 
+                    variant="contained" 
+                    fullWidth 
+                    onClick={() => onConcludeAndProceed(caseJoint.nextFlowId)}>
+                    「{nextFlow ? nextFlow.name : '次のフロー'}」へ進む
+                </Button>
+            </Box>
+        );
+    }
+
+    if (caseJoint.type === 'branching' && caseJoint.branches?.length > 0) {
+        return (
+            <Box sx={{ mt: 2 }}>
+                 <Alert severity="info" sx={{mb: 2}}>{caseJoint.prompt || '次のアクションを選択してください。'}</Alert>
+                <Stack spacing={1}>
+                    {caseJoint.branches.map(branch => {
+                        if (!branch.nextFlowId || !branch.label) return null;
+                        return (
+                            <Button 
+                                key={branch.id}
+                                variant="outlined" 
+                                onClick={() => onConcludeAndProceed(branch.nextFlowId)}>
+                                {branch.label}
+                            </Button>
+                        );
+                    })}
+                </Stack>
+            </Box>
+        );
+    }
+    return null;
+  };
+
 
   if (!task) {
     return (
@@ -106,6 +184,7 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, 
           <ListItemButton
             onClick={onToggleTask}
             sx={{ borderRadius: 1, p: '4px 8px' }}
+            // ▼▼▼ 【修正】 disabled={task.completed} の行を削除 ▼▼▼
           >
             <ListItemIcon sx={{ minWidth: 40 }}>
               <Checkbox
@@ -188,6 +267,9 @@ function TaskDetailPane({ task, onToggleDocument, onToggleTask, onSelectBranch, 
           </Box>
         )}
       </Box>
+      
+      {renderExitUI()}
+
     </Pane>
   );
 }
