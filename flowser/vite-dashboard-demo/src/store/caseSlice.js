@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 const initialFlowLibrary = [
   {
     id: 'flow001', name: '【標準】新車販売フロー', description: '新車のキャンピングカーを販売する際の標準的な業務フローです。', categoryId: 'cat-sales',
+    joint: null,
     tasks: [
       { id: 1, text: '顧客要望ヒアリングと車種選定', refId: 'AI', completed: false, memo: '', details: '顧客の利用用途、予算、希望装備などを詳しくヒアリングし、最適な車種を提案します。パンフレットやデモカーを活用します。', documents: [{ name: '車種カタログ.pdf', url: '#', checked: false }] },
       { id: 2, text: '見積書作成とオプション確認', refId: 'K001', completed: false, memo: '', details: '選択された車種をベースに、追加オプション（ソーラーパネル、FFヒーター、ナビ等）を含めた正式な見積書を作成し、提示します。' },
@@ -56,6 +57,7 @@ const initialFlowLibrary = [
   },
   {
     id: 'flow002', name: '【標準】中古車買取フロー', description: '顧客からキャンピングカーを買い取る際の標準的な業務フローです。', categoryId: 'cat-sales',
+    joint: null,
     tasks: [
       { id: 1, text: '査定予約の受付と車両情報確認', refId: 'AI', completed: true, memo: '', details: '電話またはウェブサイトから査定予約を受け付けます。車種、年式、走行距離、装備などの基本情報を事前にヒアリングします。' },
       { id: 2, text: '実車査定と査定額の提示', refId: 'K004', completed: false, memo: '', details: '予約日に顧客に来店いただき、車両の状態（内外装、エンジン、電装系）を詳細にチェックします。市場価格と車両状態を基に、適正な査定額を算出・提示します。', documents: [{ name: '中古車査定チェックシート.xlsx', url: '#', checked: true }] },
@@ -66,6 +68,7 @@ const initialFlowLibrary = [
   },
   {
     id: 'flow003', name: '【緊急】重大クレーム対応フロー', description: '雨漏りやエンジン不動など、顧客満足度に大きく影響する重大なクレームに対応するためのフローです。', categoryId: 'cat-support',
+    joint: null,
     tasks: [
       { id: 1, text: '第一次受付と状況ヒアリング', refId: 'AI', completed: false, memo: '', details: '顧客からのクレーム連絡を最優先で受け付け、冷静に状況をヒアリングします。感情的にならず、事実確認に徹します。' },
       { id: 2, text: '車両の緊急引き取りまたは出張点検', refId: 'K007', completed: false, memo: '', details: '車両が自走不能な場合は積載車を手配します。自走可能な場合でも、迅速に車両をお預かりするか、サービスカーで現地へ向かいま す。' },
@@ -124,11 +127,13 @@ const loadStateFromLocalStorage = () => {
             });
         }
         
-        // ▼▼▼ 【修正】 `map` を使用して、カテゴリIDがない場合に安全に新しい配列を生成 ▼▼▼
         let flowLibrary = savedFlowLibrary ? JSON.parse(savedFlowLibrary) : initialFlowLibrary;
         flowLibrary = flowLibrary.map(wf => {
             if (!wf.categoryId) {
                 return { ...wf, categoryId: 'cat-uncategorized' };
+            }
+            if (wf.joint === undefined) {
+                return { ...wf, joint: null };
             }
             return wf;
         });
@@ -171,7 +176,7 @@ export const caseSlice = createSlice({
   initialState: loadStateFromLocalStorage(),
   reducers: {
     addFlow: (state, action) => {
-        const newFlow = { ...action.payload, categoryId: 'cat-uncategorized' };
+        const newFlow = { ...action.payload, categoryId: 'cat-uncategorized', joint: null };
         state.flowLibrary.push(newFlow);
     },
     updateFlowCategory: (state, action) => {
@@ -188,7 +193,28 @@ export const caseSlice = createSlice({
       }
     },
     deleteFlowTemplate: (state, action) => {
-      state.flowLibrary = state.flowLibrary.filter(wf => wf.id !== action.payload);
+      const deletedFlowId = action.payload;
+      state.flowLibrary = state.flowLibrary.filter(wf => wf.id !== deletedFlowId);
+      state.flowLibrary.forEach(flow => {
+        if (flow.joint) {
+          if (flow.joint.type === 'direct' && flow.joint.nextFlowId === deletedFlowId) {
+            flow.joint = null;
+          } else if (flow.joint.type === 'branching') {
+            flow.joint.branches.forEach(branch => {
+              if (branch.nextFlowId === deletedFlowId) {
+                branch.nextFlowId = null; 
+              }
+            });
+          }
+        }
+      });
+    },
+    updateFlowJoint: (state, action) => {
+        const { flowId, joint } = action.payload;
+        const flow = state.flowLibrary.find(f => f.id === flowId);
+        if (flow) {
+            flow.joint = joint;
+        }
     },
     setSelectedCustomerId: (state, action) => {
       state.selectedCustomerId = action.payload;
@@ -361,6 +387,7 @@ export const {
   updateFlowCategory,
   updateFlowTemplate,
   deleteFlowTemplate,
+  updateFlowJoint,
   setSelectedCustomerId,
   setSelectedCaseId,
   setSelectedTaskId,
