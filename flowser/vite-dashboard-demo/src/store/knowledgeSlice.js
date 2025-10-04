@@ -98,6 +98,34 @@ const initialKnowledgeLibrary = [
         options: [],
       }
     ]
+  },
+  {
+    id: "phase-005",
+    name: "顧客サポートフェーズ",
+    subPhases: [],
+    knowledges: [
+      {
+        id: 'k-sup-001',
+        text: '第一次受付と状況ヒアリング',
+        details: '顧客からの連絡を最優先で受け付け、冷静に状況をヒアリングします。感情的にならず、事実確認に徹します。',
+        type: 'task',
+        options: [],
+      },
+      {
+        id: 'k-sup-002',
+        text: '原因の調査と特定',
+        details: 'サービス部門が不具合の原因を調査・特定します。必要であればメーカーにも問い合わせ、情報を収集します。',
+        type: 'task',
+        options: [],
+      },
+      {
+        id: 'k-sup-003',
+        text: '顧客への経過報告と対応策の提案',
+        details: '調査状況を定期的に顧客へ報告し、不安を和らげます。原因が特定でき次第、対応策を正式に提案します。',
+        type: 'task',
+        options: [],
+      }
+    ]
   }
 ];
 
@@ -109,11 +137,15 @@ const loadState = () => {
       return initialKnowledgeLibrary;
     }
     const parsed = JSON.parse(serializedState);
-    return parsed.map(phase => ({
-      ...phase,
-      knowledges: phase.knowledges || [],
-      subPhases: (phase.subPhases || []).map(sp => ({ ...sp, knowledges: sp.knowledges || [] })),
-    }));
+    if (parsed.some(p => p.id === 'phase-005')) {
+        return parsed.map(phase => ({
+          ...phase,
+          knowledges: phase.knowledges || [],
+          subPhases: (phase.subPhases || []).map(sp => ({ ...sp, knowledges: sp.knowledges || [] })),
+        }));
+    }
+    return initialKnowledgeLibrary;
+
   } catch (err) {
     return initialKnowledgeLibrary;
   }
