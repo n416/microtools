@@ -1,3 +1,4 @@
+// src/store/caseSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -379,6 +380,36 @@ export const caseSlice = createSlice({
     setApiCommunicating: (state, action) => {
         state.isApiCommunicating = action.payload;
     },
+    concludeAndCreateNextCase: (state, action) => {
+      const { customerId, caseInstanceId, nextFlowId } = action.payload;
+      const customer = state.customerData.find(c => c.id === customerId);
+      if (customer) {
+        const caseToConclude = customer.assignedCases.find(c => c.instanceId === caseInstanceId);
+        if (caseToConclude) {
+          caseToConclude.status = 'completed';
+        }
+
+        const template = state.flowLibrary.find(f => f.id === nextFlowId);
+        if (template) {
+          const newInstance = JSON.parse(JSON.stringify(template));
+          newInstance.instanceId = uuidv4();
+          newInstance.templateId = nextFlowId;
+          customer.assignedCases.push(newInstance);
+          state.selectedCaseId = newInstance.instanceId;
+          state.selectedTaskId = newInstance.tasks[0]?.id || null;
+        }
+      }
+    },
+    concludeCase: (state, action) => {
+        const { customerId, caseInstanceId } = action.payload;
+        const customer = state.customerData.find(c => c.id === customerId);
+        if (customer) {
+            const caseToConclude = customer.assignedCases.find(c => c.instanceId === caseInstanceId);
+            if (caseToConclude) {
+                caseToConclude.status = 'completed';
+            }
+        }
+    },
   },
 });
 
@@ -401,6 +432,8 @@ export const {
   closeAiModal,
   updateAiSuggestion,
   setApiCommunicating,
+  concludeAndCreateNextCase,
+  concludeCase,
 } = caseSlice.actions;
 
 export default caseSlice.reducer;

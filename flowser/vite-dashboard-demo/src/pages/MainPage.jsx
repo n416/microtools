@@ -1,3 +1,4 @@
+// src/pages/MainPage.jsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Box, Modal, List, ListItemButton, ListItemText, Typography, Button, Paper, Stack } from '@mui/material';
 import Header from '../components/Header';
@@ -19,6 +20,8 @@ import {
   toggleTask,
   selectBranch,
   toggleDocument,
+  concludeAndCreateNextCase,
+  concludeCase,
 } from '../store/caseSlice';
 
 const modalStyle = {
@@ -48,6 +51,9 @@ function MainPage() {
   const [passcodeInput, setPasscodeInput] = useState('');
   const [isBranchConfirmModalOpen, setIsBranchConfirmModalOpen] = useState(false);
   const [branchChangeContext, setBranchChangeContext] = useState(null);
+  
+  const [isLoopConfirmModalOpen, setIsLoopConfirmModalOpen] = useState(false);
+  const [loopCallbackContext, setLoopCallbackContext] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('isCustomerListLocked', JSON.stringify(isCustomerListLocked));
@@ -72,7 +78,7 @@ function MainPage() {
     if (!assignedCases || assignedCases.length === 0) return null;
     const isIdValid = assignedCases.some(wf => wf.instanceId === selectedCaseId);
     if (isIdValid) return selectedCaseId;
-    return assignedCases[0]?.instanceId || null;
+    return assignedCases.find(c => c.status !== 'completed')?.instanceId || null;
   }, [assignedCases, selectedCaseId]);
 
   useEffect(() => {
@@ -212,6 +218,41 @@ function MainPage() {
     setIsBranchConfirmModalOpen(false);
     setBranchChangeContext(null);
   };
+  
+  const handleConcludeAndProceed = (nextFlowId) => {
+    const isLoop = assignedCases.some(c => c.templateId === nextFlowId);
+
+    if (isLoop) {
+      setLoopCallbackContext({ nextFlowId });
+      setIsLoopConfirmModalOpen(true);
+    } else {
+      dispatch(concludeAndCreateNextCase({
+        customerId: selectedCustomerId,
+        caseInstanceId: validSelectedCaseId,
+        nextFlowId: nextFlowId,
+      }));
+    }
+  };
+
+  const handleLoopConfirm = (repeat) => {
+    if (loopCallbackContext) {
+      if (repeat) {
+        dispatch(concludeAndCreateNextCase({
+          customerId: selectedCustomerId,
+          caseInstanceId: validSelectedCaseId,
+          nextFlowId: loopCallbackContext.nextFlowId,
+        }));
+      } else {
+        dispatch(concludeCase({
+            customerId: selectedCustomerId,
+            caseInstanceId: validSelectedCaseId
+        }));
+      }
+    }
+    setIsLoopConfirmModalOpen(false);
+    setLoopCallbackContext(null);
+  };
+
 
   const handleToggleLock = () => {
     if (isCustomerListLocked) {
@@ -259,7 +300,7 @@ function MainPage() {
             onOpenModal={() => setIsModalOpen(true)}
           />
           <CaseList
-            assignedCases={assignedCases}
+            assignedCases={assignedCases} // ◀◀◀ 【修正】完了済みケースを除外するフィルタを削除
             selectedCaseId={validSelectedCaseId}
             onSelectCase={(id) => dispatch(setSelectedCaseId(id))}
             currentCase={currentCase}
@@ -271,10 +312,13 @@ function MainPage() {
           <TaskDetailPane
             key={selectedTask ? `${validSelectedCaseId}-${selectedTaskId}` : 'no-task-selected'}
             task={selectedTask}
+            currentCase={currentCase}
+            flowLibrary={flowLibrary}
             onUpdateTaskMemo={(memo) => selectedTask && handleUpdateTaskMemo(selectedTask.id, memo)}
             onToggleTask={() => selectedTask && handleToggleTask(selectedTask.id)}
             onSelectBranch={(optionKey) => selectedTask && handleSelectBranch(selectedTask.id, optionKey)}
             onToggleDocument={(docName) => selectedTask && handleToggleDocument(selectedTask.id, docName)}
+            onConcludeAndProceed={handleConcludeAndProceed}
           />
         </Box>
       </Box>
@@ -299,6 +343,20 @@ function MainPage() {
             <Button variant="outlined" onClick={() => setIsLockConfirmOpen(false)}>キャンセル</Button>
             <Button variant="contained" color="primary" onClick={handleConfirmLock}>リストをロック</Button>
           </Box>
+        </Box>
+      </Modal>
+      
+      <Modal open={isLoopConfirmModalOpen} onClose={() => setIsLoopConfirmModalOpen(false)}>
+        <Box sx={{...modalStyle, width: 500}}>
+            <Typography variant="h6">プロセスの繰り返し確認</Typography>
+            <Typography sx={{mt: 2}}>
+                この操作により、以前に実行したことのある業務プロセスが再度開始されます。
+                プロセスを繰り返しますか？それともここで全ての業務を完了しますか？
+            </Typography>
+            <Box sx={{mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1}}>
+                <Button variant="contained" color="primary" onClick={() => handleLoopConfirm(true)}>繰り返す</Button>
+                <Button variant="outlined" onClick={() => handleLoopConfirm(false)}>完了する</Button>
+            </Box>
         </Box>
       </Modal>
 
