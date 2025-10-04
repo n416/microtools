@@ -12,7 +12,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   addPhase, deletePhase, updatePhase, reorderPhases,
   addSubPhase, deleteSubPhase, updateSubPhase, reorderSubPhases
-} from '../store/knowledgeSlice'; // <- 修正：インポート元を caseSlice から knowledgeSlice に変更
+} from '../store/knowledgeSlice';
 import { motion, AnimatePresence } from "framer-motion";
 import { styled } from '@mui/material/styles';
 
@@ -83,7 +83,7 @@ function SystemSettingsPage() {
   };
 
   const handleDeletePhase = (phase) => {
-    if (phase.subPhases.length > 0) {
+    if (phase.subPhases && phase.subPhases.length > 0) {
       alert('サブフェーズが存在するため削除できません。');
       return;
     }
@@ -122,7 +122,7 @@ function SystemSettingsPage() {
             <Typography variant="h6" gutterBottom>フェーズ管理</Typography>
             <List sx={{ p: 0 }}>
               <AnimatePresence>
-                {knowledgeLibrary.map((phase, index) => (
+                {(knowledgeLibrary || []).map((phase, index) => (
                   <motion.div key={phase.id} layout transition={{ type: 'spring', stiffness: 300, damping: 25 }} style={{ marginBottom: '8px' }}>
                     <Accordion
                       expanded={expanded === phase.id}
@@ -154,7 +154,7 @@ function SystemSettingsPage() {
                         <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.paper' }}>
                           <List dense sx={{ p: 0 }}>
                             <AnimatePresence>
-                              {phase.subPhases.map((sp, spIndex) => (
+                              {(phase.subPhases || []).map((sp, spIndex) => (
                                 <motion.div key={sp.id} layout transition={{ type: 'spring', stiffness: 300, damping: 25 }}>
                                   <ListItem
                                     disablePadding
@@ -174,7 +174,7 @@ function SystemSettingsPage() {
                                     <Box sx={{ flexGrow: 1 }} />
                                     <Box>
                                       <IconButton size="small" onClick={() => handleReorderSubPhase(phase.id, spIndex, 'up')} disabled={spIndex === 0}><ArrowUpwardIcon fontSize="small" /></IconButton>
-                                      <IconButton size="small" onClick={() => handleReorderSubPhase(phase.id, spIndex, 'down')} disabled={spIndex === phase.subPhases.length - 1}><ArrowDownwardIcon fontSize="small" /></IconButton>
+                                      <IconButton size="small" onClick={() => handleReorderSubPhase(phase.id, spIndex, 'down')} disabled={spIndex === (phase.subPhases || []).length - 1}><ArrowDownwardIcon fontSize="small" /></IconButton>
                                       <IconButton size="small" onClick={() => handleDeleteSubPhase(phase.id, sp.id)}><DeleteIcon sx={{ fontSize: '1.1rem' }} /></IconButton>
                                     </Box>
                                   </ListItem>

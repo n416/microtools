@@ -16,8 +16,12 @@ function KnowledgeEditorPane() {
 
   const debounceTimeout = useRef(null);
 
-  const activeKnowledge = library
-    .flatMap(p => [...(p.knowledges || []), ...p.subPhases.flatMap(sp => sp.knowledges)])
+  const activeKnowledge = (library || [])
+    .flatMap(p => {
+      if (!p) return [];
+      const subPhaseKnowledges = (p.subPhases || []).flatMap(sp => sp.knowledges || []);
+      return [...(p.knowledges || []), ...subPhaseKnowledges];
+    })
     .find(k => k.id === selectedKnowledgeId);
 
   useEffect(() => {

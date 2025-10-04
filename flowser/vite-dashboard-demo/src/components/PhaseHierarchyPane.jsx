@@ -16,44 +16,44 @@ const itemSx = {
 };
 
 function DroppableHierarchyItem({ children, phaseId, subPhaseId = null, selected, isAncestor, onClick }) {
-    const dispatch = useDispatch();
-    const [{ isOver, canDrop }, drop] = useDrop(() => ({
-        accept: 'knowledge',
-        drop: (item) => {
-            dispatch(moveKnowledge({
-                knowledgeId: item.id,
-                source: item.source,
-                target: { phaseId, subPhaseId }
-            }));
-        },
-        collect: (monitor) => ({
-            isOver: monitor.isOver(),
-            canDrop: monitor.canDrop(),
-        }),
-    }), [phaseId, subPhaseId]);
+  const dispatch = useDispatch();
+  const [{ isOver, canDrop }, drop] = useDrop(() => ({
+    accept: 'knowledge',
+    drop: (item) => {
+      dispatch(moveKnowledge({
+        knowledgeId: item.id,
+        source: item.source,
+        target: { phaseId, subPhaseId }
+      }));
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  }), [phaseId, subPhaseId]);
 
-    return (
-        <Box
-            ref={drop}
-            onClick={onClick}
-            sx={{
-                ...itemSx,
-                backgroundColor: selected
-                    ? 'rgba(25, 118, 210, 0.08)'
-                    : isAncestor
-                    ? 'action.hover'
-                    : 'transparent',
-                color: 'text.primary',
-                // ▼▼▼ 【修正】ドラッグ開始時(canDrop)に点線を表示し、重なった時(isOver)に色を変えるロジック ▼▼▼
-                borderColor: isOver ? 'primary.main' : canDrop ? '#ccc' : 'transparent',
-                '&:hover': {
-                    backgroundColor: 'action.hover',
-                }
-            }}
-        >
-            {children}
-        </Box>
-    );
+  return (
+    <Box
+      ref={drop}
+      onClick={onClick}
+      sx={{
+        ...itemSx,
+        backgroundColor: selected
+          ? 'rgba(25, 118, 210, 0.08)'
+          : isAncestor
+            ? 'action.hover'
+            : 'transparent',
+        color: 'text.primary',
+        // ▼▼▼ 【修正】ドラッグ開始時(canDrop)に点線を表示し、重なった時(isOver)に色を変えるロジック ▼▼▼
+        borderColor: isOver ? 'primary.main' : canDrop ? '#ccc' : 'transparent',
+        '&:hover': {
+          backgroundColor: 'action.hover',
+        }
+      }}
+    >
+      {children}
+    </Box>
+  );
 }
 
 function PhaseHierarchyPane() {
@@ -82,7 +82,7 @@ function PhaseHierarchyPane() {
                   </Typography>
                 </DroppableHierarchyItem>
 
-                {phase.subPhases.map(subPhase => (
+                {(phase.subPhases || []).map(subPhase => (
                   <Box key={subPhase.id} sx={{ pl: 4 }}>
                     <DroppableHierarchyItem
                       phaseId={phase.id}

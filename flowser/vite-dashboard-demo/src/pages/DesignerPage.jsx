@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Box, ToggleButtonGroup, ToggleButton, Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle, List, ListItemButton, ListItemText, Typography } from '@mui/material';
+import { Box, ToggleButtonGroup, ToggleButton, Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle, List, ListItemButton, ListItemText, Typography, Fab, Paper } from '@mui/material';
 import Header from '../components/Header';
 import PhaseHierarchyPane from '../components/PhaseHierarchyPane';
 import KnowledgeListPane from '../components/KnowledgeListPane';
@@ -17,6 +17,28 @@ import { addFlow } from '../store/caseSlice';
 import { v4 as uuidv4 } from 'uuid';
 import FlowManagementPane from '../components/FlowManagementPane.jsx';
 import FlowDesignPane from '../components/FlowDesignPane.jsx';
+import KnowledgeSetupAssistant from '../components/KnowledgeSetupAssistant.jsx'; 
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+
+
+function AiSetupAssistantWelcomePanel({ onStart }) {
+  return (
+    <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, gap: 2, width: '100%' }}>
+      <AutoFixHighIcon sx={{ fontSize: 60, color: 'text.secondary' }} />
+      <Typography variant="h5" component="h2" gutterBottom>
+        AIとの対話で、あなたの業務知識を整理しませんか？
+      </Typography>
+      <Typography color="text.secondary" align="center" sx={{ maxWidth: '600px', mb: 2 }}>
+        最初のステップとして、AIアシスタントがあなたの業界や主な業務について簡単な質問をします。
+        回答をもとに、業務フロー設計の土台となる「知識ライブラリ」を自動で構築します。
+      </Typography>
+      <Button variant="contained" size="large" onClick={onStart}>
+        ガイド付きセットアップを開始する
+      </Button>
+    </Paper>
+  );
+}
+
 
 function PhaseSelectionModal({ open, onClose, phases, onSelect }) {
   return (
@@ -45,6 +67,7 @@ function PhaseSelectionModal({ open, onClose, phases, onSelect }) {
 function DesignerPage() {
   const dispatch = useDispatch();
   const [isGeneratorModalOpen, setIsGeneratorModalOpen] = useState(false);
+  const [isAssistantModalOpen, setIsAssistantModalOpen] = useState(false);
   const [mode, setMode] = useState('knowledge');
 
   const { library: knowledgeLibrary } = useSelector(state => state.knowledge);
@@ -61,6 +84,8 @@ function DesignerPage() {
   const [selectedMainPhaseId, setSelectedMainPhaseId] = useState(null);
 
   const isAiChatActive = selectedMainPhaseId !== null;
+  
+  const isKnowledgeSetupDone = knowledgeLibrary && knowledgeLibrary.length > 0;
 
   useEffect(() => {
     if (selectedMainPhaseId && chatHistory.length === 0) {
@@ -289,13 +314,21 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
       </Box>
 
       {mode === 'knowledge' && (
-        <DndProvider backend={HTML5Backend}>
-          <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
-            <Box sx={{ flex: '0 1 320px', minWidth: 280 }}><PhaseHierarchyPane /></Box>
-            <Box sx={{ flex: '1 1 40%', minWidth: 300 }}><KnowledgeListPane onOpenAiModal={() => setIsGeneratorModalOpen(true)} /></Box>
-            <Box sx={{ flex: '1 1 60%', minWidth: 400 }}><KnowledgeEditorPane /></Box>
-          </Box>
-        </DndProvider>
+        <>
+          {!isKnowledgeSetupDone ? (
+            <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex' }}>
+               <AiSetupAssistantWelcomePanel onStart={() => setIsAssistantModalOpen(true)} />
+            </Box>
+          ) : (
+            <DndProvider backend={HTML5Backend}>
+              <Box sx={{ flexGrow: 1, p: '0 24px 24px 24px', display: 'flex', gap: 2, minHeight: 0 }}>
+                <Box sx={{ flex: '0 1 320px', minWidth: 280 }}><PhaseHierarchyPane /></Box>
+                <Box sx={{ flex: '1 1 40%', minWidth: 300 }}><KnowledgeListPane onOpenAiModal={() => setIsGeneratorModalOpen(true)} /></Box>
+                <Box sx={{ flex: '1 1 60%', minWidth: 400 }}><KnowledgeEditorPane /></Box>
+              </Box>
+            </DndProvider>
+          )}
+        </>
       )}
 
       {mode === 'flow-management' && (
@@ -325,6 +358,17 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
           <RuleEditingPane />
         </Box>
       )}
+      
+      {isKnowledgeSetupDone && mode === 'knowledge' && (
+          <Fab
+            color="primary"
+            aria-label="ai-assistant"
+            sx={{ position: 'absolute', bottom: 40, right: 40 }}
+            onClick={() => setIsAssistantModalOpen(true)}
+          >
+            <AutoFixHighIcon />
+          </Fab>
+      )}
 
       <FlowGeneratorModal open={isGeneratorModalOpen} onClose={() => setIsGeneratorModalOpen(false)} />
 
@@ -351,8 +395,14 @@ ${JSON.stringify(knowledgeLibrary, null, 2)}
       <PhaseSelectionModal
         open={isPhaseModalOpen}
         onClose={() => setIsPhaseModalOpen(false)}
-        phases={knowledgeLibrary.filter(p => p.subPhases.length > 0 || (p.knowledges && p.knowledges.length > 0))}
+        phases={knowledgeLibrary.filter(p => (p && p.subPhases && p.subPhases.length > 0) || (p && p.knowledges && p.knowledges.length > 0))}
         onSelect={handlePhaseSelected}
+      />
+
+      <KnowledgeSetupAssistant
+        open={isAssistantModalOpen}
+        onClose={() => setIsAssistantModalOpen(false)}
+        isInitialSetup={!isKnowledgeSetupDone}
       />
     </Box>
   );
