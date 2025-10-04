@@ -5,9 +5,9 @@ const initialKnowledgeLibrary = [
     id: "phase-001",
     name: "商談フェーズ",
     subPhases: [
-      { 
-        id: "subphase-001a", 
-        name: "初期接触・ヒアリング", 
+      {
+        id: "subphase-001a",
+        name: "初期接触・ヒアリング",
         knowledges: [
           {
             id: 'k-001',
@@ -16,11 +16,11 @@ const initialKnowledgeLibrary = [
             type: 'task',
             options: [],
           }
-        ] 
+        ]
       },
-      { 
-        id: "subphase-001b", 
-        name: "提案・プラン選択", 
+      {
+        id: "subphase-001b",
+        name: "提案・プラン選択",
         knowledges: [
           {
             id: 'k-002',
@@ -35,17 +35,17 @@ const initialKnowledgeLibrary = [
             details: '顧客の希望に応じて、販売プランを選択してもらいます。即納可能な在庫車か、カスタムオーダーかによって後続のタスクが分岐します。',
             type: 'branch',
             options: [
-              { id: 'opt-001', label: 'Aプラン（即時販売）'},
-              { id: 'opt-002', label: 'Bプラン（カスタムオーダー）'},
+              { id: 'opt-001', label: 'Aプラン（即時販売）' },
+              { id: 'opt-002', label: 'Bプラン（カスタムオーダー）' },
             ],
           }
-        ] 
+        ]
       }
     ]
   },
-  { 
-    id: "phase-002", 
-    name: "契約フェーズ", 
+  {
+    id: "phase-002",
+    name: "契約フェーズ",
     subPhases: [],
     knowledges: [
       {
@@ -57,9 +57,9 @@ const initialKnowledgeLibrary = [
       }
     ]
   },
-  { 
-    id: "phase-003", 
-    name: "納車準備フェーズ", 
+  {
+    id: "phase-003",
+    name: "納車準備フェーズ",
     subPhases: [],
     knowledges: [
       {
@@ -134,20 +134,22 @@ const loadState = () => {
   try {
     const serializedState = localStorage.getItem('knowledgeLibrary');
     if (serializedState === null) {
-      return initialKnowledgeLibrary;
+      // ★★★【修正】初期データではなく、空配列を返すように変更
+      return [];
     }
     const parsed = JSON.parse(serializedState);
-    if (parsed.some(p => p.id === 'phase-005')) {
-        return parsed.map(phase => ({
-          ...phase,
-          knowledges: phase.knowledges || [],
-          subPhases: (phase.subPhases || []).map(sp => ({ ...sp, knowledges: sp.knowledges || [] })),
-        }));
+    // 既存のデータ形式チェックと補完処理は維持
+    if (parsed.length > 0 && parsed.some(p => p.id === 'phase-005')) {
+      return parsed.map(phase => ({
+        ...phase,
+        knowledges: phase.knowledges || [],
+        subPhases: (phase.subPhases || []).map(sp => ({ ...sp, knowledges: sp.knowledges || [] })),
+      }));
     }
-    return initialKnowledgeLibrary;
+    return parsed; // 空配列の場合もここを通る
 
   } catch (err) {
-    return initialKnowledgeLibrary;
+    return []; // エラー時も空配列
   }
 };
 
@@ -161,6 +163,18 @@ const knowledgeSlice = createSlice({
     isAddingNewKnowledge: false,
   },
   reducers: {
+    setKnowledgeLibrary: (state, action) => {
+      state.library = action.payload;
+      state.selectedPhaseId = null;
+      state.selectedSubPhaseId = null;
+      state.selectedKnowledgeId = null;
+      state.isAddingNewKnowledge = false;
+    },
+    addKnowledgeBulk: (state, action) => {
+      const newItems = action.payload;
+      // ここでは簡易的に結合する。本来はIDの重複チェックや、既存フェーズへのマージなどが必要
+      state.library.push(...newItems);
+    },
     selectPhase: (state, action) => {
       state.selectedPhaseId = action.payload;
       state.selectedSubPhaseId = null;
@@ -186,7 +200,7 @@ const knowledgeSlice = createSlice({
       state.isAddingNewKnowledge = true;
     },
     finishEditing: (state) => {
-      state.selectedKnowledgeId = null; 
+      state.selectedKnowledgeId = null;
       state.isAddingNewKnowledge = false;
     },
     addPhase: (state, action) => {
@@ -307,7 +321,7 @@ const knowledgeSlice = createSlice({
       } else {
         targetListOwner = parent;
       }
-      
+
       if (targetListOwner && targetListOwner.knowledges) {
         targetListOwner.knowledges = targetListOwner.knowledges.filter(k => k.id !== knowledgeId);
         if (state.selectedKnowledgeId === knowledgeId) {
@@ -324,7 +338,7 @@ const knowledgeSlice = createSlice({
         const sourceOwner = source.subPhaseId
           ? sourcePhase.subPhases.find(sp => sp.id === source.subPhaseId)
           : sourcePhase;
-        
+
         if (sourceOwner && sourceOwner.knowledges) {
           const index = sourceOwner.knowledges.findIndex(k => k.id === knowledgeId);
           if (index > -1) {
@@ -339,7 +353,7 @@ const knowledgeSlice = createSlice({
           const targetOwner = target.subPhaseId
             ? targetPhase.subPhases.find(sp => sp.id === target.subPhaseId)
             : targetPhase;
-          
+
           if (targetOwner) {
             if (!targetOwner.knowledges) {
               targetOwner.knowledges = [];
@@ -353,6 +367,8 @@ const knowledgeSlice = createSlice({
 });
 
 export const {
+  setKnowledgeLibrary,
+  addKnowledgeBulk,
   selectPhase, selectSubPhase, selectKnowledge,
   startAddingKnowledge, finishEditing,
   addPhase, updatePhase, deletePhase, reorderPhases,
