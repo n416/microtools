@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Minimal Ammo.js Drag Test</title>
+    <style> body { margin: 0; background-color: #222; } </style>
+</head>
+<body>
+    <script type="importmap">
+        { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/ammo-node@1.0.0/ammo.min.js"></script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- グローバル変数 ---
+        let scene, camera, renderer;
+        let physicsWorld;
+        const rigidBodies = [];
+        const clock = new THREE.Clock();
+        let tmpTransform; 
+        
+        let mouseConstraint = null;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // --- メイン処理 ---
+        init();
+        animate();
+
+        // --- 関数定義 ---
+        function init() {
+            // Ammo.jsの必須オブジェクトを最初に確保
+            tmpTransform = new Ammo.btTransform();
+
+            // 1. 物理ワールドを作成
+            const collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
+            const dispatcher = new Ammo.btCollisionDispatcher(collisionConfiguration);
+            const broadphase = new Ammo.btDbvtBroadphase();
+            const solver = new Ammo.btSequentialImpulseConstraintSolver();
+            physicsWorld = new Ammo.btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+            physicsWorld.setGravity(new Ammo.btVector3(0, -9.8, 0));
+
+            // 2. Three.jsのシーンを作成
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(2, 2, 4);
+            camera.lookAt(0, 0, 0);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            scene.add(new THREE.GridHelper(10, 10));
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            const light = new THREE.DirectionalLight(0xffffff, 0.5);
+            light.position.set(5, 10, 7.5);
+            scene.add(light);
+
+            // 3. オブジェクトを作成
+            // 地面 (静的オブジェクト mass=0)
+            createRigidBody(new THREE.BoxGeometry(10, 0.2, 10), 0, new THREE.Vector3(0, -0.1, 0), new THREE.Quaternion());
+            
+            // ドラッグする箱 (動的オブジェクト mass=1)
+            const box = createRigidBody(new THREE.BoxGeometry(1, 1, 1), 1, new THREE.Vector3(0, 2, 0), new THREE.Quaternion());
+            box.mesh.material.color.set(0x00ff00); // 色を緑に
+        }
+        
+        function createRigidBody(threeGeometry, mass, pos, quat) {
+            const threeMesh = new THREE.Mesh(threeGeometry, new THREE.MeshStandardMaterial());
+            threeMesh.position.copy(pos);
+            threeMesh.quaternion.copy(quat);
+            scene.add(threeMesh);
+
+            const shape = new Ammo.btBoxShape(new Ammo.btVector3(threeGeometry.parameters.width * 0.5, threeGeometry.parameters.height * 0.5, threeGeometry.parameters.depth * 0.5));
+            const transform = new Ammo.btTransform();
+            transform.setIdentity();
+            transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+            transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
+            
+            const localInertia = new Ammo.btVector3(0, 0, 0);
+            if (mass > 0) shape.calculateLocalInertia(mass, localInertia);
+            
+            const motionState = new Ammo.btDefaultMotionState(transform);
+            const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
+            const body = new Ammo.btRigidBody(rbInfo);
+            
+            physicsWorld.addRigidBody(body);
+            
+            threeMesh.userData.physicsBody = body;
+            body.mesh = threeMesh;
+            rigidBodies.push(body);
+            return { mesh: threeMesh, body: body };
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const deltaTime = clock.getDelta();
+            
+            // 物理計算を進める
+            physicsWorld.stepSimulation(deltaTime, 10);
+
+            // 物理オブジェクトの位置を描画オブジェクトに反映
+            for (const body of rigidBodies) {
+                if (body.getInvMass() === 0) continue;
+                const ms = body.getMotionState();
+                if (ms) {
+                    ms.getWorldTransform(tmpTransform);
+                    const p = tmpTransform.getOrigin();
+                    const q = tmpTransform.getRotation();
+                    body.mesh.position.set(p.x(), p.y(), p.z());
+                    body.mesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
+                }
+            }
+            renderer.render(scene, camera);
+        }
+
+        // --- マウス操作 ---
+        window.addEventListener('pointerdown', e => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                const body = obj.userData.physicsBody;
+                if (body && body.getInvMass() !== 0) {
+                    const pos = intersects[0].point;
+                    const pivot = new Ammo.btVector3(0,0,0); // 箱の中心をつかむ
+                    const p2p = new Ammo.btPoint2PointConstraint(body, pivot);
+                    physicsWorld.addConstraint(p2p);
+                    mouseConstraint = p2p;
+                }
+            }
+        });
+
+        window.addEventListener('pointermove', e => {
+            if (!mouseConstraint) return;
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            const plane = new THREE.Plane(camera.getWorldDirection(new THREE.Vector3()), 0);
+            const targetPos = new THREE.Vector3();
+            if(raycaster.ray.intersectPlane(plane, targetPos)) {
+                 mouseConstraint.setPivotB(new Ammo.btVector3(targetPos.x, targetPos.y, targetPos.z));
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (mouseConstraint) {
+                physicsWorld.removeConstraint(mouseConstraint);
+                mouseConstraint = null;
+            }
+        });
+    </script>
+</body>
+</html>

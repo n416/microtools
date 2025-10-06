@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <title>PBD W-Shape Hinge - Box Rigid Bodies</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #111;
+      color: white;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 5px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="info">
+    <b>おもちゃの改良: 剛体を直方体に変更</b><br>
+    緑の球(X)をドラッグしてください。<br>
+    剛体が「ネジれる」かどうかを確認できます。
+  </div>
+  <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.149.0/examples/jsm/"
+        }
+    }
+    </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import {
+      OrbitControls
+    } from 'three/addons/controls/OrbitControls.js';
+
+    // --- あなたのThree.js設定を完全に維持 ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x222222);
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    const gridHelper = new THREE.GridHelper(10, 20, 0x888888, 0x444444);
+    scene.add(gridHelper);
+    camera.position.set(0, 3, 5);
+    controls.target.set(0, 1, 0);
+
+    const hingeWidth = 0.2;
+    const points = {
+      AnchorL: new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshBasicMaterial({
+        color: 0x0000ff
+      })),
+      L1: new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshBasicMaterial({
+        color: 0xffa500
+      })),
+      J_back: new THREE.Mesh(new THREE.SphereGeometry(0.05), new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        visible: false
+      })),
+      J_front: new THREE.Mesh(new THREE.SphereGeometry(0.05), new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        visible: false
+      })),
+      R1: new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshBasicMaterial({
+        color: 0xffa500
+      })),
+      AnchorR: new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshBasicMaterial({
+        color: 0x0000ff
+      })),
+      Y: new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshBasicMaterial({
+        color: 0xffa500
+      })),
+      X: new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshBasicMaterial({
+        color: 0x00ff00
+      }))
+    };
+    // ヒンジの可視化用メッシュは円柱のまま
+    points.J = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, hingeWidth, 16), new THREE.MeshBasicMaterial({
+      color: 0xffff00
+    }));
+
+    points.AnchorL.position.set(-2, 2.5, 0);
+    points.L1.position.set(-1, 2.0, 0);
+    points.J_back.position.set(0, 1.8, -hingeWidth / 2);
+    points.J_front.position.set(0, 1.8, hingeWidth / 2);
+    points.R1.position.set(1, 2.0, 0);
+    points.AnchorR.position.set(2, 2.5, 0);
+    points.Y.position.set(0, 1.0, 0);
+    points.X.position.set(0, 0.2, 0);
+
+    Object.values(points).forEach(p => scene.add(p));
+
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ 修正点 1: 剛体をCylinderからBoxに変更します ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    const bodyMaterial = new THREE.MeshBasicMaterial({
+      color: 0xcccccc
+    });
+    const bodySize = new THREE.Vector3(0.1, 1, 0.1); // (幅, 高さ, 奥行き) 高さを後でスケールする
+    const bodies = {};
+    const bodyNames = ["AnchorL_L1", "L1_J", "J_R1", "R1_AnchorR", "J_Y", "Y_X"];
+    bodyNames.forEach(name => {
+      bodies[name] = new THREE.Mesh(new THREE.BoxGeometry(bodySize.x, bodySize.y, bodySize.z), bodyMaterial);
+      scene.add(bodies[name]);
+    });
+
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ これが正しいコードです！(ねじれ & 崩壊バグ修正版) ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    function updateBodies() {
+      const j_center = new THREE.Vector3().addVectors(points.J_back.position, points.J_front.position).multiplyScalar(0.5);
+
+      const connections = {
+        "AnchorL_L1": [points.AnchorL.position, points.L1.position],
+        "L1_J": [points.L1.position, j_center],
+        "J_R1": [j_center, points.R1.position],
+        "R1_AnchorR": [points.R1.position, points.AnchorR.position],
+        "J_Y": [j_center, points.Y.position],
+        "Y_X": [points.Y.position, points.X.position]
+      };
+
+      // --- ヘルパー変数 ---
+      const yAxis = new THREE.Vector3(); // ボーンの長軸方向 (BoxのY軸)
+      const zAxis = new THREE.Vector3();
+      const xAxis = new THREE.Vector3();
+      const rotationMatrix = new THREE.Matrix4();
+
+      bodyNames.forEach(name => {
+        const bodyMesh = bodies[name];
+        const [p1, p2] = connections[name];
+
+        const center = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+        bodyMesh.position.copy(center);
+
+        const direction = new THREE.Vector3().subVectors(p2, p1);
+        const length = direction.length();
+
+        bodyMesh.scale.y = length;
+
+        // --- 正しいクォータニオン計算 ---
+        // 1. ボーンの長軸方向を、Boxの「Y軸」に設定
+        yAxis.copy(direction).normalize();
+
+        // 2. 仮の「上方向」をワールドのZ軸と仮定
+        const tempUp = new THREE.Vector3(0, 0, 1);
+
+        // 3. ローカルX軸を計算 (外積)
+        xAxis.crossVectors(yAxis, tempUp).normalize();
+
+        // 4. ボーンの向きが仮の上方向と平行になった場合のフォールバック処理
+        if (xAxis.lengthSq() < 0.0001) {
+          tempUp.set(1, 0, 0); // 別のベクトルで再試行
+          xAxis.crossVectors(yAxis, tempUp).normalize();
+        }
+
+        // 5. ローカルZ軸を計算 (外積)。これで正しい右手座標系が完成
+        zAxis.crossVectors(xAxis, yAxis).normalize();
+
+        // 6. 3つの軸ベクトルから回転行列を作成
+        rotationMatrix.makeBasis(xAxis, yAxis, zAxis);
+
+        // 7. 回転行列からクォータニオンを設定
+        bodyMesh.quaternion.setFromRotationMatrix(rotationMatrix);
+      });
+    }
+
+    // --- PBD Core (変更なし) ---
+    const pbd_points_map = {
+      AnchorL: 0,
+      L1: 1,
+      J_back: 2,
+      J_front: 3,
+      R1: 4,
+      AnchorR: 5,
+      Y: 6,
+      X: 7
+    };
+    const pbd_points_array = [points.AnchorL, points.L1, points.J_back, points.J_front, points.R1, points.AnchorR, points.Y, points.X];
+    const pbd = {
+      positions: pbd_points_array.map(p => p.position),
+      invMass: [0, 1, 1, 1, 1, 0, 1, 1],
+      constraints: [],
+    };
+    const addConstraint = (p1_name, p2_name) => {
+      const p1_idx = pbd_points_map[p1_name];
+      const p2_idx = pbd_points_map[p2_name];
+      pbd.constraints.push({
+        p1_idx,
+        p2_idx,
+        dist: pbd.positions[p1_idx].distanceTo(pbd.positions[p2_idx])
+      });
+    };
+    addConstraint("AnchorL", "L1");
+    addConstraint("R1", "AnchorR");
+    addConstraint("Y", "X");
+    addConstraint("J_front", "J_back");
+    addConstraint("L1", "J_front");
+    addConstraint("L1", "J_back");
+    addConstraint("R1", "J_front");
+    addConstraint("R1", "J_back");
+    addConstraint("Y", "J_front");
+    addConstraint("Y", "J_back");
+
+    function solvePBD(iterations) {
+      for (let i = 0; i < iterations; i++) {
+        pbd.constraints.forEach(c => {
+          const p1 = pbd.positions[c.p1_idx];
+          const p2 = pbd.positions[c.p2_idx];
+          const w1 = pbd.invMass[c.p1_idx];
+          const w2 = pbd.invMass[c.p2_idx];
+          const w_sum = w1 + w2;
+          if (w_sum === 0) return;
+          const delta = new THREE.Vector3().subVectors(p2, p1);
+          const currentDist = delta.length();
+          if (currentDist === 0) return;
+          const error = currentDist - c.dist;
+          const correction = delta.multiplyScalar(error / currentDist / w_sum);
+          if (w1 > 0) p1.add(correction.clone().multiplyScalar(w1));
+          if (w2 > 0) p2.sub(correction.clone().multiplyScalar(w2));
+        });
+      }
+    }
+
+    // --- Interactivity (変更なし) ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const dragPlane = new THREE.Plane();
+    let draggedObject = null;
+    let targetPosition = new THREE.Vector3();
+    window.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(points.X);
+      if (intersects.length > 0) {
+        draggedObject = points.X;
+        controls.enabled = false;
+        dragPlane.setFromNormalAndCoplanarPoint(
+          camera.getWorldDirection(dragPlane.normal),
+          draggedObject.position
+        );
+      }
+    });
+    window.addEventListener('pointermove', (event) => {
+      if (draggedObject) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        raycaster.ray.intersectPlane(dragPlane, targetPosition);
+        pbd.positions[pbd_points_map.X].copy(targetPosition);
+      }
+    });
+    window.addEventListener('pointerup', (event) => {
+      if (event.button === 0 && draggedObject) {
+        draggedObject = null;
+        controls.enabled = true;
+        solvePBD(100);
+      }
+    });
+
+    // --- Animation Loop ---
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      if (draggedObject) {
+        solvePBD(30);
+      }
+
+      pbd_points_array.forEach((mesh, i) => {
+        mesh.position.copy(pbd.positions[i]);
+      });
+
+      const j_back_pos = pbd.positions[pbd_points_map.J_back];
+      const j_front_pos = pbd.positions[pbd_points_map.J_front];
+      const center = new THREE.Vector3().addVectors(j_front_pos, j_back_pos).multiplyScalar(0.5);
+      points.J.position.copy(center);
+      const direction = new THREE.Vector3().subVectors(j_front_pos, j_back_pos).normalize();
+      points.J.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+
+      updateBodies();
+      renderer.render(scene, camera);
+    }
+
+    updateBodies();
+    animate();
+  </script>
+</body>
+
+</html>
