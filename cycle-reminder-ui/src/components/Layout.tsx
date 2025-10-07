@@ -1,17 +1,25 @@
 import {
-  AppBar, Box, Drawer, IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Divider,
+  AppBar, Box, Drawer, IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Divider, useTheme,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DnsIcon from '@mui/icons-material/Dns';
-import HistoryIcon from '@mui/icons-material/History';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
+import TonalityIcon from '@mui/icons-material/Tonality'; // 1. TonalityIconをインポート
 import React, { useState } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
+import { useAppDispatch } from '@/app/hooks';
+import { clearWriteTokens } from '@/features/auth/authSlice';
+import { useColorMode } from './ThemeRegistry';
 
 export const Layout = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const theme = useTheme();
+  const colorMode = useColorMode();
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -19,8 +27,20 @@ export const Layout = () => {
   };
 
   const handleLogout = () => {
-    console.log('Logout clicked');
+    dispatch(clearWriteTokens());
+    localStorage.removeItem('auth-token');
+    navigate('/login');
     setDrawerOpen(false);
+  };
+
+  const renderThemeIcon = () => {
+    if (colorMode.mode === 'auto') {
+      return <TonalityIcon />; // 2. アイコンを変更
+    }
+    if (theme.palette.mode === 'dark') {
+      return <Brightness7Icon />;
+    }
+    return <Brightness4Icon />;
   };
 
   const drawer = (
@@ -32,14 +52,6 @@ export const Layout = () => {
               <DnsIcon />
             </ListItemIcon>
             <ListItemText primary="サーバー一覧" />
-          </ListItemButton>
-        </ListItem>
-        <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation('/log')}>
-            <ListItemIcon>
-              <HistoryIcon />
-            </ListItemIcon>
-            <ListItemText primary="操作ログ" />
           </ListItemButton>
         </ListItem>
       </List>
@@ -65,12 +77,15 @@ export const Layout = () => {
             <HomeIcon />
           </IconButton>
           <Box sx={{ flexGrow: 1 }} />
+          <IconButton sx={{ ml: 1 }} onClick={colorMode.toggleColorMode} color="inherit">
+            {renderThemeIcon()}
+          </IconButton>
           <IconButton color="inherit" aria-label="open drawer" edge="end" onClick={() => setDrawerOpen(true)}>
             <MenuIcon />
           </IconButton>
         </Toolbar>
       </AppBar>
-      
+
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         {drawer}
       </Drawer>

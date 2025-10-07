@@ -1,0 +1,35 @@
+/* --- Clock Dark Mode --- */
+
+/* 全体 */
+.react-clock {
+  font-family: monospace;
+}
+
+/* 文字盤 */
+.react-clock__face {
+  border-color: var(--mui-palette-text-secondary, #aaa);
+  background-color: var(--mui-palette-background-paper, #1e1e1e);
+}
+
+/* 目盛り */
+.react-clock__mark__body,
+.react-clock__mark__body--hour {
+  background-color: var(--mui-palette-text-secondary, #aaa);
+}
+
+/* 数字 */
+.react-clock__number {
+  color: var(--mui-palette-text-primary, #fff);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* 針 */
+.react-clock__hand__body {
+  background-color: var(--mui-palette-text-primary, #fff);
+}
+
+/* 秒針 */
+.react-clock__second-hand__body {
+  background-color: #e91e63;
+}

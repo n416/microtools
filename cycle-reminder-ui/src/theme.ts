@@ -1,14 +1,34 @@
 import { createTheme } from '@mui/material/styles';
-import { grey } from '@mui/material/colors';
 
-// アプリ全体のテーマを定義
-export const theme = createTheme({
+// ライトモード用のテーマ
+export const lightTheme = createTheme({
   palette: {
+    mode: 'light',
     primary: {
-      main: grey[800], // プライマリーカラーを濃いグレーに
+      main: '#333', // プライマリーカラーを濃いグレーに
     },
     secondary: {
-      main: grey[500], // セカンダリーカラーをグレーに
+      main: '#777', // セカンダリーカラーをグレーに
+    },
+    background: {
+      default: '#f4f4f4', // 背景色
+    }
+  },
+});
+
+// ダークモード用のテーマ
+export const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#f0f0f0', // プライマリーカラーを明るいグレーに
+    },
+    secondary: {
+      main: '#aaa', // セカンダリーカラーをミディアムグレーに
+    },
+    background: {
+      default: '#121212', // 背景色
+      paper: '#1e1e1e', // Cardなどの背景色
     },
   },
 });
