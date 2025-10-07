@@ -5,11 +5,6 @@ import WebAssetIcon from '@mui/icons-material/WebAsset';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import GroupIcon from '@mui/icons-material/Group';
 
-const fakeLogin = () => {
-  localStorage.setItem('is-authenticated', JSON.stringify(true));
-  window.location.href = '/';
-};
-
 export const LoginPage = () => {
   return (
     <Container component="main" maxWidth="md">
@@ -24,19 +19,14 @@ export const LoginPage = () => {
         }}
       >
         <Paper elevation={3} sx={{ p: 4, borderRadius: 4, width: '100%' }}>
-          {/* ↓ここから変更 */}
           <Typography
             component="h1"
             variant="h2"
             gutterBottom
-            sx={{
-              fontFamily: "'Dancing Script', cursive",
-              fontWeight: 700,
-            }}
+            sx={{ fontFamily: "'Dancing Script', cursive", fontWeight: 700 }}
           >
             Cycle Reminder
           </Typography>
-          {/* ↑ここまで変更 */}
           <Typography variant="h6" color="text.secondary" paragraph>
             あなたのDiscordコミュニティのための、ウェブで完結する多機能リマインダー
           </Typography>
@@ -60,7 +50,7 @@ export const LoginPage = () => {
             variant="contained"
             size="large"
             startIcon={<LoginIcon />}
-            onClick={fakeLogin}
+            href="http://localhost:8080/api/auth/discord" // onClickからhrefに変更
             sx={{ px: 5, py: 1.5, fontSize: '1.1rem' }}
           >
             Discordでログイン

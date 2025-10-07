@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -21,72 +21,62 @@ import {
   TextField,
   DialogActions,
   Button,
+  CircularProgress,
 } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
-import VideogameAssetIcon from '@mui/icons-material/VideogameAsset';
-import CodeIcon from '@mui/icons-material/Code';
-import WorkIcon from '@mui/icons-material/Work';
-import GroupIcon from '@mui/icons-material/Group';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import AddLinkIcon from '@mui/icons-material/AddLink';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { Link } from 'react-router-dom';
+import { useAppSelector, useAppDispatch } from '@/app/hooks';
+import { fetchServers, selectAllServers, getServersStatus, getLastFetched, Server, updateServerPassword } from './serversSlice';
+import { showToast } from '@/features/toast/toastSlice';
 
-const ServerIcon = ({ iconName }: { iconName: string }) => {
-  switch (iconName) {
-    case 'game': return <VideogameAssetIcon />;
-    case 'code': return <CodeIcon />;
-    case 'work': return <WorkIcon />;
-    case 'group': return <GroupIcon />;
-    default: return null;
-  }
+const OAUTH_URL = `https://discord.com/api/oauth2/authorize?client_id=${import.meta.env.VITE_DISCORD_CLIENT_ID}&permissions=268435456&scope=bot%20applications.commands`;
+
+const getServerIconUrl = (id: string, iconHash: string | null) => {
+  if (!iconHash) return null;
+  return `https://cdn.discordapp.com/icons/${id}/${iconHash}.png`;
 };
-
-interface Server {
-  id: string;
-  name: string;
-  iconName: string;
-  isAdded: boolean;
-  role: 'admin' | 'member';
-}
-
-const mockServers: Server[] = [
-  { id: '1', name: 'ゲーム部', iconName: 'game', isAdded: true, role: 'admin' },
-  { id: '2', name: '〇〇大学 プログラミングサークル', iconName: 'code', isAdded: false, role: 'member' },
-  { id: '3', name: 'プロジェクトAの進捗管理部屋', iconName: 'work', isAdded: true, role: 'admin' },
-  { id: '4', name: '個人用テストサーバー', iconName: 'work', isAdded: false, role: 'admin' },
-  { id: '5', name: '友人との雑談サーバー', iconName: 'group', isAdded: true, role: 'member' },
-  { id: '6', name: 'React勉強会', iconName: 'code', isAdded: true, role: 'member' },
-];
 
 interface ServerListSectionProps {
   title: string;
   servers: Server[];
   onSettingsClick: (server: Server) => void;
-  onAddClick: (server: Server) => void;
 }
 
-const ServerListSection = ({ title, servers, onSettingsClick, onAddClick }: ServerListSectionProps) => (
+const ServerListSection = ({ title, servers, onSettingsClick }: ServerListSectionProps) => (
   <Box>
     <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
       {title}
     </Typography>
     {servers.length > 0 ? (
-      <List sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1 }}>
-        {servers.map((server, index) => (
+      <List sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, p: 0 }}>
+        {servers.map((server: Server, index: number) => (
           <React.Fragment key={server.id}>
-            <ListItem
-              secondaryAction={
-                <Stack direction="row" spacing={1} alignItems="center">
+            {/* --- ★★★ ここからListItemの構造を全面的に修正 ★★★ --- */}
+            <ListItem disablePadding>
+              <Box sx={{ width: '100%', p: 1, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center' }}>
+                
+                {/* 1段目: アイコンとサーバー名 (リンク付き) */}
+                <ListItemButton component={Link} to={`/servers/${server.id}`} sx={{ flexGrow: 1, p: 1, borderRadius: 1 }}>
+                  <ListItemAvatar>
+                    <Avatar src={getServerIconUrl(server.id, server.icon) || undefined}>
+                      {server.name.charAt(0)}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText primary={server.name} />
+                </ListItemButton>
+
+                {/* 2段目: 導入状況とボタン */}
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ pt: { xs: 1, sm: 0 }, pl: { xs: 0, sm: 2 } }}>
                   <Chip
                     label={server.isAdded ? "導入済み" : "未導入"}
                     color={server.isAdded ? "success" : "default"}
                     size="small"
                   />
                   {server.role === 'admin' && server.isAdded && (
-                    <IconButton
-                      edge="end"
-                      aria-label="settings"
-                      onClick={() => onSettingsClick(server)}
-                    >
+                    <IconButton edge="end" aria-label="settings" onClick={() => onSettingsClick(server)}>
                       <SettingsIcon />
                     </IconButton>
                   )}
@@ -94,22 +84,19 @@ const ServerListSection = ({ title, servers, onSettingsClick, onAddClick }: Serv
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => onAddClick(server)}
+                      href={`${OAUTH_URL}&guild_id=${server.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      startIcon={<AddLinkIcon />}
                     >
                       導入
                     </Button>
                   )}
                 </Stack>
-              }
-              disablePadding
-            >
-              <ListItemButton component={Link} to="/" state={{ serverName: server.name, serverIconName: server.iconName }}>
-                <ListItemAvatar>
-                  <Avatar><ServerIcon iconName={server.iconName} /></Avatar>
-                </ListItemAvatar>
-                <ListItemText primary={server.name} />
-              </ListItemButton>
+
+              </Box>
             </ListItem>
+            {/* --- ★★★ ここまで修正 ★★★ --- */}
             {index < servers.length - 1 && <Divider component="li" />}
           </React.Fragment>
         ))}
@@ -120,52 +107,98 @@ const ServerListSection = ({ title, servers, onSettingsClick, onAddClick }: Serv
   </Box>
 );
 
+
 export const ServerList = () => {
+  const dispatch = useAppDispatch();
+  const servers = useAppSelector(selectAllServers);
+  const serversStatus = useAppSelector(getServersStatus);
+  const lastFetched = useAppSelector(getLastFetched);
+  const error = useAppSelector(state => state.servers.error);
+  
   const [showOnlyAdded, setShowOnlyAdded] = useLocalStorage('showOnlyAddedServers', false);
   const [configuringServer, setConfiguringServer] = useState<Server | null>(null);
+  
+  const [newPassword, setNewPassword] = useState('');
 
-  const handleOpenSettings = (server: Server) => {
-    setConfiguringServer(server);
+  useEffect(() => {
+    const CACHE_DURATION = 5 * 60 * 1000;
+    const now = Date.now();
+    if (serversStatus !== 'loading') {
+      if (!lastFetched || (now - lastFetched > CACHE_DURATION)) {
+        dispatch(fetchServers());
+      }
+    }
+  }, [dispatch, lastFetched, serversStatus]);
+  
+  const handleRefresh = () => {
+    dispatch(fetchServers());
   };
 
+  const filteredByAdded = showOnlyAdded
+    ? servers.filter(server => server.isAdded)
+    : servers;
+  
+  const adminServers = filteredByAdded.filter(server => server.role === 'admin');
+  const memberServers = filteredByAdded.filter(server => server.role === 'member');
+
+  const handleOpenSettings = (server: Server) => setConfiguringServer(server);
   const handleCloseSettings = () => {
     setConfiguringServer(null);
+    setNewPassword('');
   };
 
-  const handleSavePassword = () => {
-    console.log(`Saving password for ${configuringServer?.name}`);
-    handleCloseSettings();
+  const handleSavePassword = async () => {
+    if (!configuringServer) return;
+    try {
+      await dispatch(updateServerPassword({ serverId: configuringServer.id, password: newPassword })).unwrap();
+      dispatch(showToast({ message: 'パスワードを更新しました。', severity: 'success' }));
+    } catch (err) {
+      dispatch(showToast({ message: 'パスワードの更新に失敗しました。', severity: 'error' }));
+    } finally {
+      handleCloseSettings();
+    }
   };
   
-  const handleAddBot = (server: Server) => {
-    alert(`「${server.name}」にBotを導入します。\n（これはダミーの動作です）`);
-  };
-
-  const filteredByStatus = showOnlyAdded
-    ? mockServers.filter(server => server.isAdded)
-    : mockServers;
-
-  const adminServers = filteredByStatus.filter(server => server.role === 'admin');
-  const memberServers = filteredByStatus.filter(server => server.role === 'member');
+  let content;
+  if (serversStatus === 'loading' && servers.length === 0) {
+    content = <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+  } else if (serversStatus === 'failed') {
+    content = <Typography color="error">エラー: {error}</Typography>;
+  } else if (servers.length > 0) {
+    content = (
+      <>
+        <ServerListSection title="管理サーバー" servers={adminServers} onSettingsClick={handleOpenSettings} />
+        <ServerListSection title="参加サーバー" servers={memberServers} onSettingsClick={handleOpenSettings} />
+      </>
+    );
+  } else if (serversStatus === 'succeeded' && servers.length === 0) {
+    content = <Typography sx={{ mt: 4, textAlign: 'center' }}>参加しているDiscordサーバーが見つかりませんでした。</Typography>;
+  } else {
+    content = <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+  }
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        サーバー一覧
-      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Typography variant="h5" gutterBottom sx={{ mb: 0 }}>
+          サーバー一覧
+        </Typography>
+        <IconButton onClick={handleRefresh} disabled={serversStatus === 'loading'}>
+          <RefreshIcon />
+        </IconButton>
+      </Stack>
       <Typography paragraph color="text.secondary">
         あなたが参加しているDiscordサーバーの一覧です。
       </Typography>
 
       <Box sx={{ mb: 2 }}>
-        <FormControlLabel
-          control={<Checkbox checked={showOnlyAdded} onChange={(e) => setShowOnlyAdded(e.target.checked)} />}
-          label="導入済みのサーバーのみ表示"
+        <FormControlLabel 
+          control={<Checkbox checked={showOnlyAdded} onChange={(e) => setShowOnlyAdded(e.target.checked)} />} 
+          label="導入済みのサーバーのみ表示" 
         />
       </Box>
       
-      <ServerListSection title="管理サーバー" servers={adminServers} onSettingsClick={handleOpenSettings} onAddClick={handleAddBot} />
-      <ServerListSection title="参加サーバー" servers={memberServers} onSettingsClick={handleOpenSettings} onAddClick={handleAddBot} />
+      {content}
 
       <Dialog open={!!configuringServer} onClose={handleCloseSettings}>
         <DialogTitle>
@@ -173,16 +206,18 @@ export const ServerList = () => {
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            このサーバーのリマインダー設定を保護するためのパスワードを入力してください。
+            このサーバーのリマインダー設定を保護するためのパスワードを入力してください。空欄で保存するとパスワードが削除されます。
           </DialogContentText>
           <TextField
             autoFocus
             margin="dense"
-            id="password"
             label="新しいパスワード"
             type="password"
             fullWidth
             variant="standard"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSavePassword()}
           />
         </DialogContent>
         <DialogActions>

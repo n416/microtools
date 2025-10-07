@@ -1,0 +1,48 @@
+/* --- Calendar Dark Mode --- */
+
+/* 全体 */
+.react-calendar {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: var(--mui-palette-background-paper, #1e1e1e);
+}
+
+/* ヘッダー部分 (月と年) */
+.react-calendar__navigation button {
+  color: var(--mui-palette-text-primary, #fff);
+  background-color: transparent;
+}
+.react-calendar__navigation button:hover,
+.react-calendar__navigation button:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* 曜日 */
+.react-calendar__month-view__weekdays__weekday abbr {
+  color: var(--mui-palette-text-secondary, #aaa);
+  text-decoration: none;
+}
+
+/* 日付タイル */
+.react-calendar__tile {
+  color: var(--mui-palette-text-primary, #fff);
+  background-color: transparent;
+}
+.react-calendar__tile:hover,
+.react-calendar__tile:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* 選択された曜日（アクティブ） */
+.react-calendar__tile--active {
+  background-color: var(--mui-palette-primary-main, #f0f0f0);
+  color: var(--mui-palette-primary-contrastText, #121212);
+}
+.react-calendar__tile--active:hover,
+.react-calendar__tile--active:focus {
+  background-color: var(--mui-palette-primary-dark, #ccc);
+}
+
+/* 隣接する月の日付 */
+.react-calendar__month-view__days__day--neighboringMonth {
+  color: var(--mui-palette-text-disabled, #777);
+}

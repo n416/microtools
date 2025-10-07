@@ -1,14 +1,20 @@
 import { createListenerMiddleware } from '@reduxjs/toolkit';
 import type { RootState } from './store';
-import { addReminder, updateReminder, deleteReminder, toggleReminderStatus } from '@/features/reminders/remindersSlice';
+import { 
+  addNewReminder, 
+  updateExistingReminder, 
+  deleteExistingReminder, 
+  toggleStatusAsync 
+} from '@/features/reminders/remindersSlice';
 import { addLogEntry } from '@/features/auditLog/auditLogSlice';
 
 export const listenerMiddleware = createListenerMiddleware();
 
 const currentUser = "sample_user"; 
 
+// addReminder -> addNewReminder
 listenerMiddleware.startListening({
-  actionCreator: addReminder,
+  actionCreator: addNewReminder.fulfilled, // .fulfilledをリッスン
   effect: (action, listenerApi) => {
     const newReminder = action.payload;
     const isRestoreAction = newReminder.message.startsWith('[復元]');
@@ -23,8 +29,9 @@ listenerMiddleware.startListening({
   },
 });
 
+// updateReminder -> updateExistingReminder
 listenerMiddleware.startListening({
-  actionCreator: updateReminder,
+  actionCreator: updateExistingReminder.fulfilled, // .fulfilledをリッスン
   effect: (action, listenerApi) => {
     const updatedReminder = action.payload;
     const previousState = listenerApi.getOriginalState() as RootState;
@@ -40,8 +47,9 @@ listenerMiddleware.startListening({
   },
 });
 
+// deleteReminder -> deleteExistingReminder
 listenerMiddleware.startListening({
-  actionCreator: deleteReminder,
+  actionCreator: deleteExistingReminder.fulfilled, // .fulfilledをリッスン
   effect: (action, listenerApi) => {
     const deletedId = action.payload;
     const previousState = listenerApi.getOriginalState() as RootState;
@@ -58,27 +66,24 @@ listenerMiddleware.startListening({
   },
 });
 
-// --- ↓ここから toggleReminderStatus のリスナーを修正 ---
+// toggleReminderStatus -> toggleStatusAsync
 listenerMiddleware.startListening({
-  actionCreator: toggleReminderStatus,
+  actionCreator: toggleStatusAsync.fulfilled, // .fulfilledをリッスン
   effect: (action, listenerApi) => {
-    const toggledId = action.payload;
+    const toggledReminder = action.payload;
     const previousState = listenerApi.getOriginalState() as RootState;
-    const originalReminder = previousState.reminders.reminders.find(r => r.id === toggledId);
+    const originalReminder = previousState.reminders.reminders.find(r => r.id === toggledReminder.id);
 
     if (originalReminder) {
-      const newStatus = originalReminder.status === 'active' ? 'paused' : 'active';
-      const actionLabel = newStatus === 'paused' ? '休止' : '再開';
+      const actionLabel = toggledReminder.status === 'paused' ? '休止' : '再開';
 
       listenerApi.dispatch(addLogEntry({
         user: currentUser,
         action: actionLabel,
         reminderMessage: originalReminder.message,
-        // beforeとafterに、idも一緒に入れるように変更
         before: { id: originalReminder.id, status: originalReminder.status },
-        after: { id: originalReminder.id, status: newStatus },
+        after: { id: toggledReminder.id, status: toggledReminder.status },
       }));
     }
   },
 });
-// --- ↑ここまで修正 ---

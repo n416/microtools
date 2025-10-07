@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { useAppDispatch } from '@/app/hooks.ts';
-import { updateReminder, Reminder } from './remindersSlice.ts';
+import React, { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks.ts';
+import { updateExistingReminder, Reminder } from './remindersSlice.ts';
+import { fetchChannels, selectChannelsForServer, getChannelsStatus } from '../channels/channelsSlice.ts';
+import { showToast } from '@/features/toast/toastSlice'; // 1. showToastをインポート
 import {
   Box,
   TextField,
   Button,
   Stack,
+  Typography,
   FormControl,
   FormLabel,
   RadioGroup,
@@ -17,18 +20,20 @@ import {
   ListItemText,
   OutlinedInput,
   InputLabel,
+  IconButton,
+  CircularProgress,
+  Paper,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import Calendar from 'react-calendar';
+import Clock from 'react-clock';
+import 'react-calendar/dist/Calendar.css';
+import 'react-clock/dist/Clock.css';
 
-// 仮のチャンネル一覧データ
-const mockChannels = [
-  { id: 'C123', name: '#general' },
-  { id: 'C456', name: '#development' },
-  { id: 'C789', name: '#random' },
-  { id: 'C101', name: '#meeting' },
-];
-
-const weekDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const weekDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const weekDayMap: { [key: string]: string } = {
   monday: '月曜',
   tuesday: '火曜',
@@ -46,22 +51,60 @@ interface EditReminderFormProps {
 
 export const EditReminderForm: React.FC<EditReminderFormProps> = ({ reminder, onCancel }) => {
   const dispatch = useAppDispatch();
+  
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const channels = useAppSelector(selectChannelsForServer(reminder.serverId));
+  const channelsStatus = useAppSelector(getChannelsStatus);
+
+  useEffect(() => {
+    if (reminder.serverId && !channels) {
+      dispatch(fetchChannels({ serverId: reminder.serverId }));
+    }
+  }, [reminder.serverId, channels, dispatch]);
 
   const [message, setMessage] = useState(reminder.message);
-  const [channel, setChannel] = useState(reminder.channel);
+  const [channel, setChannel] = useState('');
   const [startTime, setStartTime] = useState(new Date(reminder.startTime).toISOString().slice(0, 16));
+  const [startTimeValue, setStartTimeValue] = useState<Date | null>(new Date(reminder.startTime));
 
   const [recurrenceType, setRecurrenceType] = useState(reminder.recurrence.type);
   const [weeklyDays, setWeeklyDays] = useState(reminder.recurrence.type === 'weekly' ? reminder.recurrence.days : []);
   const [intervalHours, setIntervalHours] = useState(reminder.recurrence.type === 'interval' ? reminder.recurrence.hours : 1);
+  
+  useEffect(() => {
+    if (channels) {
+      const channelExists = channels.some(ch => ch.name === reminder.channel);
+      if (channelExists) {
+        setChannel(reminder.channel);
+      } else if (channels.length > 0) {
+        setChannel(channels[0].name);
+      }
+    }
+  }, [channels, reminder.channel]);
+  
+  useEffect(() => {
+    try {
+      const date = new Date(startTime);
+      if (!isNaN(date.getTime())) {
+        setStartTimeValue(date);
+      } else {
+        setStartTimeValue(null);
+      }
+    } catch {
+      setStartTimeValue(null);
+    }
+  }, [startTime]);
 
   const handleSetNow = () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    now.setSeconds(0, 0);
     setStartTime(now.toISOString().slice(0, 16));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message || !channel || !startTime) return;
 
@@ -74,16 +117,59 @@ export const EditReminderForm: React.FC<EditReminderFormProps> = ({ reminder, on
       recurrence = { type: 'none' };
     }
 
-    dispatch(
-      updateReminder({
-        id: reminder.id,
-        message,
-        channel,
-        startTime: new Date(startTime).toISOString(),
-        recurrence,
-      })
-    );
-    onCancel();
+    try {
+      await dispatch(
+        updateExistingReminder({
+          id: reminder.id,
+          serverId: reminder.serverId,
+          message,
+          channel,
+          startTime: new Date(startTime).toISOString(),
+          recurrence,
+          status: reminder.status,
+        })
+      ).unwrap();
+      
+      // --- ★★★ ここから修正 ★★★ ---
+      dispatch(showToast({ message: 'リマインダーを更新しました。', severity: 'success' }));
+      onCancel();
+    } catch (error) {
+      console.error('Failed to update the reminder: ', error);
+      dispatch(showToast({ message: 'リマインダーの更新に失敗しました。', severity: 'error' }));
+      // --- ★★★ ここまで修正 ★★★ ---
+    }
+  };
+  
+  const tileClassName = ({ date, view }: { date: Date, view: string }) => {
+    if (view === 'month') {
+      const dayName = weekDays[date.getDay()];
+      if (weeklyDays.includes(dayName)) {
+        return 'react-calendar__tile--active';
+      }
+    }
+    return null;
+  };
+  
+  const renderIntervalClocks = () => {
+    if (!startTimeValue) return null;
+    const now = new Date();
+    const clocks = [];
+    
+    let nextStartTime = new Date(startTimeValue);
+    while (nextStartTime <= now) {
+      nextStartTime.setHours(nextStartTime.getHours() + intervalHours);
+    }
+
+    for (let i = 0; i < 3; i++) {
+      const nextTime = new Date(nextStartTime.getTime() + i * intervalHours * 60 * 60 * 1000);
+      clocks.push(
+        <Stack key={i} alignItems="center" spacing={1}>
+          <Clock value={nextTime} size={isSmallScreen ? 70 : 100} renderNumbers />
+          <Typography variant="caption">{nextTime.toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Typography>
+        </Stack>
+      );
+    }
+    return clocks;
   };
 
   return (
@@ -91,22 +177,28 @@ export const EditReminderForm: React.FC<EditReminderFormProps> = ({ reminder, on
       <Stack spacing={3}>
         <TextField label="メッセージ" value={message} onChange={(e) => setMessage(e.target.value)} required fullWidth variant="filled" />
 
-        <FormControl fullWidth variant="filled">
-          <InputLabel id="channel-select-label">チャンネル</InputLabel>
-          <Select
-            labelId="channel-select-label"
-            value={channel}
-            onChange={(e) => setChannel(e.target.value)}
-          >
-            {mockChannels.map((ch) => (
-              <MenuItem key={ch.id} value={ch.name}>
-                {ch.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <Stack direction="row" spacing={1} alignItems="flex-end">
+        <Stack direction="row" spacing={1} alignItems="center">
+          <FormControl fullWidth variant="filled">
+            <InputLabel id="channel-select-label">チャンネル</InputLabel>
+            <Select
+              labelId="channel-select-label"
+              value={channel}
+              onChange={(e) => setChannel(e.target.value)}
+              disabled={!channels}
+            >
+              {channels ? channels.map((ch) => (
+                <MenuItem key={ch.id} value={ch.name}>
+                  {ch.name}
+                </MenuItem>
+              )) : <MenuItem disabled>チャンネルを読み込み中...</MenuItem>}
+            </Select>
+          </FormControl>
+          <IconButton onClick={() => dispatch(fetchChannels({ serverId: reminder.serverId, forceRefresh: true }))} disabled={channelsStatus === 'loading'}>
+              {channelsStatus === 'loading' ? <CircularProgress size={24} /> : <RefreshIcon />}
+            </IconButton>
+        </Stack>
+        
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="stretch">
           <TextField
             label="起点日時"
             type="datetime-local"
@@ -133,19 +225,18 @@ export const EditReminderForm: React.FC<EditReminderFormProps> = ({ reminder, on
 
         {recurrenceType === 'weekly' && (
           <FormControl fullWidth variant="filled">
-            <InputLabel>曜日</InputLabel>
             <Select
               multiple
               displayEmpty
               value={weeklyDays}
               onChange={(e) => setWeeklyDays(e.target.value as string[])}
-              input={<OutlinedInput label="曜日" />}
+              input={<OutlinedInput />}
               renderValue={(selected) => (selected.length === 0 ? <em>曜日を選択...</em> : selected.map((day) => weekDayMap[day]).join(', '))}
             >
-              {weekDays.map((day) => (
-                <MenuItem key={day} value={day}>
-                  <Checkbox checked={weeklyDays.indexOf(day) > -1} />
-                  <ListItemText primary={weekDayMap[day]} />
+              {Object.entries(weekDayMap).map(([key, value]) => (
+                <MenuItem key={key} value={key}>
+                  <Checkbox checked={weeklyDays.includes(key)} />
+                  <ListItemText primary={value} />
                 </MenuItem>
               ))}
             </Select>
@@ -162,6 +253,30 @@ export const EditReminderForm: React.FC<EditReminderFormProps> = ({ reminder, on
             variant="filled"
           />
         )}
+
+        {startTimeValue && (
+            <Paper variant="outlined" sx={{ p: 2, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+              {recurrenceType === 'none' && (
+                <Stack alignItems="center" spacing={1}>
+                  <Clock value={startTimeValue} size={isSmallScreen ? 120 : 150} renderNumbers />
+                  <Typography variant="caption">この日時に1回だけ通知</Typography>
+                </Stack>
+              )}
+              {recurrenceType === 'weekly' && (
+                <Box sx={{ pointerEvents: 'none', width: '100%', maxWidth: '350px', '& .react-calendar': { width: '100% !important' } }}>
+                  <Calendar
+                    value={startTimeValue}
+                    tileClassName={tileClassName}
+                    showNeighboringMonth={false}
+                    showNavigation={false}
+                    formatShortWeekday={(locale, date) => ['日', '月', '火', '水', '木', '金', '土'][date.getDay()]}
+                    formatDay={isSmallScreen ? (locale, date) => date.getDate().toString() : undefined}
+                  />
+                </Box>
+              )}
+              {recurrenceType === 'interval' && renderIntervalClocks()}
+            </Paper>
+          )}
 
         <Stack direction="row" spacing={2} justifyContent="flex-end">
           <Button onClick={onCancel}>キャンセル</Button>
