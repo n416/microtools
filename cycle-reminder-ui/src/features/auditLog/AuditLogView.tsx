@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks.ts';
-import { selectAllLogs, LogEntry } from './auditLogSlice';
-import { addReminder } from '@/features/reminders/remindersSlice';
+import { selectAllLogs, getLogsStatus, fetchLogs, LogEntry } from './auditLogSlice';
+import { addNewReminder } from '@/features/reminders/remindersSlice';
+import { selectAllServers } from '@/features/servers/serversSlice';
+import { selectWriteTokenForServer } from '@/features/auth/authSlice';
+import { showToast } from '@/features/toast/toastSlice';
 import {
   Box,
   Typography,
@@ -10,12 +13,10 @@ import {
   Chip,
   Stack,
   Button,
-  Snackbar,
-  Alert,
   Link as MuiLink,
+  CircularProgress,
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
-import LinkIcon from '@mui/icons-material/Link'; // リンクアイコンをインポート
+import { Link as RouterLink, useParams, useNavigate } from 'react-router-dom';
 
 const DiffViewer = ({ log }: { log: LogEntry }) => {
   const { before, after, action } = log;
@@ -55,42 +56,63 @@ const DiffViewer = ({ log }: { log: LogEntry }) => {
 };
 
 export const AuditLogView = () => {
-  const logs = useAppSelector(selectAllLogs);
+  const { serverId } = useParams<{ serverId: string }>();
   const dispatch = useAppDispatch();
-  const [snackbarOpen, setSnackbarOpen] = React.useState(false);
+  const navigate = useNavigate();
+
+  const logs = useAppSelector(selectAllLogs);
+  const logsStatus = useAppSelector(getLogsStatus);
+  const error = useAppSelector(state => state.auditLog.error);
+  
+  const servers = useAppSelector(selectAllServers);
+  const writeToken = useAppSelector(selectWriteTokenForServer(serverId!));
+  const currentServer = servers.find(s => s.id === serverId);
+  const isServerAdmin = currentServer?.role === 'admin';
+  const canWrite = isServerAdmin || !!writeToken;
+
+  useEffect(() => {
+    if (serverId) {
+      dispatch(fetchLogs(serverId));
+    }
+  }, [serverId, dispatch]);
 
   const handleRestore = (logEntry: LogEntry) => {
-    const dataToRestore = logEntry.after || logEntry.before;
-    if (!dataToRestore) return;
+    const dataToRestore = (logEntry.before || logEntry.after) as any;
+    if (!dataToRestore || !serverId) return;
 
-    dispatch(addReminder({
-      ...(dataToRestore as any),
-      message: `[復元] ${(dataToRestore as any).message}`,
-      status: 'paused',
-    }));
-
-    setSnackbarOpen(true);
+    dispatch(addNewReminder({
+      serverId: serverId,
+      newReminder: {
+        message: `[復元] ${dataToRestore.message}`,
+        channel: dataToRestore.channel,
+        startTime: dataToRestore.startTime,
+        recurrence: dataToRestore.recurrence,
+        status: 'paused',
+      }
+    })).unwrap()
+     .then(() => {
+        dispatch(showToast({ message: '休止状態でリマインダーを復元しました。', severity: 'info' }));
+      })
+     .catch((err) => {
+        console.error("復元に失敗しました:", err);
+        dispatch(showToast({ message: '復元に失敗しました。', severity: 'error' }));
+      });
   };
 
   const getActionColor = (action: string): "success" | "info" | "error" | "default" | "warning" | "primary" | "secondary" => {
     if (action === '作成') return 'success';
     if (action === '更新') return 'info';
     if (action === '削除') return 'error';
-    if (action === '休止') return 'warning';
-    if (action === '再開') return 'info';
+    if (action === '休止' || action === '再開') return 'warning';
     if (action === '復元') return 'primary';
     return 'default';
   };
 
-  return (
-    <Box>
-      <Typography variant="h5" gutterBottom>
-        操作ログ
-      </Typography>
-      <Typography paragraph color="text.secondary">
-        直近30件の操作履歴が表示されます。
-      </Typography>
-
+  let content;
+  if (logsStatus === 'loading' || logsStatus === 'idle') {
+    content = <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+  } else if (logsStatus === 'succeeded') {
+    content = (
       <Stack spacing={2}>
         {logs.map(log => {
           const reminderId = (log.after as any)?.id || (log.before as any)?.id;
@@ -107,35 +129,18 @@ export const AuditLogView = () => {
                   </Typography>
                 </Stack>
                 {log.action !== '削除' && reminderId ? (
-                  <MuiLink
-                    component={RouterLink}
-                    to="/"
-                    state={{ linkedReminderId: reminderId }}
-                    underline="hover"
-                    sx={{ color: 'primary.main', display: 'inline-flex', alignItems: 'center' }}
-                  >
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <LinkIcon sx={{ fontSize: '1rem' }} />
-                      <Typography variant="subtitle1" component="div" gutterBottom sx={{ mb: 0 }}>
-                        {log.reminderMessage}
-                      </Typography>
-                    </Stack>
+                  <MuiLink component={RouterLink} to={`/servers/${serverId}`} state={{ linkedReminderId: reminderId }} underline="hover" sx={{ color: 'inherit' }}>
+                    <Typography variant="subtitle1" component="div" gutterBottom>{log.reminderMessage}</Typography>
                   </MuiLink>
                 ) : (
-                  <Typography variant="subtitle1" component="div" gutterBottom sx={{ textDecoration: 'line-through', color: 'text.disabled' }}>
-                    {log.reminderMessage}
-                  </Typography>
+                  <Typography variant="subtitle1" component="div" gutterBottom sx={{ textDecoration: 'line-through', color: 'text.disabled' }}>{log.reminderMessage}</Typography>
                 )}
                 <Box sx={{ mt: 1, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
                   <DiffViewer log={log} />
                 </Box>
                 {(log.action === '更新' || log.action === '削除') && (
                   <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleRestore(log)}
-                    >
+                    <Button variant="outlined" size="small" onClick={() => handleRestore(log)} disabled={!canWrite}>
                       この内容で復元
                     </Button>
                   </Box>
@@ -144,13 +149,30 @@ export const AuditLogView = () => {
             </Card>
           );
         })}
-        {logs.length === 0 && <Typography>操作ログはまだありません。</Typography>}
+        {logs.length === 0 && <Typography>このサーバーの操作ログはまだありません。</Typography>}
       </Stack>
-      <Snackbar open={snackbarOpen} autoHideDuration={4000} onClose={() => setSnackbarOpen(false)}>
-        <Alert onClose={() => setSnackbarOpen(false)} severity="info" sx={{ width: '100%' }}>
-          休止状態でリマインダーを復元しました。
-        </Alert>
-      </Snackbar>
+    );
+  } else if (logsStatus === 'failed') {
+    content = <Typography color="error">エラー: {error}</Typography>;
+  }
+
+  return (
+    <Box>
+      <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
+        <Box>
+          <Typography variant="h5" gutterBottom>
+            操作ログ
+          </Typography>
+          <Typography paragraph color="text.secondary">
+            直近30件の操作履歴が表示されます。
+          </Typography>
+        </Box>
+        <Button variant="outlined" onClick={() => navigate(`/servers/${serverId}`)}>
+          リマインダー一覧へ戻る
+        </Button>
+      </Stack>
+      
+      {content}
     </Box>
   );
 };

@@ -26,6 +26,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../cycle-reminder-api/src/routes"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

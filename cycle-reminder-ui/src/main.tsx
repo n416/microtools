@@ -5,17 +5,17 @@ import './index.css';
 import { Provider } from 'react-redux';
 import { store } from './app/store.ts';
 import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles'; // インポート
-import { theme } from './theme.ts'; // 作成したテーマをインポート
+import { ThemeRegistry } from './components/ThemeRegistry.tsx'; // 1. ThemeRegistryをインポート
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>
-      <ThemeProvider theme={theme}> {/* ここで囲む */}
+      {/* 2. ThemeProviderの代わりにThemeRegistryでラップする */}
+      <ThemeRegistry>
         <BrowserRouter>
           <App />
         </BrowserRouter>
-      </ThemeProvider>
+      </ThemeRegistry>
     </Provider>
   </React.StrictMode>,
 );
