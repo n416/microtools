@@ -1,4 +1,3 @@
-import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Paper, Typography, Box, Button, List, ListItem, ListItemButton, ListItemText, Chip } from '@mui/material'; // ListItem をインポート
 import { selectKnowledge, startAddingKnowledge } from '../store/knowledgeSlice';
