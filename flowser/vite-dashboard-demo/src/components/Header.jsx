@@ -1,4 +1,3 @@
-import React from 'react';
 import { Paper, Typography, Box, IconButton, Tabs, Tab, Chip } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import LockIcon from '@mui/icons-material/Lock';

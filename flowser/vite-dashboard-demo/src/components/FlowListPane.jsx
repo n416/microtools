@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSelector } from 'react-redux';
 import { Paper, Typography, Box, List, ListItem, ListItemText, Button } from '@mui/material';
 import { useDrag } from 'react-dnd';
