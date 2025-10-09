@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Paper, Typography, Button } from '@mui/material';
 import ChatPane from './ChatPane';
 import FlowchartPane from './FlowchartPane';
