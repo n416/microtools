@@ -1,30 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
+
 <head>
+
   <meta charset="utf-8">
-  <title>MediaPipe ペンギンデモ</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ペンギン変身カメラ</title>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: sans-serif;
+      font-family: 'Arial', sans-serif;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      margin: 0;
-      background-color: #f0f0f0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
     }
+
+    h1 {
+      color: white;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      font-size: 2em;
+    }
+
     .container {
       position: relative;
-      width: 640px;
-      height: 480px;
-      border: 2px solid #333;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      background-color: black;
+      width: 100%;
+      max-width: 640px;
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     }
+
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      padding-bottom: 75%;
+      /* 4:3 aspect ratio */
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
     #webcam {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
       display: none;
     }
+
     #output_canvas {
       position: absolute;
       top: 0;
@@ -32,100 +69,196 @@
       width: 100%;
       height: 100%;
     }
-    h1 {
-        margin-bottom: 20px;
+
+    #status {
+      margin-top: 15px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+    }
+
+    #status.loading {
+      color: #667eea;
+    }
+
+    #status.ready {
+      color: #10b981;
+    }
+
+    #status.error {
+      color: #ef4444;
     }
   </style>
 </head>
+
 <body>
-  <h1>ペンギンに変身！</h1>
+  <h1>🐧 ペンギンに変身！</h1>
   <div class="container">
-    <video id="webcam"></video>
-    <canvas id="output_canvas"></canvas>
+    <div class="video-wrapper">
+      <video id="webcam" autoplay playsinline></video>
+      <canvas id="output_canvas"></canvas>
+    </div>
+    <div id="status" class="loading">読み込み中...</div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
 
-<script>
+  <script>
     const videoElement = document.getElementById('webcam');
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
+    const statusElement = document.getElementById('status');
 
-    const beakImage = new Image();
-    beakImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAA6tJREFUeJzt3D1u1EAUhuFnZ18AFyRdpE6Vr0Kk4hvoEylS5U/oEl0pUnJKlFxAnwB/gbsCAgJ+SSQx1t7Ozj6L9ySLZOO1Z8/szI53cpcDAAAAAAAAAAAAAAAAgMBe5KkHk/P5R9e5T+4++Tq5uDzl43z24c3N/R87383nL1r/5QG44EHyWbJ2a2sv+XLyX/Y+8sXk+fyr+YkH4IIPk4/37u5+8P+V/7d/u/fRe5OfJt/OflsC/A2Q4D8DSf43QIL/DSDB/wZI8L8BkvxvgAT/GyDB/wZI8L8BkvxvgAT/GyDB/wZI8L8BkvxvgAT/GyDB/wZI8L8BkvxvgAT/G3iA/D65+3g6+S/7eDI5eR9t/nng+vP5h9f5R+8eA3wQ/k/OPgG+B8gAEwwgwwAyDCDDAJIMIMMA0gwwAyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIMIAMg8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADANIAIMA8gwgAwDyDCADAN+AnB08uP428mvk2d3H4/3P3uePPiK/Pz8r6v8xN8/gV/kdwMAAAAAAAAAAAAAAACAwH/5Azj7O7F4xY4ZAAAAAElFTkSuQmCC';
-    
-    const SMOOTHING_FACTOR = 0.8;
-    let smoothedLandmarks = null;
+    let faceMesh;
+    let camera;
+    let isReady = false;
 
-    beakImage.onload = () => {
-      camera.start();
-    };
-    beakImage.onerror = () => {
-      console.error("画像の読み込みに失敗しました。");
-    };
+    function updateStatus(message, className) {
+      statusElement.textContent = message;
+      statusElement.className = className;
+    }
 
     function onResults(results) {
-      canvasElement.width = videoElement.videoWidth;
-      canvasElement.height = videoElement.videoHeight;
-      const canvasWidth = canvasElement.width;
-      const canvasHeight = canvasElement.height;
+      if (!isReady) return;
+
+      const width = videoElement.videoWidth;
+      const height = videoElement.videoHeight;
+      canvasElement.width = width;
+      canvasElement.height = height;
 
       canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-      canvasCtx.fillStyle = '#000000';
-      canvasCtx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-      canvasCtx.translate(canvasWidth, 0);
+      canvasCtx.clearRect(0, 0, width, height);
+      canvasCtx.translate(width, 0); // 映像を左右反転
       canvasCtx.scale(-1, 1);
+      canvasCtx.drawImage(videoElement, 0, 0, width, height);
 
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         const landmarks = results.multiFaceLandmarks[0];
-
-        if (smoothedLandmarks === null) {
-          smoothedLandmarks = landmarks;
-        } else {
-          smoothedLandmarks.forEach((prev, i) => {
-            prev.x = prev.x * SMOOTHING_FACTOR + landmarks[i].x * (1 - SMOOTHING_FACTOR);
-            prev.y = prev.y * SMOOTHING_FACTOR + landmarks[i].y * (1 - SMOOTHING_FACTOR);
-            prev.z = prev.z * SMOOTHING_FACTOR + landmarks[i].z * (1 - SMOOTHING_FACTOR);
-          });
-        }
-        
-        drawConnectors(canvasCtx, smoothedLandmarks, FACEMESH_CONTOURS, {color: '#30FF30', lineWidth: 1});
-
-        drawPenguinParts(smoothedLandmarks, canvasWidth, canvasHeight);
+        drawPenguinBeak(landmarks, width, height);
       }
       canvasCtx.restore();
     }
-    
-    // ★★★ 傾きや大きさの計算をなくした、シンプルな描画関数 ★★★
-    function drawPenguinParts(landmarks, width, height) {
-        // 鼻の先端（1番）の座標を取得
-        const beakAnchor = landmarks[1];
-        if (!beakAnchor) return; // 念のためデータがあるか確認
 
-        const beakX = beakAnchor.x * width;
-        const beakY = beakAnchor.y * height;
+    // ★★★ 最終修正：横向きに応じてシアー変形（剪断変形）を適用 ★★★
+    function drawPenguinBeak(landmarks, width, height) {
+      const noseBottom = landmarks[2];
+      const leftEye = landmarks[33];
+      const rightEye = landmarks[263];
+      const noseTip = landmarks[4]; // 鼻先のランドマークも角度計算に利用
 
-        // 大きさを100pxに固定（テスト用）
-        const beakSize = 100;
+      if (!noseBottom || !leftEye || !rightEye || !noseTip) return;
 
-        // 傾きの計算はせず、そのまま描画
-        // 画像の中心が鼻先にくるように座標をずらす
-        canvasCtx.drawImage(beakImage, beakX - beakSize / 2, beakY - beakSize / 2, beakSize, beakSize);
+      const eyeDistX = (leftEye.x - rightEye.x) * width;
+      const eyeDistY = (leftEye.y - rightEye.y) * height;
+      const eyeDistance = Math.sqrt(eyeDistX * eyeDistX + eyeDistY * eyeDistY);
+
+      const beakHeight = eyeDistance * 1.5;
+      const beakWidth = eyeDistance * 1.4;
+
+      const anchorX = noseBottom.x * width;
+      const anchorY = noseBottom.y * height;
+
+      canvasCtx.save();
+      canvasCtx.translate(anchorX, anchorY); // 鼻の下を原点に移動
+
+      // ★顔の横向きの角度を計算
+      // 鼻先(4)と鼻の下(2)のX座標の差分から、顔の左右への傾きを推定
+      const faceTurnAngleRad = Math.atan2((noseTip.x - noseBottom.x) * width, beakHeight); // Y軸方向の基準としてbeakHeightを利用
+      const maxShearFactor = 0.5; // 最大のシアー強度 (調整可能)
+      const shearFactor = faceTurnAngleRad / (Math.PI / 2) * maxShearFactor; // 90度でmaxShearFactorとなるように調整
+
+      // シアー変形を適用
+      // ctx.transform(scaleX, skewY, skewX, scaleY, translateX, translateY);
+      // skewXにshearFactorを適用することで、X軸方向の傾き（横向き）を表現
+      canvasCtx.transform(1, 0, shearFactor, 1, 0, 0);
+
+      // グラデーションを作成 (シアー変形後も光の方向が変わらないように、グラデーションの起点を中心に固定)
+      const gradient = canvasCtx.createLinearGradient(-beakWidth / 2, 0, beakWidth / 2, 0);
+      gradient.addColorStop(0, '#FFB74D'); // 左側を明るいオレンジ
+      gradient.addColorStop(0.5, '#FFA726'); // 中央をメインのオレンジ
+      gradient.addColorStop(1, '#FB8C00'); // 右側を少し暗いオレンジ
+
+      // 三角形を描画
+      canvasCtx.beginPath();
+      canvasCtx.moveTo(-beakWidth / 2, 0); // 左上
+      canvasCtx.lineTo(beakWidth / 2, 0); // 右上
+      canvasCtx.lineTo(0, beakHeight); // 下の頂点
+      canvasCtx.closePath();
+
+      canvasCtx.fillStyle = gradient;
+      canvasCtx.fill();
+
+      canvasCtx.strokeStyle = '#BF6A00';
+      canvasCtx.lineWidth = 2;
+      canvasCtx.stroke();
+
+      canvasCtx.restore();
     }
 
-    const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
-    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-    faceMesh.onResults(onResults);
+    async function initFaceMesh() {
+      try {
+        updateStatus('Face Mesh を初期化中...', 'loading');
+        faceMesh = new FaceMesh({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`
+        });
+        faceMesh.setOptions({
+          maxNumFaces: 1,
+          refineLandmarks: false,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+        faceMesh.onResults(onResults);
+        updateStatus('カメラを起動中...', 'loading');
+        setTimeout(() => initCamera(), 500);
+      } catch (error) {
+        console.error('Face Mesh初期化エラー:', error);
+        updateStatus('初期化に失敗しました: ' + error.message, 'error');
+      }
+    }
 
-    const camera = new Camera(videoElement, {
-      onFrame: async () => { await faceMesh.send({image: videoElement}); },
-      width: 640, height: 480, facingMode: 'user'
-    });
-</script>
+    async function initCamera() {
+      try {
+        camera = new Camera(videoElement, {
+          onFrame: async () => {
+            if (faceMesh && isReady) {
+              await faceMesh.send({
+                image: videoElement
+              });
+            }
+          },
+          width: 640,
+          height: 480
+        });
+        await camera.start();
+        isReady = true;
+        updateStatus('準備完了！顔を映してください 🐧', 'ready');
+      } catch (error) {
+        console.error('カメラ起動エラー:', error);
+        updateStatus('カメラの起動に失敗しました。カメラへのアクセスを許可してください。', 'error');
+      }
+    }
+
+    async function initialize() {
+      try {
+        updateStatus('初期化中...', 'loading');
+        await initFaceMesh();
+      } catch (error) {
+        console.error('初期化エラー:', error);
+        updateStatus('エラー: ' + error.message, 'error');
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+      initialize();
+    }
+  </script>
 </body>
+
 </html>
