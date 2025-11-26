@@ -1,211 +1,102 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>VP 2064 - Mobile</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background-color: #000;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VP 2064 - Mobile Fixed</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; touch-action: none; user-select: none; -webkit-user-select: none; }
+        
+        /* 情報UI (左上) */
+        #ui {
+            position: absolute; top: 10px; left: 10px; color: #fff;
+            font-family: 'Arial Black', sans-serif;
+            text-shadow: 1px 1px 0 #000;
+            z-index: 100; pointer-events: none;
+            background: rgba(0, 0, 0, 0.5); /* 黒背景で見やすく */
+            padding: 10px; border-radius: 8px; border-left: 5px solid #00ff00;
+            width: 180px; transform-origin: top left; transform: scale(0.9);
+        }
+        #speed-row { font-size: 24px; color: #00ff00; font-style: italic; }
+        .unit { font-size: 12px; color: #ccc; font-style: normal;}
+        #score-row { font-size: 16px; color: #ffcc00; margin-bottom: 5px;}
+        
+        #hp-container {
+            width: 100%; height: 10px; background-color: #222;
+            border: 1px solid #555; margin-top: 5px;
+        }
+        #hp-bar { width: 100%; height: 100%; background-color: #00ff00; transition: width 0.2s, background-color 0.2s; }
 
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: #fff;
-      font-family: 'Arial Black', sans-serif;
-      text-shadow: 0 0 5px #00aaff;
-      z-index: 100;
-      pointer-events: none;
-      background: rgba(0, 20, 40, 0.6);
-      padding: 10px;
-      border-radius: 8px;
-      border-left: 6px solid #00aaff;
-      width: 200px;
-      transform-origin: top left;
-      transform: scale(0.8);
-      /* スマホ向けに少し小さく */
-    }
+        #damage-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: red; opacity: 0; pointer-events: none; z-index: 50;
+            transition: opacity 0.1s;
+        }
+        #loading {
+            position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+            color:#fff; font-family:sans-serif; letter-spacing: 2px; font-weight: bold;
+            text-shadow: 0 0 5px #000; pointer-events: none;
+        }
 
-    #speed-row {
-      font-size: 24px;
-      color: #00ffff;
-      font-style: italic;
-      letter-spacing: -1px;
-    }
+        /* --- コントローラー (視認性強化版) --- */
+        #mobile-controls {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
+            z-index: 200; pointer-events: none;
+        }
 
-    .unit {
-      font-size: 12px;
-      color: #88ccff;
-      font-style: normal;
-    }
+        /* 左スティック */
+        #joystick-zone {
+            position: absolute; bottom: 30px; left: 30px;
+            width: 140px; height: 140px;
+            background: rgba(0, 0, 0, 0.3); /* 黒ベース */
+            border: 2px solid rgba(255, 255, 255, 0.5); /* 白枠 */
+            border-radius: 50%;
+            pointer-events: auto;
+        }
+        #joystick-knob {
+            position: absolute; top: 50%; left: 50%;
+            width: 60px; height: 60px;
+            background: rgba(0, 255, 255, 0.8); /* 水色のツマミ */
+            border: 2px solid #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
 
-    #score-row {
-      font-size: 16px;
-      color: #ffdd00;
-    }
+        /* 右ボタンエリア */
+        #action-area {
+            position: absolute; bottom: 30px; right: 30px;
+            width: 180px; height: 180px;
+            pointer-events: none;
+        }
+        .act-btn {
+            position: absolute; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: bold; font-family: sans-serif;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            user-select: none; pointer-events: auto;
+            text-shadow: 1px 1px 0 #000;
+        }
+        .act-btn:active { transform: scale(0.9); opacity: 0.8; }
+        
+        /* SHOTボタン (大きく、押しやすく) */
+        #btn-shot {
+            bottom: 0; right: 0;
+            width: 90px; height: 90px; font-size: 18px;
+            background: rgba(0, 100, 255, 0.6); border: 3px solid #00ccff;
+        }
+        /* BOMBボタン (少し小さく、配置をずらす) */
+        #btn-bomb {
+            bottom: 80px; right: 90px;
+            width: 70px; height: 70px; font-size: 14px;
+            background: rgba(255, 50, 0, 0.6); border: 3px solid #ffaa00;
+        }
 
-    #hp-container {
-      width: 100%;
-      height: 8px;
-      background-color: #333;
-      border: 1px solid #555;
-      margin-top: 5px;
-    }
-
-    #hp-bar {
-      width: 100%;
-      height: 100%;
-      background-color: #00ff00;
-      transition: width 0.2s, background-color 0.2s;
-    }
-
-    #damage-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: red;
-      opacity: 0;
-      pointer-events: none;
-      z-index: 50;
-      transition: opacity 0.1s;
-    }
-
-    #loading {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #0af;
-      font-family: sans-serif;
-      letter-spacing: 2px;
-      font-weight: bold;
-      pointer-events: none;
-    }
-
-    /* --- スマホ用コントローラー --- */
-    #mobile-controls {
-      position: absolute;
-      bottom: 20px;
-      left: 0;
-      width: 100%;
-      height: 180px;
-      z-index: 200;
-      pointer-events: none;
-      /* エリア自体は透過 */
-      display: flex;
-      justify-content: space-between;
-      padding: 0 20px;
-      box-sizing: border-box;
-    }
-
-    /* 十字キー */
-    #d-pad {
-      width: 150px;
-      height: 150px;
-      position: relative;
-      pointer-events: auto;
-    }
-
-    .d-btn {
-      position: absolute;
-      width: 50px;
-      height: 50px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 2px solid rgba(0, 255, 255, 0.3);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: rgba(0, 255, 255, 0.7);
-      font-size: 24px;
-      font-weight: bold;
-      user-select: none;
-    }
-
-    .d-btn:active,
-    .d-btn.active {
-      background: rgba(0, 255, 255, 0.4);
-      color: #fff;
-    }
-
-    #d-up {
-      top: 0;
-      left: 50px;
-    }
-
-    #d-down {
-      bottom: 0;
-      left: 50px;
-    }
-
-    #d-left {
-      top: 50px;
-      left: 0;
-    }
-
-    #d-right {
-      top: 50px;
-      right: 0;
-    }
-
-    /* アクションボタン */
-    #action-btns {
-      width: 160px;
-      height: 150px;
-      position: relative;
-      pointer-events: auto;
-    }
-
-    .act-btn {
-      position: absolute;
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-weight: bold;
-      font-family: sans-serif;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-      user-select: none;
-    }
-
-    .act-btn:active,
-    .act-btn.active {
-      transform: scale(0.95);
-      filter: brightness(1.2);
-    }
-
-    #btn-shot {
-      bottom: 10px;
-      right: 0;
-      background: rgba(0, 200, 255, 0.4);
-      border: 2px solid #00ccff;
-      font-size: 14px;
-    }
-
-    #btn-bomb {
-      bottom: 60px;
-      right: 80px;
-      background: rgba(255, 100, 0, 0.4);
-      border: 2px solid #ffaa00;
-      font-size: 12px;
-    }
-  </style>
-  <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-  <script type="importmap">
-    {
+    </style>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
         "imports": {
           "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
           "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/"
@@ -213,588 +104,345 @@
       }
     </script>
 </head>
-
 <body>
-  <div id="damage-overlay"></div>
-  <div id="loading">SYSTEM START...</div>
-
-  <div id="ui" style="display:none;">
-    <div id="speed-row"><span id="speed-val">0</span> <span class="unit">km/h</span></div>
-    <div id="score-row">SCORE: <span id="score">0</span></div>
-    <div id="hp-container">
-      <div id="hp-bar"></div>
+    <div id="damage-overlay"></div>
+    <div id="loading">SYSTEM START...</div>
+    
+    <div id="ui" style="display:none;">
+        <div id="speed-row"><span id="speed-val">0</span> <span class="unit">km/h</span></div>
+        <div id="score-row">SCORE: <span id="score">0</span></div>
+        <div id="hp-container"><div id="hp-bar"></div></div>
     </div>
-  </div>
 
-  <div id="mobile-controls">
-    <div id="d-pad">
-      <div id="d-up" class="d-btn" data-key="ArrowUp">▲</div>
-      <div id="d-left" class="d-btn" data-key="ArrowLeft">◀</div>
-      <div id="d-right" class="d-btn" data-key="ArrowRight">▶</div>
-      <div id="d-down" class="d-btn" data-key="ArrowDown">▼</div>
+    <div id="mobile-controls">
+        <div id="joystick-zone">
+            <div id="joystick-knob"></div>
+        </div>
+        <div id="action-area">
+            <div id="btn-bomb" class="act-btn" data-key="z">BOMB</div>
+            <div id="btn-shot" class="act-btn" data-key=" ">SHOT</div>
+        </div>
     </div>
-    <div id="action-btns">
-      <div id="btn-bomb" class="act-btn" data-key="z">BOMB</div>
-      <div id="btn-shot" class="act-btn" data-key=" ">SHOT</div>
-    </div>
-  </div>
 
-  <script type="module">
-    import * as THREE from 'three';
-    import {
-      UnrealBloomPass
-    } from 'three/addons/postprocessing/UnrealBloomPass.js';
-    import {
-      EffectComposer
-    } from 'three/addons/postprocessing/EffectComposer.js';
-    import {
-      RenderPass
-    } from 'three/addons/postprocessing/RenderPass.js';
+    <script type="module">
+        import * as THREE from 'three';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 
-    // --- 設定 ---
-    const CFG = {
-      initSpeed: 1.5,
-      maxSpeed: 15.0,
-      speedUpPerKill: 0.2,
-      speedDownPerHit: 2.0,
-      playerMoveSpeed: 1.2,
-      shotSpeed: 8.0,
-      missileSpeed: 5.0,
-      maxHP: 100,
-      fogDist: 1800,
-      skyTop: '#0044aa',
-      skyBottom: '#66ccff'
-    };
+        // --- 設定 ---
+        const CFG = {
+            initSpeed: 1.5, maxSpeed: 15.0, speedUpPerKill: 0.2, speedDownPerHit: 2.0,
+            playerMoveSpeed: 1.5, shotSpeed: 8.0, missileSpeed: 5.0,
+            maxHP: 100, fogDist: 1800,
+            skyTop: '#0044aa', skyBottom: '#66ccff'
+        };
 
-    // --- システム変数 ---
-    let gameSpeed = CFG.initSpeed;
-    let worldZ = 0;
-    let currentHP = CFG.maxHP;
-    let score = 0;
-    let frame = 0;
-    const keys = {
-      ArrowUp: false,
-      ArrowDown: false,
-      ArrowLeft: false,
-      ArrowRight: false,
-      " ": false,
-      z: false
-    };
+        let gameSpeed = CFG.initSpeed;
+        let worldZ = 0;
+        let currentHP = CFG.maxHP;
+        let score = 0;
+        let frame = 0;
+        const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false, " ":false, z:false };
 
-    // --- スマホ操作セットアップ ---
-    function setupMobileControls() {
-      const btns = document.querySelectorAll('.d-btn, .act-btn');
+        // --- ジョイスティック制御 ---
+        function setupJoystick() {
+            const zone = document.getElementById('joystick-zone');
+            const knob = document.getElementById('joystick-knob');
+            const maxDist = 35; // 可動範囲
+            
+            // 座標計算用
+            const handleMove = (clientX, clientY) => {
+                const rect = zone.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                let dx = clientX - centerX;
+                let dy = clientY - centerY;
+                
+                // 距離制限
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist > maxDist) {
+                    const angle = Math.atan2(dy, dx);
+                    dx = Math.cos(angle) * maxDist;
+                    dy = Math.sin(angle) * maxDist;
+                }
+                
+                // ノブの見た目を更新
+                knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                
+                // 入力値を正規化してキー状態に反映
+                // しきい値(10px)を超えたら入力ON
+                const threshold = 10;
+                keys.ArrowRight = dx > threshold;
+                keys.ArrowLeft = dx < -threshold;
+                keys.ArrowDown = dy > threshold;
+                keys.ArrowUp = dy < -threshold;
+            };
+            
+            const reset = () => {
+                knob.style.transform = `translate(-50%, -50%)`;
+                keys.ArrowRight = false; keys.ArrowLeft = false;
+                keys.ArrowDown = false; keys.ArrowUp = false;
+            };
 
-      const handleStart = (e) => {
-        e.preventDefault(); // スクロール防止
-        const key = e.target.dataset.key;
-        if (keys.hasOwnProperty(key)) {
-          keys[key] = true;
-          e.target.classList.add('active');
+            // Touch Events
+            zone.addEventListener('touchstart', e => {
+                e.preventDefault();
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }, {passive: false});
+
+            zone.addEventListener('touchmove', e => {
+                e.preventDefault();
+                // zone内のタッチIDを探す処理は省略し、最初のタッチを追従
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }, {passive: false});
+
+            zone.addEventListener('touchend', e => {
+                e.preventDefault(); reset();
+            }, {passive: false});
+            
+            // Mouse Events (PCテスト用)
+            let dragging = false;
+            zone.addEventListener('mousedown', e => { dragging = true; handleMove(e.clientX, e.clientY); });
+            window.addEventListener('mousemove', e => { if(dragging) handleMove(e.clientX, e.clientY); });
+            window.addEventListener('mouseup', e => { if(dragging) { dragging = false; reset(); }});
         }
-      };
 
-      const handleEnd = (e) => {
-        e.preventDefault();
-        const key = e.target.dataset.key;
-        if (keys.hasOwnProperty(key)) {
-          keys[key] = false;
-          e.target.classList.remove('active');
+        // --- アクションボタン制御 ---
+        function setupActionButtons() {
+            const btns = document.querySelectorAll('.act-btn');
+            
+            const press = (btn) => {
+                const key = btn.dataset.key;
+                keys[key] = true;
+                btn.style.transform = "scale(0.9)";
+            };
+            const release = (btn) => {
+                const key = btn.dataset.key;
+                keys[key] = false;
+                btn.style.transform = "scale(1.0)";
+            };
+
+            btns.forEach(btn => {
+                btn.addEventListener('touchstart', e => { e.preventDefault(); press(btn); }, {passive: false});
+                btn.addEventListener('touchend', e => { e.preventDefault(); release(btn); }, {passive: false});
+                btn.addEventListener('mousedown', e => { press(btn); });
+                btn.addEventListener('mouseup', e => { release(btn); });
+                btn.addEventListener('mouseleave', e => { release(btn); });
+            });
         }
-      };
 
-      btns.forEach(btn => {
-        btn.addEventListener('touchstart', handleStart, {
-          passive: false
-        });
-        btn.addEventListener('touchend', handleEnd, {
-          passive: false
-        });
-        // PCでのテスト用マウスイベント
-        btn.addEventListener('mousedown', handleStart);
-        btn.addEventListener('mouseup', handleEnd);
-        btn.addEventListener('mouseleave', handleEnd);
-      });
-    }
-    setupMobileControls();
+        setupJoystick();
+        setupActionButtons();
 
-    const scene = new THREE.Scene();
-    const fogColor = new THREE.Color(CFG.skyBottom);
-    scene.fog = new THREE.Fog(fogColor, 100, CFG.fogDist);
-    scene.background = fogColor;
+        // --- Three.js Setup ---
+        const scene = new THREE.Scene();
+        const fogColor = new THREE.Color(CFG.skyBottom);
+        scene.fog = new THREE.Fog(fogColor, 100, CFG.fogDist);
+        scene.background = fogColor;
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 20000);
-    let baseFov = 60;
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 20000);
+        let baseFov = 60;
 
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.toneMapping = THREE.NoToneMapping;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.body.appendChild(renderer.domElement);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.toneMapping = THREE.NoToneMapping;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
 
-    const composer = new EffectComposer(renderer);
-    const renderPass = new RenderPass(scene, camera);
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-    bloomPass.threshold = 0.8;
-    bloomPass.strength = 0.5;
-    bloomPass.radius = 0.3;
-    composer.addPass(renderPass);
-    composer.addPass(bloomPass);
+        const composer = new EffectComposer(renderer);
+        const renderPass = new RenderPass(scene, camera);
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+        bloomPass.threshold = 0.8; bloomPass.strength = 0.5; bloomPass.radius = 0.3;
+        composer.addPass(renderPass);
+        composer.addPass(bloomPass);
 
-    // --- 環境構築 ---
-    function createSkyGradient() {
-      const canvas = document.createElement('canvas');
-      canvas.width = 32;
-      canvas.height = 256;
-      const ctx = canvas.getContext('2d');
-      const grad = ctx.createLinearGradient(0, 0, 0, 256);
-      grad.addColorStop(0, CFG.skyTop);
-      grad.addColorStop(0.6, CFG.skyBottom);
-      grad.addColorStop(1, '#ffffff');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 32, 256);
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
-    }
-    const skyTexture = createSkyGradient();
-    scene.background = skyTexture;
-    scene.environment = skyTexture;
-
-    const seaGeo = new THREE.PlaneGeometry(10000, 10000);
-    const seaMat = new THREE.MeshBasicMaterial({
-      color: CFG.skyBottom,
-      transparent: true,
-      opacity: 0.8
-    });
-    const sea = new THREE.Mesh(seaGeo, seaMat);
-    sea.rotation.x = -Math.PI / 2;
-    sea.position.y = -150;
-    scene.add(sea);
-
-    // --- ビル生成 ---
-    const buildings = [];
-    const buildingMat = new THREE.MeshStandardMaterial({
-      color: 0x8899aa,
-      roughness: 0.2,
-      metalness: 0.8,
-      envMap: scene.environment,
-      envMapIntensity: 1.0
-    });
-
-    function createBuilding(x, z) {
-      const width = 20 + Math.random() * 40;
-      const depth = 20 + Math.random() * 40;
-      const height = 100 + Math.random() * 500;
-      const geo = new THREE.BoxGeometry(width, height, depth);
-      const mesh = new THREE.Mesh(geo, buildingMat);
-      const yPos = (Math.random() - 0.5) * 300 - 50;
-      mesh.position.set(x, yPos, z);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      scene.add(mesh);
-      mesh.geometry.computeBoundingBox();
-      return mesh;
-    }
-
-    // --- パーティクル ---
-    const dustCount = 1000;
-    const dustGeo = new THREE.BufferGeometry();
-    const dustPos = new Float32Array(dustCount * 3);
-    for (let i = 0; i < dustCount; i++) {
-      dustPos[i * 3] = (Math.random() - 0.5) * 1200;
-      dustPos[i * 3 + 1] = (Math.random() - 0.5) * 600;
-      dustPos[i * 3 + 2] = (Math.random() - 0.5) * 2000;
-    }
-    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
-    const dustMat = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 2.0,
-      transparent: true,
-      opacity: 0.5
-    });
-    const dustSystem = new THREE.Points(dustGeo, dustMat);
-    dustSystem.frustumCulled = false;
-    scene.add(dustSystem);
-
-    // --- プレイヤー ---
-    function createPlayerShip() {
-      const ship = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.ConeGeometry(1.2, 6, 8), new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.1,
-        metalness: 0.8
-      }));
-      body.rotation.x = Math.PI / 2;
-      body.castShadow = true;
-      ship.add(body);
-      const cockpit = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2, 8), new THREE.MeshStandardMaterial({
-        color: 0x00ccff,
-        emissive: 0x001133
-      }));
-      cockpit.rotation.x = Math.PI / 2;
-      cockpit.position.set(0, 0.8, -0.5);
-      ship.add(cockpit);
-      const wingMat = new THREE.MeshStandardMaterial({
-        color: 0x0055aa,
-        roughness: 0.2
-      });
-      const lWing = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 2), wingMat);
-      lWing.position.set(-1.5, 0, 1);
-      ship.add(lWing);
-      const rWing = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 2), wingMat);
-      rWing.position.set(1.5, 0, 1);
-      ship.add(rWing);
-      const engMat = new THREE.MeshStandardMaterial({
-        color: 0x222222
-      });
-      [-1.2, 1.2].forEach(x => {
-        const e = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.2, 1.5, 8), engMat);
-        e.rotation.x = Math.PI / 2;
-        e.position.set(x, 0, 1.5);
-        ship.add(e);
-        const g = new THREE.Mesh(new THREE.CircleGeometry(0.25, 8), new THREE.MeshBasicMaterial({
-          color: 0x00ffff
-        }));
-        g.rotation.x = Math.PI / 2;
-        g.position.set(0, -0.76, 0);
-        e.add(g);
-      });
-      return ship;
-    }
-    const player = createPlayerShip();
-    scene.add(player);
-    const options = [];
-    for (let i = 0; i < 2; i++) {
-      const opt = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshStandardMaterial({
-        color: 0xffaa00,
-        emissive: 0xff5500,
-        emissiveIntensity: 0.5
-      }));
-      opt.castShadow = true;
-      player.add(opt);
-      options.push({
-        mesh: opt
-      });
-      opt.position.set(i === 0 ? -5 : 5, 0, 0);
-    }
-
-    // --- 敵 ---
-    function createEnemy() {
-      const g = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.OctahedronGeometry(3, 0), new THREE.MeshStandardMaterial({
-        color: 0xff3300,
-        roughness: 0.3,
-        metalness: 0.5
-      }));
-      body.castShadow = true;
-      g.add(body);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(4, 0.2, 4, 8), new THREE.MeshBasicMaterial({
-        color: 0xffaa00
-      }));
-      ring.rotation.x = Math.PI / 2;
-      g.add(ring);
-      g.userData.ring = ring;
-      return g;
-    }
-
-    let bullets = [],
-      missiles = [],
-      enemies = [],
-      particles = [];
-
-    function spawnExplosion(pos, scale = 1.0) {
-      for (let i = 0; i < 10; i++) {
-        const p = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshBasicMaterial({
-          color: 0xff8800
-        }));
-        p.position.copy(pos);
-        p.scale.setScalar(scale);
-        scene.add(p);
-        particles.push({
-          mesh: p,
-          vel: new THREE.Vector3((Math.random() - 0.5) * 5, Math.random() * 5, (Math.random() - 0.5) * 5),
-          life: 1.0
-        });
-      }
-    }
-
-    function updateSpeed(delta) {
-      gameSpeed += delta;
-      if (gameSpeed < CFG.initSpeed) gameSpeed = CFG.initSpeed;
-      if (gameSpeed > CFG.maxSpeed) gameSpeed = CFG.maxSpeed;
-      document.getElementById('speed-val').innerText = Math.floor(gameSpeed * 200);
-      const speedEl = document.getElementById('speed-row');
-      if (gameSpeed > 10.0) speedEl.style.color = '#ff0055';
-      else if (gameSpeed > 6.0) speedEl.style.color = '#ffcc00';
-      else speedEl.style.color = '#00ffff';
-    }
-
-    function takeDamage(amount) {
-      currentHP -= amount;
-      if (currentHP < 0) currentHP = 0;
-      const bar = document.getElementById('hp-bar');
-      bar.style.width = currentHP + '%';
-      if (currentHP < 30) bar.style.backgroundColor = '#ff0000';
-      else if (currentHP < 60) bar.style.backgroundColor = '#ffff00';
-      else bar.style.backgroundColor = '#00ff00';
-      const overlay = document.getElementById('damage-overlay');
-      overlay.style.opacity = 0.5;
-      setTimeout(() => {
-        overlay.style.opacity = 0;
-      }, 100);
-      updateSpeed(-CFG.speedDownPerHit);
-      if (currentHP === 0) {
-        gameSpeed = CFG.initSpeed;
-        updateSpeed(0);
-        currentHP = CFG.maxHP;
-        bar.style.width = '100%';
-        bar.style.backgroundColor = '#00ff00';
-      }
-    }
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
-    dirLight.position.set(-100, 200, 100);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.set(2048, 2048);
-    const d = 600;
-    dirLight.shadow.camera.left = -d;
-    dirLight.shadow.camera.right = d;
-    dirLight.shadow.camera.top = d;
-    dirLight.shadow.camera.bottom = -d;
-    scene.add(dirLight);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-
-    // キーボード入力も維持
-    window.addEventListener('keydown', e => {
-      if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
-    });
-    window.addEventListener('keyup', e => {
-      if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
-    });
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('ui').style.display = 'block';
-
-    const box3A = new THREE.Box3();
-    const box3B = new THREE.Box3();
-
-    function checkCollision(meshA, meshB) {
-      box3A.setFromObject(meshA);
-      box3B.setFromObject(meshB);
-      return box3A.intersectsBox(box3B);
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      frame++;
-      worldZ -= gameSpeed;
-
-      const targetFov = baseFov + (gameSpeed - CFG.initSpeed) * 2.0;
-      camera.fov += (targetFov - camera.fov) * 0.05;
-      camera.updateProjectionMatrix();
-
-      let localX = player.position.x;
-      let localY = player.position.y;
-      if (keys.ArrowLeft) localX -= CFG.playerMoveSpeed;
-      if (keys.ArrowRight) localX += CFG.playerMoveSpeed;
-      if (keys.ArrowUp) localY += CFG.playerMoveSpeed;
-      if (keys.ArrowDown) localY -= CFG.playerMoveSpeed;
-      localX = Math.max(-180, Math.min(180, localX));
-      localY = Math.max(-100, Math.min(100, localY));
-      player.position.x = localX;
-      player.position.y = localY;
-      player.position.z = worldZ;
-
-      const targetRoll = (keys.ArrowLeft ? 0.7 : (keys.ArrowRight ? -0.7 : 0));
-      player.rotation.z += (targetRoll - player.rotation.z) * 0.1;
-      player.rotation.x += ((keys.ArrowUp ? 0.3 : (keys.ArrowDown ? -0.3 : 0)) - player.rotation.x) * 0.1;
-      options[0].mesh.position.y = Math.sin(frame * 0.1) * 1.0;
-      options[1].mesh.position.y = Math.cos(frame * 0.1) * 1.0;
-
-      camera.position.x += (localX * 0.6 - camera.position.x) * 0.05;
-      camera.position.y += (localY * 0.6 + 20 - camera.position.y) * 0.05;
-      camera.position.z = worldZ + 80;
-      camera.lookAt(player.position.x * 0.5, player.position.y * 0.5, player.position.z - 100);
-      dirLight.position.z = worldZ + 100;
-      dirLight.target.position.z = worldZ - 100;
-      dirLight.target.updateMatrixWorld();
-
-      const spawnRate = Math.max(2, Math.floor(10 / (gameSpeed / 4)));
-      if (frame % spawnRate === 0) {
-        const spawnZ = worldZ - 1500 - (gameSpeed * 50);
-        const x = (Math.random() - 0.5) * 1000;
-        const b = createBuilding(x, spawnZ);
-        buildings.push(b);
-      }
-      for (let i = buildings.length - 1; i >= 0; i--) {
-        const b = buildings[i];
-        if (Math.abs(b.position.z - player.position.z) < 30) {
-          if (checkCollision(player, b)) {
-            takeDamage(15);
-            spawnExplosion(player.position, 0xaaaaaa);
-            scene.remove(b);
-            buildings.splice(i, 1);
-            continue;
-          }
+        function createSkyGradient() {
+            const canvas = document.createElement('canvas'); canvas.width = 32; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createLinearGradient(0, 0, 0, 256);
+            grad.addColorStop(0, CFG.skyTop); grad.addColorStop(0.6, CFG.skyBottom); grad.addColorStop(1, '#ffffff');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, 32, 256);
+            const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
         }
-        if (b.position.z > worldZ + 200) {
-          scene.remove(b);
-          buildings.splice(i, 1);
-        }
-      }
+        const skyTexture = createSkyGradient();
+        scene.background = skyTexture; scene.environment = skyTexture;
 
-      const pos = dustSystem.geometry.attributes.position.array;
-      for (let i = 0; i < dustCount; i++) {
-        let z = pos[i * 3 + 2];
-        if (z > worldZ + 50) {
-          z = worldZ - 1500 - Math.random() * 500;
-          pos[i * 3] = (Math.random() - 0.5) * 1200;
-          pos[i * 3 + 1] = (Math.random() - 0.5) * 600;
-        }
-        pos[i * 3 + 2] = z;
-      }
-      dustSystem.geometry.attributes.position.needsUpdate = true;
+        const seaGeo = new THREE.PlaneGeometry(10000, 10000);
+        const seaMat = new THREE.MeshBasicMaterial({color: CFG.skyBottom, transparent:true, opacity:0.8});
+        const sea = new THREE.Mesh(seaGeo, seaMat);
+        sea.rotation.x = -Math.PI/2; sea.position.y = -150; scene.add(sea);
 
-      if (keys[" "] && frame % 5 === 0) {
-        [0, -4, 4].forEach(o => {
-          const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 8), new THREE.MeshBasicMaterial({
-            color: 0x00ffff
-          }));
-          b.position.set(player.position.x + o, player.position.y, player.position.z - 3);
-          scene.add(b);
-          bullets.push(b);
-        });
-      }
-      if (keys.z && frame % 20 === 0) {
-        const m = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.5, 8), new THREE.MeshBasicMaterial({
-          color: 0xffaa00
-        }));
-        m.rotation.x = Math.PI / 2;
-        m.position.copy(player.position);
-        scene.add(m);
-        let t = null,
-          minDist = 1000;
-        enemies.forEach(e => {
-          const d = player.position.distanceTo(e.mesh.position);
-          if (d < minDist && e.mesh.position.z < player.position.z) {
-            minDist = d;
-            t = e.mesh;
-          }
-        });
-        missiles.push({
-          mesh: m,
-          vel: new THREE.Vector3(0, 0, -1),
-          target: t,
-          speed: 0
-        });
-      }
+        const buildings = [];
+        const buildingMat = new THREE.MeshStandardMaterial({ color: 0x8899aa, roughness: 0.2, metalness: 0.8, envMap: scene.environment, envMapIntensity: 1.0 });
+        function createBuilding(x, z) {
+            const width = 20 + Math.random() * 40; const depth = 20 + Math.random() * 40; const height = 100 + Math.random() * 500;
+            const geo = new THREE.BoxGeometry(width, height, depth);
+            const mesh = new THREE.Mesh(geo, buildingMat);
+            const yPos = (Math.random() - 0.5) * 300 - 50;
+            mesh.position.set(x, yPos, z); mesh.castShadow = true; mesh.receiveShadow = true;
+            scene.add(mesh); mesh.geometry.computeBoundingBox();
+            return mesh;
+        }
 
-      const bulletSpeed = gameSpeed + CFG.shotSpeed;
-      for (let i = bullets.length - 1; i >= 0; i--) {
-        bullets[i].position.z -= bulletSpeed;
-        if (bullets[i].position.z < worldZ - 1200) {
-          scene.remove(bullets[i]);
-          bullets.splice(i, 1);
+        const dustCount = 1000;
+        const dustGeo = new THREE.BufferGeometry();
+        const dustPos = new Float32Array(dustCount * 3);
+        for(let i=0; i<dustCount; i++) {
+            dustPos[i*3] = (Math.random() - 0.5) * 1200;
+            dustPos[i*3+1] = (Math.random() - 0.5) * 600;
+            dustPos[i*3+2] = (Math.random() - 0.5) * 2000;
         }
-      }
-      for (let i = missiles.length - 1; i >= 0; i--) {
-        let m = missiles[i];
-        m.speed = Math.min(m.speed + 0.1, CFG.missileSpeed);
-        if (m.target && m.target.parent) m.vel.lerp(new THREE.Vector3().subVectors(m.target.position, m.mesh.position).normalize(), 0.15);
-        else m.vel.z = -1;
-        const moveVec = m.vel.clone().normalize().multiplyScalar(gameSpeed + m.speed);
-        m.mesh.position.add(moveVec);
-        m.mesh.lookAt(m.mesh.position.clone().add(m.vel));
-        if (frame % 2 === 0) {
-          const p = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial({
-            color: 0xaaaaaa
-          }));
-          p.position.copy(m.mesh.position);
-          scene.add(p);
-          particles.push({
-            mesh: p,
-            vel: new THREE.Vector3(0, 0, 0),
-            life: 0.4
-          });
-        }
-        if (m.mesh.position.z < worldZ - 1200) {
-          scene.remove(m.mesh);
-          missiles.splice(i, 1);
-        }
-      }
+        dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+        const dustMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.0, transparent: true, opacity: 0.5 });
+        const dustSystem = new THREE.Points(dustGeo, dustMat); dustSystem.frustumCulled = false; scene.add(dustSystem);
 
-      const enemySpawnRate = Math.max(10, Math.floor(40 - gameSpeed));
-      if (frame % enemySpawnRate === 0) {
-        const e = createEnemy();
-        e.position.set((Math.random() - 0.5) * 400, (Math.random() - 0.5) * 200, worldZ - 1200);
-        scene.add(e);
-        enemies.push({
-          mesh: e
-        });
-      }
-      enemies.forEach((e, i) => {
-        e.mesh.rotation.y += 0.02;
-        if (e.mesh.userData.ring) e.mesh.userData.ring.rotation.z += 0.1;
-        if (checkCollision(player, e.mesh)) {
-          takeDamage(20);
-          spawnExplosion(e.mesh.position, 0xff0000);
-          scene.remove(e.mesh);
-          enemies.splice(i, 1);
-          return;
+        function createPlayerShip() {
+            const ship = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.ConeGeometry(1.2, 6, 8), new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.1, metalness: 0.8}));
+            body.rotation.x = Math.PI / 2; body.castShadow = true; ship.add(body);
+            const cockpit = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2, 8), new THREE.MeshStandardMaterial({color: 0x00ccff, emissive: 0x001133}));
+            cockpit.rotation.x = Math.PI / 2; cockpit.position.set(0, 0.8, -0.5); ship.add(cockpit);
+            const wingMat = new THREE.MeshStandardMaterial({color: 0x0055aa, roughness:0.2});
+            const lWing = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 2), wingMat); lWing.position.set(-1.5, 0, 1); ship.add(lWing);
+            const rWing = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 2), wingMat); rWing.position.set(1.5, 0, 1); ship.add(rWing);
+            const engMat = new THREE.MeshStandardMaterial({color:0x222222});
+            [-1.2, 1.2].forEach(x=>{ const e = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.2,1.5,8), engMat); e.rotation.x=Math.PI/2; e.position.set(x,0,1.5); ship.add(e); const g = new THREE.Mesh(new THREE.CircleGeometry(0.25,8), new THREE.MeshBasicMaterial({color:0x00ffff})); g.rotation.x=Math.PI/2; g.position.set(0,-0.76,0); e.add(g); });
+            return ship;
         }
-        let hit = false;
-        for (let j = bullets.length - 1; j >= 0; j--) {
-          if (!hit && e.mesh.position.distanceTo(bullets[j].position) < 8) {
-            scene.remove(bullets[j]);
-            bullets.splice(j, 1);
-            hit = true;
-          }
+        const player = createPlayerShip(); scene.add(player);
+        const options = []; for(let i=0; i<2; i++) { const opt = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshStandardMaterial({color: 0xffaa00, emissive:0xff5500, emissiveIntensity:0.5})); opt.castShadow = true; player.add(opt); options.push({mesh:opt}); opt.position.set(i===0?-5:5, 0, 0); }
+
+        function createEnemy() {
+            const g = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.OctahedronGeometry(3, 0), new THREE.MeshStandardMaterial({color: 0xff3300, roughness: 0.3, metalness: 0.5}));
+            body.castShadow = true; g.add(body);
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(4, 0.2, 4, 8), new THREE.MeshBasicMaterial({color:0xffaa00}));
+            ring.rotation.x = Math.PI/2; g.add(ring); g.userData.ring = ring; return g;
         }
-        if (!hit) {
-          for (let j = missiles.length - 1; j >= 0; j--) {
-            if (!hit && e.mesh.position.distanceTo(missiles[j].mesh.position) < 8) {
-              scene.remove(missiles[j].mesh);
-              missiles.splice(j, 1);
-              hit = true;
+
+        let bullets=[], missiles=[], enemies=[], particles=[];
+
+        function spawnExplosion(pos, scale=1.0) {
+            for(let i=0; i<10; i++) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshBasicMaterial({color: 0xff8800}));
+                p.position.copy(pos); p.scale.setScalar(scale); scene.add(p);
+                particles.push({mesh:p, vel:new THREE.Vector3((Math.random()-0.5)*5, Math.random()*5, (Math.random()-0.5)*5), life:1.0});
             }
-          }
         }
-        if (hit) {
-          updateSpeed(CFG.speedUpPerKill);
-          spawnExplosion(e.mesh.position);
-          scene.remove(e.mesh);
-          enemies.splice(i, 1);
-          score += 500;
-          document.getElementById('score').innerText = score;
-        } else if (e.mesh.position.z > worldZ + 50) {
-          scene.remove(e.mesh);
-          enemies.splice(i, 1);
-        }
-      });
 
-      particles.forEach((p, i) => {
-        p.mesh.position.add(p.vel);
-        p.life -= 0.05;
-        p.mesh.scale.setScalar(p.life);
-        if (p.life <= 0) {
-          scene.remove(p.mesh);
-          particles.splice(i, 1);
+        function updateSpeed(delta) {
+            gameSpeed += delta;
+            if (gameSpeed < CFG.initSpeed) gameSpeed = CFG.initSpeed;
+            if (gameSpeed > CFG.maxSpeed) gameSpeed = CFG.maxSpeed;
+            document.getElementById('speed-val').innerText = Math.floor(gameSpeed * 200);
+            const speedEl = document.getElementById('speed-row');
+            if(gameSpeed > 10.0) speedEl.style.color = '#ff0055';
+            else if(gameSpeed > 6.0) speedEl.style.color = '#ffcc00';
+            else speedEl.style.color = '#00ffff';
         }
-      });
-      composer.render();
-    }
 
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      composer.setSize(window.innerWidth, window.innerHeight);
-    });
-    animate();
-  </script>
+        function takeDamage(amount) {
+            currentHP -= amount;
+            if (currentHP < 0) currentHP = 0;
+            const bar = document.getElementById('hp-bar');
+            bar.style.width = currentHP + '%';
+            if (currentHP < 30) bar.style.backgroundColor = '#ff0000';
+            else if (currentHP < 60) bar.style.backgroundColor = '#ffff00';
+            else bar.style.backgroundColor = '#00ff00';
+            const overlay = document.getElementById('damage-overlay');
+            overlay.style.opacity = 0.5; setTimeout(() => { overlay.style.opacity = 0; }, 100);
+            updateSpeed(-CFG.speedDownPerHit);
+            if(currentHP === 0) {
+                gameSpeed = CFG.initSpeed; updateSpeed(0);
+                currentHP = CFG.maxHP; bar.style.width = '100%'; bar.style.backgroundColor = '#00ff00';
+            }
+        }
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2.0); dirLight.position.set(-100, 200, 100); dirLight.castShadow = true; dirLight.shadow.mapSize.set(2048, 2048);
+        const d = 600; dirLight.shadow.camera.left = -d; dirLight.shadow.camera.right = d; dirLight.shadow.camera.top = d; dirLight.shadow.camera.bottom = -d;
+        scene.add(dirLight); scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+        window.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
+        window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+        document.getElementById('loading').style.display = 'none'; document.getElementById('ui').style.display = 'block';
+
+        const box3A = new THREE.Box3(); const box3B = new THREE.Box3();
+        function checkCollision(meshA, meshB) { box3A.setFromObject(meshA); box3B.setFromObject(meshB); return box3A.intersectsBox(box3B); }
+
+        function animate() {
+            requestAnimationFrame(animate); frame++;
+            worldZ -= gameSpeed;
+            
+            const targetFov = baseFov + (gameSpeed - CFG.initSpeed) * 2.0;
+            camera.fov += (targetFov - camera.fov) * 0.05; camera.updateProjectionMatrix();
+
+            let localX = player.position.x; let localY = player.position.y;
+            if (keys.ArrowLeft) localX -= CFG.playerMoveSpeed; if (keys.ArrowRight) localX += CFG.playerMoveSpeed;
+            if (keys.ArrowUp) localY += CFG.playerMoveSpeed; if (keys.ArrowDown) localY -= CFG.playerMoveSpeed;
+            localX = Math.max(-180, Math.min(180, localX)); localY = Math.max(-100, Math.min(100, localY));
+            player.position.x = localX; player.position.y = localY; player.position.z = worldZ;
+
+            const targetRoll = (keys.ArrowLeft ? 0.7 : (keys.ArrowRight ? -0.7 : 0));
+            player.rotation.z += (targetRoll - player.rotation.z) * 0.1;
+            player.rotation.x += ((keys.ArrowUp ? 0.3 : (keys.ArrowDown ? -0.3 : 0)) - player.rotation.x) * 0.1;
+            options[0].mesh.position.y = Math.sin(frame*0.1)*1.0; options[1].mesh.position.y = Math.cos(frame*0.1)*1.0;
+
+            camera.position.x += (localX * 0.6 - camera.position.x) * 0.05; camera.position.y += (localY * 0.6 + 20 - camera.position.y) * 0.05;
+            camera.position.z = worldZ + 80; camera.lookAt(player.position.x * 0.5, player.position.y * 0.5, player.position.z - 100);
+            dirLight.position.z = worldZ + 100; dirLight.target.position.z = worldZ - 100; dirLight.target.updateMatrixWorld();
+
+            const spawnRate = Math.max(2, Math.floor(10 / (gameSpeed/4))); 
+            if (frame % spawnRate === 0) {
+                const spawnZ = worldZ - 1500 - (gameSpeed * 50);
+                const x = (Math.random()-0.5) * 1000; const b = createBuilding(x, spawnZ); buildings.push(b);
+            }
+            for(let i=buildings.length-1; i>=0; i--) {
+                const b = buildings[i];
+                if(Math.abs(b.position.z - player.position.z) < 30) {
+                    if(checkCollision(player, b)) {
+                        takeDamage(15); spawnExplosion(player.position, 0xaaaaaa);
+                        scene.remove(b); buildings.splice(i, 1); continue;
+                    }
+                }
+                if(b.position.z > worldZ + 200) { scene.remove(b); buildings.splice(i, 1); }
+            }
+
+            const pos = dustSystem.geometry.attributes.position.array;
+            for(let i=0; i<dustCount; i++) {
+                let z = pos[i*3+2];
+                if(z > worldZ + 50) { z = worldZ - 1500 - Math.random() * 500; pos[i*3] = (Math.random()-0.5)*1200; pos[i*3+1] = (Math.random()-0.5)*600; }
+                pos[i*3+2] = z;
+            }
+            dustSystem.geometry.attributes.position.needsUpdate = true;
+
+            if(keys[" "] && frame%5===0) { [0, -4, 4].forEach(o => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,8), new THREE.MeshBasicMaterial({color:0x00ffff})); b.position.set(player.position.x+o, player.position.y, player.position.z-3); scene.add(b); bullets.push(b); }); }
+            if(keys.z && frame%20===0) { const m = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.5, 8), new THREE.MeshBasicMaterial({color:0xffaa00})); m.rotation.x=Math.PI/2; m.position.copy(player.position); scene.add(m); let t=null, minDist=1000; enemies.forEach(e=>{const d=player.position.distanceTo(e.mesh.position);if(d<minDist&&e.mesh.position.z<player.position.z){minDist=d;t=e.mesh;}}); missiles.push({mesh:m, vel:new THREE.Vector3(0,0,-1), target:t, speed:0}); }
+
+            const bulletSpeed = gameSpeed + CFG.shotSpeed;
+            for(let i=bullets.length-1; i>=0; i--){ bullets[i].position.z -= bulletSpeed; if(bullets[i].position.z < worldZ - 1200){scene.remove(bullets[i]);bullets.splice(i,1);} }
+            for(let i=missiles.length-1; i>=0; i--){ let m = missiles[i]; m.speed = Math.min(m.speed+0.1, CFG.missileSpeed); if(m.target && m.target.parent) m.vel.lerp(new THREE.Vector3().subVectors(m.target.position, m.mesh.position).normalize(), 0.15); else m.vel.z = -1; const moveVec = m.vel.clone().normalize().multiplyScalar(gameSpeed + m.speed); m.mesh.position.add(moveVec); m.mesh.lookAt(m.mesh.position.clone().add(m.vel)); if(frame%2===0){const p=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.5), new THREE.MeshBasicMaterial({color:0xaaaaaa})); p.position.copy(m.mesh.position); scene.add(p); particles.push({mesh:p, vel:new THREE.Vector3(0,0,0), life:0.4});} if(m.mesh.position.z < worldZ - 1200){scene.remove(m.mesh);missiles.splice(i,1);} }
+
+            const enemySpawnRate = Math.max(10, Math.floor(40 - gameSpeed));
+            if(frame % enemySpawnRate === 0) { const e = createEnemy(); e.position.set((Math.random()-0.5)*400, (Math.random()-0.5)*200, worldZ - 1200); scene.add(e); enemies.push({mesh:e}); }
+            enemies.forEach((e,i)=>{
+                e.mesh.rotation.y += 0.02; if(e.mesh.userData.ring) e.mesh.userData.ring.rotation.z += 0.1;
+                if(checkCollision(player, e.mesh)) { takeDamage(20); spawnExplosion(e.mesh.position, 0xff0000); scene.remove(e.mesh); enemies.splice(i,1); return; }
+                let hit = false;
+                for(let j=bullets.length-1; j>=0; j--){ if(!hit && e.mesh.position.distanceTo(bullets[j].position)<8){ scene.remove(bullets[j]); bullets.splice(j,1); hit=true; } }
+                if(!hit){ for(let j=missiles.length-1; j>=0; j--){ if(!hit && e.mesh.position.distanceTo(missiles[j].mesh.position)<8){ scene.remove(missiles[j].mesh); missiles.splice(j,1); hit=true; } } }
+                if(hit) { updateSpeed(CFG.speedUpPerKill); spawnExplosion(e.mesh.position); scene.remove(e.mesh); enemies.splice(i,1); score+=500; document.getElementById('score').innerText=score; } else if(e.mesh.position.z > worldZ + 50) { scene.remove(e.mesh); enemies.splice(i,1); }
+            });
+
+            particles.forEach((p,i)=>{ p.mesh.position.add(p.vel); p.life-=0.05; p.mesh.scale.setScalar(p.life); if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1);} });
+            composer.render();
+        }
+
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight); });
+        animate();
+    </script>
 </body>
-
 </html>
