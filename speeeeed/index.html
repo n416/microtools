@@ -3,30 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VP 2064 - Mobile Fixed</title>
+    <title>VP 2064 - Touch Fix</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; touch-action: none; user-select: none; -webkit-user-select: none; }
         
-        /* 情報UI (左上) */
         #ui {
             position: absolute; top: 10px; left: 10px; color: #fff;
             font-family: 'Arial Black', sans-serif;
             text-shadow: 1px 1px 0 #000;
             z-index: 100; pointer-events: none;
-            background: rgba(0, 0, 0, 0.5); /* 黒背景で見やすく */
+            background: rgba(0, 0, 0, 0.5);
             padding: 10px; border-radius: 8px; border-left: 5px solid #00ff00;
             width: 180px; transform-origin: top left; transform: scale(0.9);
         }
         #speed-row { font-size: 24px; color: #00ff00; font-style: italic; }
         .unit { font-size: 12px; color: #ccc; font-style: normal;}
         #score-row { font-size: 16px; color: #ffcc00; margin-bottom: 5px;}
-        
         #hp-container {
             width: 100%; height: 10px; background-color: #222;
             border: 1px solid #555; margin-top: 5px;
         }
         #hp-bar { width: 100%; height: 100%; background-color: #00ff00; transition: width 0.2s, background-color 0.2s; }
-
         #damage-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: red; opacity: 0; pointer-events: none; z-index: 50;
@@ -34,37 +31,34 @@
         }
         #loading {
             position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-            color:#fff; font-family:sans-serif; letter-spacing: 2px; font-weight: bold;
-            text-shadow: 0 0 5px #000; pointer-events: none;
+            color:#fff; font-family:sans-serif; letter-spacing: 2px; font-weight: bold; pointer-events: none;
         }
 
-        /* --- コントローラー (視認性強化版) --- */
+        /* コントローラー */
         #mobile-controls {
             position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
             z-index: 200; pointer-events: none;
         }
-
         /* 左スティック */
         #joystick-zone {
             position: absolute; bottom: 30px; left: 30px;
             width: 140px; height: 140px;
-            background: rgba(0, 0, 0, 0.3); /* 黒ベース */
-            border: 2px solid rgba(255, 255, 255, 0.5); /* 白枠 */
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
             border-radius: 50%;
             pointer-events: auto;
         }
         #joystick-knob {
             position: absolute; top: 50%; left: 50%;
             width: 60px; height: 60px;
-            background: rgba(0, 255, 255, 0.8); /* 水色のツマミ */
+            background: rgba(0, 255, 255, 0.8);
             border: 2px solid #fff;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
             pointer-events: none;
         }
-
-        /* 右ボタンエリア */
+        /* 右ボタン */
         #action-area {
             position: absolute; bottom: 30px; right: 30px;
             width: 180px; height: 180px;
@@ -79,20 +73,16 @@
             text-shadow: 1px 1px 0 #000;
         }
         .act-btn:active { transform: scale(0.9); opacity: 0.8; }
-        
-        /* SHOTボタン (大きく、押しやすく) */
         #btn-shot {
             bottom: 0; right: 0;
             width: 90px; height: 90px; font-size: 18px;
             background: rgba(0, 100, 255, 0.6); border: 3px solid #00ccff;
         }
-        /* BOMBボタン (少し小さく、配置をずらす) */
         #btn-bomb {
             bottom: 80px; right: 90px;
             width: 70px; height: 70px; font-size: 14px;
             background: rgba(255, 50, 0, 0.6); border: 3px solid #ffaa00;
         }
-
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
     <script type="importmap">
@@ -145,13 +135,13 @@
         let frame = 0;
         const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false, " ":false, z:false };
 
-        // --- ジョイスティック制御 ---
+        // --- ★ジョイスティック制御 (ID追跡版) ---
         function setupJoystick() {
             const zone = document.getElementById('joystick-zone');
             const knob = document.getElementById('joystick-knob');
-            const maxDist = 35; // 可動範囲
+            const maxDist = 35;
+            let joystickId = null; // ★操作している指のIDを記憶
             
-            // 座標計算用
             const handleMove = (clientX, clientY) => {
                 const rect = zone.getBoundingClientRect();
                 const centerX = rect.left + rect.width / 2;
@@ -160,7 +150,6 @@
                 let dx = clientX - centerX;
                 let dy = clientY - centerY;
                 
-                // 距離制限
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist > maxDist) {
                     const angle = Math.atan2(dy, dx);
@@ -168,11 +157,8 @@
                     dy = Math.sin(angle) * maxDist;
                 }
                 
-                // ノブの見た目を更新
                 knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                 
-                // 入力値を正規化してキー状態に反映
-                // しきい値(10px)を超えたら入力ON
                 const threshold = 10;
                 keys.ArrowRight = dx > threshold;
                 keys.ArrowLeft = dx < -threshold;
@@ -184,25 +170,48 @@
                 knob.style.transform = `translate(-50%, -50%)`;
                 keys.ArrowRight = false; keys.ArrowLeft = false;
                 keys.ArrowDown = false; keys.ArrowUp = false;
+                joystickId = null;
             };
 
-            // Touch Events
+            // タッチ開始
             zone.addEventListener('touchstart', e => {
                 e.preventDefault();
-                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+                if (joystickId !== null) return; // 既に操作中なら無視
+                
+                // 最初の指を登録
+                const touch = e.changedTouches[0];
+                joystickId = touch.identifier;
+                handleMove(touch.clientX, touch.clientY);
             }, {passive: false});
 
+            // タッチ移動（IDチェック）
             zone.addEventListener('touchmove', e => {
                 e.preventDefault();
-                // zone内のタッチIDを探す処理は省略し、最初のタッチを追従
-                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+                if (joystickId === null) return;
+
+                // 登録された指だけを探して処理
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === joystickId) {
+                        handleMove(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+                        break;
+                    }
+                }
             }, {passive: false});
 
+            // タッチ終了（IDチェック）
             zone.addEventListener('touchend', e => {
-                e.preventDefault(); reset();
+                e.preventDefault();
+                if (joystickId === null) return;
+
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === joystickId) {
+                        reset();
+                        break;
+                    }
+                }
             }, {passive: false});
             
-            // Mouse Events (PCテスト用)
+            // PCデバッグ用マウス
             let dragging = false;
             zone.addEventListener('mousedown', e => { dragging = true; handleMove(e.clientX, e.clientY); });
             window.addEventListener('mousemove', e => { if(dragging) handleMove(e.clientX, e.clientY); });
