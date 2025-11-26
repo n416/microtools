@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VP 2064 - FINAL CAMERA FIX</title>
+  <title>VP 2064 - AUTO FIRE</title>
   <style>
     body {
       margin: 0;
@@ -415,6 +415,16 @@
       border: 2px solid #ffaa00;
     }
 
+    #btn-mode {
+      bottom: 0;
+      right: 110px;
+      width: 60px;
+      height: 60px;
+      font-size: 12px;
+      background: rgba(0, 255, 0, 0.5);
+      border: 2px solid #00ff00;
+    }
+
     #btn-view {
       bottom: 80px;
       right: 180px;
@@ -424,16 +434,6 @@
       background: rgba(255, 255, 0, 0.5);
       border: 2px solid #ffff00;
       color: #ffff00;
-    }
-
-    #btn-mode {
-      bottom: 0;
-      right: 110px;
-      width: 60px;
-      height: 60px;
-      font-size: 12px;
-      background: rgba(0, 255, 0, 0.5);
-      border: 2px solid #00ff00;
     }
   </style>
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -492,8 +492,8 @@
     <div id="action-area">
       <div id="btn-view" class="act-btn" data-key="v">ZOOM</div>
       <div id="btn-mode" class="act-btn" data-key="c">FORM</div>
-      <div id="btn-bomb" class="act-btn" data-key="z">BOMB</div>
-      <div id="btn-shot" class="act-btn" data-key=" ">SHOT</div>
+      <div id="btn-bomb" class="act-btn" data-key="z">STOP<br>BOMB</div>
+      <div id="btn-shot" class="act-btn" data-key=" ">STOP<br>SHOT</div>
     </div>
   </div>
 
@@ -684,9 +684,11 @@
       isDroneMode = !isDroneMode;
       document.getElementById('mode-label').innerText = isDroneMode ? "MODE: DRONE" : "MODE: JET";
       if (isDroneMode) {
+        camera.up.set(0, 0, -1);
         document.getElementById('hud-reticle').style.display = 'none';
         if (droneSightMesh) droneSightMesh.visible = true;
       } else {
+        camera.up.set(0, 1, 0);
         document.getElementById('hud-reticle').style.display = 'block';
         if (droneSightMesh) droneSightMesh.visible = false;
       }
@@ -858,7 +860,6 @@
       rWing.scale.x = -1;
       rWingGroup.add(rWing);
 
-      // --- エンジン ---
       const engMat = new THREE.MeshStandardMaterial({
         color: 0x333333,
         roughness: 0.5
@@ -1184,7 +1185,6 @@
       }
 
       if (isInspectMode) {
-        // ★修正: 接写時は強制的にUPベクトルを(0,1,0)に
         camera.up.set(0, 1, 0);
         const targetX = player.position.x + 10;
         const targetY = player.position.y + 5;
@@ -1193,7 +1193,6 @@
         camera.lookAt(player.position);
       } else {
         if (isDroneMode) {
-          // ★修正: ドローン時はUPベクトルを(0,0,-1)に
           camera.up.set(0, 0, -1);
           const camTargetZ = worldZ + 50;
           camera.position.x += (0 - camera.position.x) * 0.1;
@@ -1201,7 +1200,6 @@
           camera.position.y += (150 - camera.position.y) * 0.1;
           camera.lookAt(camera.position.x, 0, worldZ - 100);
         } else {
-          // ★修正: 通常時はUPベクトルを(0,1,0)に
           camera.up.set(0, 1, 0);
           const targetFov = baseFov + (gameSpeed - CFG.initSpeed) * 2.0;
           camera.fov += (targetFov - camera.fov) * 0.05;
@@ -1361,7 +1359,8 @@
           buildings.push(b);
         }
 
-        if (keys[" "] && frame % 5 === 0) {
+        // ★修正: オートファイア (押してない時に発射)
+        if (!keys[" "] && frame % 5 === 0) {
           [0, -4, 4].forEach(o => {
             const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 8), new THREE.MeshBasicMaterial({
               color: 0x00ffff
@@ -1372,7 +1371,8 @@
           });
         }
 
-        if (keys.z && frame % 20 === 0) {
+        // ★修正: オートミサイル (押してない時に発射)
+        if (!keys.z && frame % 20 === 0) {
           const beamLen = 200.0;
           const mGeo = new THREE.CylinderGeometry(0.1, 0.01, beamLen, 2);
           mGeo.rotateX(Math.PI / 2);
