@@ -291,6 +291,7 @@
       z-index: 200;
       text-shadow: 0 0 10px #000;
       text-align: center;
+      display: none;
     }
 
     #result-screen {
@@ -455,6 +456,58 @@
       line-height: 1.1;
       text-align: center;
     }
+
+    #title-screen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 200;
+      width: 100%;
+      pointer-events: none;
+    }
+
+    .main-title {
+      font-size: 50px;
+      color: #00aaff;
+      text-shadow: 0 0 20px #00aaff;
+      font-style: italic;
+      margin-bottom: 10px;
+      line-height: 1.1;
+    }
+
+    .sub-title {
+      font-size: 18px;
+      color: #ffffff;
+      margin-bottom: 5px;
+      letter-spacing: 1px;
+    }
+
+    .flavor-text {
+      font-size: 14px;
+      color: #88ccff;
+      margin-bottom: 40px;
+      font-weight: normal;
+    }
+
+    .click-msg {
+      font-size: 20px;
+      color: #ffdd00;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.3
+      }
+    }
   </style>
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
   <script type="importmap">
@@ -469,7 +522,15 @@
 
 <body>
   <div id="damage-overlay"></div>
-  <div id="center-msg">TAP SCREEN TO START</div>
+
+  <div id="title-screen">
+    <div class="main-title">Running Away is Shameful, but Useful</div>
+    <div class="sub-title">RAIS-bU</div>
+    <div class="flavor-text">- 逃げるは恥だが役に立つ…！脱出速度を競うゲーム -</div>
+    <div class="click-msg">TAP SCREEN TO START</div>
+  </div>
+
+  <div id="center-msg"></div>
   <div id="click-catcher"></div>
 
   <div id="hud-reticle"></div>
@@ -551,17 +612,35 @@
     };
     const STAGES = [{
         target: 8.0,
-        name: "STAGE 1"
+        name: "STAGE 1: BLUE SKY",
+        skyTop: '#0044aa',
+        skyBottom: '#44aaff',
+        ground: '#44aaff',
+        fog: '#44aaff'
       },
       {
         target: 12.0,
-        name: "STAGE 2"
+        name: "STAGE 2: DESERT",
+        skyTop: '#2255aa',
+        skyBottom: '#aaccff',
+        ground: '#eebb44',
+        fog: '#eebb44'
       },
       {
         target: 16.0,
-        name: "STAGE 3"
+        name: "STAGE 3: DEEP SPACE",
+        skyTop: '#000000',
+        skyBottom: '#000022',
+        ground: '#000000',
+        fog: '#000000'
       }
     ];
+    // ★追加: タイトル画面用の宇宙設定
+    const TITLE_STAGE = {
+      skyTop: '#000000',
+      skyBottom: '#000011',
+      fog: '#000000'
+    };
 
     let gameState = 'INIT';
     let gameSpeed = CFG.initSpeed;
@@ -790,16 +869,50 @@
     composer.addPass(renderPass);
     composer.addPass(bloomPass);
 
+    // ★追加: タイトル画面用のビジュアル設定関数
+    function setTitleVisuals() {
+      const s = TITLE_STAGE;
+      const canvas = skyTexture.image;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0, s.skyTop);
+      grad.addColorStop(0.8, s.skyBottom);
+      grad.addColorStop(1, '#000000');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 32, 256);
+      skyTexture.needsUpdate = true;
+      scene.fog.color.set(s.fog);
+      sea.visible = false; // 宇宙なので海は非表示
+    }
+
+    function setStageVisuals(idx) {
+      const s = STAGES[idx];
+      const canvas = skyTexture.image;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0, s.skyTop);
+      grad.addColorStop(0.6, s.skyBottom);
+      grad.addColorStop(1, idx === 2 ? '#000000' : '#ffffff');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 32, 256);
+      skyTexture.needsUpdate = true;
+
+      scene.fog.color.set(s.fog);
+
+      if (idx === 2) {
+        sea.visible = false;
+      } else {
+        sea.visible = true;
+        sea.material.color.set(s.ground);
+      }
+    }
+
     function createSkyGradient() {
       const canvas = document.createElement('canvas');
       canvas.width = 32;
       canvas.height = 256;
       const ctx = canvas.getContext('2d');
-      const grad = ctx.createLinearGradient(0, 0, 0, 256);
-      grad.addColorStop(0, CFG.skyTop);
-      grad.addColorStop(0.6, CFG.skyBottom);
-      grad.addColorStop(1, '#ffffff');
-      ctx.fillStyle = grad;
+      ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, 32, 256);
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
@@ -1085,7 +1198,7 @@
     }
 
     function startGame() {
-      document.getElementById('center-msg').style.display = 'none';
+      document.getElementById('title-screen').style.display = 'none';
       document.getElementById('click-catcher').style.display = 'none';
       document.getElementById('ui').style.display = 'block';
       document.getElementById('mobile-controls').style.display = 'block';
@@ -1093,6 +1206,12 @@
       gameState = 'PLAY';
       startTime = performance.now();
       stageStartTime = startTime;
+
+      // ★追加: ゲーム開始時にステージ1の空に戻し、プレイヤー位置と回転をリセット
+      setStageVisuals(0);
+      player.position.set(0, 0, 0);
+      player.rotation.set(0, 0, 0);
+      worldZ = 0;
     }
     document.getElementById('click-catcher').addEventListener('click', () => {
       if (gameState === 'INIT') startGame();
@@ -1114,6 +1233,9 @@
         } else {
           document.getElementById('stage-name').innerText = STAGES[currentStageIdx].name;
           msg.innerText = STAGES[currentStageIdx].name + " START";
+
+          setStageVisuals(currentStageIdx);
+
           gameSpeed = CFG.initSpeed * 1.5;
           enemies.forEach(e => scene.remove(e.mesh));
           enemies = [];
@@ -1201,48 +1323,35 @@
       return box3A.intersectsBox(box3B);
     }
 
-    // ★修正: 画面内制限ロジック
     function keepPlayerOnScreen() {
       if (isDroneMode) {
-        // ドローンモード
         const vFOV = THREE.MathUtils.degToRad(camera.fov);
-        const visibleHeight = 2 * Math.tan(vFOV / 2) * 150; // Y=150
+        const visibleHeight = 2 * Math.tan(vFOV / 2) * 150;
         const visibleWidth = visibleHeight * camera.aspect;
-
         const centerZ = worldZ - 100;
-        const limitZ = visibleHeight * 0.45; // 上下マージン
-        const limitX = visibleWidth * 0.45; // 左右マージン
-
+        const limitZ = visibleHeight * 0.45;
+        const limitX = visibleWidth * 0.45;
         player.position.x = Math.max(-limitX, Math.min(limitX, player.position.x));
         player.position.z = Math.max(centerZ - limitZ, Math.min(centerZ + limitZ, player.position.z));
       } else {
-        // Jetモード (カメラ追従ベースでの制限)
-        // カメラ位置から見た画面端を計算して、そこまでは行けるようにする
-        // カメラZ=worldZ+80, Player Z=worldZ. Dist=80.
         const dist = 80;
         const vFOV = THREE.MathUtils.degToRad(camera.fov);
         const visibleHeight = 2 * Math.tan(vFOV / 2) * dist;
         const visibleWidth = visibleHeight * camera.aspect;
 
-        // カメラの現在位置(カメラはPlayerを追うが遅れる)
-        // Screen edge relative to camera position
         const camY = camera.position.y;
         const camX = camera.position.x;
 
-        const topEdge = camY + visibleHeight / 2;
-        const bottomEdge = camY - visibleHeight / 2;
-        const rightEdge = camX + visibleWidth / 2;
-        const leftEdge = camX - visibleWidth / 2;
+        const topEdge = camY + visibleHeight * 0.45;
+        const bottomEdge = camY - visibleHeight * 0.45;
+        const rightEdge = camX + visibleWidth * 0.45;
+        const leftEdge = camX - visibleWidth * 0.45;
 
-        const pad = 2.0;
+        player.position.x = Math.max(leftEdge, Math.min(rightEdge, player.position.x));
+        player.position.y = Math.max(bottomEdge, Math.min(topEdge, player.position.y));
 
-        // スクリーン端で止める
-        player.position.y = Math.max(bottomEdge + pad, Math.min(topEdge - pad, player.position.y));
-        player.position.x = Math.max(leftEdge + pad, Math.min(rightEdge - pad, player.position.x));
-
-        // ワールド絶対最大値 (これ以上は行けない壁)
-        player.position.y = Math.max(-200, Math.min(200, player.position.y));
-        player.position.x = Math.max(-400, Math.min(400, player.position.x));
+        player.position.y = Math.max(-100, Math.min(300, player.position.y));
+        player.position.x = Math.max(-600, Math.min(600, player.position.x));
       }
     }
 
@@ -1260,11 +1369,28 @@
       };
     }
 
+    // ★追加: 初期化処理
+    function initGame() {
+      setTitleVisuals(); // タイトル画面の宇宙背景を設定
+      // プレイヤーを画面中央付近に配置
+      player.position.set(0, 20, -50);
+    }
+    initGame();
+
     function animate() {
       requestAnimationFrame(animate);
       frame++;
 
-      if (gameState === 'INIT' || gameState === 'CLEARED') {
+      // ★追加: タイトル画面での機体のアイドリングモーション
+      if (gameState === 'INIT') {
+        player.rotation.z = Math.sin(frame * 0.02) * 0.1;
+        player.rotation.x = Math.cos(frame * 0.02) * 0.05;
+        player.position.y = 20 + Math.sin(frame * 0.05) * 2;
+        composer.render();
+        return;
+      }
+
+      if (gameState === 'CLEARED') {
         composer.render();
         return;
       }
@@ -1275,6 +1401,8 @@
 
       const spd = (gameState === 'WARP') ? CFG.maxSpeed * 3 : gameSpeed;
       worldZ -= spd;
+
+      sea.position.z = camera.position.z;
 
       const parts = player.userData.parts;
       if (parts) {
@@ -1357,7 +1485,6 @@
           player.position.z = worldZ;
         }
 
-        // ★修正: 画面内キープ関数を実行
         keepPlayerOnScreen();
 
         const targetRoll = -targetDX * 0.5;
