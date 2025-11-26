@@ -3,86 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VP 2064 - Touch Fix</title>
+    <title>VP 2064 - KILL CONFIRM FIX</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; touch-action: none; user-select: none; -webkit-user-select: none; }
+        body { margin: 0; overflow: hidden; background-color: #000; touch-action: none; user-select: none; -webkit-user-select: none; font-family: 'Arial Black', sans-serif; }
         
         #ui {
             position: absolute; top: 10px; left: 10px; color: #fff;
-            font-family: 'Arial Black', sans-serif;
-            text-shadow: 1px 1px 0 #000;
-            z-index: 100; pointer-events: none;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 10px; border-radius: 8px; border-left: 5px solid #00ff00;
-            width: 180px; transform-origin: top left; transform: scale(0.9);
+            text-shadow: 0 0 5px #00aaff; z-index: 100; pointer-events: none;
+            background: rgba(0, 20, 40, 0.6); padding: 10px; border-radius: 8px; border-left: 5px solid #00ff00;
+            width: 220px; transform-origin: top left; transform: scale(0.9);
         }
+        #timer-row { font-size: 20px; color: #fff; border-bottom: 1px solid #444; margin-bottom: 5px; padding-bottom: 2px;}
         #speed-row { font-size: 24px; color: #00ff00; font-style: italic; }
         .unit { font-size: 12px; color: #ccc; font-style: normal;}
-        #score-row { font-size: 16px; color: #ffcc00; margin-bottom: 5px;}
-        #hp-container {
-            width: 100%; height: 10px; background-color: #222;
-            border: 1px solid #555; margin-top: 5px;
+        #warp-info { font-size: 10px; color: #0af; display:flex; justify-content:space-between; margin-top:2px;}
+        #warp-container { width: 100%; height: 4px; background: #222; margin-bottom: 5px; }
+        #warp-bar { width: 0%; height: 100%; background: #00ffff; transition: width 0.1s; }
+        #score-row { font-size: 14px; color: #ffcc00; margin-bottom: 2px;}
+        #hp-container { width: 100%; height: 8px; background: #333; border: 1px solid #555; margin-top: 5px; }
+        #hp-bar { width: 100%; height: 100%; background: #00ff00; transition: width 0.2s; }
+        
+        /* HUD */
+        #hud-reticle {
+            position: absolute; top: 0; left: 0;
+            width: 100px; height: 100px;
+            border: 2px solid rgba(0, 255, 0, 0.4);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+            pointer-events: none; z-index: 90;
+            transform: translate(-50%, -50%); display: none;
         }
-        #hp-bar { width: 100%; height: 100%; background-color: #00ff00; transition: width 0.2s, background-color 0.2s; }
-        #damage-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: red; opacity: 0; pointer-events: none; z-index: 50;
-            transition: opacity 0.1s;
-        }
-        #loading {
-            position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-            color:#fff; font-family:sans-serif; letter-spacing: 2px; font-weight: bold; pointer-events: none;
+        #hud-reticle::after {
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 4px; height: 4px; background: #00ff00; border-radius: 50%; box-shadow: 0 0 5px #fff;
         }
 
-        /* コントローラー */
-        #mobile-controls {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
-            z-index: 200; pointer-events: none;
+        /* ロックオン表示用レイヤー */
+        #lock-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 95; overflow: hidden;
         }
-        /* 左スティック */
-        #joystick-zone {
-            position: absolute; bottom: 30px; left: 30px;
-            width: 140px; height: 140px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            pointer-events: auto;
+        /* ★追加: エフェクト専用レイヤー (リセットされない) */
+        #effect-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 96; overflow: hidden;
         }
-        #joystick-knob {
-            position: absolute; top: 50%; left: 50%;
-            width: 60px; height: 60px;
-            background: rgba(0, 255, 255, 0.8);
-            border: 2px solid #fff;
-            border-radius: 50%;
+
+        /* ロックオンマーカー (通常・緑) */
+        .lock-wrapper { position: absolute; width: 60px; height: 60px; transform: translate(-50%, -50%); }
+        .lock-bracket {
+            width: 100%; height: 100%; border: 2px solid #00ff00; box-shadow: 0 0 8px #00ff00;
+            clip-path: polygon(0% 0%, 25% 0%, 25% 10%, 10% 10%, 10% 25%, 0% 25%, 0% 75%, 10% 75%, 10% 90%, 25% 90%, 25% 100%, 0% 100%, 0% 100%, 100% 100%, 100% 75%, 90% 75%, 90% 90%, 75% 90%, 75% 100%, 100% 100%, 100% 0%, 75% 0%, 75% 10%, 90% 10%, 90% 25%, 100% 25%);
+        }
+        .lock-info {
+            position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+            color: #00ff00; font-size: 12px; font-family: monospace; font-weight: bold;
+            text-shadow: 0 0 2px #000; white-space: nowrap; text-align: center; margin-top: 4px;
+        }
+        .lock-label { font-size: 10px; color: #aaffaa; display: block; line-height: 1;}
+
+        /* 撃破時のマーカー (赤・X印) */
+        .lock-marker.destroyed {
+            position: absolute; width: 60px; height: 60px;
+            border: 2px solid #ff0000;
+            box-shadow: 0 0 15px #ff0000;
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            pointer-events: none;
+            clip-path: polygon(0% 0%, 25% 0%, 25% 10%, 10% 10%, 10% 25%, 0% 25%, 0% 75%, 10% 75%, 10% 90%, 25% 90%, 25% 100%, 0% 100%, 0% 100%, 100% 100%, 100% 75%, 90% 75%, 90% 90%, 75% 90%, 75% 100%, 100% 100%, 100% 0%, 75% 0%, 75% 10%, 90% 10%, 90% 25%, 100% 25%);
+            animation: fadeOut 0.4s forwards; /* 少し長めに */
         }
-        /* 右ボタン */
-        #action-area {
-            position: absolute; bottom: 30px; right: 30px;
-            width: 180px; height: 180px;
-            pointer-events: none;
+        .lock-marker.destroyed::before, .lock-marker.destroyed::after {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 70%; height: 3px;
+            background: #ff0000; box-shadow: 0 0 5px #fff;
         }
-        .act-btn {
-            position: absolute; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            color: #fff; font-weight: bold; font-family: sans-serif;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-            user-select: none; pointer-events: auto;
-            text-shadow: 1px 1px 0 #000;
-        }
-        .act-btn:active { transform: scale(0.9); opacity: 0.8; }
-        #btn-shot {
-            bottom: 0; right: 0;
-            width: 90px; height: 90px; font-size: 18px;
-            background: rgba(0, 100, 255, 0.6); border: 3px solid #00ccff;
-        }
-        #btn-bomb {
-            bottom: 80px; right: 90px;
-            width: 70px; height: 70px; font-size: 14px;
-            background: rgba(255, 50, 0, 0.6); border: 3px solid #ffaa00;
-        }
+        .lock-marker.destroyed::before { transform: translate(-50%, -50%) rotate(45deg); }
+        .lock-marker.destroyed::after { transform: translate(-50%, -50%) rotate(-45deg); }
+
+        @keyframes fadeOut { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); } }
+
+        #damage-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: red; opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.1s; }
+        #center-msg { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#0af; letter-spacing: 2px; font-weight: bold; pointer-events: none; z-index: 200; text-shadow: 0 0 10px #000; text-align: center; }
+        #result-screen { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 20, 40, 0.95); border: 2px solid #00aaff; padding: 20px; text-align: center; z-index: 300; color: white; border-radius: 10px; min-width: 300px; }
+        input[type="text"] { font-size: 16px; padding: 8px; width: 70%; background: #000; border: 1px solid #0af; color: white; text-align: center; margin: 10px 0; }
+        button { font-size: 16px; padding: 10px 20px; border: none; cursor: pointer; font-weight: bold; margin: 5px; background: #00aaff; color: #000; }
+        #ranking-list { text-align: left; margin-top: 15px; font-size: 12px; color: #ccc; font-family: monospace; border-top: 1px solid #444; padding-top: 10px; }
+        .rank-row { display: flex; justify-content: space-between; padding: 2px 0; }
+        #click-catcher { position:absolute; top:0; left:0; width:100%; height:100%; z-index: 150; cursor: pointer; }
+        #mobile-controls { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; z-index: 200; pointer-events: none; }
+        #joystick-zone { position: absolute; bottom: 40px; left: 30px; width: 150px; height: 150px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(0, 255, 255, 0.3); border-radius: 50%; pointer-events: auto; }
+        #joystick-knob { position: absolute; top: 50%; left: 50%; width: 60px; height: 60px; background: rgba(0, 255, 255, 0.6); border: 2px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 10px #0af; }
+        #action-area { position: absolute; bottom: 30px; right: 30px; width: 180px; height: 180px; pointer-events: none; }
+        .act-btn { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.5); pointer-events: auto; }
+        .act-btn:active { transform: scale(0.9); opacity: 0.8; filter: brightness(1.2); }
+        #btn-shot { bottom: 0; right: 0; width: 90px; height: 90px; font-size: 18px; background: rgba(0, 120, 255, 0.5); border: 2px solid #00ccff; }
+        #btn-bomb { bottom: 90px; right: 90px; width: 70px; height: 70px; font-size: 14px; background: rgba(255, 60, 0, 0.5); border: 2px solid #ffaa00; }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
     <script type="importmap">
@@ -96,18 +109,33 @@
 </head>
 <body>
     <div id="damage-overlay"></div>
-    <div id="loading">SYSTEM START...</div>
-    
-    <div id="ui" style="display:none;">
+    <div id="center-msg">TAP SCREEN TO START</div>
+    <div id="click-catcher"></div>
+
+    <div id="hud-reticle"></div>
+    <div id="lock-container"></div>
+    <div id="effect-container"></div> <div id="ui" style="display:none;">
+        <div id="timer-row">TIME: <span id="timer">00:00.000</span></div>
         <div id="speed-row"><span id="speed-val">0</span> <span class="unit">km/h</span></div>
+        <div id="warp-info"><span id="stage-name">STAGE 1</span><span>WARP CHARGE</span></div>
+        <div id="warp-container"><div id="warp-bar"></div></div>
         <div id="score-row">SCORE: <span id="score">0</span></div>
         <div id="hp-container"><div id="hp-bar"></div></div>
     </div>
-
-    <div id="mobile-controls">
-        <div id="joystick-zone">
-            <div id="joystick-knob"></div>
+    <div id="result-screen">
+        <h2 style="color:#ffdd00; margin:0 0 10px 0;">MISSION COMPLETE</h2>
+        <div style="font-size:30px; margin:10px 0;" id="final-time">00:00.000</div>
+        <input type="text" id="pilot-name" placeholder="PILOT NAME" maxlength="10">
+        <br>
+        <button id="btn-tweet">SHARE</button>
+        <button id="btn-restart">RESTART</button>
+        <div id="ranking-list">
+            <div>LOCAL RANKING</div>
+            <div id="ranking-content"></div>
         </div>
+    </div>
+    <div id="mobile-controls" style="display:none;">
+        <div id="joystick-zone"><div id="joystick-knob"></div></div>
         <div id="action-area">
             <div id="btn-bomb" class="act-btn" data-key="z">BOMB</div>
             <div id="btn-shot" class="act-btn" data-key=" ">SHOT</div>
@@ -120,138 +148,69 @@
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 
-        // --- 設定 ---
+        const DENSITY_SETTINGS = { reductionStart: 5000, reductionStrength: 0.5 };
         const CFG = {
-            initSpeed: 1.5, maxSpeed: 15.0, speedUpPerKill: 0.2, speedDownPerHit: 2.0,
-            playerMoveSpeed: 1.5, shotSpeed: 8.0, missileSpeed: 5.0,
-            maxHP: 100, fogDist: 1800,
-            skyTop: '#0044aa', skyBottom: '#66ccff'
+            initSpeed: 1.5, maxSpeed: 16.0, speedUpPerKill: 0.2, speedDownPerHit: 2.0,
+            playerMoveSpeed: 1.2, shotSpeed: 8.0, missileSpeed: 5.0,
+            maxHP: 100, fogDist: 1800, skyTop: '#0044aa', skyBottom: '#44aaff'
         };
+        const STAGES = [
+            { target: 8.0, name: "STAGE 1" },
+            { target: 12.0, name: "STAGE 2" },
+            { target: 16.0, name: "STAGE 3" }
+        ];
 
+        let gameState = 'INIT';
         let gameSpeed = CFG.initSpeed;
         let worldZ = 0;
         let currentHP = CFG.maxHP;
         let score = 0;
         let frame = 0;
-        const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false, " ":false, z:false };
+        let currentStageIdx = 0;
+        let startTime = 0;
+        let elapsed = 0;
+        let stageStartTime = 0;
+        let lockedEnemies = [];
 
-        // --- ★ジョイスティック制御 (ID追跡版) ---
-        function setupJoystick() {
+        const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false, " ":false, z:false };
+        const joyInput = { x: 0, y: 0 };
+
+        function setupControls() {
+            window.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key)) keys[e.key]=true; });
+            window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key]=false; });
             const zone = document.getElementById('joystick-zone');
             const knob = document.getElementById('joystick-knob');
-            const maxDist = 35;
-            let joystickId = null; // ★操作している指のIDを記憶
-            
-            const handleMove = (clientX, clientY) => {
-                const rect = zone.getBoundingClientRect();
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-                
-                let dx = clientX - centerX;
-                let dy = clientY - centerY;
-                
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > maxDist) {
-                    const angle = Math.atan2(dy, dx);
-                    dx = Math.cos(angle) * maxDist;
-                    dy = Math.sin(angle) * maxDist;
-                }
-                
+            let joyId = null; const maxDist = 40; 
+            const moveKnob = (cx, cy) => {
+                const r = zone.getBoundingClientRect(); const cntX = r.left + r.width/2, cntY = r.top + r.height/2;
+                let dx = cx - cntX, dy = cy - cntY; const dist = Math.sqrt(dx*dx+dy*dy);
+                let nx = dx / maxDist, ny = dy / maxDist;
+                if(dist > maxDist) { const a=Math.atan2(dy,dx); dx=Math.cos(a)*maxDist; dy=Math.sin(a)*maxDist; nx=Math.cos(a); ny=Math.sin(a); }
                 knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-                
-                const threshold = 10;
-                keys.ArrowRight = dx > threshold;
-                keys.ArrowLeft = dx < -threshold;
-                keys.ArrowDown = dy > threshold;
-                keys.ArrowUp = dy < -threshold;
+                joyInput.x = nx; joyInput.y = ny;
+                const th = 0.2; keys.ArrowRight = nx > th; keys.ArrowLeft = nx < -th; keys.ArrowDown = ny > th; keys.ArrowUp = ny < -th;
             };
-            
-            const reset = () => {
-                knob.style.transform = `translate(-50%, -50%)`;
-                keys.ArrowRight = false; keys.ArrowLeft = false;
-                keys.ArrowDown = false; keys.ArrowUp = false;
-                joystickId = null;
-            };
-
-            // タッチ開始
-            zone.addEventListener('touchstart', e => {
-                e.preventDefault();
-                if (joystickId !== null) return; // 既に操作中なら無視
-                
-                // 最初の指を登録
-                const touch = e.changedTouches[0];
-                joystickId = touch.identifier;
-                handleMove(touch.clientX, touch.clientY);
-            }, {passive: false});
-
-            // タッチ移動（IDチェック）
-            zone.addEventListener('touchmove', e => {
-                e.preventDefault();
-                if (joystickId === null) return;
-
-                // 登録された指だけを探して処理
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === joystickId) {
-                        handleMove(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
-                        break;
-                    }
-                }
-            }, {passive: false});
-
-            // タッチ終了（IDチェック）
-            zone.addEventListener('touchend', e => {
-                e.preventDefault();
-                if (joystickId === null) return;
-
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === joystickId) {
-                        reset();
-                        break;
-                    }
-                }
-            }, {passive: false});
-            
-            // PCデバッグ用マウス
-            let dragging = false;
-            zone.addEventListener('mousedown', e => { dragging = true; handleMove(e.clientX, e.clientY); });
-            window.addEventListener('mousemove', e => { if(dragging) handleMove(e.clientX, e.clientY); });
-            window.addEventListener('mouseup', e => { if(dragging) { dragging = false; reset(); }});
-        }
-
-        // --- アクションボタン制御 ---
-        function setupActionButtons() {
-            const btns = document.querySelectorAll('.act-btn');
-            
-            const press = (btn) => {
-                const key = btn.dataset.key;
-                keys[key] = true;
-                btn.style.transform = "scale(0.9)";
-            };
-            const release = (btn) => {
-                const key = btn.dataset.key;
-                keys[key] = false;
-                btn.style.transform = "scale(1.0)";
-            };
-
-            btns.forEach(btn => {
-                btn.addEventListener('touchstart', e => { e.preventDefault(); press(btn); }, {passive: false});
-                btn.addEventListener('touchend', e => { e.preventDefault(); release(btn); }, {passive: false});
-                btn.addEventListener('mousedown', e => { press(btn); });
-                btn.addEventListener('mouseup', e => { release(btn); });
-                btn.addEventListener('mouseleave', e => { release(btn); });
+            const resetKnob = () => { knob.style.transform = `translate(-50%, -50%)`; joyInput.x = 0; joyInput.y = 0; keys.ArrowRight=keys.ArrowLeft=keys.ArrowDown=keys.ArrowUp=false; joyId=null; };
+            zone.addEventListener('touchstart', e=>{ e.preventDefault(); if(joyId!==null)return; const t=e.changedTouches[0]; joyId=t.identifier; moveKnob(t.clientX, t.clientY); }, {passive:false});
+            zone.addEventListener('touchmove', e=>{ e.preventDefault(); if(joyId===null)return; for(let i=0;i<e.changedTouches.length;i++){ if(e.changedTouches[i].identifier===joyId){ moveKnob(e.changedTouches[i].clientX, e.changedTouches[i].clientY); break; }} }, {passive:false});
+            zone.addEventListener('touchend', e=>{ e.preventDefault(); if(joyId===null)return; for(let i=0;i<e.changedTouches.length;i++){ if(e.changedTouches[i].identifier===joyId){ resetKnob(); break; }} }, {passive:false});
+            document.querySelectorAll('.act-btn').forEach(btn => {
+                const press = () => { keys[btn.dataset.key] = true; btn.style.transform="scale(0.9)"; };
+                const rel = () => { keys[btn.dataset.key] = false; btn.style.transform="scale(1)"; };
+                btn.addEventListener('touchstart', e=>{ e.preventDefault(); press(); }, {passive:false});
+                btn.addEventListener('touchend', e=>{ e.preventDefault(); rel(); }, {passive:false});
+                btn.addEventListener('mousedown', press); btn.addEventListener('mouseup', rel);
             });
         }
+        setupControls();
 
-        setupJoystick();
-        setupActionButtons();
-
-        // --- Three.js Setup ---
         const scene = new THREE.Scene();
         const fogColor = new THREE.Color(CFG.skyBottom);
         scene.fog = new THREE.Fog(fogColor, 100, CFG.fogDist);
         scene.background = fogColor;
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 20000);
+        camera.position.set(0, 30, 100); 
         let baseFov = 60;
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -274,18 +233,17 @@
             const grad = ctx.createLinearGradient(0, 0, 0, 256);
             grad.addColorStop(0, CFG.skyTop); grad.addColorStop(0.6, CFG.skyBottom); grad.addColorStop(1, '#ffffff');
             ctx.fillStyle = grad; ctx.fillRect(0, 0, 32, 256);
-            const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace;
-            return tex;
+            const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; return tex;
         }
         const skyTexture = createSkyGradient();
         scene.background = skyTexture; scene.environment = skyTexture;
 
-        const seaGeo = new THREE.PlaneGeometry(10000, 10000);
-        const seaMat = new THREE.MeshBasicMaterial({color: CFG.skyBottom, transparent:true, opacity:0.8});
+        const seaGeo = new THREE.PlaneGeometry(20000, 20000);
+        const seaMat = new THREE.MeshBasicMaterial({color: CFG.skyBottom, transparent:true, opacity:0.9});
         const sea = new THREE.Mesh(seaGeo, seaMat);
         sea.rotation.x = -Math.PI/2; sea.position.y = -150; scene.add(sea);
 
-        const buildings = [];
+        let buildings = [];
         const buildingMat = new THREE.MeshStandardMaterial({ color: 0x8899aa, roughness: 0.2, metalness: 0.8, envMap: scene.environment, envMapIntensity: 1.0 });
         function createBuilding(x, z) {
             const width = 20 + Math.random() * 40; const depth = 20 + Math.random() * 40; const height = 100 + Math.random() * 500;
@@ -297,23 +255,22 @@
             return mesh;
         }
 
-        const dustCount = 1000;
+        const dustCount = 1500;
         const dustGeo = new THREE.BufferGeometry();
         const dustPos = new Float32Array(dustCount * 3);
         for(let i=0; i<dustCount; i++) {
-            dustPos[i*3] = (Math.random() - 0.5) * 1200;
-            dustPos[i*3+1] = (Math.random() - 0.5) * 600;
-            dustPos[i*3+2] = (Math.random() - 0.5) * 2000;
+            dustPos[i*3] = (Math.random() - 0.5) * 1200; dustPos[i*3+1] = (Math.random() - 0.5) * 600; dustPos[i*3+2] = (Math.random() - 0.5) * 2000;
         }
         dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
-        const dustMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.0, transparent: true, opacity: 0.5 });
-        const dustSystem = new THREE.Points(dustGeo, dustMat); dustSystem.frustumCulled = false; scene.add(dustSystem);
+        const dustMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.0, transparent: true, opacity: 0.6 });
+        const dustSystem = new THREE.Points(dustGeo, dustMat); dustSystem.frustumCulled = false;
+        scene.add(dustSystem);
 
         function createPlayerShip() {
             const ship = new THREE.Group();
             const body = new THREE.Mesh(new THREE.ConeGeometry(1.2, 6, 8), new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.1, metalness: 0.8}));
             body.rotation.x = Math.PI / 2; body.castShadow = true; ship.add(body);
-            const cockpit = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2, 8), new THREE.MeshStandardMaterial({color: 0x00ccff, emissive: 0x001133}));
+            const cockpit = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2, 8), new THREE.MeshStandardMaterial({color: 0x00ccff, emissive: 0x0088ff, emissiveIntensity: 1.0}));
             cockpit.rotation.x = Math.PI / 2; cockpit.position.set(0, 0.8, -0.5); ship.add(cockpit);
             const wingMat = new THREE.MeshStandardMaterial({color: 0x0055aa, roughness:0.2});
             const lWing = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 2), wingMat); lWing.position.set(-1.5, 0, 1); ship.add(lWing);
@@ -335,26 +292,44 @@
 
         let bullets=[], missiles=[], enemies=[], particles=[];
 
-        function spawnExplosion(pos, scale=1.0) {
-            for(let i=0; i<10; i++) {
-                const p = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshBasicMaterial({color: 0xff8800}));
-                p.position.copy(pos); p.scale.setScalar(scale); scene.add(p);
-                particles.push({mesh:p, vel:new THREE.Vector3((Math.random()-0.5)*5, Math.random()*5, (Math.random()-0.5)*5), life:1.0});
+        function spawnExplosion(pos, color=0xff8800) {
+            for(let i=0; i<12; i++) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshBasicMaterial({color: color}));
+                p.position.copy(pos); p.scale.setScalar(1.5); scene.add(p);
+                particles.push({mesh:p, vel:new THREE.Vector3((Math.random()-0.5)*8, Math.random()*8, (Math.random()-0.5)*8), life:1.0});
             }
         }
 
+        // ★修正: エフェクト専用レイヤーに追加
+        function spawnDestroyedMarker(x, y) {
+            const div = document.createElement('div');
+            div.className = 'lock-marker destroyed';
+            div.style.left = x + 'px';
+            div.style.top = y + 'px';
+            document.getElementById('effect-container').appendChild(div);
+            setTimeout(() => div.remove(), 400);
+        }
+
         function updateSpeed(delta) {
+            if(gameState !== 'PLAY') return;
             gameSpeed += delta;
             if (gameSpeed < CFG.initSpeed) gameSpeed = CFG.initSpeed;
             if (gameSpeed > CFG.maxSpeed) gameSpeed = CFG.maxSpeed;
             document.getElementById('speed-val').innerText = Math.floor(gameSpeed * 200);
+            const st = STAGES[currentStageIdx];
+            if(st) {
+                const pct = Math.min(100, (gameSpeed / st.target) * 100);
+                document.getElementById('warp-bar').style.width = pct + '%';
+                if(gameSpeed >= st.target) { startWarp(); }
+            }
             const speedEl = document.getElementById('speed-row');
             if(gameSpeed > 10.0) speedEl.style.color = '#ff0055';
             else if(gameSpeed > 6.0) speedEl.style.color = '#ffcc00';
-            else speedEl.style.color = '#00ffff';
+            else speedEl.style.color = '#00ff00';
         }
 
         function takeDamage(amount) {
+            if(gameState !== 'PLAY') return;
             currentHP -= amount;
             if (currentHP < 0) currentHP = 0;
             const bar = document.getElementById('hp-bar');
@@ -371,82 +346,296 @@
             }
         }
 
+        function startGame() {
+            document.getElementById('center-msg').style.display = 'none';
+            document.getElementById('click-catcher').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            document.getElementById('mobile-controls').style.display = 'block';
+            document.getElementById('hud-reticle').style.display = 'block';
+            gameState = 'PLAY';
+            startTime = performance.now();
+            stageStartTime = startTime; 
+        }
+        document.getElementById('click-catcher').addEventListener('click', () => { if(gameState==='INIT') startGame(); });
+
+        function startWarp() {
+            gameState = 'WARP';
+            const msg = document.getElementById('center-msg');
+            msg.innerText = "WARP ENGAGED!!"; msg.style.display = 'block'; msg.style.color = '#00ffff'; msg.style.fontSize = '30px';
+            
+            // ロック解除
+            document.getElementById('lock-container').innerHTML = '';
+            lockedEnemies = [];
+
+            setTimeout(() => {
+                currentStageIdx++;
+                if(currentStageIdx >= STAGES.length) {
+                    finishGame();
+                } else {
+                    document.getElementById('stage-name').innerText = STAGES[currentStageIdx].name;
+                    msg.innerText = STAGES[currentStageIdx].name + " START";
+                    
+                    gameSpeed = CFG.initSpeed * 1.5;
+                    enemies.forEach(e=>scene.remove(e.mesh)); enemies=[];
+                    buildings.forEach(b=>scene.remove(b)); buildings=[];
+                    missiles.forEach(m=>{ scene.remove(m.mesh); if(m.trail) scene.remove(m.trail); }); missiles=[];
+                    bullets.forEach(b=>scene.remove(b)); bullets=[];
+                    
+                    setTimeout(() => {
+                        msg.style.display = 'none';
+                        gameState = 'PLAY';
+                        stageStartTime = performance.now(); 
+                    }, 1000);
+                }
+            }, 1500);
+        }
+
+        function finishGame() {
+            gameState = 'CLEARED';
+            document.getElementById('ui').style.display = 'none';
+            document.getElementById('mobile-controls').style.display = 'none';
+            document.getElementById('center-msg').style.display = 'none';
+            document.getElementById('hud-reticle').style.display = 'none';
+            document.getElementById('lock-container').innerHTML = '';
+            document.getElementById('result-screen').style.display = 'block';
+            document.getElementById('final-time').innerText = formatTime(elapsed);
+            loadRanking();
+        }
+
+        function formatTime(ms) {
+            const m = Math.floor(ms / 60000);
+            const s = Math.floor((ms % 60000) / 1000);
+            const mil = Math.floor(ms % 1000);
+            return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(mil).padStart(3,'0')}`;
+        }
+
+        const SAVE_KEY = 'VP2064_INTEGRATED_RTA';
+        function loadRanking() {
+            const list = JSON.parse(localStorage.getItem(SAVE_KEY) || '[]');
+            list.sort((a,b) => a.ms - b.ms);
+            const div = document.getElementById('ranking-content'); div.innerHTML = '';
+            list.slice(0, 5).forEach((d, i) => {
+                div.innerHTML += `<div class="rank-row"><span>${i+1}. ${d.name}</span><span>${d.time}</span></div>`;
+            });
+        }
+        document.getElementById('btn-tweet').onclick = () => {
+            const n = document.getElementById('pilot-name').value || "PILOT";
+            const t = document.getElementById('final-time').innerText;
+            const l = JSON.parse(localStorage.getItem(SAVE_KEY) || '[]');
+            l.push({name:n, time:t, ms:elapsed}); localStorage.setItem(SAVE_KEY, JSON.stringify(l));
+            loadRanking();
+            window.open(`https://twitter.com/intent/tweet?text=Cleared VP 2064 (Integrated RTA) in ${t}!&hashtags=VP2064`, '_blank');
+        };
+        document.getElementById('btn-restart').onclick = () => location.reload();
+
         const dirLight = new THREE.DirectionalLight(0xffffff, 2.0); dirLight.position.set(-100, 200, 100); dirLight.castShadow = true; dirLight.shadow.mapSize.set(2048, 2048);
         const d = 600; dirLight.shadow.camera.left = -d; dirLight.shadow.camera.right = d; dirLight.shadow.camera.top = d; dirLight.shadow.camera.bottom = -d;
         scene.add(dirLight); scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-        window.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
-        window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
-        document.getElementById('loading').style.display = 'none'; document.getElementById('ui').style.display = 'block';
-
         const box3A = new THREE.Box3(); const box3B = new THREE.Box3();
         function checkCollision(meshA, meshB) { box3A.setFromObject(meshA); box3B.setFromObject(meshB); return box3A.intersectsBox(box3B); }
 
+        function toScreenPosition(obj, camera) {
+            const vector = new THREE.Vector3();
+            obj.updateMatrixWorld();
+            vector.setFromMatrixPosition(obj.matrixWorld);
+            vector.project(camera);
+            const widthHalf = 0.5 * window.innerWidth;
+            const heightHalf = 0.5 * window.innerHeight;
+            return {
+                x: (vector.x * widthHalf) + widthHalf,
+                y: -(vector.y * heightHalf) + heightHalf,
+                z: vector.z 
+            };
+        }
+
         function animate() {
-            requestAnimationFrame(animate); frame++;
-            worldZ -= gameSpeed;
+            requestAnimationFrame(animate);
+            frame++;
+            
+            if(gameState === 'INIT' || gameState === 'CLEARED') { composer.render(); return; }
+
+            const now = performance.now();
+            elapsed = now - startTime;
+            document.getElementById('timer').innerText = formatTime(elapsed);
+
+            const spd = (gameState==='WARP') ? CFG.maxSpeed*3 : gameSpeed;
+            worldZ -= spd;
             
             const targetFov = baseFov + (gameSpeed - CFG.initSpeed) * 2.0;
             camera.fov += (targetFov - camera.fov) * 0.05; camera.updateProjectionMatrix();
 
-            let localX = player.position.x; let localY = player.position.y;
-            if (keys.ArrowLeft) localX -= CFG.playerMoveSpeed; if (keys.ArrowRight) localX += CFG.playerMoveSpeed;
-            if (keys.ArrowUp) localY += CFG.playerMoveSpeed; if (keys.ArrowDown) localY -= CFG.playerMoveSpeed;
-            localX = Math.max(-180, Math.min(180, localX)); localY = Math.max(-100, Math.min(100, localY));
-            player.position.x = localX; player.position.y = localY; player.position.z = worldZ;
-
-            const targetRoll = (keys.ArrowLeft ? 0.7 : (keys.ArrowRight ? -0.7 : 0));
-            player.rotation.z += (targetRoll - player.rotation.z) * 0.1;
-            player.rotation.x += ((keys.ArrowUp ? 0.3 : (keys.ArrowDown ? -0.3 : 0)) - player.rotation.x) * 0.1;
+            if(gameState === 'PLAY') {
+                let targetDX = 0; let targetDY = 0;
+                if (joyInput.x !== 0 || joyInput.y !== 0) { targetDX = joyInput.x * CFG.playerMoveSpeed; targetDY = -joyInput.y * CFG.playerMoveSpeed; } 
+                else {
+                    if (keys.ArrowLeft) targetDX = -CFG.playerMoveSpeed; if (keys.ArrowRight) targetDX = CFG.playerMoveSpeed;
+                    if (keys.ArrowUp) targetDY = CFG.playerMoveSpeed; if (keys.ArrowDown) targetDY = -CFG.playerMoveSpeed;
+                }
+                player.position.x += targetDX; player.position.y += targetDY;
+                player.position.x = Math.max(-180, Math.min(180, player.position.x));
+                player.position.y = Math.max(-100, Math.min(100, player.position.y));
+                
+                const targetRoll = -targetDX * 0.5; const targetPitch = targetDY * 0.2;
+                player.rotation.z += (targetRoll - player.rotation.z) * 0.1;
+                player.rotation.x += (targetPitch - player.rotation.x) * 0.1;
+            }
+            player.position.z = worldZ;
             options[0].mesh.position.y = Math.sin(frame*0.1)*1.0; options[1].mesh.position.y = Math.cos(frame*0.1)*1.0;
 
-            camera.position.x += (localX * 0.6 - camera.position.x) * 0.05; camera.position.y += (localY * 0.6 + 20 - camera.position.y) * 0.05;
+            camera.position.x += (player.position.x * 0.6 - camera.position.x) * 0.05;
+            camera.position.y += (player.position.y * 0.6 + 20 - camera.position.y) * 0.05;
             camera.position.z = worldZ + 80; camera.lookAt(player.position.x * 0.5, player.position.y * 0.5, player.position.z - 100);
             dirLight.position.z = worldZ + 100; dirLight.target.position.z = worldZ - 100; dirLight.target.updateMatrixWorld();
 
-            const spawnRate = Math.max(2, Math.floor(10 / (gameSpeed/4))); 
-            if (frame % spawnRate === 0) {
-                const spawnZ = worldZ - 1500 - (gameSpeed * 50);
-                const x = (Math.random()-0.5) * 1000; const b = createBuilding(x, spawnZ); buildings.push(b);
+            if(gameState === 'PLAY') {
+                const reticle = document.getElementById('hud-reticle');
+                const aimTarget = player.position.clone(); aimTarget.z -= 500; 
+                const vec = aimTarget.clone().project(camera);
+                const rx = (vec.x * 0.5 + 0.5) * window.innerWidth;
+                const ry = (-(vec.y * 0.5) + 0.5) * window.innerHeight;
+                reticle.style.left = rx + 'px'; reticle.style.top = ry + 'px';
+
+                const lockContainer = document.getElementById('lock-container');
+                lockContainer.innerHTML = ''; 
+                lockedEnemies = []; // リセット
+
+                let bestTarget = null;
+                let minScreenDist = 100; 
+
+                enemies.forEach(e => {
+                    if (e.mesh.position.z < player.position.z) {
+                        const dist = player.position.distanceTo(e.mesh.position);
+                        if (dist < 1800) {
+                            const sPos = toScreenPosition(e.mesh, camera);
+                            if (sPos.z < 1) {
+                                const dx = sPos.x - rx; const dy = sPos.y - ry;
+                                const d = Math.sqrt(dx*dx + dy*dy);
+                                
+                                if (d < 100) {
+                                    lockedEnemies.push(e.mesh);
+                                    
+                                    const wrapper = document.createElement('div');
+                                    wrapper.className = 'lock-wrapper';
+                                    wrapper.style.left = sPos.x + 'px';
+                                    wrapper.style.top = sPos.y + 'px';
+                                    wrapper.innerHTML = `
+                                        <div class="lock-bracket"></div>
+                                        <div class="lock-info">
+                                            <span class="lock-label">LOCK</span>
+                                            <span>${Math.floor(dist)}m</span>
+                                        </div>
+                                    `;
+                                    lockContainer.appendChild(wrapper);
+
+                                    if(d < minScreenDist) {
+                                        minScreenDist = d; bestTarget = e.mesh;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                const stageTime = performance.now() - stageStartTime;
+                let spawnInterval = Math.max(2, Math.floor(10 / (gameSpeed/4)));
+                if(stageTime > DENSITY_SETTINGS.reductionStart) {
+                    const extra = Math.floor((stageTime - DENSITY_SETTINGS.reductionStart)/1000 * DENSITY_SETTINGS.reductionStrength);
+                    spawnInterval += extra;
+                }
+                if (frame % spawnInterval === 0) {
+                    const spawnZ = worldZ - 1500 - (gameSpeed * 50);
+                    const x = (Math.random()-0.5) * 1000; const b = createBuilding(x, spawnZ); buildings.push(b);
+                }
+                
+                if(keys[" "] && frame%5===0) { [0, -4, 4].forEach(o => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,8), new THREE.MeshBasicMaterial({color:0x00ffff})); b.position.set(player.position.x+o, player.position.y, player.position.z-3); scene.add(b); bullets.push(b); }); }
+                
+                if(keys.z && frame%20===0) { 
+                    const beamLen = 200.0;
+                    const mGeo = new THREE.CylinderGeometry(0.1, 0.01, beamLen, 2);
+                    mGeo.rotateX(Math.PI / 2); mGeo.translate(0, 0, -beamLen / 2);
+                    const mMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffaa00, emissiveIntensity: 5.0, roughness: 0.0, metalness: 0.0 });
+                    const m = new THREE.Mesh(mGeo, mMat);
+                    m.position.copy(player.position); scene.add(m); 
+                    
+                    missiles.push({mesh:m, vel:new THREE.Vector3(0,0,-1), target:bestTarget, speed:2.0});
+                }
             }
+
             for(let i=buildings.length-1; i>=0; i--) {
                 const b = buildings[i];
-                if(Math.abs(b.position.z - player.position.z) < 30) {
-                    if(checkCollision(player, b)) {
-                        takeDamage(15); spawnExplosion(player.position, 0xaaaaaa);
-                        scene.remove(b); buildings.splice(i, 1); continue;
-                    }
+                if(gameState==='PLAY' && Math.abs(b.position.z - player.position.z) < 30 && checkCollision(player, b)) {
+                    takeDamage(15); spawnExplosion(player.position, 0xaaaaaa); scene.remove(b); buildings.splice(i, 1); continue;
                 }
                 if(b.position.z > worldZ + 200) { scene.remove(b); buildings.splice(i, 1); }
             }
 
-            const pos = dustSystem.geometry.attributes.position.array;
+            const dPos = dustSystem.geometry.attributes.position.array;
             for(let i=0; i<dustCount; i++) {
-                let z = pos[i*3+2];
-                if(z > worldZ + 50) { z = worldZ - 1500 - Math.random() * 500; pos[i*3] = (Math.random()-0.5)*1200; pos[i*3+1] = (Math.random()-0.5)*600; }
-                pos[i*3+2] = z;
+                let z = dPos[i*3+2];
+                if(z > worldZ + 50) { 
+                    z = worldZ - 1500 - Math.random() * 500; 
+                    dPos[i*3] = (Math.random()-0.5)*1200; dPos[i*3+1] = (Math.random()-0.5)*600;
+                }
+                dPos[i*3+2] = z;
             }
             dustSystem.geometry.attributes.position.needsUpdate = true;
 
-            if(keys[" "] && frame%5===0) { [0, -4, 4].forEach(o => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,8), new THREE.MeshBasicMaterial({color:0x00ffff})); b.position.set(player.position.x+o, player.position.y, player.position.z-3); scene.add(b); bullets.push(b); }); }
-            if(keys.z && frame%20===0) { const m = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.5, 8), new THREE.MeshBasicMaterial({color:0xffaa00})); m.rotation.x=Math.PI/2; m.position.copy(player.position); scene.add(m); let t=null, minDist=1000; enemies.forEach(e=>{const d=player.position.distanceTo(e.mesh.position);if(d<minDist&&e.mesh.position.z<player.position.z){minDist=d;t=e.mesh;}}); missiles.push({mesh:m, vel:new THREE.Vector3(0,0,-1), target:t, speed:0}); }
+            for(let i=bullets.length-1; i>=0; i--) {
+                bullets[i].position.z -= (gameSpeed+CFG.shotSpeed); 
+                if(bullets[i].position.z < worldZ - 1200){scene.remove(bullets[i]);bullets.splice(i,1);}
+            }
+            
+            for(let i=missiles.length-1; i>=0; i--){ 
+                let m = missiles[i]; m.speed = Math.min(m.speed+0.1, CFG.missileSpeed); 
+                if(m.target && m.target.parent) { m.vel.lerp(new THREE.Vector3().subVectors(m.target.position, m.mesh.position).normalize(), 0.15); } else { m.vel.z = -1; }
+                m.mesh.position.add(m.vel.clone().normalize().multiplyScalar(gameSpeed + m.speed));
+                m.mesh.lookAt(m.mesh.position.clone().add(m.vel));
+                if(frame%2===0){ const p=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.6), new THREE.MeshBasicMaterial({color:0x888888})); p.position.copy(m.mesh.position); scene.add(p); particles.push({mesh:p, vel:new THREE.Vector3(0,0,0), life:0.3}); }
+                if(m.mesh.position.z < worldZ - 1200){scene.remove(m.mesh);missiles.splice(i,1);} 
+            }
 
-            const bulletSpeed = gameSpeed + CFG.shotSpeed;
-            for(let i=bullets.length-1; i>=0; i--){ bullets[i].position.z -= bulletSpeed; if(bullets[i].position.z < worldZ - 1200){scene.remove(bullets[i]);bullets.splice(i,1);} }
-            for(let i=missiles.length-1; i>=0; i--){ let m = missiles[i]; m.speed = Math.min(m.speed+0.1, CFG.missileSpeed); if(m.target && m.target.parent) m.vel.lerp(new THREE.Vector3().subVectors(m.target.position, m.mesh.position).normalize(), 0.15); else m.vel.z = -1; const moveVec = m.vel.clone().normalize().multiplyScalar(gameSpeed + m.speed); m.mesh.position.add(moveVec); m.mesh.lookAt(m.mesh.position.clone().add(m.vel)); if(frame%2===0){const p=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.5), new THREE.MeshBasicMaterial({color:0xaaaaaa})); p.position.copy(m.mesh.position); scene.add(p); particles.push({mesh:p, vel:new THREE.Vector3(0,0,0), life:0.4});} if(m.mesh.position.z < worldZ - 1200){scene.remove(m.mesh);missiles.splice(i,1);} }
-
-            const enemySpawnRate = Math.max(10, Math.floor(40 - gameSpeed));
-            if(frame % enemySpawnRate === 0) { const e = createEnemy(); e.position.set((Math.random()-0.5)*400, (Math.random()-0.5)*200, worldZ - 1200); scene.add(e); enemies.push({mesh:e}); }
-            enemies.forEach((e,i)=>{
+            if(gameState==='PLAY') {
+                const enemySpawnRate = Math.max(10, Math.floor(40 - gameSpeed));
+                if(frame % enemySpawnRate === 0) { const e = createEnemy(); e.position.set((Math.random()-0.5)*400, (Math.random()-0.5)*200, worldZ - 1200); scene.add(e); enemies.push({mesh:e}); }
+            }
+            
+            for(let i=enemies.length-1; i>=0; i--) {
+                let e = enemies[i];
                 e.mesh.rotation.y += 0.02; if(e.mesh.userData.ring) e.mesh.userData.ring.rotation.z += 0.1;
-                if(checkCollision(player, e.mesh)) { takeDamage(20); spawnExplosion(e.mesh.position, 0xff0000); scene.remove(e.mesh); enemies.splice(i,1); return; }
+                if(gameState==='PLAY' && checkCollision(player, e.mesh)) { takeDamage(20); spawnExplosion(e.mesh.position, 0xff0000); scene.remove(e.mesh); enemies.splice(i,1); continue; }
+                
                 let hit = false;
                 for(let j=bullets.length-1; j>=0; j--){ if(!hit && e.mesh.position.distanceTo(bullets[j].position)<8){ scene.remove(bullets[j]); bullets.splice(j,1); hit=true; } }
-                if(!hit){ for(let j=missiles.length-1; j>=0; j--){ if(!hit && e.mesh.position.distanceTo(missiles[j].mesh.position)<8){ scene.remove(missiles[j].mesh); missiles.splice(j,1); hit=true; } } }
-                if(hit) { updateSpeed(CFG.speedUpPerKill); spawnExplosion(e.mesh.position); scene.remove(e.mesh); enemies.splice(i,1); score+=500; document.getElementById('score').innerText=score; } else if(e.mesh.position.z > worldZ + 50) { scene.remove(e.mesh); enemies.splice(i,1); }
-            });
+                if(!hit){ 
+                    for(let j=missiles.length-1; j>=0; j--){ 
+                        if(!hit && checkCollision(missiles[j].mesh, e.mesh)){ 
+                            scene.remove(missiles[j].mesh); missiles.splice(j,1); hit=true; 
+                        } 
+                    } 
+                }
+                
+                if(hit) { 
+                    updateSpeed(CFG.speedUpPerKill); 
+                    spawnExplosion(e.mesh.position); 
+                    
+                    // ★修正: 撃破時に、その敵が「現在のフレームでロックされていたか」をチェックしてエフェクト表示
+                    if (lockedEnemies.includes(e.mesh)) {
+                        const sPos = toScreenPosition(e.mesh, camera);
+                        if(sPos.z < 1) spawnDestroyedMarker(sPos.x, sPos.y);
+                    }
 
-            particles.forEach((p,i)=>{ p.mesh.position.add(p.vel); p.life-=0.05; p.mesh.scale.setScalar(p.life); if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1);} });
+                    scene.remove(e.mesh); enemies.splice(i,1); 
+                    score+=500; document.getElementById('score').innerText=score; 
+                } 
+                else if(e.mesh.position.z > worldZ + 50) { scene.remove(e.mesh); enemies.splice(i,1); }
+            }
+
+            for(let i=particles.length-1; i>=0; i--){ 
+                let p = particles[i]; p.mesh.position.add(p.vel); p.life-=0.05; p.mesh.scale.setScalar(p.life); 
+                if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1);} 
+            }
+
             composer.render();
         }
 
