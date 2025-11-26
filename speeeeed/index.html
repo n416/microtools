@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VP 2064 - AUTO FIRE</title>
+  <title>RAIS-bU</title>
   <style>
     body {
       margin: 0;
@@ -96,13 +96,17 @@
       transition: width 0.2s;
     }
 
-    #mode-labels {
+    #top-right-ui {
       position: absolute;
       top: 10px;
       right: 10px;
       text-align: right;
-      pointer-events: none;
+      pointer-events: auto;
       z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
     }
 
     .label-box {
@@ -119,6 +123,27 @@
       color: #ffaa00;
       border-color: #ffaa00;
       display: none;
+    }
+
+    #btn-view {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 0, 0.3);
+      border: 2px solid #ffff00;
+      color: #ffff00;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 0 5px #ffff00;
+    }
+
+    #btn-view:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 0, 0.6);
     }
 
     #hud-reticle {
@@ -370,10 +395,10 @@
 
     #action-area {
       position: absolute;
-      bottom: 30px;
-      right: 30px;
-      width: 340px;
-      height: 180px;
+      bottom: 20px;
+      right: 20px;
+      width: 200px;
+      height: 200px;
       pointer-events: none;
     }
 
@@ -387,53 +412,48 @@
       font-weight: bold;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
       pointer-events: auto;
+      transition: transform 0.1s;
     }
 
     .act-btn:active {
-      transform: scale(0.9);
+      transform: scale(0.9) !important;
       opacity: 0.8;
       filter: brightness(1.2);
     }
 
-    #btn-shot {
+    #btn-mode {
       bottom: 0;
       right: 0;
-      width: 90px;
-      height: 90px;
+      width: 110px;
+      height: 110px;
       font-size: 18px;
-      background: rgba(0, 120, 255, 0.5);
+      background: rgba(0, 255, 0, 0.4);
+      border: 2px solid #00ff00;
+      z-index: 10;
+    }
+
+    #btn-shot {
+      bottom: 10px;
+      right: 120px;
+      width: 60px;
+      height: 60px;
+      font-size: 10px;
+      background: rgba(0, 120, 255, 0.4);
       border: 2px solid #00ccff;
+      line-height: 1.1;
+      text-align: center;
     }
 
     #btn-bomb {
-      bottom: 90px;
-      right: 90px;
-      width: 70px;
-      height: 70px;
-      font-size: 14px;
-      background: rgba(255, 60, 0, 0.5);
-      border: 2px solid #ffaa00;
-    }
-
-    #btn-mode {
-      bottom: 0;
-      right: 110px;
+      bottom: 120px;
+      right: 10px;
       width: 60px;
       height: 60px;
-      font-size: 12px;
-      background: rgba(0, 255, 0, 0.5);
-      border: 2px solid #00ff00;
-    }
-
-    #btn-view {
-      bottom: 80px;
-      right: 180px;
-      width: 50px;
-      height: 50px;
       font-size: 10px;
-      background: rgba(255, 255, 0, 0.5);
-      border: 2px solid #ffff00;
-      color: #ffff00;
+      background: rgba(255, 60, 0, 0.4);
+      border: 2px solid #ffaa00;
+      line-height: 1.1;
+      text-align: center;
     }
   </style>
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -456,9 +476,10 @@
   <div id="lock-container"></div>
   <div id="effect-container"></div>
 
-  <div id="mode-labels">
+  <div id="top-right-ui">
     <div id="mode-label" class="label-box">MODE: JET</div>
     <div id="cam-label" class="label-box">CAM: INSPECT</div>
+    <div id="btn-view">ZOOM</div>
   </div>
 
   <div id="ui" style="display:none;">
@@ -651,12 +672,56 @@
       }, {
         passive: false
       });
-      document.querySelectorAll('.act-btn').forEach(btn => {
+
+      const btnMode = document.getElementById('btn-mode');
+      btnMode.addEventListener('touchstart', e => {
+        e.preventDefault();
+        toggleDroneMode();
+        btnMode.style.transform = "scale(0.9)";
+      }, {
+        passive: false
+      });
+      btnMode.addEventListener('touchend', e => {
+        e.preventDefault();
+        btnMode.style.transform = "scale(1)";
+      }, {
+        passive: false
+      });
+      btnMode.addEventListener('mousedown', () => {
+        toggleDroneMode();
+        btnMode.style.transform = "scale(0.9)";
+      });
+      btnMode.addEventListener('mouseup', () => {
+        btnMode.style.transform = "scale(1)";
+      });
+
+      const btnView = document.getElementById('btn-view');
+      btnView.addEventListener('touchstart', e => {
+        e.preventDefault();
+        toggleInspectMode();
+        btnView.style.transform = "scale(0.9)";
+      }, {
+        passive: false
+      });
+      btnView.addEventListener('touchend', e => {
+        e.preventDefault();
+        btnView.style.transform = "scale(1)";
+      }, {
+        passive: false
+      });
+      btnView.addEventListener('mousedown', () => {
+        toggleInspectMode();
+        btnView.style.transform = "scale(0.9)";
+      });
+      btnView.addEventListener('mouseup', () => {
+        btnView.style.transform = "scale(1)";
+      });
+
+      ['btn-shot', 'btn-bomb'].forEach(id => {
+        const btn = document.getElementById(id);
         const press = () => {
           keys[btn.dataset.key] = true;
           btn.style.transform = "scale(0.9)";
-          if (btn.id === 'btn-mode') toggleDroneMode();
-          if (btn.id === 'btn-view') toggleInspectMode();
         };
         const rel = () => {
           keys[btn.dataset.key] = false;
@@ -1137,6 +1202,51 @@
       return box3A.intersectsBox(box3B);
     }
 
+    // ★修正: 画面内制限ロジック
+    function keepPlayerOnScreen() {
+      if (isDroneMode) {
+        // ドローンモード
+        const vFOV = THREE.MathUtils.degToRad(camera.fov);
+        const visibleHeight = 2 * Math.tan(vFOV / 2) * 150; // Y=150
+        const visibleWidth = visibleHeight * camera.aspect;
+
+        const centerZ = worldZ - 100;
+        const limitZ = visibleHeight * 0.45; // 上下マージン
+        const limitX = visibleWidth * 0.45; // 左右マージン
+
+        player.position.x = Math.max(-limitX, Math.min(limitX, player.position.x));
+        player.position.z = Math.max(centerZ - limitZ, Math.min(centerZ + limitZ, player.position.z));
+      } else {
+        // Jetモード (カメラ追従ベースでの制限)
+        // カメラ位置から見た画面端を計算して、そこまでは行けるようにする
+        // カメラZ=worldZ+80, Player Z=worldZ. Dist=80.
+        const dist = 80;
+        const vFOV = THREE.MathUtils.degToRad(camera.fov);
+        const visibleHeight = 2 * Math.tan(vFOV / 2) * dist;
+        const visibleWidth = visibleHeight * camera.aspect;
+
+        // カメラの現在位置(カメラはPlayerを追うが遅れる)
+        // Screen edge relative to camera position
+        const camY = camera.position.y;
+        const camX = camera.position.x;
+
+        const topEdge = camY + visibleHeight / 2;
+        const bottomEdge = camY - visibleHeight / 2;
+        const rightEdge = camX + visibleWidth / 2;
+        const leftEdge = camX - visibleWidth / 2;
+
+        const pad = 2.0;
+
+        // スクリーン端で止める
+        player.position.y = Math.max(bottomEdge + pad, Math.min(topEdge - pad, player.position.y));
+        player.position.x = Math.max(leftEdge + pad, Math.min(rightEdge - pad, player.position.x));
+
+        // ワールド絶対最大値 (これ以上は行けない壁)
+        player.position.y = Math.max(-200, Math.min(200, player.position.y));
+        player.position.x = Math.max(-400, Math.min(400, player.position.x));
+      }
+    }
+
     function toScreenPosition(obj, camera) {
       const vector = new THREE.Vector3();
       obj.updateMatrixWorld();
@@ -1232,7 +1342,7 @@
           player.position.x += targetDX;
           player.position.z += targetDY * 2.0;
           player.position.y += (0 - player.position.y) * 0.1;
-          player.position.z = Math.max(worldZ - 300, Math.min(worldZ + 100, player.position.z));
+
         } else {
           if (joyInput.x !== 0 || joyInput.y !== 0) {
             targetDX = joyInput.x * CFG.playerMoveSpeed;
@@ -1248,8 +1358,8 @@
           player.position.z = worldZ;
         }
 
-        player.position.x = Math.max(-180, Math.min(180, player.position.x));
-        if (!isDroneMode) player.position.y = Math.max(-100, Math.min(100, player.position.y));
+        // ★修正: 画面内キープ関数を実行
+        keepPlayerOnScreen();
 
         const targetRoll = -targetDX * 0.5;
         const targetPitch = isDroneMode ? 0 : targetDY * 0.2;
@@ -1359,7 +1469,6 @@
           buildings.push(b);
         }
 
-        // ★修正: オートファイア (押してない時に発射)
         if (!keys[" "] && frame % 5 === 0) {
           [0, -4, 4].forEach(o => {
             const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 8), new THREE.MeshBasicMaterial({
@@ -1371,7 +1480,6 @@
           });
         }
 
-        // ★修正: オートミサイル (押してない時に発射)
         if (!keys.z && frame % 20 === 0) {
           const beamLen = 200.0;
           const mGeo = new THREE.CylinderGeometry(0.1, 0.01, beamLen, 2);
