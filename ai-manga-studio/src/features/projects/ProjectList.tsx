@@ -7,12 +7,13 @@ import AddIcon from '@mui/icons-material/Add';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import FileUploadIcon from '@mui/icons-material/FileUpload';
+import FileDownloadIcon from '@mui/icons-material/FileDownload'; // JSON Exportで利用中なら維持、不要なら削除
+// FileUploadIcon 削除
 import FolderZipIcon from '@mui/icons-material/FolderZip';
 import FolderIcon from '@mui/icons-material/Folder';
 
 // Libs
+import { saveAs } from 'file-saver';
 import { v4 as uuidv4 } from 'uuid';
 
 // Redux
@@ -20,28 +21,22 @@ import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { fetchProjects, createOrUpdateProject, setCurrentProject, deleteProject } from './projectSlice';
 import type { Project } from '../../types';
 
-// Components & Utils
+// Components
 import StoryGenModal from '../../components/StoryGenModal';
 import { exportProjectToZip, importProjectFromZip } from '../../utils/projectIO';
 
 const ProjectList: React.FC = () => {
+  // ... (以下変更なし)
   const dispatch = useAppDispatch();
   const { items, status } = useAppSelector(state => state.projects);
   const assets = useAppSelector(state => state.assets.items);
 
-  // Local State
   const [genres, setGenres] = useState<string[]>(['サイバーパンク', '日常']);
   const [newGenre, setNewGenre] = useState('');
-  
-  // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState('');
-
-  // Menu State
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-
-  // File Input Ref
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -50,7 +45,6 @@ const ProjectList: React.FC = () => {
     }
   }, [status, dispatch]);
 
-  // --- Handlers: Genres ---
   const handleAddGenre = () => {
     if (newGenre.trim()) {
       setGenres([...genres, newGenre.trim()]);
@@ -61,7 +55,6 @@ const ProjectList: React.FC = () => {
     setGenres(genres.filter((_, i) => i !== index));
   };
 
-  // --- Handlers: Project Creation ---
   const handleCreateStory = () => {
     const prompt = `あなたは「予想外の展開」を得意とする超一流の漫画原作者であり、同時に優秀なAI漫画画像プロンプターです。
 ユーザーから提供される「${genres.join('と')}」をもとに、24ページの読み切り漫画の企画、ネーム構成、そして表紙イラストを作成します。
@@ -120,7 +113,6 @@ const ProjectList: React.FC = () => {
     }
   };
 
-  // --- Handlers: Project Menu ---
   const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, pid: string) => {
     e.stopPropagation();
     setMenuAnchor(e.currentTarget);
@@ -153,6 +145,19 @@ const ProjectList: React.FC = () => {
     }
   };
 
+  // ※ JSONエクスポートも残したい場合
+  const handleExportJSON = () => {
+    if (selectedProjectId) {
+      const project = items.find(p => p.id === selectedProjectId);
+      if (project) {
+        const jsonStr = JSON.stringify(project, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        saveAs(blob, `${project.title || 'project'}.json`);
+      }
+    }
+    handleMenuClose();
+  };
+
   const handleFileClick = () => {
     fileInputRef.current?.click();
   };
@@ -168,7 +173,6 @@ const ProjectList: React.FC = () => {
       console.error(err);
       alert('インポート失敗: ' + err.message);
     }
-    
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -254,7 +258,6 @@ const ProjectList: React.FC = () => {
               key={p.id} 
               variant="outlined" 
               sx={{ 
-                // ★修正: ここに position: 'relative' を追加しました
                 position: 'relative',
                 borderRadius: 2,
                 transition: 'border-color 0.2s',
@@ -287,8 +290,6 @@ const ProjectList: React.FC = () => {
                 />
               </ListItemButton>
 
-              {/* Menu Button */}
-              {/* カードがrelativeになったので、このabsoluteは正しくカードの右上に配置されます */}
               <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
                 <IconButton onClick={(e) => handleMenuOpen(e, p.id)} size="small">
                   <MoreVertIcon fontSize="small" />
@@ -299,7 +300,6 @@ const ProjectList: React.FC = () => {
         </List>
       )}
 
-      {/* Project Menu */}
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
@@ -308,6 +308,10 @@ const ProjectList: React.FC = () => {
         <MenuItem onClick={handleExportZIP}>
           <ListItemIcon><FolderZipIcon fontSize="small" /></ListItemIcon>
           <ListItemText>ZIPエクスポート</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleExportJSON}>
+          <ListItemIcon><FileDownloadIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>JSONエクスポート</ListItemText>
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleDeleteProject} sx={{ color: 'error.main' }}>
