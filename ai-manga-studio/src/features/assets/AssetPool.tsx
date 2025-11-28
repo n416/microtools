@@ -36,18 +36,15 @@ import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { fetchAssets, addAsset, deleteAsset, moveAssetCategory, reorderAssets, deleteMultipleAssets } from './assetSlice';
 import type { AssetCategory, Asset } from '../../types';
 
-// --- 1. 共通UIコンポーネント (AssetCard) ---
+// --- 1. AssetCard Component ---
 interface AssetCardProps {
   asset: Asset;
   activeTab?: AssetCategory;
   isOverlay?: boolean;
   isReferenced?: boolean;
-  
-  // Selection Mode Props
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelection?: (id: string) => void;
-
   onMenuOpen?: (e: React.MouseEvent<HTMLElement>, id: string) => void;
   onDelete?: (id: string) => void;
   onOpenSlideshow?: () => void;
@@ -60,7 +57,6 @@ const AssetCard: React.FC<AssetCardProps> = ({
   selectionMode, isSelected, onToggleSelection,
   onMenuOpen, onDelete, onOpenSlideshow, dragHandleProps, nativeDragProps 
 }) => {
-  
   const handleClick = (e: React.MouseEvent) => {
     if (selectionMode && onToggleSelection) {
       e.stopPropagation();
@@ -103,74 +99,30 @@ const AssetCard: React.FC<AssetCardProps> = ({
           opacity: (selectionMode && !isSelected) ? 0.6 : 1 
         }} 
       />
-      
-      {/* 参照バッジ */}
       {!isOverlay && isReferenced && (
         <Box sx={{ position: 'absolute', top: 4, left: 4, zIndex: 1 }}>
-          <Chip 
-            icon={<LinkIcon style={{ color: 'white', width: 14, height: 14 }} />} 
-            label="Used" size="small"
-            sx={{ 
-              height: 20, fontSize: '0.65rem', fontWeight: 'bold', 
-              bgcolor: 'success.main', color: 'white', 
-              '& .MuiChip-label': { px: 0.5 },
-              boxShadow: 2
-            }} 
-          />
+          <Chip icon={<LinkIcon style={{ color: 'white', width: 14, height: 14 }} />} label="Used" size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 'bold', bgcolor: 'success.main', color: 'white', boxShadow: 2, '& .MuiChip-label': { px: 0.5 } }} />
         </Box>
       )}
-
-      {/* 選択チェックマーク (選択モード時のみ) */}
       {!isOverlay && selectionMode && (
         <Box sx={{ position: 'absolute', top: 4, right: 4, zIndex: 2 }}>
-          {isSelected ? (
-            <CheckCircleIcon color="primary" sx={{ bgcolor: 'white', borderRadius: '50%' }} />
-          ) : (
-            <RadioButtonUncheckedIcon sx={{ color: 'rgba(255,255,255,0.7)', filter: 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))' }} />
-          )}
+          {isSelected ? <CheckCircleIcon color="primary" sx={{ bgcolor: 'white', borderRadius: '50%' }} /> : <RadioButtonUncheckedIcon sx={{ color: 'rgba(255,255,255,0.7)', filter: 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))' }} />}
         </Box>
       )}
-
-      {/* ホバーアクション (選択モード中は非表示) */}
       {!isOverlay && !selectionMode && (
-        <Box 
-          className="overlay-actions"
-          sx={{ 
-            position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.3)', 
-            opacity: 0, transition: '0.2s', display: 'flex', alignItems: 'start', justifyContent: 'flex-end', p: 0.5, gap: 0.5
-          }}
-        >
+        <Box className="overlay-actions" sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.3)', opacity: 0, transition: '0.2s', display: 'flex', alignItems: 'start', justifyContent: 'flex-end', p: 0.5, gap: 0.5 }}>
           <Tooltip title="削除">
-            <IconButton 
-              size="small" 
-              sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#ff4444', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.9)' } }}
-              onClick={(e) => { e.stopPropagation(); onDelete && onDelete(asset.id); }}
-              onMouseDown={e => e.stopPropagation()} 
-            >
+            <IconButton size="small" sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#ff4444', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.9)' } }} onClick={(e) => { e.stopPropagation(); onDelete && onDelete(asset.id); }} onMouseDown={e => e.stopPropagation()}>
               <DeleteIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
       )}
-
-      {/* 下部バー (選択モード中は非表示) */}
       {!selectionMode && (
-        <Box
-          sx={{ 
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', p: 0.5
-          }}
-        >
-          <IconButton 
-            sx={{ color: 'rgba(255,255,255,0.9)', cursor: isOverlay ? 'grabbing' : 'grab', mr: 'auto' }} 
-            size="small"
-            {...dragHandleProps}
-            onClick={e => e.stopPropagation()}
-          >
+        <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', p: 0.5 }}>
+          <IconButton sx={{ color: 'rgba(255,255,255,0.9)', cursor: isOverlay ? 'grabbing' : 'grab', mr: 'auto' }} size="small" {...dragHandleProps} onClick={e => e.stopPropagation()}>
             <DragHandleIcon fontSize="small" />
           </IconButton>
-
           {!isOverlay && onMenuOpen && (
             <IconButton sx={{ color: 'white' }} onClick={(e) => onMenuOpen(e, asset.id)} size="small">
               <MoreVertIcon fontSize="small" />
@@ -188,28 +140,16 @@ interface SortableAssetItemProps extends Omit<AssetCardProps, 'dragHandleProps'>
 }
 
 const SortableAssetItem: React.FC<SortableAssetItemProps> = (props) => {
-  const {
-    attributes, listeners, setNodeRef, transform, transition, isDragging
-  } = useSortable({ id: props.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.3 : 1,
-    zIndex: isDragging ? 0 : 'auto',
-  };
-
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1, zIndex: isDragging ? 0 : 'auto' };
   return (
     <Box ref={setNodeRef} style={style} id={props.id} sx={{ position: 'relative', aspectRatio: '1/1' }}>
-      <AssetCard 
-        {...props} 
-        dragHandleProps={{ ...attributes, ...listeners }} 
-      />
+      <AssetCard {...props} dragHandleProps={{ ...attributes, ...listeners }} />
     </Box>
   );
 };
 
-
+// --- 3. Main Component ---
 const AssetPool: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items, status } = useAppSelector((state) => state.assets);
@@ -218,15 +158,14 @@ const AssetPool: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AssetCategory>('material');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
-
   const [slideshowIndex, setSlideshowIndex] = useState<number | null>(null);
   const [toast, setToast] = useState<{ open: boolean, msg: string, type: 'success' | 'info' | 'warning' }>({ open: false, msg: '', type: 'success' });
-
-  // Selection Mode State
+  
+  // Selection
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // dnd-kit State
+  // DnD
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [dragSize, setDragSize] = useState<{ width: number, height: number } | null>(null);
 
@@ -237,22 +176,16 @@ const AssetPool: React.FC = () => {
   );
 
   useEffect(() => {
-    if (status === 'idle') {
-      dispatch(fetchAssets());
-    }
+    if (status === 'idle') dispatch(fetchAssets());
   }, [status, dispatch]);
 
-  const filteredAssets = useMemo(() => 
-    items.filter(a => a.category === activeTab), 
-  [items, activeTab]);
+  const filteredAssets = useMemo(() => items.filter(a => a.category === activeTab), [items, activeTab]);
 
   const usedAssetIds = useMemo(() => {
     const ids = new Set<string>();
     projects.forEach(p => {
       if (p.coverAssetId) ids.add(p.coverAssetId);
-      p.pages.forEach(page => {
-        if (page.assignedAssetId) ids.add(page.assignedAssetId);
-      });
+      p.pages.forEach(page => { if (page.assignedAssetId) ids.add(page.assignedAssetId); });
     });
     return ids;
   }, [projects]);
@@ -262,77 +195,61 @@ const AssetPool: React.FC = () => {
   };
   const handleToastClose = () => setToast({ ...toast, open: false });
 
-  // --- Logic: Selection ---
-  const toggleSelectionMode = () => {
-    setSelectionMode(!selectionMode);
-    setSelectedIds(new Set());
+  // ★修正: checkAssetUsage をここに定義
+  const checkAssetUsage = (id: string) => {
+    const usages: string[] = [];
+    projects.forEach(p => {
+      if (p.coverAssetId === id) usages.push(`「${p.title}」の表紙`);
+      p.pages.forEach(page => {
+        if (page.assignedAssetId === id) usages.push(`「${p.title}」のP${page.pageNumber}`);
+      });
+    });
+    return usages;
   };
 
+  // --- Handlers ---
+  const toggleSelectionMode = () => { setSelectionMode(!selectionMode); setSelectedIds(new Set()); };
   const toggleSelection = (id: string) => {
     const newSet = new Set(selectedIds);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
+    if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
     setSelectedIds(newSet);
   };
-
   const handleSelectAll = () => {
-    if (selectedIds.size === filteredAssets.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredAssets.map(a => a.id)));
-    }
+    if (selectedIds.size === filteredAssets.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredAssets.map(a => a.id)));
   };
-
   const handleDeleteSelected = () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-
     let referencedCount = 0;
     ids.forEach(id => { if (usedAssetIds.has(id)) referencedCount++; });
-
     let msg = `${ids.length}枚の画像を削除しますか？`;
-    if (referencedCount > 0) {
-      msg = `【警告】選択した画像のうち ${referencedCount}枚 がプロジェクトで使用されています。\n削除すると表示されなくなりますが、よろしいですか？`;
-    }
-
+    if (referencedCount > 0) msg = `【警告】選択した画像のうち ${referencedCount}枚 がプロジェクトで使用されています。\n削除すると表示されなくなりますが、よろしいですか？`;
     if (window.confirm(msg)) {
       dispatch(deleteMultipleAssets(ids));
-      setSelectionMode(false);
-      setSelectedIds(new Set());
+      setSelectionMode(false); setSelectedIds(new Set());
       showToast(`${ids.length}枚削除しました`, 'info');
     }
   };
 
-  // --- Logic: Handlers ---
   const handleFiles = useCallback((files: FileList) => {
-    Array.from(files).forEach(file => {
-      if (file.type.startsWith('image/')) {
-        dispatch(addAsset({ file, category: activeTab }));
-      }
-    });
+    Array.from(files).forEach(file => { if (file.type.startsWith('image/')) dispatch(addAsset({ file, category: activeTab })); });
     if(files.length > 0) showToast(`${files.length}枚追加しました`);
   }, [dispatch, activeTab]);
 
   const handleDropZone = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files);
-    }
+    e.preventDefault(); e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
   };
 
   const handleDragStartNative = (e: React.DragEvent, assetId: string) => {
-    e.dataTransfer.setData('assetId', assetId);
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('assetId', assetId); e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDragId(event.active.id as string);
     const node = document.getElementById(event.active.id as string);
-    if (node) {
-      const rect = node.getBoundingClientRect();
-      setDragSize({ width: rect.width, height: rect.height });
-    }
+    if (node) { const rect = node.getBoundingClientRect(); setDragSize({ width: rect.width, height: rect.height }); }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -340,12 +257,9 @@ const AssetPool: React.FC = () => {
     if (over && active.id !== over.id) {
       const oldIndex = filteredAssets.findIndex((item) => item.id === active.id);
       const newIndex = filteredAssets.findIndex((item) => item.id === over.id);
-      if (oldIndex !== -1 && newIndex !== -1) {
-        dispatch(reorderAssets({ fromIndex: oldIndex, toIndex: newIndex, category: activeTab }));
-      }
+      if (oldIndex !== -1 && newIndex !== -1) dispatch(reorderAssets({ fromIndex: oldIndex, toIndex: newIndex, category: activeTab }));
     }
-    setActiveDragId(null);
-    setDragSize(null);
+    setActiveDragId(null); setDragSize(null);
   };
 
   const handleTabDrop = (e: React.DragEvent, targetCategory: AssetCategory) => {
@@ -353,30 +267,22 @@ const AssetPool: React.FC = () => {
     const assetId = e.dataTransfer.getData('assetId');
     if (assetId) {
       dispatch(moveAssetCategory({ id: assetId, newCategory: targetCategory }));
-      setActiveTab(targetCategory);
-      showToast('カテゴリーを移動しました', 'info');
+      setActiveTab(targetCategory); showToast('カテゴリーを移動しました', 'info');
     } else if (e.dataTransfer.files.length > 0) {
-      Array.from(e.dataTransfer.files).forEach(file => {
-        if (file.type.startsWith('image/')) dispatch(addAsset({ file, category: targetCategory }));
-      });
-      setActiveTab(targetCategory);
-      showToast('画像をアップロードしました');
+      Array.from(e.dataTransfer.files).forEach(file => { if (file.type.startsWith('image/')) dispatch(addAsset({ file, category: targetCategory })); });
+      setActiveTab(targetCategory); showToast('画像をアップロードしました');
     }
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, id: string) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
-    setSelectedAssetId(id);
+    event.stopPropagation(); setAnchorEl(event.currentTarget); setSelectedAssetId(id);
   };
   const handleMenuClose = () => { setAnchorEl(null); setSelectedAssetId(null); };
 
   const handleDelete = (id: string) => {
-    const usages = checkAssetUsage(id);
+    const usages = checkAssetUsage(id); // ★ここでの呼び出しがエラーになっていたが、定義済みなので解決
     let msg = 'この画像を削除しますか？';
-    if (usages.length > 0) {
-      msg = `【警告】この画像は以下の場所で使用されています：\n\n・${usages.join('\n・')}\n\n削除すると表示されなくなりますが、本当によろしいですか？`;
-    }
+    if (usages.length > 0) msg = `【警告】この画像は以下の場所で使用されています：\n\n・${usages.join('\n・')}\n\n削除すると表示されなくなりますが、本当によろしいですか？`;
     if (window.confirm(msg)) {
       dispatch(deleteAsset(id));
       if (slideshowIndex !== null) setSlideshowIndex(null);
@@ -389,8 +295,7 @@ const AssetPool: React.FC = () => {
     const asset = items.find(a => a.id === id);
     if(asset) {
       try {
-        const res = await fetch(asset.url);
-        const blob = await res.blob();
+        const res = await fetch(asset.url); const blob = await res.blob();
         await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
         showToast('画像をコピーしました');
       } catch(e) { console.error(e); }
@@ -402,11 +307,9 @@ const AssetPool: React.FC = () => {
     const asset = items.find(a => a.id === id);
     if(asset) {
       try {
-        const res = await fetch(asset.url);
-        const blob = await res.blob();
+        const res = await fetch(asset.url); const blob = await res.blob();
         const file = new File([blob], "duplicate.png", { type: blob.type });
-        dispatch(addAsset({ file, category: activeTab }));
-        showToast('複製しました');
+        dispatch(addAsset({ file, category: activeTab })); showToast('複製しました');
       } catch(e) { console.error(e); }
     }
     handleMenuClose();
@@ -430,67 +333,32 @@ const AssetPool: React.FC = () => {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-      
-      {/* Header (Mode Switching) */}
-      <Box sx={{ 
-        p: selectionMode ? 1 : 2, 
-        borderBottom: 1, borderColor: 'divider', bgcolor: selectionMode ? 'primary.dark' : 'background.paper', 
-        boxShadow: 1, zIndex: 1, minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-      }}>
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: selectionMode ? 'primary.dark' : 'background.paper', boxShadow: 1, zIndex: 1, minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {!selectionMode ? (
           <>
             <Box>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CollectionsIcon fontSize="small" color="primary" />
-                画像プール
+                <CollectionsIcon fontSize="small" color="primary" /> 画像プール
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Drag Handle to Sort
-              </Typography>
+              <Typography variant="caption" color="text.secondary">Drag Handle to Sort</Typography>
             </Box>
-            <Tooltip title="選択モード（一括削除）">
-              <IconButton onClick={toggleSelectionMode}>
-                <LibraryAddCheckIcon />
-              </IconButton>
-            </Tooltip>
+            <Tooltip title="選択モード（一括削除）"><IconButton onClick={toggleSelectionMode}><LibraryAddCheckIcon /></IconButton></Tooltip>
           </>
         ) : (
           <>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Button onClick={toggleSelectionMode} variant="outlined" color="inherit" size="small" sx={{ borderColor: 'rgba(255,255,255,0.3)', color: 'white' }}>
-                完了
-              </Button>
-              <Typography variant="subtitle1" color="white" fontWeight="bold">
-                {selectedIds.size}枚 選択中
-              </Typography>
+              <Button onClick={toggleSelectionMode} variant="outlined" color="inherit" size="small" sx={{ borderColor: 'rgba(255,255,255,0.3)', color: 'white' }}>完了</Button>
+              <Typography variant="subtitle1" color="white" fontWeight="bold">{selectedIds.size}枚 選択中</Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button onClick={handleSelectAll} sx={{ color: 'white' }}>
-                {selectedIds.size === filteredAssets.length ? '全解除' : '全選択'}
-              </Button>
-              <Button 
-                onClick={handleDeleteSelected} 
-                variant="contained" 
-                color="error" 
-                startIcon={<DeleteIcon />}
-                disabled={selectedIds.size === 0}
-              >
-                削除
-              </Button>
+              <Button onClick={handleSelectAll} sx={{ color: 'white' }}>{selectedIds.size === filteredAssets.length ? '全解除' : '全選択'}</Button>
+              <Button onClick={handleDeleteSelected} variant="contained" color="error" startIcon={<DeleteIcon />} disabled={selectedIds.size === 0}>削除</Button>
             </Box>
           </>
         )}
       </Box>
 
-      {/* Tabs */}
-      <Tabs 
-        value={activeTab} 
-        onChange={(_, v) => { setActiveTab(v); if(selectionMode) setSelectedIds(new Set()); }} 
-        variant="fullWidth" 
-        indicatorColor={activeTab === 'material' ? 'primary' : 'secondary'} 
-        textColor="inherit" 
-        sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 40 }}
-      >
+      <Tabs value={activeTab} onChange={(_, v) => { setActiveTab(v); if(selectionMode) setSelectedIds(new Set()); }} variant="fullWidth" indicatorColor={activeTab === 'material' ? 'primary' : 'secondary'} textColor="inherit" sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 40 }}>
         <Tab label="素材" value="material" sx={{ minHeight: 40, fontSize: '0.75rem', fontWeight: 'bold', color: activeTab==='material' ? 'primary.main' : 'text.disabled' }} onDragOver={e => e.preventDefault()} onDrop={e => handleTabDrop(e, 'material')} />
         <Tab label="生成結果" value="generated" sx={{ minHeight: 40, fontSize: '0.75rem', fontWeight: 'bold', color: activeTab==='generated' ? 'secondary.main' : 'text.disabled' }} onDragOver={e => e.preventDefault()} onDrop={e => handleTabDrop(e, 'generated')} />
       </Tabs>
@@ -498,44 +366,27 @@ const AssetPool: React.FC = () => {
       <Box sx={{ flex: 1, overflowY: 'auto', p: 1, position: 'relative' }} onDragOver={e => e.preventDefault()} onDrop={handleDropZone}>
         {filteredAssets.length === 0 ? (
           <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed', borderColor: 'divider', borderRadius: 2, m: 1, color: 'text.disabled' }}>
-            <Typography variant="body2">No Images</Typography>
-            <Typography variant="caption">Drag & Drop files here</Typography>
+            <Typography variant="body2">No Images</Typography><Typography variant="caption">Drag & Drop files here</Typography>
           </Box>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <SortableContext items={filteredAssets.map(a => a.id)} strategy={rectSortingStrategy}>
-              {/* CSS Grid Layout */}
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 1 }}>
                 {filteredAssets.map((asset, index) => (
                   <SortableAssetItem 
-                    key={asset.id} 
-                    id={asset.id}
-                    asset={asset} 
-                    activeTab={activeTab}
+                    key={asset.id} id={asset.id} asset={asset} activeTab={activeTab}
                     isReferenced={usedAssetIds.has(asset.id)}
-                    
-                    selectionMode={selectionMode}
-                    isSelected={selectedIds.has(asset.id)}
-                    onToggleSelection={toggleSelection}
-
-                    onMenuOpen={handleMenuOpen}
-                    onDelete={handleDelete}
-                    onOpenSlideshow={() => handleOpenSlideshow(index)}
+                    selectionMode={selectionMode} isSelected={selectedIds.has(asset.id)} onToggleSelection={toggleSelection}
+                    onMenuOpen={handleMenuOpen} onDelete={handleDelete} onOpenSlideshow={() => handleOpenSlideshow(index)}
                     nativeDragProps={{ draggable: true, onDragStart: (e: React.DragEvent) => handleDragStartNative(e, asset.id) }}
                   />
                 ))}
               </Box>
             </SortableContext>
-
-            {/* Drag Overlay */}
             <DragOverlay>
               {activeDragId && dragSize ? (
                 <Box sx={{ width: dragSize.width, height: dragSize.height }}>
-                  <AssetCard 
-                    asset={filteredAssets.find(i => i.id === activeDragId)!}
-                    isOverlay
-                    isReferenced={usedAssetIds.has(activeDragId)}
-                  />
+                  <AssetCard asset={filteredAssets.find(i => i.id === activeDragId)!} isOverlay isReferenced={usedAssetIds.has(activeDragId)} />
                 </Box>
               ) : null}
             </DragOverlay>
@@ -549,7 +400,6 @@ const AssetPool: React.FC = () => {
         <MenuItem onClick={() => selectedAssetId && handleDelete(selectedAssetId)} sx={{ color: 'error.main' }}><ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon><ListItemText>削除</ListItemText></MenuItem>
       </Menu>
 
-      {/* Slideshow */}
       {slideshowIndex !== null && filteredAssets[slideshowIndex] && (
         <Dialog open={true} onClose={handleCloseSlideshow} maxWidth={false} PaperProps={{ sx: { bgcolor: 'rgba(0,0,0,0.9)', color: 'white', maxWidth: '90vw', maxHeight: '90vh', boxShadow: 'none', backgroundImage: 'none' } }}>
           <Box sx={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 600, minHeight: 400 }}>
