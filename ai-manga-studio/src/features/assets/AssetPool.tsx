@@ -15,13 +15,16 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
 import LinkIcon from '@mui/icons-material/Link';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import LibraryAddCheckIcon from '@mui/icons-material/LibraryAddCheck';
 
 // dnd-kit
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, 
   DragOverlay, TouchSensor
 } from '@dnd-kit/core';
-import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core'; // 型定義のみインポート
+import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 
 import {
   SortableContext, sortableKeyboardCoordinates, useSortable, rectSortingStrategy
@@ -30,7 +33,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 // Redux & Types
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
-import { fetchAssets, addAsset, deleteAsset, moveAssetCategory, reorderAssets } from './assetSlice';
+import { fetchAssets, addAsset, deleteAsset, moveAssetCategory, reorderAssets, deleteMultipleAssets } from './assetSlice';
 import type { AssetCategory, Asset } from '../../types';
 
 // --- 1. 共通UIコンポーネント (AssetCard) ---
@@ -39,6 +42,12 @@ interface AssetCardProps {
   activeTab?: AssetCategory;
   isOverlay?: boolean;
   isReferenced?: boolean;
+  
+  // Selection Mode Props
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (id: string) => void;
+
   onMenuOpen?: (e: React.MouseEvent<HTMLElement>, id: string) => void;
   onDelete?: (id: string) => void;
   onOpenSlideshow?: () => void;
@@ -47,56 +56,83 @@ interface AssetCardProps {
 }
 
 const AssetCard: React.FC<AssetCardProps> = ({ 
-  asset, activeTab, isOverlay, isReferenced, onMenuOpen, onDelete, onOpenSlideshow, dragHandleProps, nativeDragProps 
+  asset, activeTab, isOverlay, isReferenced, 
+  selectionMode, isSelected, onToggleSelection,
+  onMenuOpen, onDelete, onOpenSlideshow, dragHandleProps, nativeDragProps 
 }) => {
+  
+  const handleClick = (e: React.MouseEvent) => {
+    if (selectionMode && onToggleSelection) {
+      e.stopPropagation();
+      onToggleSelection(asset.id);
+    } else if (onOpenSlideshow) {
+      onOpenSlideshow();
+    }
+  };
+
   return (
     <Paper 
       elevation={isOverlay ? 8 : 1}
       sx={{ 
         width: '100%', height: '100%',
-        border: '1px solid', 
-        borderColor: isOverlay ? 'primary.main' : isReferenced ? 'success.main' : 'divider',
+        border: '2px solid', 
+        borderColor: isOverlay 
+          ? 'primary.main' 
+          : (selectionMode && isSelected) ? 'primary.main'
+          : isReferenced ? 'success.main' : 'divider',
         borderRadius: 2, 
         overflow: 'hidden',
         position: 'relative',
         bgcolor: 'background.paper',
-        transform: isOverlay ? 'scale(1.05)' : 'none', 
-        cursor: isOverlay ? 'grabbing' : 'default',
-        '&:hover': { borderColor: activeTab === 'material' ? 'primary.main' : 'secondary.main' },
+        transform: isOverlay ? 'scale(1.05)' : (isSelected ? 'scale(0.95)' : 'none'),
+        transition: 'all 0.1s',
+        cursor: isOverlay ? 'grabbing' : (selectionMode ? 'pointer' : 'default'),
+        '&:hover': { borderColor: selectionMode ? 'primary.light' : (activeTab === 'material' ? 'primary.main' : 'secondary.main') },
         '&:hover .overlay-actions': { opacity: 1 },
       }}
-      onClick={onOpenSlideshow}
-      {...nativeDragProps} 
+      onClick={handleClick}
+      {...(!selectionMode ? nativeDragProps : {})} 
     >
       <Box
         component="img"
         src={asset.url}
         alt="asset"
         loading="lazy"
-        sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }} 
+        sx={{ 
+          width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none',
+          opacity: (selectionMode && !isSelected) ? 0.6 : 1 
+        }} 
       />
       
       {/* 参照バッジ */}
       {!isOverlay && isReferenced && (
         <Box sx={{ position: 'absolute', top: 4, left: 4, zIndex: 1 }}>
-          <Tooltip title="この画像はプロジェクトで使用されています">
-            <Chip 
-              icon={<LinkIcon style={{ color: 'white', width: 16, height: 16 }} />} 
-              label="Used"
-              size="small"
-              sx={{ 
-                height: 20, fontSize: '0.65rem', fontWeight: 'bold', 
-                bgcolor: 'success.main', color: 'white', 
-                '& .MuiChip-label': { px: 0.5 },
-                boxShadow: 2
-              }} 
-            />
-          </Tooltip>
+          <Chip 
+            icon={<LinkIcon style={{ color: 'white', width: 14, height: 14 }} />} 
+            label="Used" size="small"
+            sx={{ 
+              height: 20, fontSize: '0.65rem', fontWeight: 'bold', 
+              bgcolor: 'success.main', color: 'white', 
+              '& .MuiChip-label': { px: 0.5 },
+              boxShadow: 2
+            }} 
+          />
         </Box>
       )}
 
-      {/* ホバーアクション */}
-      {!isOverlay && (
+      {/* 選択チェックマーク (選択モード時のみ) */}
+      {!isOverlay && selectionMode && (
+        <Box sx={{ position: 'absolute', top: 4, right: 4, zIndex: 2 }}>
+          {isSelected ? (
+            <CheckCircleIcon color="primary" sx={{ bgcolor: 'white', borderRadius: '50%' }} />
+          ) : (
+            <RadioButtonUncheckedIcon sx={{ color: 'rgba(255,255,255,0.7)', filter: 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))' }} />
+          )}
+        </Box>
+      )}
+
+      {/* ホバーアクション (選択モード中は非表示) */}
+      {!isOverlay && !selectionMode && (
         <Box 
           className="overlay-actions"
           sx={{ 
@@ -117,34 +153,36 @@ const AssetCard: React.FC<AssetCardProps> = ({
         </Box>
       )}
 
-      {/* 下部バー */}
-      <Box
-        sx={{ 
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', p: 0.5
-        }}
-      >
-        <IconButton 
-          sx={{ color: 'rgba(255,255,255,0.9)', cursor: isOverlay ? 'grabbing' : 'grab', mr: 'auto' }} 
-          size="small"
-          {...dragHandleProps}
-          onClick={e => e.stopPropagation()}
+      {/* 下部バー (選択モード中は非表示) */}
+      {!selectionMode && (
+        <Box
+          sx={{ 
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', p: 0.5
+          }}
         >
-          <DragHandleIcon fontSize="small" />
-        </IconButton>
-
-        {!isOverlay && onMenuOpen && (
-          <IconButton sx={{ color: 'white' }} onClick={(e) => onMenuOpen(e, asset.id)} size="small">
-            <MoreVertIcon fontSize="small" />
+          <IconButton 
+            sx={{ color: 'rgba(255,255,255,0.9)', cursor: isOverlay ? 'grabbing' : 'grab', mr: 'auto' }} 
+            size="small"
+            {...dragHandleProps}
+            onClick={e => e.stopPropagation()}
+          >
+            <DragHandleIcon fontSize="small" />
           </IconButton>
-        )}
-      </Box>
+
+          {!isOverlay && onMenuOpen && (
+            <IconButton sx={{ color: 'white' }} onClick={(e) => onMenuOpen(e, asset.id)} size="small">
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      )}
     </Paper>
   );
 };
 
-// --- 2. Sortable Item Wrapper ---
+// --- 2. Sortable Wrapper ---
 interface SortableAssetItemProps extends Omit<AssetCardProps, 'dragHandleProps'> {
   id: string;
 }
@@ -184,6 +222,10 @@ const AssetPool: React.FC = () => {
   const [slideshowIndex, setSlideshowIndex] = useState<number | null>(null);
   const [toast, setToast] = useState<{ open: boolean, msg: string, type: 'success' | 'info' | 'warning' }>({ open: false, msg: '', type: 'success' });
 
+  // Selection Mode State
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   // dnd-kit State
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [dragSize, setDragSize] = useState<{ width: number, height: number } | null>(null);
@@ -204,7 +246,6 @@ const AssetPool: React.FC = () => {
     items.filter(a => a.category === activeTab), 
   [items, activeTab]);
 
-  // 参照されているAsset ID
   const usedAssetIds = useMemo(() => {
     const ids = new Set<string>();
     projects.forEach(p => {
@@ -216,24 +257,53 @@ const AssetPool: React.FC = () => {
     return ids;
   }, [projects]);
 
-  // --- Helpers ---
   const showToast = (msg: string, type: 'success' | 'info' | 'warning' = 'success') => {
     setToast({ open: true, msg, type });
   };
   const handleToastClose = () => setToast({ ...toast, open: false });
 
-  const checkAssetUsage = (id: string) => {
-    const usages: string[] = [];
-    projects.forEach(p => {
-      if (p.coverAssetId === id) usages.push(`「${p.title}」の表紙`);
-      p.pages.forEach(page => {
-        if (page.assignedAssetId === id) usages.push(`「${p.title}」のP${page.pageNumber}`);
-      });
-    });
-    return usages;
+  // --- Logic: Selection ---
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedIds(new Set());
   };
 
-  // --- Handlers ---
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredAssets.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredAssets.map(a => a.id)));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    let referencedCount = 0;
+    ids.forEach(id => { if (usedAssetIds.has(id)) referencedCount++; });
+
+    let msg = `${ids.length}枚の画像を削除しますか？`;
+    if (referencedCount > 0) {
+      msg = `【警告】選択した画像のうち ${referencedCount}枚 がプロジェクトで使用されています。\n削除すると表示されなくなりますが、よろしいですか？`;
+    }
+
+    if (window.confirm(msg)) {
+      dispatch(deleteMultipleAssets(ids));
+      setSelectionMode(false);
+      setSelectedIds(new Set());
+      showToast(`${ids.length}枚削除しました`, 'info');
+    }
+  };
+
+  // --- Logic: Handlers ---
   const handleFiles = useCallback((files: FileList) => {
     Array.from(files).forEach(file => {
       if (file.type.startsWith('image/')) {
@@ -360,17 +430,67 @@ const AssetPool: React.FC = () => {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', boxShadow: 1, zIndex: 1 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CollectionsIcon fontSize="small" color="primary" />
-          画像プール
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Drag Handle to Sort / Drag Image to Assign
-        </Typography>
+      
+      {/* Header (Mode Switching) */}
+      <Box sx={{ 
+        p: selectionMode ? 1 : 2, 
+        borderBottom: 1, borderColor: 'divider', bgcolor: selectionMode ? 'primary.dark' : 'background.paper', 
+        boxShadow: 1, zIndex: 1, minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+      }}>
+        {!selectionMode ? (
+          <>
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CollectionsIcon fontSize="small" color="primary" />
+                画像プール
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Drag Handle to Sort
+              </Typography>
+            </Box>
+            <Tooltip title="選択モード（一括削除）">
+              <IconButton onClick={toggleSelectionMode}>
+                <LibraryAddCheckIcon />
+              </IconButton>
+            </Tooltip>
+          </>
+        ) : (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Button onClick={toggleSelectionMode} variant="outlined" color="inherit" size="small" sx={{ borderColor: 'rgba(255,255,255,0.3)', color: 'white' }}>
+                完了
+              </Button>
+              <Typography variant="subtitle1" color="white" fontWeight="bold">
+                {selectedIds.size}枚 選択中
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button onClick={handleSelectAll} sx={{ color: 'white' }}>
+                {selectedIds.size === filteredAssets.length ? '全解除' : '全選択'}
+              </Button>
+              <Button 
+                onClick={handleDeleteSelected} 
+                variant="contained" 
+                color="error" 
+                startIcon={<DeleteIcon />}
+                disabled={selectedIds.size === 0}
+              >
+                削除
+              </Button>
+            </Box>
+          </>
+        )}
       </Box>
 
-      <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} variant="fullWidth" indicatorColor={activeTab === 'material' ? 'primary' : 'secondary'} textColor="inherit" sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 40 }}>
+      {/* Tabs */}
+      <Tabs 
+        value={activeTab} 
+        onChange={(_, v) => { setActiveTab(v); if(selectionMode) setSelectedIds(new Set()); }} 
+        variant="fullWidth" 
+        indicatorColor={activeTab === 'material' ? 'primary' : 'secondary'} 
+        textColor="inherit" 
+        sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 40 }}
+      >
         <Tab label="素材" value="material" sx={{ minHeight: 40, fontSize: '0.75rem', fontWeight: 'bold', color: activeTab==='material' ? 'primary.main' : 'text.disabled' }} onDragOver={e => e.preventDefault()} onDrop={e => handleTabDrop(e, 'material')} />
         <Tab label="生成結果" value="generated" sx={{ minHeight: 40, fontSize: '0.75rem', fontWeight: 'bold', color: activeTab==='generated' ? 'secondary.main' : 'text.disabled' }} onDragOver={e => e.preventDefault()} onDrop={e => handleTabDrop(e, 'generated')} />
       </Tabs>
@@ -384,6 +504,7 @@ const AssetPool: React.FC = () => {
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <SortableContext items={filteredAssets.map(a => a.id)} strategy={rectSortingStrategy}>
+              {/* CSS Grid Layout */}
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 1 }}>
                 {filteredAssets.map((asset, index) => (
                   <SortableAssetItem 
@@ -392,6 +513,11 @@ const AssetPool: React.FC = () => {
                     asset={asset} 
                     activeTab={activeTab}
                     isReferenced={usedAssetIds.has(asset.id)}
+                    
+                    selectionMode={selectionMode}
+                    isSelected={selectedIds.has(asset.id)}
+                    onToggleSelection={toggleSelection}
+
                     onMenuOpen={handleMenuOpen}
                     onDelete={handleDelete}
                     onOpenSlideshow={() => handleOpenSlideshow(index)}
@@ -408,7 +534,7 @@ const AssetPool: React.FC = () => {
                   <AssetCard 
                     asset={filteredAssets.find(i => i.id === activeDragId)!}
                     isOverlay
-                    isReferenced={usedAssetIds.has(activeDragId)} // Overlayにもバッジを反映
+                    isReferenced={usedAssetIds.has(activeDragId)}
                   />
                 </Box>
               ) : null}
@@ -417,7 +543,6 @@ const AssetPool: React.FC = () => {
         )}
       </Box>
 
-      {/* Menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
         <MenuItem onClick={() => selectedAssetId && handleCopyUrl(selectedAssetId)}><ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon><ListItemText>クリップボードにコピー</ListItemText></MenuItem>
         <MenuItem onClick={() => selectedAssetId && handleDuplicate(selectedAssetId)}><ListItemIcon><FileCopyIcon fontSize="small" /></ListItemIcon><ListItemText>複製</ListItemText></MenuItem>
@@ -441,7 +566,6 @@ const AssetPool: React.FC = () => {
         </Dialog>
       )}
 
-      {/* Toast */}
       <Snackbar open={toast.open} autoHideDuration={3000} onClose={handleToastClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={handleToastClose} severity={toast.type} sx={{ width: '100%' }}>{toast.msg}</Alert></Snackbar>
     </Box>
   );

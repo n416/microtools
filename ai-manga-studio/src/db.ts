@@ -45,6 +45,17 @@ export const dbGetAllProjects = async (): Promise<Project[]> => {
   });
 };
 
+// ★追加: プロジェクト削除
+export const dbDeleteProject = async (id: string): Promise<void> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('projects', 'readwrite');
+    tx.objectStore('projects').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+};
+
 // --- Assets Operations ---
 
 export const dbSaveAsset = async (item: AssetDBItem): Promise<void> => {
@@ -90,6 +101,22 @@ export const dbUpdateAssetCategory = async (id: string, newCategory: string): Pr
       }
       tx.oncomplete = () => resolve();
     };
+    tx.onerror = () => reject(tx.error);
+  });
+};
+
+// ★追加: アセット一括削除
+export const dbDeleteAssets = async (ids: string[]): Promise<void> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('assets', 'readwrite');
+    const store = tx.objectStore('assets');
+    
+    ids.forEach(id => {
+      store.delete(id);
+    });
+
+    tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 };
