@@ -4,13 +4,17 @@ export interface GachaResult {
   secretIngredient: string;
 }
 
-export interface Page {
+export interface ImageBlock {
+  id: string;
+  type: 'image';
   pageNumber: number;
   sceneDescription: string;
   dialogue: string;
   imagePrompt: string;
   assignedAssetId: string | null; // 画像ID
 }
+
+export type StoryBlock = ImageBlock;
 
 export interface Project {
   id: string;
@@ -19,7 +23,7 @@ export interface Project {
   coverAssetId: string | null;
   gachaResult: GachaResult;
   synopsis: string;
-  pages: Page[];
+  storyboard: StoryBlock[];
   editorNote: string;
   createdAt: number;
   updatedAt: number;

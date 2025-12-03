@@ -6,7 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import type { Project } from '../types';
+import type { Project, ImageBlock } from '../types';
 
 interface MangaViewerProps {
   open: boolean;
@@ -24,9 +24,12 @@ const MangaViewer: React.FC<MangaViewerProps> = ({ open, onClose, project, getAs
     if (open) setCurrentIndex(-1);
   }, [open]);
 
-  const totalPages = project.pages.length;
+  // 画像ブロックのみ抽出
+  const imageBlocks = project.storyboard.filter(b => b.type === 'image') as ImageBlock[];
+
+  const totalPages = imageBlocks.length;
   const isCover = currentIndex === -1;
-  const currentPage = !isCover ? project.pages[currentIndex] : null;
+  const currentPage = !isCover ? imageBlocks[currentIndex] : null;
 
   // Navigation Logic
   const handleNext = useCallback(() => {
