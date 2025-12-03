@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import html2canvas from 'html2canvas';
-import type { Project, Asset } from '../types';
+import type { Project, Asset, ImageBlock } from '../types';
 
 export type AspectRatio = '9:16' | '16:9' | '4:5' | '5:4';
 
@@ -41,15 +41,15 @@ export const generateImages = async (
   const zip = new JSZip();
   const folder = zip.folder(project.title) || zip;
 
-  // 処理対象のページリスト (Singleモードなら表紙だけ、ZIPなら全部)
-  // ※今回はシンプルに「Single=表紙」「Zip=全ページ」としますが、
-  // エディタで現在表示中のページを判別するのは設計上複雑になるため、
-  // 「Single = 表紙画像」として実装します。
+  // 画像ブロックのみ抽出
+  const imageBlocks = project.storyboard.filter(b => b.type === 'image') as ImageBlock[];
+
+  // 処理対象のページリスト
   const targets = options.mode === 'single' 
     ? [{ type: 'cover', data: project.coverAssetId, text: project.title }] 
     : [
         { type: 'cover', data: project.coverAssetId, text: project.title },
-        ...project.pages.map(p => ({ type: 'page', data: p.assignedAssetId, text: p.dialogue, num: p.pageNumber }))
+        ...imageBlocks.map(p => ({ type: 'page', data: p.assignedAssetId, text: p.dialogue, num: p.pageNumber }))
       ];
 
   try {
