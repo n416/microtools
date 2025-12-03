@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import type { Project, Asset } from '../types';
+import type { Project, Asset, StoryBlock } from '../types';
 import type { AppDispatch } from '../app/store';
 import { addAsset } from '../features/assets/assetSlice';
 import { createOrUpdateProject, setCurrentProject } from '../features/projects/projectSlice';
@@ -18,8 +18,8 @@ export const exportProjectToZip = async (project: Project, assets: Asset[]) => {
   // 2. 使用されているアセットIDを収集
   const usedIds = new Set<string>();
   if (project.coverAssetId) usedIds.add(project.coverAssetId);
-  project.pages.forEach(p => {
-    if (p.assignedAssetId) usedIds.add(p.assignedAssetId);
+  project.storyboard.forEach(b => {
+    if (b.type === 'image' && b.assignedAssetId) usedIds.add(b.assignedAssetId);
   });
 
   // 3. 画像ファイルを追加
@@ -58,7 +58,7 @@ export const importProjectFromZip = async (file: File, dispatch: AppDispatch) =>
   if (!projectFile) throw new Error('project.json が見つかりません (無効なファイルです)');
   
   const projectJson = await projectFile.async('string');
-  const projectData: Project = JSON.parse(projectJson);
+  const rawProject = JSON.parse(projectJson);
   
   // 2. 画像を復元し、IDのマッピングを作成 (旧ID -> 新ID)
   const idMap = new Map<string, string>();
@@ -80,7 +80,6 @@ export const importProjectFromZip = async (file: File, dispatch: AppDispatch) =>
       const imageFile = new File([blob], entry.name, { type: blob.type });
       
       // Reduxアクションでアップロード（新規IDが発行される）
-      // ※インポートした画像はとりあえず 'material' に入れます
       const resultAction = await dispatch(addAsset({ file: imageFile, category: 'material' }));
       
       if (addAsset.fulfilled.match(resultAction)) {
@@ -90,21 +89,43 @@ export const importProjectFromZip = async (file: File, dispatch: AppDispatch) =>
     }
   }
 
-  // 3. プロジェクトデータのIDを新しいものに書き換え
-  const newProject: Project = {
-    ...projectData,
-    id: uuidv4(), // プロジェクトIDも一新して「コピー」として扱う
-    title: projectData.title + " (Imported)",
-    coverAssetId: projectData.coverAssetId ? (idMap.get(projectData.coverAssetId) || null) : null,
-    pages: projectData.pages.map(p => ({
+  // 3. マイグレーション (pages -> storyboard)
+  let storyboard: StoryBlock[] = [];
+  if (rawProject.storyboard) {
+    storyboard = rawProject.storyboard;
+  } else if (rawProject.pages) {
+    storyboard = rawProject.pages.map((p: any) => ({
       ...p,
-      assignedAssetId: p.assignedAssetId ? (idMap.get(p.assignedAssetId) || null) : null
-    })),
+      id: uuidv4(),
+      type: 'image'
+    }));
+  }
+
+  // 4. プロジェクトデータのIDを新しいものに書き換え
+  const newProject: Project = {
+    ...rawProject,
+    id: uuidv4(), // プロジェクトIDも一新して「コピー」として扱う
+    title: rawProject.title + " (Imported)",
+    coverAssetId: rawProject.coverAssetId ? (idMap.get(rawProject.coverAssetId) || null) : null,
+    storyboard: storyboard.map(b => {
+        if (b.type === 'image') {
+            return {
+              ...b,
+              assignedAssetId: b.assignedAssetId ? (idMap.get(b.assignedAssetId) || null) : null
+            };
+        }
+        return b;
+    }),
     createdAt: Date.now(),
     updatedAt: Date.now()
   };
 
-  // 4. 保存して開く
+  // レガシーフィールドの削除
+  if ('pages' in newProject) {
+    delete (newProject as any).pages;
+  }
+
+  // 5. 保存して開く
   await dispatch(createOrUpdateProject(newProject));
   dispatch(setCurrentProject(newProject));
   

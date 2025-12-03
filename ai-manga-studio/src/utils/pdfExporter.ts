@@ -1,12 +1,11 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import type { Project, Asset } from '../types';
+import type { Project, Asset, ImageBlock } from '../types';
 
 // A4サイズ (mm)
 const A4_WIDTH = 210;
 const A4_HEIGHT = 297;
 
-// ★追加: オプションの型定義
 export interface PDFExportOptions {
   scale: number;   // 解像度倍率 (1=普通, 2=高画質)
   quality: number; // JPEG圧縮率 (0.1 ~ 1.0)
@@ -92,9 +91,13 @@ export const generatePDF = async (
     // ==========================================
     // 2. 本編ページ (Story Pages)
     // ==========================================
-    for (let i = 0; i < project.pages.length; i++) {
-      onProgress(`ページ生成中 (${i + 1}/${project.pages.length})...`);
-      const page = project.pages[i];
+    
+    // 画像ブロックのみ抽出
+    const imageBlocks = project.storyboard.filter(b => b.type === 'image') as ImageBlock[];
+
+    for (let i = 0; i < imageBlocks.length; i++) {
+      onProgress(`ページ生成中 (${i + 1}/${imageBlocks.length})...`);
+      const page = imageBlocks[i];
       const pageUrl = getAssetUrl(page.assignedAssetId);
 
       container.innerHTML = `
@@ -120,7 +123,7 @@ export const generatePDF = async (
       await captureAndAddPage(false);
     }
 
-    // 保存 (★ファイル名にサフィックスをつける)
+    // 保存
     onProgress("保存中...");
     const suffix = options.filenameSuffix || '';
     pdf.save(`${project.title}${suffix}.pdf`);

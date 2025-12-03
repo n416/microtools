@@ -1,7 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { Project } from '../../types';
+import type { Project, StoryBlock } from '../../types';
 import { dbGetAllProjects, dbSaveProject, dbDeleteProject } from '../../db';
+import { v4 as uuidv4 } from 'uuid';
 
 // --- State Definition ---
 interface ProjectState {
@@ -18,9 +19,29 @@ const initialState: ProjectState = {
 
 // --- Async Thunks ---
 
-// 1. 全プロジェクト取得
+// 1. 全プロジェクト取得 (マイグレーション機能付き)
 export const fetchProjects = createAsyncThunk('projects/fetchProjects', async () => {
-  return await dbGetAllProjects();
+  const projects = await dbGetAllProjects();
+  
+  // 旧データ (pages) を新データ (storyboard) にマイグレーション
+  return projects.map((p: any) => {
+    if (p.pages && !p.storyboard) {
+      const storyboard: StoryBlock[] = p.pages.map((page: any) => ({
+        ...page,
+        id: uuidv4(),
+        type: 'image',
+        assignedAssetId: page.assignedAssetId
+      }));
+      
+      // 不要になったpagesを削除してProject型にキャスト
+      const { pages, ...rest } = p;
+      return {
+        ...rest,
+        storyboard
+      } as Project;
+    }
+    return p as Project;
+  });
 });
 
 // 2. プロジェクトの新規作成または更新
@@ -36,7 +57,7 @@ export const createOrUpdateProject = createAsyncThunk(
   }
 );
 
-// 3. プロジェクト削除 (★追加)
+// 3. プロジェクト削除
 export const deleteProject = createAsyncThunk(
   'projects/deleteProject',
   async (id: string) => {
@@ -45,11 +66,11 @@ export const deleteProject = createAsyncThunk(
   }
 );
 
-// 4. プロジェクト内の画像割り当て更新
+// 4. プロジェクト内の画像割り当て更新 (Block ID対応)
 export const updateProjectAsset = createAsyncThunk(
   'projects/updateAsset',
   async (
-    { projectId, type, pageIndex, assetId }: { projectId: string, type: 'cover' | 'page', pageIndex?: number, assetId: string }, 
+    { projectId, type, blockId, assetId }: { projectId: string, type: 'cover' | 'block', blockId?: string, assetId: string }, 
     { getState }
   ) => {
     const state = getState() as { projects: { items: Project[] } };
@@ -61,12 +82,13 @@ export const updateProjectAsset = createAsyncThunk(
     
     if (type === 'cover') {
       updatedProject.coverAssetId = assetId;
-    } else if (type === 'page' && typeof pageIndex === 'number') {
-      updatedProject.pages = [...updatedProject.pages];
-      updatedProject.pages[pageIndex] = {
-        ...updatedProject.pages[pageIndex],
-        assignedAssetId: assetId
-      };
+    } else if (type === 'block' && blockId) {
+      updatedProject.storyboard = updatedProject.storyboard.map(b => {
+        if (b.id === blockId) {
+          return { ...b, assignedAssetId: assetId };
+        }
+        return b;
+      });
     }
 
     await dbSaveProject(updatedProject);
@@ -108,7 +130,7 @@ const projectSlice = createSlice({
           state.currentProject = action.payload;
         }
       })
-      // Delete (★追加)
+      // Delete
       .addCase(deleteProject.fulfilled, (state, action) => {
         state.items = state.items.filter(p => p.id !== action.payload);
         if (state.currentProject?.id === action.payload) {

@@ -7,8 +7,7 @@ import AddIcon from '@mui/icons-material/Add';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
-import FileDownloadIcon from '@mui/icons-material/FileDownload'; // JSON Exportで利用中なら維持、不要なら削除
-// FileUploadIcon 削除
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FolderZipIcon from '@mui/icons-material/FolderZip';
 import FolderIcon from '@mui/icons-material/Folder';
 
@@ -19,14 +18,13 @@ import { v4 as uuidv4 } from 'uuid';
 // Redux
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { fetchProjects, createOrUpdateProject, setCurrentProject, deleteProject } from './projectSlice';
-import type { Project } from '../../types';
+import type { Project, StoryBlock } from '../../types';
 
 // Components
 import StoryGenModal from '../../components/StoryGenModal';
 import { exportProjectToZip, importProjectFromZip } from '../../utils/projectIO';
 
 const ProjectList: React.FC = () => {
-  // ... (以下変更なし)
   const dispatch = useAppDispatch();
   const { items, status } = useAppSelector(state => state.projects);
   const assets = useAppSelector(state => state.assets.items);
@@ -96,11 +94,23 @@ const ProjectList: React.FC = () => {
       const data = JSON.parse(clean);
       if (!data.pages) throw new Error("ページデータがありません");
 
+      // pages -> storyboard (ImageBlock) への変換
+      const storyboard: StoryBlock[] = data.pages.map((p: any) => ({
+        ...p,
+        id: uuidv4(),
+        type: 'image',
+        assignedAssetId: null
+      }));
+
       const newProject: Project = {
         id: uuidv4(),
-        ...data,
-        pages: data.pages.map((p: any) => ({ ...p, assignedAssetId: null })),
+        title: data.title,
+        coverImagePrompt: data.coverImagePrompt,
         coverAssetId: null,
+        gachaResult: data.gachaResult,
+        synopsis: data.synopsis,
+        storyboard: storyboard, // 新構造
+        editorNote: data.editorNote,
         createdAt: Date.now(),
         updatedAt: Date.now()
       };
@@ -145,7 +155,6 @@ const ProjectList: React.FC = () => {
     }
   };
 
-  // ※ JSONエクスポートも残したい場合
   const handleExportJSON = () => {
     if (selectedProjectId) {
       const project = items.find(p => p.id === selectedProjectId);
@@ -274,6 +283,8 @@ const ProjectList: React.FC = () => {
                       {p.title}
                     </Typography>
                   }
+                  // ★修正: component='div' を追加してネスト違反を回避
+                  secondaryTypographyProps={{ component: 'div' }}
                   secondary={
                     <Stack spacing={0.5}>
                       <Typography variant="body2" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontSize: '0.85rem' }}>

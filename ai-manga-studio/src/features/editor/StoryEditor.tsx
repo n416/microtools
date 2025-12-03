@@ -30,9 +30,10 @@ import { addAsset } from '../assets/assetSlice';
 import ImageGenModal from '../../components/ImageGenModal';
 import MangaViewer from '../../components/MangaViewer';
 import { generatePDF } from '../../utils/pdfExporter';
-import type { PDFExportOptions } from '../../utils/pdfExporter'; // ★修正: type import
+import type { PDFExportOptions } from '../../utils/pdfExporter';
 import { generateImages } from '../../utils/imageExporter';
-import type { AspectRatio } from '../../utils/imageExporter';   // ★修正: type import
+import type { AspectRatio } from '../../utils/imageExporter';
+import { ImageBlock } from '../../types';
 
 interface StoryEditorProps {
   getAssetUrl: (id: string | null) => string | undefined;
@@ -47,7 +48,8 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState('');
-  const [targetIndex, setTargetIndex] = useState<'cover' | number>('cover');
+  // targetIndexをIDベースに変更 (string = blockId)
+  const [targetId, setTargetId] = useState<'cover' | string>('cover');
 
   // PDF Export State
   const [isExporting, setIsExporting] = useState(false);
@@ -106,10 +108,10 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
   };
 
   // Image Gen Handlers
-  const handleGenStart = (prompt: string, target: 'cover' | number) => {
+  const handleGenStart = (prompt: string, target: 'cover' | string) => {
     const fullPrompt = `(Masterpiece, Best Quality), Manga Style. ${prompt}`;
     setCurrentPrompt(fullPrompt);
-    setTargetIndex(target);
+    setTargetId(target);
     setModalOpen(true);
   };
 
@@ -120,8 +122,8 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
         const newAssetId = action.payload.id;
         dispatch(updateProjectAsset({
           projectId: project.id,
-          type: targetIndex === 'cover' ? 'cover' : 'page',
-          pageIndex: typeof targetIndex === 'number' ? targetIndex : undefined,
+          type: targetId === 'cover' ? 'cover' : 'block',
+          blockId: targetId !== 'cover' ? targetId : undefined,
           assetId: newAssetId
         }));
         setModalOpen(false);
@@ -129,14 +131,14 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
     }
   };
 
-  const handleDropAssign = async (e: React.DragEvent, target: 'cover' | number) => {
+  const handleDropAssign = async (e: React.DragEvent, target: 'cover' | string) => {
     e.preventDefault();
     const assetId = e.dataTransfer.getData('assetId');
     if (assetId) {
       dispatch(updateProjectAsset({
         projectId: project.id,
-        type: target === 'cover' ? 'cover' : 'page',
-        pageIndex: typeof target === 'number' ? target : undefined,
+        type: target === 'cover' ? 'cover' : 'block',
+        blockId: target !== 'cover' ? target : undefined,
         assetId: assetId
       }));
     } else if (e.dataTransfer.files.length > 0) {
@@ -144,8 +146,8 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
       if (addAsset.fulfilled.match(action)) {
         dispatch(updateProjectAsset({
           projectId: project.id,
-          type: target === 'cover' ? 'cover' : 'page',
-          pageIndex: typeof target === 'number' ? target : undefined,
+          type: target === 'cover' ? 'cover' : 'block',
+          blockId: target !== 'cover' ? target : undefined,
           assetId: action.payload.id
         }));
       }
@@ -178,6 +180,9 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
       </Box>
     );
   };
+
+  // storyboardから画像ブロックだけを抽出
+  const imageBlocks = project.storyboard.filter(b => b.type === 'image') as ImageBlock[];
 
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', p: 3, paddingBottom: '8rem' }}>
@@ -251,18 +256,18 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
         </Box>
       </Paper>
 
-      <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2, color: 'text.secondary' }}>ネーム構成 (全{project.pages.length}P)</Typography>
+      <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2, color: 'text.secondary' }}>ネーム構成 (全{imageBlocks.length}P)</Typography>
       <Stack spacing={2}>
-        {project.pages.map((page, idx) => (
-          <Paper key={idx} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, '&:hover': { borderColor: 'text.secondary' } }}>
-            <Typography variant="h5" fontWeight="bold" color="text.disabled" sx={{ width: 40, textAlign: 'center', pt: 1 }}>{page.pageNumber}</Typography>
-            {renderImagePlaceholder(page.assignedAssetId, () => handleGenStart(page.imagePrompt, idx), (e) => handleDropAssign(e, idx), "画像生成")}
+        {imageBlocks.map((block) => (
+          <Paper key={block.id} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, '&:hover': { borderColor: 'text.secondary' } }}>
+            <Typography variant="h5" fontWeight="bold" color="text.disabled" sx={{ width: 40, textAlign: 'center', pt: 1 }}>{block.pageNumber}</Typography>
+            {renderImagePlaceholder(block.assignedAssetId, () => handleGenStart(block.imagePrompt, block.id), (e) => handleDropAssign(e, block.id), "画像生成")}
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" fontWeight="bold" gutterBottom>{page.sceneDescription}</Typography>
-              <Paper variant="outlined" sx={{ p: 1.5, mb: 1, bgcolor: '#020617', borderLeft: 3, borderColor: 'primary.main' }}><Typography variant="body2" color="primary.light">{page.dialogue}</Typography></Paper>
+              <Typography variant="subtitle2" fontWeight="bold" gutterBottom>{block.sceneDescription}</Typography>
+              <Paper variant="outlined" sx={{ p: 1.5, mb: 1, bgcolor: '#020617', borderLeft: 3, borderColor: 'primary.main' }}><Typography variant="body2" color="primary.light">{block.dialogue}</Typography></Paper>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="caption" fontFamily="monospace" color="text.disabled" noWrap sx={{ maxWidth: '80%', bgcolor: 'rgba(255,255,255,0.05)', px: 1, borderRadius: 0.5 }}>{page.imagePrompt}</Typography>
-                <IconButton size="small" onClick={() => copyToClipboard(page.imagePrompt)}><ContentCopyIcon fontSize="small" /></IconButton>
+                <Typography variant="caption" fontFamily="monospace" color="text.disabled" noWrap sx={{ maxWidth: '80%', bgcolor: 'rgba(255,255,255,0.05)', px: 1, borderRadius: 0.5 }}>{block.imagePrompt}</Typography>
+                <IconButton size="small" onClick={() => copyToClipboard(block.imagePrompt)}><ContentCopyIcon fontSize="small" /></IconButton>
               </Box>
             </Box>
           </Paper>
@@ -279,8 +284,6 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
         </DialogTitle>
         <DialogContent dividers>
           <Stack spacing={3} sx={{ mt: 1 }}>
-            
-            {/* 1. アスペクト比 */}
             <Box>
               <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.85rem' }}>アスペクト比 (黒帯がつきます)</FormLabel>
               <ToggleButtonGroup
@@ -310,7 +313,6 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
 
             <Divider />
 
-            {/* 2. テロップ有無 */}
             <FormControl fullWidth>
               <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.85rem' }}>コンテンツ</FormLabel>
               <FormControlLabel
@@ -321,7 +323,6 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
 
             <Divider />
 
-            {/* 3. 出力形式 */}
             <FormControl component="fieldset">
               <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.85rem' }}>出力形式</FormLabel>
               <RadioGroup row value={exportMode} onChange={e => setExportMode(e.target.value as any)}>
