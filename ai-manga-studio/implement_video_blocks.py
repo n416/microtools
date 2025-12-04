@@ -1,0 +1,1311 @@
+import os
+
+files_content = {}
+
+# 1. src/types.ts
+# VideoBlockの定義追加と、Asset型へのmimeType追加
+files_content['src/types.ts'] = """export interface GachaResult {
+  themeA: string;
+  themeB: string;
+  secretIngredient: string;
+}
+
+export interface BaseBlock {
+  id: string;
+  type: 'image' | 'video';
+}
+
+export interface ImageBlock extends BaseBlock {
+  type: 'image';
+  pageNumber: number;
+  sceneDescription: string;
+  dialogue: string;
+  imagePrompt: string;
+  assignedAssetId: string | null;
+}
+
+export interface VideoBlock extends BaseBlock {
+  type: 'video';
+  prompt: string;         // 生成用プロンプト
+  referenceBlockId?: string; // (Optional) 元ネタにする画像のID
+  assignedAssetId: string | null; // 動画ファイルID
+}
+
+export type StoryBlock = ImageBlock | VideoBlock;
+
+export interface Project {
+  id: string;
+  title: string;
+  coverImagePrompt: string;
+  coverAssetId: string | null;
+  gachaResult: GachaResult;
+  synopsis: string;
+  storyboard: StoryBlock[];
+  editorNote: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type AssetCategory = 'material' | 'generated';
+
+export interface Asset {
+  id: string;
+  url: string;
+  category: AssetCategory;
+  mimeType: string; // ★追加: 動画か画像か判別するため
+  createdAt: number;
+}
+
+export interface AssetDBItem {
+  id: string;
+  blob: Blob;
+  category: AssetCategory;
+  created: number;
+}
+"""
+
+# 2. src/features/assets/assetSlice.ts
+# mimeTypeの保存処理を追加
+files_content['src/features/assets/assetSlice.ts'] = """import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
+import { arrayMove } from '@dnd-kit/sortable';
+import type { Asset, AssetCategory, AssetDBItem } from '../../types';
+import { 
+  dbGetAllAssets, dbSaveAsset, dbDeleteAsset, 
+  dbUpdateAssetCategory, dbDeleteAssets 
+} from '../../db';
+import { v4 as uuidv4 } from 'uuid';
+
+interface AssetState {
+  items: Asset[];
+  status: 'idle' | 'loading' | 'succeeded' | 'failed';
+}
+
+const initialState: AssetState = {
+  items: [],
+  status: 'idle',
+};
+
+// --- Async Thunks ---
+
+export const fetchAssets = createAsyncThunk('assets/fetchAssets', async () => {
+  const dbItems = await dbGetAllAssets();
+  return dbItems.map(item => ({
+    id: item.id,
+    url: URL.createObjectURL(item.blob),
+    category: item.category,
+    mimeType: item.blob.type, // ★DBから復元
+    createdAt: item.created,
+  } as Asset));
+});
+
+export const addAsset = createAsyncThunk(
+  'assets/addAsset',
+  async ({ file, category }: { file: File; category: AssetCategory }) => {
+    const id = uuidv4();
+    const dbItem: AssetDBItem = {
+      id,
+      blob: file,
+      category,
+      created: Date.now(),
+    };
+    await dbSaveAsset(dbItem);
+    
+    return {
+      id,
+      url: URL.createObjectURL(file),
+      category,
+      mimeType: file.type, // ★新規追加時
+      createdAt: dbItem.created,
+    } as Asset;
+  }
+);
+
+export const deleteAsset = createAsyncThunk('assets/deleteAsset', async (id: string) => {
+  await dbDeleteAsset(id);
+  return id;
+});
+
+export const deleteMultipleAssets = createAsyncThunk(
+  'assets/deleteMultiple',
+  async (ids: string[]) => {
+    await dbDeleteAssets(ids);
+    return ids;
+  }
+);
+
+export const moveAssetCategory = createAsyncThunk(
+  'assets/moveCategory',
+  async ({ id, newCategory }: { id: string; newCategory: AssetCategory }) => {
+    await dbUpdateAssetCategory(id, newCategory);
+    return { id, newCategory };
+  }
+);
+
+// --- Slice ---
+const assetSlice = createSlice({
+  name: 'assets',
+  initialState,
+  reducers: {
+    reorderAssets: (state, action: PayloadAction<{ fromIndex: number; toIndex: number; category: AssetCategory }>) => {
+      const { fromIndex, toIndex, category } = action.payload;
+      const categoryItems = state.items.filter(i => i.category === category);
+      const otherItems = state.items.filter(i => i.category !== category);
+      
+      if (categoryItems[fromIndex] && categoryItems[toIndex]) {
+        const reordered = arrayMove(categoryItems, fromIndex, toIndex);
+        state.items = [...reordered, ...otherItems]; 
+      }
+    }
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchAssets.pending, (state) => { state.status = 'loading'; })
+      .addCase(fetchAssets.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.items = action.payload.sort((a, b) => b.createdAt - a.createdAt);
+      })
+      .addCase(addAsset.fulfilled, (state, action) => {
+        state.items.unshift(action.payload);
+      })
+      .addCase(deleteAsset.fulfilled, (state, action) => {
+        state.items = state.items.filter(a => a.id !== action.payload);
+      })
+      .addCase(deleteMultipleAssets.fulfilled, (state, action) => {
+        const idsToRemove = new Set(action.payload);
+        state.items = state.items.filter(a => !idsToRemove.has(a.id));
+      })
+      .addCase(moveAssetCategory.fulfilled, (state, action) => {
+        const item = state.items.find(i => i.id === action.payload.id);
+        if (item) item.category = action.payload.newCategory;
+      });
+  },
+});
+
+export const { reorderAssets } = assetSlice.actions;
+export default assetSlice.reducer;
+"""
+
+# 3. src/features/projects/projectSlice.ts
+# ブロックの追加・削除・更新アクションを追加
+files_content['src/features/projects/projectSlice.ts'] = """import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
+import type { Project, StoryBlock, VideoBlock } from '../../types';
+import { dbGetAllProjects, dbSaveProject, dbDeleteProject } from '../../db';
+import { v4 as uuidv4 } from 'uuid';
+
+interface ProjectState {
+  items: Project[];
+  currentProject: Project | null;
+  status: 'idle' | 'loading' | 'succeeded';
+}
+
+const initialState: ProjectState = {
+  items: [],
+  currentProject: null,
+  status: 'idle',
+};
+
+// --- Async Thunks ---
+
+export const fetchProjects = createAsyncThunk('projects/fetchProjects', async () => {
+  const projects = await dbGetAllProjects();
+  // マイグレーション
+  return projects.map((p: any) => {
+    if (p.pages && !p.storyboard) {
+      const storyboard: StoryBlock[] = p.pages.map((page: any) => ({
+        ...page,
+        id: uuidv4(),
+        type: 'image',
+        assignedAssetId: page.assignedAssetId
+      }));
+      const { pages, ...rest } = p;
+      return { ...rest, storyboard } as Project;
+    }
+    return p as Project;
+  });
+});
+
+export const createOrUpdateProject = createAsyncThunk(
+  'projects/saveProject',
+  async (project: Project) => {
+    const now = Date.now();
+    const toSave = { ...project, updatedAt: now };
+    if (!toSave.createdAt) toSave.createdAt = now;
+    await dbSaveProject(toSave);
+    return toSave;
+  }
+);
+
+export const deleteProject = createAsyncThunk(
+  'projects/deleteProject',
+  async (id: string) => {
+    await dbDeleteProject(id);
+    return id;
+  }
+);
+
+// --- Storyboard Manipulation Thunks ---
+
+// ブロックの追加 (動画ブロックなど)
+export const addStoryBlock = createAsyncThunk(
+  'projects/addStoryBlock',
+  async ({ projectId, index, block }: { projectId: string, index: number, block: StoryBlock }, { getState }) => {
+    const state = getState() as { projects: { items: Project[] } };
+    const project = state.projects.items.find(p => p.id === projectId);
+    if (!project) throw new Error("Project not found");
+
+    const newStoryboard = [...project.storyboard];
+    newStoryboard.splice(index, 0, block);
+
+    const updatedProject = { ...project, storyboard: newStoryboard, updatedAt: Date.now() };
+    await dbSaveProject(updatedProject);
+    return updatedProject;
+  }
+);
+
+// ブロックの削除
+export const removeStoryBlock = createAsyncThunk(
+  'projects/removeStoryBlock',
+  async ({ projectId, blockId }: { projectId: string, blockId: string }, { getState }) => {
+    const state = getState() as { projects: { items: Project[] } };
+    const project = state.projects.items.find(p => p.id === projectId);
+    if (!project) throw new Error("Project not found");
+
+    const updatedProject = { 
+      ...project, 
+      storyboard: project.storyboard.filter(b => b.id !== blockId),
+      updatedAt: Date.now() 
+    };
+    await dbSaveProject(updatedProject);
+    return updatedProject;
+  }
+);
+
+// プロンプト等の更新
+export const updateBlockPrompt = createAsyncThunk(
+  'projects/updateBlockPrompt',
+  async ({ projectId, blockId, prompt }: { projectId: string, blockId: string, prompt: string }, { getState }) => {
+    const state = getState() as { projects: { items: Project[] } };
+    const project = state.projects.items.find(p => p.id === projectId);
+    if (!project) throw new Error("Project not found");
+
+    const updatedProject = {
+      ...project,
+      storyboard: project.storyboard.map(b => b.id === blockId && b.type === 'video' ? { ...b, prompt } : b),
+      updatedAt: Date.now()
+    };
+    await dbSaveProject(updatedProject);
+    return updatedProject;
+  }
+);
+
+// アセット割り当て
+export const updateProjectAsset = createAsyncThunk(
+  'projects/updateAsset',
+  async (
+    { projectId, type, blockId, assetId }: { projectId: string, type: 'cover' | 'block', blockId?: string, assetId: string }, 
+    { getState }
+  ) => {
+    const state = getState() as { projects: { items: Project[] } };
+    const project = state.projects.items.find(p => p.id === projectId);
+    if (!project) throw new Error("Project not found");
+
+    const updatedProject = { ...project, updatedAt: Date.now() };
+    
+    if (type === 'cover') {
+      updatedProject.coverAssetId = assetId;
+    } else if (type === 'block' && blockId) {
+      updatedProject.storyboard = updatedProject.storyboard.map(b => {
+        if (b.id === blockId) {
+          return { ...b, assignedAssetId: assetId };
+        }
+        return b;
+      });
+    }
+
+    await dbSaveProject(updatedProject);
+    return updatedProject;
+  }
+);
+
+// --- Slice ---
+const projectSlice = createSlice({
+  name: 'projects',
+  initialState,
+  reducers: {
+    setCurrentProject: (state, action: PayloadAction<Project | null>) => {
+      state.currentProject = action.payload;
+    },
+    addProjectTemporary: (state, action: PayloadAction<Project>) => {
+      state.items.unshift(action.payload);
+      state.currentProject = action.payload;
+    }
+  },
+  extraReducers: (builder) => {
+    const updateProjectInState = (state: ProjectState, project: Project) => {
+      const index = state.items.findIndex(p => p.id === project.id);
+      if (index >= 0) {
+        state.items[index] = project;
+      }
+      if (state.currentProject?.id === project.id) {
+        state.currentProject = project;
+      }
+    };
+
+    builder
+      .addCase(fetchProjects.fulfilled, (state, action) => {
+        state.items = action.payload.sort((a, b) => b.updatedAt - a.updatedAt);
+        state.status = 'succeeded';
+      })
+      .addCase(createOrUpdateProject.fulfilled, (state, action) => {
+        const index = state.items.findIndex(p => p.id === action.payload.id);
+        if (index >= 0) {
+          state.items[index] = action.payload;
+        } else {
+          state.items.unshift(action.payload);
+        }
+        state.items.sort((a, b) => b.updatedAt - a.updatedAt);
+        if (state.currentProject?.id === action.payload.id) {
+          state.currentProject = action.payload;
+        }
+      })
+      .addCase(deleteProject.fulfilled, (state, action) => {
+        state.items = state.items.filter(p => p.id !== action.payload);
+        if (state.currentProject?.id === action.payload) {
+          state.currentProject = null;
+        }
+      })
+      .addCase(addStoryBlock.fulfilled, (state, action) => updateProjectInState(state, action.payload))
+      .addCase(removeStoryBlock.fulfilled, (state, action) => updateProjectInState(state, action.payload))
+      .addCase(updateBlockPrompt.fulfilled, (state, action) => updateProjectInState(state, action.payload))
+      .addCase(updateProjectAsset.fulfilled, (state, action) => updateProjectInState(state, action.payload));
+  },
+});
+
+export const { setCurrentProject, addProjectTemporary } = projectSlice.actions;
+export default projectSlice.reducer;
+"""
+
+# 4. src/features/assets/AssetPool.tsx
+# mimeTypeに応じた表示切り替え
+files_content['src/features/assets/AssetPool.tsx'] = """import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { 
+  Box, Typography, Tabs, Tab, IconButton, Menu, MenuItem, 
+  ListItemIcon, ListItemText, Dialog, Button, Tooltip, Snackbar, Alert, Paper, Chip
+} from '@mui/material';
+
+// Icons
+import CollectionsIcon from '@mui/icons-material/Collections';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import DeleteIcon from '@mui/icons-material/Delete'; 
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import FileCopyIcon from '@mui/icons-material/FileCopy';
+import CloseIcon from '@mui/icons-material/Close';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import DragHandleIcon from '@mui/icons-material/DragHandle';
+import LinkIcon from '@mui/icons-material/Link';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import LibraryAddCheckIcon from '@mui/icons-material/LibraryAddCheck';
+import MovieIcon from '@mui/icons-material/Movie';
+
+// dnd-kit
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, 
+  DragOverlay, TouchSensor
+} from '@dnd-kit/core';
+import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+
+import {
+  SortableContext, sortableKeyboardCoordinates, useSortable, rectSortingStrategy
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Redux & Types
+import { useAppSelector, useAppDispatch } from '../../app/hooks';
+import { fetchAssets, addAsset, deleteAsset, moveAssetCategory, reorderAssets, deleteMultipleAssets } from './assetSlice';
+import type { AssetCategory, Asset } from '../../types';
+
+// --- 1. AssetCard Component ---
+interface AssetCardProps {
+  asset: Asset;
+  activeTab?: AssetCategory;
+  isOverlay?: boolean;
+  isReferenced?: boolean;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (id: string) => void;
+  onMenuOpen?: (e: React.MouseEvent<HTMLElement>, id: string) => void;
+  onDelete?: (id: string) => void;
+  onOpenSlideshow?: () => void;
+  dragHandleProps?: any;
+  nativeDragProps?: any;
+}
+
+const AssetCard: React.FC<AssetCardProps> = ({ 
+  asset, activeTab, isOverlay, isReferenced, 
+  selectionMode, isSelected, onToggleSelection,
+  onMenuOpen, onDelete, onOpenSlideshow, dragHandleProps, nativeDragProps 
+}) => {
+  const handleClick = (e: React.MouseEvent) => {
+    if (selectionMode && onToggleSelection) {
+      e.stopPropagation();
+      onToggleSelection(asset.id);
+    } else if (onOpenSlideshow) {
+      onOpenSlideshow();
+    }
+  };
+
+  const isVideo = asset.mimeType?.startsWith('video/');
+
+  return (
+    <Paper 
+      elevation={isOverlay ? 8 : 1}
+      sx={{ 
+        width: '100%', height: '100%',
+        border: '2px solid', 
+        borderColor: isOverlay 
+          ? 'primary.main' 
+          : (selectionMode && isSelected) ? 'primary.main'
+          : isReferenced ? 'success.main' : 'divider',
+        borderRadius: 2, 
+        overflow: 'hidden',
+        position: 'relative',
+        bgcolor: 'background.paper',
+        transform: isOverlay ? 'scale(1.05)' : (isSelected ? 'scale(0.95)' : 'none'),
+        transition: 'all 0.1s',
+        cursor: isOverlay ? 'grabbing' : (selectionMode ? 'pointer' : 'default'),
+        '&:hover': { borderColor: selectionMode ? 'primary.light' : (activeTab === 'material' ? 'primary.main' : 'secondary.main') },
+        '&:hover .overlay-actions': { opacity: 1 },
+      }}
+      onClick={handleClick}
+      {...(!selectionMode ? nativeDragProps : {})} 
+    >
+      {isVideo ? (
+         <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'black' }}>
+           <video src={asset.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+           <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.3)' }}>
+              <MovieIcon sx={{ color: 'white', opacity: 0.8 }} />
+           </Box>
+         </Box>
+      ) : (
+        <Box
+          component="img"
+          src={asset.url}
+          alt="asset"
+          loading="lazy"
+          sx={{ 
+            width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none',
+            opacity: (selectionMode && !isSelected) ? 0.6 : 1 
+          }} 
+        />
+      )}
+      
+      {!isOverlay && isReferenced && (
+        <Box sx={{ position: 'absolute', top: 4, left: 4, zIndex: 1 }}>
+          <Chip icon={<LinkIcon style={{ color: 'white', width: 14, height: 14 }} />} label="Used" size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 'bold', bgcolor: 'success.main', color: 'white', boxShadow: 2, '& .MuiChip-label': { px: 0.5 } }} />
+        </Box>
+      )}
+      {!isOverlay && selectionMode && (
+        <Box sx={{ position: 'absolute', top: 4, right: 4, zIndex: 2 }}>
+          {isSelected ? <CheckCircleIcon color="primary" sx={{ bgcolor: 'white', borderRadius: '50%' }} /> : <RadioButtonUncheckedIcon sx={{ color: 'rgba(255,255,255,0.7)', filter: 'drop-shadow(0px 0px 2px rgba(0,0,0,0.5))' }} />}
+        </Box>
+      )}
+      {!isOverlay && !selectionMode && (
+        <Box className="overlay-actions" sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.3)', opacity: 0, transition: '0.2s', display: 'flex', alignItems: 'start', justifyContent: 'flex-end', p: 0.5, gap: 0.5 }}>
+          <Tooltip title="削除">
+            <IconButton size="small" sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#ff4444', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.9)' } }} onClick={(e) => { e.stopPropagation(); onDelete && onDelete(asset.id); }} onMouseDown={e => e.stopPropagation()}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      )}
+      {!selectionMode && (
+        <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', p: 0.5 }}>
+          <IconButton sx={{ color: 'rgba(255,255,255,0.9)', cursor: isOverlay ? 'grabbing' : 'grab', mr: 'auto' }} size="small" {...dragHandleProps} onClick={e => e.stopPropagation()}>
+            <DragHandleIcon fontSize="small" />
+          </IconButton>
+          {!isOverlay && onMenuOpen && (
+            <IconButton sx={{ color: 'white' }} onClick={(e) => onMenuOpen(e, asset.id)} size="small">
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      )}
+    </Paper>
+  );
+};
+
+// --- 2. Sortable Wrapper ---
+interface SortableAssetItemProps extends Omit<AssetCardProps, 'dragHandleProps'> {
+  id: string;
+}
+
+const SortableAssetItem: React.FC<SortableAssetItemProps> = (props) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1, zIndex: isDragging ? 0 : 'auto' };
+  return (
+    <Box ref={setNodeRef} style={style} id={props.id} sx={{ position: 'relative', aspectRatio: '1/1' }}>
+      <AssetCard {...props} dragHandleProps={{ ...attributes, ...listeners }} />
+    </Box>
+  );
+};
+
+// --- 3. Main Component ---
+const AssetPool: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const { items, status } = useAppSelector((state) => state.assets);
+  const projects = useAppSelector((state) => state.projects.items);
+  
+  const [activeTab, setActiveTab] = useState<AssetCategory>('material');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [slideshowIndex, setSlideshowIndex] = useState<number | null>(null);
+  const [toast, setToast] = useState<{ open: boolean, msg: string, type: 'success' | 'info' | 'warning' }>({ open: false, msg: '', type: 'success' });
+  
+  // Selection
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // DnD
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [dragSize, setDragSize] = useState<{ width: number, height: number } | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  useEffect(() => {
+    if (status === 'idle') dispatch(fetchAssets());
+  }, [status, dispatch]);
+
+  const filteredAssets = useMemo(() => items.filter(a => a.category === activeTab), [items, activeTab]);
+
+  const usedAssetIds = useMemo(() => {
+    const ids = new Set<string>();
+    projects.forEach(p => {
+      if (p.coverAssetId) ids.add(p.coverAssetId);
+      p.storyboard?.forEach(block => { 
+        if (block.assignedAssetId) ids.add(block.assignedAssetId); 
+      });
+    });
+    return ids;
+  }, [projects]);
+
+  const showToast = (msg: string, type: 'success' | 'info' | 'warning' = 'success') => {
+    setToast({ open: true, msg, type });
+  };
+  const handleToastClose = () => setToast({ ...toast, open: false });
+
+  const checkAssetUsage = (id: string) => {
+    const usages: string[] = [];
+    projects.forEach(p => {
+      if (p.coverAssetId === id) usages.push(`「${p.title}」の表紙`);
+      p.storyboard?.forEach(block => {
+        if (block.assignedAssetId === id) {
+          if (block.type === 'image') {
+             usages.push(`「${p.title}」のP${block.pageNumber}`);
+          } else {
+             usages.push(`「${p.title}」の動画ブロック`);
+          }
+        }
+      });
+    });
+    return usages;
+  };
+
+  // --- Handlers ---
+  const toggleSelectionMode = () => { setSelectionMode(!selectionMode); setSelectedIds(new Set()); };
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredAssets.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredAssets.map(a => a.id)));
+  };
+  const handleDeleteSelected = () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    let referencedCount = 0;
+    ids.forEach(id => { if (usedAssetIds.has(id)) referencedCount++; });
+    let msg = `${ids.length}枚のファイルを削除しますか？`;
+    if (referencedCount > 0) msg = `【警告】選択したファイルのうち ${referencedCount}つ がプロジェクトで使用されています。\\n削除すると表示されなくなりますが、よろしいですか？`;
+    if (window.confirm(msg)) {
+      dispatch(deleteMultipleAssets(ids));
+      setSelectionMode(false); setSelectedIds(new Set());
+      showToast(`${ids.length}件削除しました`, 'info');
+    }
+  };
+
+  const handleFiles = useCallback((files: FileList) => {
+    // 動画も許可
+    Array.from(files).forEach(file => { 
+        if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+            dispatch(addAsset({ file, category: activeTab })); 
+        }
+    });
+    if(files.length > 0) showToast(`${files.length}件追加しました`);
+  }, [dispatch, activeTab]);
+
+  const handleDropZone = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
+  };
+
+  const handleDragStartNative = (e: React.DragEvent, assetId: string) => {
+    e.dataTransfer.setData('assetId', assetId); e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+    const node = document.getElementById(event.active.id as string);
+    if (node) { const rect = node.getBoundingClientRect(); setDragSize({ width: rect.width, height: rect.height }); }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = filteredAssets.findIndex((item) => item.id === active.id);
+      const newIndex = filteredAssets.findIndex((item) => item.id === over.id);
+      if (oldIndex !== -1 && newIndex !== -1) dispatch(reorderAssets({ fromIndex: oldIndex, toIndex: newIndex, category: activeTab }));
+    }
+    setActiveDragId(null); setDragSize(null);
+  };
+
+  const handleTabDrop = (e: React.DragEvent, targetCategory: AssetCategory) => {
+    e.preventDefault();
+    const assetId = e.dataTransfer.getData('assetId');
+    if (assetId) {
+      dispatch(moveAssetCategory({ id: assetId, newCategory: targetCategory }));
+      setActiveTab(targetCategory); showToast('カテゴリーを移動しました', 'info');
+    } else if (e.dataTransfer.files.length > 0) {
+       Array.from(e.dataTransfer.files).forEach(file => { 
+        if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+            dispatch(addAsset({ file, category: targetCategory })); 
+        }
+    });
+      setActiveTab(targetCategory); showToast('ファイルをアップロードしました');
+    }
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, id: string) => {
+    event.stopPropagation(); setAnchorEl(event.currentTarget); setSelectedAssetId(id);
+  };
+  const handleMenuClose = () => { setAnchorEl(null); setSelectedAssetId(null); };
+
+  const handleDelete = (id: string) => {
+    const usages = checkAssetUsage(id);
+    let msg = 'このファイルを削除しますか？';
+    if (usages.length > 0) msg = `【警告】このファイルは以下の場所で使用されています：\\n\\n・${usages.join('\\n・')}\\n\\n削除すると表示されなくなりますが、本当によろしいですか？`;
+    if (window.confirm(msg)) {
+      dispatch(deleteAsset(id));
+      if (slideshowIndex !== null) setSlideshowIndex(null);
+      showToast('削除しました', 'info');
+    }
+    handleMenuClose();
+  };
+
+  const handleCopyUrl = async (id: string) => {
+    // 省略: Blobコピーは画像のみ対応のブラウザが多いので一旦try-catch
+    handleMenuClose();
+  };
+
+  const handleDuplicate = async (id: string) => {
+    const asset = items.find(a => a.id === id);
+    if(asset) {
+      try {
+        const res = await fetch(asset.url); const blob = await res.blob();
+        const file = new File([blob], `copy_${Date.now()}.${blob.type.split('/')[1]}`, { type: blob.type });
+        dispatch(addAsset({ file, category: activeTab })); showToast('複製しました');
+      } catch(e) { console.error(e); }
+    }
+    handleMenuClose();
+  };
+
+  const handleOpenSlideshow = (index: number) => setSlideshowIndex(index);
+  const handleCloseSlideshow = () => setSlideshowIndex(null);
+  const handleNext = () => { if (slideshowIndex !== null && slideshowIndex < filteredAssets.length - 1) setSlideshowIndex(slideshowIndex + 1); };
+  const handlePrev = () => { if (slideshowIndex !== null && slideshowIndex > 0) setSlideshowIndex(slideshowIndex - 1); };
+
+  return (
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: selectionMode ? 'primary.dark' : 'background.paper', boxShadow: 1, zIndex: 1, minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {!selectionMode ? (
+          <>
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CollectionsIcon fontSize="small" color="primary" /> アセットプール
+              </Typography>
+              <Typography variant="caption" color="text.secondary">Drag Handle to Sort</Typography>
+            </Box>
+            <Tooltip title="選択モード（一括削除）"><IconButton onClick={toggleSelectionMode}><LibraryAddCheckIcon /></IconButton></Tooltip>
+          </>
+        ) : (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Button onClick={toggleSelectionMode} variant="outlined" color="inherit" size="small" sx={{ borderColor: 'rgba(255,255,255,0.3)', color: 'white' }}>完了</Button>
+              <Typography variant="subtitle1" color="white" fontWeight="bold">{selectedIds.size}件 選択中</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button onClick={handleSelectAll} sx={{ color: 'white' }}>{selectedIds.size === filteredAssets.length ? '全解除' : '全選択'}</Button>
+              <Button onClick={handleDeleteSelected} variant="contained" color="error" startIcon={<DeleteIcon />} disabled={selectedIds.size === 0}>削除</Button>
+            </Box>
+          </>
+        )}
+      </Box>
+
+      <Tabs value={activeTab} onChange={(_, v) => { setActiveTab(v); if(selectionMode) setSelectedIds(new Set()); }} variant="fullWidth" indicatorColor={activeTab === 'material' ? 'primary' : 'secondary'} textColor="inherit" sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 40 }}>
+        <Tab label="素材" value="material" sx={{ minHeight: 40, fontSize: '0.75rem', fontWeight: 'bold', color: activeTab==='material' ? 'primary.main' : 'text.disabled' }} onDragOver={e => e.preventDefault()} onDrop={e => handleTabDrop(e, 'material')} />
+        <Tab label="生成結果" value="generated" sx={{ minHeight: 40, fontSize: '0.75rem', fontWeight: 'bold', color: activeTab==='generated' ? 'secondary.main' : 'text.disabled' }} onDragOver={e => e.preventDefault()} onDrop={e => handleTabDrop(e, 'generated')} />
+      </Tabs>
+
+      <Box sx={{ flex: 1, overflowY: 'auto', p: 1, position: 'relative' }} onDragOver={e => e.preventDefault()} onDrop={handleDropZone}>
+        {filteredAssets.length === 0 ? (
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed', borderColor: 'divider', borderRadius: 2, m: 1, color: 'text.disabled' }}>
+            <Typography variant="body2">No Assets</Typography><Typography variant="caption">Drag & Drop files here</Typography>
+          </Box>
+        ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <SortableContext items={filteredAssets.map(a => a.id)} strategy={rectSortingStrategy}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 1 }}>
+                {filteredAssets.map((asset, index) => (
+                  <SortableAssetItem 
+                    key={asset.id} id={asset.id} asset={asset} activeTab={activeTab}
+                    isReferenced={usedAssetIds.has(asset.id)}
+                    selectionMode={selectionMode} isSelected={selectedIds.has(asset.id)} onToggleSelection={toggleSelection}
+                    onMenuOpen={handleMenuOpen} onDelete={handleDelete} onOpenSlideshow={() => handleOpenSlideshow(index)}
+                    nativeDragProps={{ draggable: true, onDragStart: (e: React.DragEvent) => handleDragStartNative(e, asset.id) }}
+                  />
+                ))}
+              </Box>
+            </SortableContext>
+            <DragOverlay>
+              {activeDragId && dragSize ? (
+                <Box sx={{ width: dragSize.width, height: dragSize.height }}>
+                  <AssetCard asset={filteredAssets.find(i => i.id === activeDragId)!} isOverlay isReferenced={usedAssetIds.has(activeDragId)} />
+                </Box>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
+      </Box>
+
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        <MenuItem onClick={() => selectedAssetId && handleCopyUrl(selectedAssetId)}><ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon><ListItemText>クリップボードにコピー</ListItemText></MenuItem>
+        <MenuItem onClick={() => selectedAssetId && handleDuplicate(selectedAssetId)}><ListItemIcon><FileCopyIcon fontSize="small" /></ListItemIcon><ListItemText>複製</ListItemText></MenuItem>
+        <MenuItem onClick={() => selectedAssetId && handleDelete(selectedAssetId)} sx={{ color: 'error.main' }}><ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon><ListItemText>削除</ListItemText></MenuItem>
+      </Menu>
+
+      {/* スライドショー (動画対応) */}
+      {slideshowIndex !== null && filteredAssets[slideshowIndex] && (
+        <Dialog open={true} onClose={handleCloseSlideshow} maxWidth={false} PaperProps={{ sx: { bgcolor: 'rgba(0,0,0,0.9)', color: 'white', maxWidth: '90vw', maxHeight: '90vh', boxShadow: 'none', backgroundImage: 'none' } }}>
+          <Box sx={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 600, minHeight: 400 }}>
+            <IconButton onClick={handleCloseSlideshow} sx={{ position: 'absolute', top: 10, right: 10, color: 'white', zIndex: 10 }}><CloseIcon /></IconButton>
+            
+            {filteredAssets[slideshowIndex].mimeType?.startsWith('video/') ? (
+               <video src={filteredAssets[slideshowIndex].url} controls autoPlay style={{ maxWidth: '100%', maxHeight: '80vh' }} />
+            ) : (
+               <Box component="img" src={filteredAssets[slideshowIndex].url} sx={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
+            )}
+            
+            {slideshowIndex > 0 && <IconButton onClick={handlePrev} sx={{ position: 'absolute', left: 10, color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}><ArrowBackIosNewIcon /></IconButton>}
+            {slideshowIndex < filteredAssets.length - 1 && <IconButton onClick={handleNext} sx={{ position: 'absolute', right: 10, color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}><ArrowForwardIosIcon /></IconButton>}
+            <Box sx={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 2 }}>
+              <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={() => handleDelete(filteredAssets[slideshowIndex].id)}>削除</Button>
+              <Button variant="outlined" color="inherit" startIcon={<ContentCopyIcon />} onClick={() => handleCopyUrl(filteredAssets[slideshowIndex].id)}>コピー</Button>
+              <Button variant="outlined" color="inherit" startIcon={<FileCopyIcon />} onClick={() => handleDuplicate(filteredAssets[slideshowIndex].id)}>複製</Button>
+            </Box>
+          </Box>
+        </Dialog>
+      )}
+
+      <Snackbar open={toast.open} autoHideDuration={3000} onClose={handleToastClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={handleToastClose} severity={toast.type} sx={{ width: '100%' }}>{toast.msg}</Alert></Snackbar>
+    </Box>
+  );
+};
+
+export default AssetPool;
+"""
+
+# 5. src/features/editor/StoryEditor.tsx
+# 動画ブロックのUI実装、ブリッジ追加ボタン、プロンプト生成
+files_content['src/features/editor/StoryEditor.tsx'] = """import React, { useState } from 'react';
+import { 
+  Box, Typography, Button, Paper, Chip, IconButton, Stack, CircularProgress, 
+  Menu, MenuItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, 
+  DialogActions, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, 
+  Switch, ToggleButtonGroup, ToggleButton, Divider, TextField, Tooltip
+} from '@mui/material';
+import { v4 as uuidv4 } from 'uuid';
+
+// Icons
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ImageIcon from '@mui/icons-material/Image';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import CompressIcon from '@mui/icons-material/Compress';
+import HighQualityIcon from '@mui/icons-material/HighQuality';
+import DownloadIcon from '@mui/icons-material/Download';
+import CropPortraitIcon from '@mui/icons-material/CropPortrait';
+import CropLandscapeIcon from '@mui/icons-material/CropLandscape';
+import FolderZipIcon from '@mui/icons-material/FolderZip';
+import InsertPhotoIcon from '@mui/icons-material/InsertPhoto';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import MovieIcon from '@mui/icons-material/Movie';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import DeleteIcon from '@mui/icons-material/Delete';
+
+// Redux
+import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { setCurrentProject, updateProjectAsset, addStoryBlock, removeStoryBlock, updateBlockPrompt } from '../projects/projectSlice';
+import { addAsset } from '../assets/assetSlice';
+
+// Components & Utils
+import ImageGenModal from '../../components/ImageGenModal';
+import MangaViewer from '../../components/MangaViewer';
+import { generatePDF } from '../../utils/pdfExporter';
+import type { PDFExportOptions } from '../../utils/pdfExporter';
+import { generateImages } from '../../utils/imageExporter';
+import type { AspectRatio } from '../../utils/imageExporter';
+import { ImageBlock, VideoBlock } from '../../types';
+
+interface StoryEditorProps {
+  getAssetUrl: (id: string | null) => string | undefined;
+}
+
+const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
+  const dispatch = useAppDispatch();
+  const project = useAppSelector(state => state.projects.currentProject);
+  const allAssets = useAppSelector(state => state.assets.items);
+
+  // Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [currentPrompt, setCurrentPrompt] = useState('');
+  const [targetId, setTargetId] = useState<'cover' | string>('cover');
+
+  // PDF Export State
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState('');
+  const [pdfMenuAnchor, setPdfMenuAnchor] = useState<null | HTMLElement>(null);
+
+  // Image Export Modal State
+  const [imgExportOpen, setImgExportOpen] = useState(false);
+  const [exportRatio, setExportRatio] = useState<AspectRatio>('9:16');
+  const [exportWithText, setExportWithText] = useState(true);
+  const [exportMode, setExportMode] = useState<'zip' | 'single'>('zip');
+
+  if (!project) return null;
+
+  // --- Handlers ---
+
+  const handleBack = () => {
+    dispatch(setCurrentProject(null));
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  // PDF Export
+  const handlePdfMenuOpen = (e: React.MouseEvent<HTMLElement>) => setPdfMenuAnchor(e.currentTarget);
+  const handlePdfMenuClose = () => setPdfMenuAnchor(null);
+  
+  const handleExportPDF = async (options: PDFExportOptions) => {
+    handlePdfMenuClose();
+    setIsExporting(true);
+    setExportMessage("PDF準備中...");
+    setTimeout(async () => {
+      await generatePDF(project, allAssets, (msg) => setExportMessage(msg), options);
+      setIsExporting(false);
+      setExportMessage('');
+    }, 100);
+  };
+
+  // Image Export
+  const handleImageExport = async () => {
+    setImgExportOpen(false);
+    setIsExporting(true);
+    setExportMessage("画像生成中...");
+    
+    setTimeout(async () => {
+      await generateImages(
+        project, 
+        allAssets, 
+        { ratio: exportRatio, withText: exportWithText, mode: exportMode }, 
+        (msg) => setExportMessage(msg)
+      );
+      setIsExporting(false);
+      setExportMessage('');
+    }, 100);
+  };
+
+  // Image Gen Handlers
+  const handleGenStart = (prompt: string, target: 'cover' | string) => {
+    const fullPrompt = `(Masterpiece, Best Quality), Manga Style. ${prompt}`;
+    setCurrentPrompt(fullPrompt);
+    setTargetId(target);
+    setModalOpen(true);
+  };
+
+  const handleGenFinish = async (files: FileList) => {
+    if (files.length > 0) {
+      const action = await dispatch(addAsset({ file: files[0], category: 'generated' }));
+      if (addAsset.fulfilled.match(action)) {
+        const newAssetId = action.payload.id;
+        dispatch(updateProjectAsset({
+          projectId: project.id,
+          type: targetId === 'cover' ? 'cover' : 'block',
+          blockId: targetId !== 'cover' ? targetId : undefined,
+          assetId: newAssetId
+        }));
+        setModalOpen(false);
+      }
+    }
+  };
+
+  const handleDropAssign = async (e: React.DragEvent, target: 'cover' | string) => {
+    e.preventDefault();
+    const assetId = e.dataTransfer.getData('assetId');
+    if (assetId) {
+      dispatch(updateProjectAsset({
+        projectId: project.id,
+        type: target === 'cover' ? 'cover' : 'block',
+        blockId: target !== 'cover' ? target : undefined,
+        assetId: assetId
+      }));
+    } else if (e.dataTransfer.files.length > 0) {
+      // 素材としてアップロード
+      const action = await dispatch(addAsset({ file: e.dataTransfer.files[0], category: 'material' }));
+      if (addAsset.fulfilled.match(action)) {
+        dispatch(updateProjectAsset({
+          projectId: project.id,
+          type: target === 'cover' ? 'cover' : 'block',
+          blockId: target !== 'cover' ? target : undefined,
+          assetId: action.payload.id
+        }));
+      }
+    }
+  };
+
+  // --- Video Block Handlers ---
+
+  const handleAddVideoBlock = (index: number) => {
+    const newBlock: VideoBlock = {
+      id: uuidv4(),
+      type: 'video',
+      prompt: '',
+      assignedAssetId: null
+    };
+    dispatch(addStoryBlock({ projectId: project.id, index, block: newBlock }));
+  };
+
+  const handleRemoveBlock = (blockId: string) => {
+    if(window.confirm('このブロックを削除しますか？')) {
+      dispatch(removeStoryBlock({ projectId: project.id, blockId }));
+    }
+  };
+
+  const handleGenerateBridgePrompt = (index: number) => {
+    const currentBlock = project.storyboard[index] as VideoBlock;
+    if (!currentBlock) return;
+
+    // 前後のコンテキスト取得
+    const prevBlock = project.storyboard[index - 1];
+    const nextBlock = project.storyboard[index + 1];
+
+    const prevDesc = (prevBlock && prevBlock.type === 'image') ? prevBlock.sceneDescription : 'Start';
+    const nextDesc = (nextBlock && nextBlock.type === 'image') ? nextBlock.sceneDescription : 'End';
+
+    const prompt = `Create a smooth video transition.
+[Start Scene]: ${prevDesc}
+[End Scene]: ${nextDesc}
+[Style]: ${project.gachaResult.themeA}, ${project.gachaResult.themeB}
+[Motion]: Morphing, Cinematic camera movement.`;
+
+    dispatch(updateBlockPrompt({ projectId: project.id, blockId: currentBlock.id, prompt }));
+    copyToClipboard(prompt);
+  };
+
+  // --- Render Helpers ---
+
+  const renderImagePlaceholder = (assetId: string | null, onClick: () => void, onDrop: (e: React.DragEvent) => void, label: string) => {
+    const url = getAssetUrl(assetId);
+    return (
+      <Box
+        sx={{
+          width: 140, aspectRatio: '2/3', bgcolor: 'black', borderRadius: 1,
+          border: url ? '1px solid' : '2px dashed',
+          borderColor: url ? 'divider' : 'text.disabled',
+          overflow: 'hidden', cursor: 'pointer', position: 'relative', flexShrink: 0,
+          '&:hover': { borderColor: 'primary.main' }
+        }}
+        onClick={onClick}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDrop}
+      >
+        {url ? (
+          <Box component="img" src={url} alt="asset" sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', p: 1, textAlign: 'center' }}>
+            <ImageIcon />
+            <Typography variant="caption">{label}</Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  };
+
+  const renderVideoBlock = (block: VideoBlock, index: number) => {
+    const url = getAssetUrl(block.assignedAssetId);
+    return (
+      <Paper 
+        key={block.id} 
+        variant="outlined" 
+        sx={{ 
+          p: 2, display: 'flex', gap: 2, bgcolor: '#0f172a', borderColor: 'primary.dark',
+          borderStyle: 'dashed', position: 'relative'
+        }}
+      >
+        <Box sx={{ width: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 1, color: 'primary.main' }}>
+          <MovieIcon />
+        </Box>
+        
+        {/* Video Preview / Dropzone */}
+        <Box
+          sx={{
+             width: 240, aspectRatio: '16/9', bgcolor: 'black', borderRadius: 1,
+             border: url ? '1px solid' : '2px dashed',
+             borderColor: url ? 'primary.main' : 'text.disabled',
+             overflow: 'hidden', position: 'relative', flexShrink: 0,
+             display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => handleDropAssign(e, block.id)}
+        >
+           {url ? (
+             <video src={url} loop muted autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+           ) : (
+             <Typography variant="caption" color="text.disabled">Drop Video Here</Typography>
+           )}
+        </Box>
+
+        {/* Controls */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+           <Box sx={{ display: 'flex', gap: 1 }}>
+             <TextField 
+                fullWidth size="small" multiline maxRows={3} 
+                placeholder="Video Prompt..."
+                value={block.prompt}
+                onChange={(e) => dispatch(updateBlockPrompt({ projectId: project.id, blockId: block.id, prompt: e.target.value }))}
+                sx={{ 
+                  '& .MuiOutlinedInput-root': { color: 'primary.light', fontFamily: 'monospace', fontSize: '0.8rem' },
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(99, 102, 241, 0.3)' }
+                }}
+             />
+             <Tooltip title="前後の文脈からプロンプト生成">
+               <Button variant="outlined" sx={{ minWidth: 40, px: 1 }} onClick={() => handleGenerateBridgePrompt(index)}>
+                 <AutoFixHighIcon fontSize="small" />
+               </Button>
+             </Tooltip>
+           </Box>
+           <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+             <Button 
+               size="small" color="error" startIcon={<DeleteIcon />} 
+               onClick={() => handleRemoveBlock(block.id)}
+             >
+               削除
+             </Button>
+           </Box>
+        </Box>
+      </Paper>
+    );
+  };
+
+  const renderAddBridge = (index: number) => (
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5, opacity: 0, '&:hover': { opacity: 1 }, transition: 'opacity 0.2s' }}>
+       <Button 
+         size="small" variant="text" color="primary" startIcon={<AddCircleOutlineIcon />}
+         onClick={() => handleAddVideoBlock(index)}
+         sx={{ bgcolor: 'background.paper', boxShadow: 1, borderRadius: 10, px: 2, border: '1px solid', borderColor: 'divider' }}
+       >
+         動画を追加 (Add Bridge)
+       </Button>
+    </Box>
+  );
+
+  return (
+    <Box sx={{ height: '100%', overflowY: 'auto', p: 3, paddingBottom: '8rem' }}>
+      
+      {/* Header Bar */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <Button startIcon={<ArrowBackIcon />} onClick={handleBack} sx={{ color: 'text.secondary' }}>
+          リストに戻る
+        </Button>
+        
+        <Stack direction="row" spacing={2}>
+          <Button 
+            variant="outlined" 
+            color="info"
+            startIcon={isExporting ? <CircularProgress size={20} /> : <DownloadIcon />}
+            onClick={() => setImgExportOpen(true)}
+            disabled={isExporting}
+          >
+            {isExporting ? exportMessage : "画像DL"}
+          </Button>
+
+          <Box>
+            <Button 
+              variant="outlined" color="primary"
+              startIcon={isExporting ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
+              endIcon={!isExporting && <KeyboardArrowDownIcon />}
+              onClick={handlePdfMenuOpen}
+              disabled={isExporting}
+            >
+              PDF出力
+            </Button>
+            <Menu anchorEl={pdfMenuAnchor} open={Boolean(pdfMenuAnchor)} onClose={handlePdfMenuClose}>
+              <MenuItem onClick={() => handleExportPDF({ scale: 2, quality: 0.9 })}>
+                <ListItemIcon><HighQualityIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="高画質 (通常)" secondary="綺麗な印刷向け" />
+              </MenuItem>
+              <MenuItem onClick={() => handleExportPDF({ scale: 1, quality: 0.6, filenameSuffix: '_light' })}>
+                <ListItemIcon><CompressIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="軽量版 (圧縮)" secondary="共有向け" />
+              </MenuItem>
+            </Menu>
+          </Box>
+
+          <Button variant="contained" color="success" startIcon={<PlayCircleOutlineIcon />} onClick={() => setViewerOpen(true)}>
+            プレビュー
+          </Button>
+        </Stack>
+      </Box>
+
+      {/* Main Editor Content */}
+      <Paper variant="outlined" sx={{ p: 0, mb: 4, overflow: 'hidden', bgcolor: 'background.paper' }}>
+        <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider', background: 'linear-gradient(to bottom right, #0f172a, rgba(49, 46, 129, 0.2))' }}>
+          <Typography variant="h5" fontWeight="bold" gutterBottom>{project.title}</Typography>
+          <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+            <Chip label={project.gachaResult.themeA} color="primary" variant="outlined" size="small" />
+            <Chip label={project.gachaResult.themeB} color="primary" variant="outlined" size="small" />
+            <Chip label={`★ ${project.gachaResult.secretIngredient}`} color="warning" variant="outlined" size="small" />
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', borderLeft: 3, borderColor: 'primary.main', pl: 1 }}>
+            {project.synopsis}
+          </Typography>
+        </Box>
+        <Box sx={{ p: 3, display: 'flex', gap: 3 }}>
+          {renderImagePlaceholder(project.coverAssetId, () => handleGenStart(project.coverImagePrompt, 'cover'), (e) => handleDropAssign(e, 'cover'), "表紙生成")}
+          <Box sx={{ flex: 1, bgcolor: 'rgba(2, 6, 23, 0.3)', p: 2, borderRadius: 1, border: 1, borderColor: 'divider' }}>
+            <Typography variant="caption" fontWeight="bold" color="text.secondary" display="block" mb={1}>EDITOR'S NOTE</Typography>
+            <Typography variant="body2" color="text.secondary">{project.editorNote}</Typography>
+          </Box>
+        </Box>
+      </Paper>
+
+      <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2, color: 'text.secondary' }}>ストーリーボード (全{project.storyboard.length}ブロック)</Typography>
+      <Stack spacing={0}>
+        {project.storyboard.map((block, idx) => {
+          const isImage = block.type === 'image';
+          return (
+             <React.Fragment key={block.id}>
+               {/* 1. Render Block */}
+               {isImage ? (
+                  <Paper variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, '&:hover': { borderColor: 'text.secondary' } }}>
+                    <Typography variant="h5" fontWeight="bold" color="text.disabled" sx={{ width: 40, textAlign: 'center', pt: 1 }}>{(block as ImageBlock).pageNumber}</Typography>
+                    {renderImagePlaceholder(block.assignedAssetId, () => handleGenStart((block as ImageBlock).imagePrompt, block.id), (e) => handleDropAssign(e, block.id), "画像生成")}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>{(block as ImageBlock).sceneDescription}</Typography>
+                      <Paper variant="outlined" sx={{ p: 1.5, mb: 1, bgcolor: '#020617', borderLeft: 3, borderColor: 'primary.main' }}><Typography variant="body2" color="primary.light">{(block as ImageBlock).dialogue}</Typography></Paper>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="caption" fontFamily="monospace" color="text.disabled" noWrap sx={{ maxWidth: '80%', bgcolor: 'rgba(255,255,255,0.05)', px: 1, borderRadius: 0.5 }}>{(block as ImageBlock).imagePrompt}</Typography>
+                        <IconButton size="small" onClick={() => copyToClipboard((block as ImageBlock).imagePrompt)}><ContentCopyIcon fontSize="small" /></IconButton>
+                      </Box>
+                    </Box>
+                  </Paper>
+               ) : (
+                  renderVideoBlock(block as VideoBlock, idx)
+               )}
+
+               {/* 2. Render Bridge Button (between blocks) */}
+               {renderAddBridge(idx + 1)}
+             </React.Fragment>
+          );
+        })}
+      </Stack>
+
+      <ImageGenModal open={modalOpen} onClose={() => setModalOpen(false)} prompt={currentPrompt} onPasteImage={handleGenFinish} />
+      <MangaViewer open={viewerOpen} onClose={() => setViewerOpen(false)} project={project} getAssetUrl={getAssetUrl} />
+
+      {/* Image Export Modal (略: 内容は既存と同じ) */}
+      <Dialog open={imgExportOpen} onClose={() => setImgExportOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DownloadIcon color="info" /> 画像エクスポート設定
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={3} sx={{ mt: 1 }}>
+            <Box>
+              <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.85rem' }}>アスペクト比</FormLabel>
+              <ToggleButtonGroup
+                value={exportRatio}
+                exclusive
+                onChange={(_, v) => v && setExportRatio(v)}
+                fullWidth
+                size="small"
+                color="info"
+              >
+                <ToggleButton value="9:16"><CropPortraitIcon sx={{ mr: 1 }}/> 9:16 (TikTok)</ToggleButton>
+                <ToggleButton value="16:9"><CropLandscapeIcon sx={{ mr: 1 }}/> 16:9 (YouTube)</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+            <Divider />
+            <FormControl fullWidth>
+              <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.85rem' }}>コンテンツ</FormLabel>
+              <FormControlLabel
+                control={<Switch checked={exportWithText} onChange={e => setExportWithText(e.target.checked)} />}
+                label={exportWithText ? "テロップあり" : "画像のみ"}
+              />
+            </FormControl>
+            <Divider />
+            <FormControl component="fieldset">
+              <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.85rem' }}>出力形式</FormLabel>
+              <RadioGroup row value={exportMode} onChange={e => setExportMode(e.target.value as any)}>
+                <FormControlLabel value="zip" control={<Radio />} label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><FolderZipIcon fontSize="small"/> ZIP</Box>} />
+                <FormControlLabel value="single" control={<Radio />} label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><InsertPhotoIcon fontSize="small"/> 表紙のみ</Box>} />
+              </RadioGroup>
+            </FormControl>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setImgExportOpen(false)} color="inherit">キャンセル</Button>
+          <Button onClick={handleImageExport} variant="contained" color="info" startIcon={<DownloadIcon />}>
+            ダウンロード
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+    </Box>
+  );
+};
+
+export default StoryEditor;
+"""
+
+for filepath, content in files_content.items():
+    dirpath = os.path.dirname(filepath)
+    if dirpath and not os.path.exists(dirpath):
+        os.makedirs(dirpath)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(content)
+        print(f"Updated: {filepath}")
+
+print("\\nImplementation complete.")

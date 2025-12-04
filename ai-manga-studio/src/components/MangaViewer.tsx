@@ -16,7 +16,7 @@ interface MangaViewerProps {
 }
 
 const MangaViewer: React.FC<MangaViewerProps> = ({ open, onClose, project, getAssetUrl }) => {
-  // -1: Cover, 0...N: Pages
+  // -1: Cover, 0...N: StoryBlocks
   const [currentIndex, setCurrentIndex] = useState(-1);
 
   // Reset on open
@@ -24,12 +24,12 @@ const MangaViewer: React.FC<MangaViewerProps> = ({ open, onClose, project, getAs
     if (open) setCurrentIndex(-1);
   }, [open]);
 
-  // 画像ブロックのみ抽出
-  const imageBlocks = project.storyboard.filter(b => b.type === 'image') as ImageBlock[];
+  // ★変更: 画像だけでなく全ブロックを対象にする
+  const storyBlocks = project.storyboard;
 
-  const totalPages = imageBlocks.length;
+  const totalPages = storyBlocks.length;
   const isCover = currentIndex === -1;
-  const currentPage = !isCover ? imageBlocks[currentIndex] : null;
+  const currentBlock = !isCover ? storyBlocks[currentIndex] : null;
 
   // Navigation Logic
   const handleNext = useCallback(() => {
@@ -53,13 +53,13 @@ const MangaViewer: React.FC<MangaViewerProps> = ({ open, onClose, project, getAs
   }, [open, handleNext, handlePrev, onClose]);
 
   // Content Resolver
-  const currentImageUrl = isCover 
+  const currentAssetUrl = isCover 
     ? getAssetUrl(project.coverAssetId) 
-    : getAssetUrl(currentPage?.assignedAssetId || null);
+    : getAssetUrl(currentBlock?.assignedAssetId || null);
 
   const currentText = isCover 
     ? project.synopsis 
-    : currentPage?.dialogue;
+    : (currentBlock?.type === 'image' ? (currentBlock as ImageBlock).dialogue : "");
 
   return (
     <Dialog
@@ -90,21 +90,34 @@ const MangaViewer: React.FC<MangaViewerProps> = ({ open, onClose, project, getAs
             maxWidth: '100%', maxHeight: '100%', gap: 2 
           }}>
             
-            {/* Image Area */}
+            {/* Image / Video Area */}
             <Box sx={{ position: 'relative', maxHeight: '75vh', maxWidth: '100vw' }}>
-              {currentImageUrl ? (
-                <Box 
-                  component="img" 
-                  src={currentImageUrl} 
-                  sx={{ maxHeight: '75vh', maxWidth: '100%', objectFit: 'contain', boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}
-                />
+              {currentAssetUrl ? (
+                currentBlock?.type === 'video' ? (
+                   // ★動画ブロックの場合: ループなし、終了時に自動で次へ
+                   <video 
+                     src={currentAssetUrl} 
+                     autoPlay 
+                     playsInline 
+                     muted={false}
+                     onEnded={handleNext} 
+                     style={{ maxHeight: '75vh', maxWidth: '100%', boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}
+                   />
+                ) : (
+                   // 静止画ブロックまたは表紙
+                   <Box 
+                     component="img" 
+                     src={currentAssetUrl} 
+                     sx={{ maxHeight: '75vh', maxWidth: '100%', objectFit: 'contain', boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}
+                   />
+                )
               ) : (
                 <Box sx={{ 
                   width: '60vh', height: '60vh', bgcolor: '#1e293b', display: 'flex', 
                   alignItems: 'center', justifyContent: 'center', color: '#64748b', flexDirection: 'column'
                 }}>
                   <MenuBookIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-                  <Typography>No Image</Typography>
+                  <Typography>No Content</Typography>
                 </Box>
               )}
               
@@ -114,25 +127,28 @@ const MangaViewer: React.FC<MangaViewerProps> = ({ open, onClose, project, getAs
                 bgcolor: 'rgba(0,0,0,0.7)', color: 'white', px: 1.5, py: 0.5, borderRadius: 1,
                 fontSize: '0.8rem', fontFamily: 'monospace'
               }}>
-                {isCover ? 'COVER' : `P.${currentPage?.pageNumber}`}
+                {isCover ? 'COVER' : (currentBlock?.type === 'image' ? `P.${(currentBlock as ImageBlock).pageNumber}` : 'VIDEO')}
               </Box>
             </Box>
 
             {/* Text Area (Subtitle Style) */}
-            <Box sx={{ 
-              width: '100%', maxWidth: 800, minHeight: 100,
-              bgcolor: 'rgba(20, 20, 20, 0.8)', border: '1px solid #333', borderRadius: 2, 
-              p: 3, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center'
-            }}>
-              {isCover && (
-                <Typography variant="h4" color="primary.main" fontWeight="bold" gutterBottom>
-                  {project.title}
+            {/* 動画の場合は字幕エリアを隠すか、空でも表示しておくか。ここではテキストがある場合のみ表示する */}
+            {(isCover || (currentBlock?.type === 'image' && currentText)) && (
+              <Box sx={{ 
+                width: '100%', maxWidth: 800, minHeight: 100,
+                bgcolor: 'rgba(20, 20, 20, 0.8)', border: '1px solid #333', borderRadius: 2, 
+                p: 3, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center'
+              }}>
+                {isCover && (
+                  <Typography variant="h4" color="primary.main" fontWeight="bold" gutterBottom>
+                    {project.title}
+                  </Typography>
+                )}
+                <Typography variant="h6" color="white" sx={{ fontStyle: isCover ? 'italic' : 'normal', lineHeight: 1.6 }}>
+                  {currentText}
                 </Typography>
-              )}
-              <Typography variant="h6" color="white" sx={{ fontStyle: isCover ? 'italic' : 'normal', lineHeight: 1.6 }}>
-                {currentText || "..."}
-              </Typography>
-            </Box>
+              </Box>
+            )}
 
           </Box>
         </Fade>

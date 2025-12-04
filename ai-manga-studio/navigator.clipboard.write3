@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import os
+
+files_content = {}
+
+# src/features/assets/AssetPool.tsx
+# MIMEタイプチェックを撤廃し、強制的にコピーを試行するよう修正
+files_content['src/features/assets/AssetPool.tsx'] = """import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Tabs, Tab, IconButton, Menu, MenuItem, 
   ListItemIcon, ListItemText, Dialog, Button, Tooltip, Snackbar, Alert, Paper, Chip
@@ -244,7 +250,7 @@ const AssetPool: React.FC = () => {
     let referencedCount = 0;
     ids.forEach(id => { if (usedAssetIds.has(id)) referencedCount++; });
     let msg = `${ids.length}枚のファイルを削除しますか？`;
-    if (referencedCount > 0) msg = `【警告】選択したファイルのうち ${referencedCount}つ がプロジェクトで使用されています。\n削除すると表示されなくなりますが、よろしいですか？`;
+    if (referencedCount > 0) msg = `【警告】選択したファイルのうち ${referencedCount}つ がプロジェクトで使用されています。\\n削除すると表示されなくなりますが、よろしいですか？`;
     if (window.confirm(msg)) {
       dispatch(deleteMultipleAssets(ids));
       setSelectionMode(false); setSelectedIds(new Set());
@@ -311,7 +317,7 @@ const AssetPool: React.FC = () => {
   const handleDelete = (id: string) => {
     const usages = checkAssetUsage(id);
     let msg = 'このファイルを削除しますか？';
-    if (usages.length > 0) msg = `【警告】このファイルは以下の場所で使用されています：\n\n・${usages.join('\n・')}\n\n削除すると表示されなくなりますが、本当によろしいですか？`;
+    if (usages.length > 0) msg = `【警告】このファイルは以下の場所で使用されています：\\n\\n・${usages.join('\\n・')}\\n\\n削除すると表示されなくなりますが、本当によろしいですか？`;
     if (window.confirm(msg)) {
       dispatch(deleteAsset(id));
       if (slideshowIndex !== null) setSlideshowIndex(null);
@@ -459,3 +465,14 @@ const AssetPool: React.FC = () => {
 };
 
 export default AssetPool;
+"""
+
+for filepath, content in files_content.items():
+    dirpath = os.path.dirname(filepath)
+    if dirpath and not os.path.exists(dirpath):
+        os.makedirs(dirpath)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(content)
+        print(f"Updated: {filepath}")
+
+print("\\nForce copy patch applied.")

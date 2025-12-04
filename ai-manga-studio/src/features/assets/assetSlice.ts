@@ -8,7 +8,6 @@ import {
 } from '../../db';
 import { v4 as uuidv4 } from 'uuid';
 
-// --- State Definition ---
 interface AssetState {
   items: Asset[];
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
@@ -21,19 +20,17 @@ const initialState: AssetState = {
 
 // --- Async Thunks ---
 
-// 1. 全アセット取得
 export const fetchAssets = createAsyncThunk('assets/fetchAssets', async () => {
   const dbItems = await dbGetAllAssets();
-  // DBのBlobをURLに変換してState用のオブジェクトを作成
   return dbItems.map(item => ({
     id: item.id,
     url: URL.createObjectURL(item.blob),
     category: item.category,
+    mimeType: item.blob.type, // ★DBから復元
     createdAt: item.created,
   } as Asset));
 });
 
-// 2. アセット追加 (Upload)
 export const addAsset = createAsyncThunk(
   'assets/addAsset',
   async ({ file, category }: { file: File; category: AssetCategory }) => {
@@ -46,23 +43,21 @@ export const addAsset = createAsyncThunk(
     };
     await dbSaveAsset(dbItem);
     
-    // Stateに返すデータ
     return {
       id,
       url: URL.createObjectURL(file),
       category,
+      mimeType: file.type, // ★新規追加時
       createdAt: dbItem.created,
     } as Asset;
   }
 );
 
-// 3. アセット単体削除
 export const deleteAsset = createAsyncThunk('assets/deleteAsset', async (id: string) => {
   await dbDeleteAsset(id);
   return id;
 });
 
-// 4. アセット一括削除
 export const deleteMultipleAssets = createAsyncThunk(
   'assets/deleteMultiple',
   async (ids: string[]) => {
@@ -71,7 +66,6 @@ export const deleteMultipleAssets = createAsyncThunk(
   }
 );
 
-// 5. カテゴリ移動 (素材 ⇔ 生成結果)
 export const moveAssetCategory = createAsyncThunk(
   'assets/moveCategory',
   async ({ id, newCategory }: { id: string; newCategory: AssetCategory }) => {
@@ -85,44 +79,34 @@ const assetSlice = createSlice({
   name: 'assets',
   initialState,
   reducers: {
-    // 並び替え (Drag & Drop)
     reorderAssets: (state, action: PayloadAction<{ fromIndex: number; toIndex: number; category: AssetCategory }>) => {
       const { fromIndex, toIndex, category } = action.payload;
-      
-      // 対象カテゴリーのアイテムだけ抽出して並び替え
       const categoryItems = state.items.filter(i => i.category === category);
       const otherItems = state.items.filter(i => i.category !== category);
       
       if (categoryItems[fromIndex] && categoryItems[toIndex]) {
         const reordered = arrayMove(categoryItems, fromIndex, toIndex);
-        // 他のカテゴリーのアイテムと再結合（順序を維持するため）
         state.items = [...reordered, ...otherItems]; 
       }
     }
   },
   extraReducers: (builder) => {
     builder
-      // Fetch
       .addCase(fetchAssets.pending, (state) => { state.status = 'loading'; })
       .addCase(fetchAssets.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        // 作成日順などで初期ソートしても良いが、並び替え機能があるのでそのまま（DB順＝並び替え順）
         state.items = action.payload.sort((a, b) => b.createdAt - a.createdAt);
       })
-      // Add
       .addCase(addAsset.fulfilled, (state, action) => {
         state.items.unshift(action.payload);
       })
-      // Delete Single
       .addCase(deleteAsset.fulfilled, (state, action) => {
         state.items = state.items.filter(a => a.id !== action.payload);
       })
-      // Delete Multiple
       .addCase(deleteMultipleAssets.fulfilled, (state, action) => {
         const idsToRemove = new Set(action.payload);
         state.items = state.items.filter(a => !idsToRemove.has(a.id));
       })
-      // Move Category
       .addCase(moveAssetCategory.fulfilled, (state, action) => {
         const item = state.items.find(i => i.id === action.payload.id);
         if (item) item.category = action.payload.newCategory;
