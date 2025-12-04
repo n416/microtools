@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { Project, StoryBlock, VideoBlock } from '../../types';
+import type { Project, StoryBlock, DirectorAttributes } from '../../types';
 import { dbGetAllProjects, dbSaveProject, dbDeleteProject } from '../../db';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -20,8 +20,8 @@ const initialState: ProjectState = {
 
 export const fetchProjects = createAsyncThunk('projects/fetchProjects', async () => {
   const projects = await dbGetAllProjects();
-  // マイグレーション
   return projects.map((p: any) => {
+    // Migration: pages -> storyboard
     if (p.pages && !p.storyboard) {
       const storyboard: StoryBlock[] = p.pages.map((page: any) => ({
         ...page,
@@ -57,7 +57,6 @@ export const deleteProject = createAsyncThunk(
 
 // --- Storyboard Manipulation Thunks ---
 
-// ブロックの追加 (動画ブロックなど)
 export const addStoryBlock = createAsyncThunk(
   'projects/addStoryBlock',
   async ({ projectId, index, block }: { projectId: string, index: number, block: StoryBlock }, { getState }) => {
@@ -74,7 +73,6 @@ export const addStoryBlock = createAsyncThunk(
   }
 );
 
-// ブロックの削除
 export const removeStoryBlock = createAsyncThunk(
   'projects/removeStoryBlock',
   async ({ projectId, blockId }: { projectId: string, blockId: string }, { getState }) => {
@@ -92,7 +90,6 @@ export const removeStoryBlock = createAsyncThunk(
   }
 );
 
-// プロンプト等の更新
 export const updateBlockPrompt = createAsyncThunk(
   'projects/updateBlockPrompt',
   async ({ projectId, blockId, prompt }: { projectId: string, blockId: string, prompt: string }, { getState }) => {
@@ -110,7 +107,32 @@ export const updateBlockPrompt = createAsyncThunk(
   }
 );
 
-// アセット割り当て
+export const updateBlockAttributes = createAsyncThunk(
+  'projects/updateBlockAttributes',
+  async ({ projectId, blockId, attributes, prompt }: { projectId: string, blockId: string, attributes: DirectorAttributes, prompt?: string }, { getState }) => {
+    const state = getState() as { projects: { items: Project[] } };
+    const project = state.projects.items.find(p => p.id === projectId);
+    if (!project) throw new Error("Project not found");
+
+    const updatedProject = {
+      ...project,
+      storyboard: project.storyboard.map(b => {
+        if (b.id === blockId && b.type === 'video') {
+          return { 
+            ...b, 
+            attributes, 
+            prompt: prompt || b.prompt
+          };
+        }
+        return b;
+      }),
+      updatedAt: Date.now()
+    };
+    await dbSaveProject(updatedProject);
+    return updatedProject;
+  }
+);
+
 export const updateProjectAsset = createAsyncThunk(
   'projects/updateAsset',
   async (
@@ -139,7 +161,6 @@ export const updateProjectAsset = createAsyncThunk(
   }
 );
 
-// --- Slice ---
 const projectSlice = createSlice({
   name: 'projects',
   initialState,
@@ -155,12 +176,8 @@ const projectSlice = createSlice({
   extraReducers: (builder) => {
     const updateProjectInState = (state: ProjectState, project: Project) => {
       const index = state.items.findIndex(p => p.id === project.id);
-      if (index >= 0) {
-        state.items[index] = project;
-      }
-      if (state.currentProject?.id === project.id) {
-        state.currentProject = project;
-      }
+      if (index >= 0) state.items[index] = project;
+      if (state.currentProject?.id === project.id) state.currentProject = project;
     };
 
     builder
@@ -170,25 +187,19 @@ const projectSlice = createSlice({
       })
       .addCase(createOrUpdateProject.fulfilled, (state, action) => {
         const index = state.items.findIndex(p => p.id === action.payload.id);
-        if (index >= 0) {
-          state.items[index] = action.payload;
-        } else {
-          state.items.unshift(action.payload);
-        }
+        if (index >= 0) state.items[index] = action.payload;
+        else state.items.unshift(action.payload);
         state.items.sort((a, b) => b.updatedAt - a.updatedAt);
-        if (state.currentProject?.id === action.payload.id) {
-          state.currentProject = action.payload;
-        }
+        if (state.currentProject?.id === action.payload.id) state.currentProject = action.payload;
       })
       .addCase(deleteProject.fulfilled, (state, action) => {
         state.items = state.items.filter(p => p.id !== action.payload);
-        if (state.currentProject?.id === action.payload) {
-          state.currentProject = null;
-        }
+        if (state.currentProject?.id === action.payload) state.currentProject = null;
       })
       .addCase(addStoryBlock.fulfilled, (state, action) => updateProjectInState(state, action.payload))
       .addCase(removeStoryBlock.fulfilled, (state, action) => updateProjectInState(state, action.payload))
       .addCase(updateBlockPrompt.fulfilled, (state, action) => updateProjectInState(state, action.payload))
+      .addCase(updateBlockAttributes.fulfilled, (state, action) => updateProjectInState(state, action.payload))
       .addCase(updateProjectAsset.fulfilled, (state, action) => updateProjectInState(state, action.payload));
   },
 });
