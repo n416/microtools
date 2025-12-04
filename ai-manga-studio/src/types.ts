@@ -18,11 +18,23 @@ export interface ImageBlock extends BaseBlock {
   assignedAssetId: string | null;
 }
 
+// 演出設定を保存するオブジェクト
+export interface DirectorAttributes {
+  structure?: 'prequel' | 'bridge' | 'sequel';
+  cameraMovements?: string[];
+  shotSize?: string;
+  angle?: string;
+  focus?: string;
+  lighting?: string;
+  emotion?: string;
+}
+
 export interface VideoBlock extends BaseBlock {
   type: 'video';
   prompt: string;         // 生成用プロンプト
-  referenceBlockId?: string; // (Optional) 元ネタにする画像のID
-  assignedAssetId: string | null; // 動画ファイルID
+  referenceBlockId?: string; 
+  assignedAssetId: string | null;
+  attributes?: DirectorAttributes; // ★追加: ウィザードの状態保存用
 }
 
 export type StoryBlock = ImageBlock | VideoBlock;
@@ -46,7 +58,7 @@ export interface Asset {
   id: string;
   url: string;
   category: AssetCategory;
-  mimeType: string; // ★追加: 動画か画像か判別するため
+  mimeType: string;
   createdAt: number;
 }
 
