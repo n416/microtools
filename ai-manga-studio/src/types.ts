@@ -4,17 +4,28 @@ export interface GachaResult {
   secretIngredient: string;
 }
 
-export interface ImageBlock {
+export interface BaseBlock {
   id: string;
+  type: 'image' | 'video';
+}
+
+export interface ImageBlock extends BaseBlock {
   type: 'image';
   pageNumber: number;
   sceneDescription: string;
   dialogue: string;
   imagePrompt: string;
-  assignedAssetId: string | null; // 画像ID
+  assignedAssetId: string | null;
 }
 
-export type StoryBlock = ImageBlock;
+export interface VideoBlock extends BaseBlock {
+  type: 'video';
+  prompt: string;         // 生成用プロンプト
+  referenceBlockId?: string; // (Optional) 元ネタにする画像のID
+  assignedAssetId: string | null; // 動画ファイルID
+}
+
+export type StoryBlock = ImageBlock | VideoBlock;
 
 export interface Project {
   id: string;
@@ -33,12 +44,12 @@ export type AssetCategory = 'material' | 'generated';
 
 export interface Asset {
   id: string;
-  url: string; // ReduxではBlobではなくURL文字列を保持
+  url: string;
   category: AssetCategory;
+  mimeType: string; // ★追加: 動画か画像か判別するため
   createdAt: number;
 }
 
-// DB保存用の型（ReduxにはBlobを入れられないため分離）
 export interface AssetDBItem {
   id: string;
   blob: Blob;

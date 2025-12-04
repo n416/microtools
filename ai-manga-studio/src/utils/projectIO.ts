@@ -19,7 +19,8 @@ export const exportProjectToZip = async (project: Project, assets: Asset[]) => {
   const usedIds = new Set<string>();
   if (project.coverAssetId) usedIds.add(project.coverAssetId);
   project.storyboard.forEach(b => {
-    if (b.type === 'image' && b.assignedAssetId) usedIds.add(b.assignedAssetId);
+    // ★修正: assignedAssetIdがあれば型を問わず収集
+    if (b.assignedAssetId) usedIds.add(b.assignedAssetId);
   });
 
   // 3. 画像ファイルを追加
@@ -33,7 +34,11 @@ export const exportProjectToZip = async (project: Project, assets: Asset[]) => {
           const res = await fetch(asset.url);
           const blob = await res.blob();
           // 拡張子の推定 (簡易的)
-          const ext = blob.type.split('/')[1] || 'png';
+          let ext = 'png';
+          if (blob.type === 'image/jpeg') ext = 'jpg';
+          else if (blob.type === 'image/svg+xml') ext = 'svg';
+          else if (blob.type.startsWith('video/')) ext = 'mp4'; // 動画対応
+          
           assetsFolder.file(`${id}.${ext}`, blob);
         } catch (e) {
           console.error(`Failed to export asset ${id}`, e);
@@ -74,10 +79,22 @@ export const importProjectFromZip = async (file: File, dispatch: AppDispatch) =>
     for (const entry of entries) {
       // ファイル名 (oldId.ext) から旧IDを取得
       const oldId = entry.name.split('.')[0];
+      const ext = entry.name.split('.').pop()?.toLowerCase();
       
       const blob = await entry.fileObj.async('blob');
+      
+      // MIMEタイプの推定
+      let mimeType = blob.type;
+      if (!mimeType) {
+        if (ext === 'png') mimeType = 'image/png';
+        else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+        else if (ext === 'svg') mimeType = 'image/svg+xml';
+        else if (ext === 'mp4' || ext === 'webm') mimeType = 'video/mp4';
+        else mimeType = 'image/png'; // Default fallback
+      }
+
       // Fileオブジェクト化
-      const imageFile = new File([blob], entry.name, { type: blob.type });
+      const imageFile = new File([blob], entry.name, { type: mimeType });
       
       // Reduxアクションでアップロード（新規IDが発行される）
       const resultAction = await dispatch(addAsset({ file: imageFile, category: 'material' }));
@@ -108,13 +125,11 @@ export const importProjectFromZip = async (file: File, dispatch: AppDispatch) =>
     title: rawProject.title + " (Imported)",
     coverAssetId: rawProject.coverAssetId ? (idMap.get(rawProject.coverAssetId) || null) : null,
     storyboard: storyboard.map(b => {
-        if (b.type === 'image') {
-            return {
-              ...b,
-              assignedAssetId: b.assignedAssetId ? (idMap.get(b.assignedAssetId) || null) : null
-            };
-        }
-        return b;
+        // 画像も動画も assignedAssetId を持っているので共通で書き換え
+        return {
+          ...b,
+          assignedAssetId: b.assignedAssetId ? (idMap.get(b.assignedAssetId) || null) : null
+        };
     }),
     createdAt: Date.now(),
     updatedAt: Date.now()
