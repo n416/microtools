@@ -84,7 +84,8 @@ const ProjectList: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleImportFromModal = async (jsonStr: string) => {
+  // ★修正: keepOpen引数を追加
+  const handleImportFromModal = async (jsonStr: string, keepOpen = false) => {
     try {
       let clean = jsonStr.trim().replace(/```json/g, '').replace(/```/g, '');
       const s = clean.indexOf('{');
@@ -116,8 +117,15 @@ const ProjectList: React.FC = () => {
       };
 
       await dispatch(createOrUpdateProject(newProject));
-      dispatch(setCurrentProject(newProject));
-      setModalOpen(false);
+      
+      // ★修正: 連続生成モードなら遷移せず通知のみ
+      if (keepOpen) {
+        alert(`「${newProject.title}」を保存しました。次の生成を行えます。`);
+      } else {
+        dispatch(setCurrentProject(newProject));
+        setModalOpen(false);
+      }
+
     } catch (e: any) {
       alert('JSON読み込みエラー: ' + e.message);
     }
@@ -283,7 +291,6 @@ const ProjectList: React.FC = () => {
                       {p.title}
                     </Typography>
                   }
-                  // ★修正: component='div' を追加してネスト違反を回避
                   secondaryTypographyProps={{ component: 'div' }}
                   secondary={
                     <Stack spacing={0.5}>
