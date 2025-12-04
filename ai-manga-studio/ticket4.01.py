@@ -1,4 +1,10 @@
-import React, { useState, useRef } from 'react';
+import os
+
+files_content = {}
+
+# src/features/editor/StoryEditor.tsx
+# Ticket #4: ストーリー拡張、外部連携、定型文挿入の実装
+files_content['src/features/editor/StoryEditor.tsx'] = """import React, { useState, useRef } from 'react';
 import { 
   Box, Typography, Button, Paper, Chip, IconButton, Stack, CircularProgress, 
   Menu, MenuItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, 
@@ -639,3 +645,14 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
 };
 
 export default StoryEditor;
+"""
+
+for filepath, content in files_content.items():
+    dirpath = os.path.dirname(filepath)
+    if dirpath and not os.path.exists(dirpath):
+        os.makedirs(dirpath)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(content)
+        print(f"Updated: {filepath}")
+
+print("\\nTicket #4 Implementation complete.")
