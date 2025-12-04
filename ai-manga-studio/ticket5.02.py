@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import os
+
+files_content = {}
+
+# src/features/editor/StoryEditor.tsx
+# 不足していた ListItemIcon, ListItemText, Link を追加
+files_content['src/features/editor/StoryEditor.tsx'] = """import React, { useState } from 'react';
 import { 
   Box, Typography, Button, Paper, Chip, IconButton, Stack, CircularProgress, 
   Menu, MenuItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, 
   DialogActions, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, 
-  Switch, ToggleButtonGroup, ToggleButton, Divider, TextField, Tooltip, Snackbar, Alert
+  Switch, ToggleButtonGroup, ToggleButton, Divider, TextField, Tooltip, Snackbar, Alert, Link
 } from '@mui/material';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -27,10 +33,13 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
 import LaunchIcon from '@mui/icons-material/Launch';
+import ArrowBackIconSmall from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 
 // Redux
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { setCurrentProject, updateProjectAsset, addStoryBlock, removeStoryBlock, updateBlockPrompt, updateBlockAttributes } from '../projects/projectSlice';
+import { setCurrentProject, updateProjectAsset, addStoryBlock, removeStoryBlock, updateBlockPrompt } from '../projects/projectSlice';
 import { addAsset } from '../assets/assetSlice';
 
 // Components & Utils
@@ -41,12 +50,13 @@ import { generatePDF } from '../../utils/pdfExporter';
 import type { PDFExportOptions } from '../../utils/pdfExporter';
 import { generateImages } from '../../utils/imageExporter';
 import type { AspectRatio } from '../../utils/imageExporter';
-import type { ImageBlock, VideoBlock, DirectorAttributes } from '../../types';
+import { ImageBlock, VideoBlock } from '../../types';
 
 interface StoryEditorProps {
   getAssetUrl: (id: string | null) => string | undefined;
 }
 
+// 定型文リスト
 const PROMPT_SNIPPETS = [
   "Cinematic Lighting, 8k, Unreal Engine 5 render",
   "Anime Style, Makoto Shinkai style vibrant colors, highly detailed",
@@ -61,26 +71,35 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
   const project = useAppSelector(state => state.projects.currentProject);
   const allAssets = useAppSelector(state => state.assets.items);
 
+  // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [targetId, setTargetId] = useState<'cover' | string>('cover');
 
+  // PDF Export State
   const [isExporting, setIsExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
   const [pdfMenuAnchor, setPdfMenuAnchor] = useState<null | HTMLElement>(null);
 
+  // Image Export Modal State
   const [imgExportOpen, setImgExportOpen] = useState(false);
   const [exportRatio, setExportRatio] = useState<AspectRatio>('9:16');
   const [exportWithText, setExportWithText] = useState(true);
   const [exportMode, setExportMode] = useState<'zip' | 'single'>('zip');
 
+  // --- Ticket #5 Directors Wizard State ---
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardTargetIndex, setWizardTargetIndex] = useState<number | null>(null);
 
+  // Magic Wand Menu (For compatibility if needed, but replaced by Wizard)
+  const [magicMenuAnchor, setMagicMenuAnchor] = useState<null | HTMLElement>(null);
+  
+  // Snippet Menu
   const [snippetMenuAnchor, setSnippetMenuAnchor] = useState<null | HTMLElement>(null);
   const [activeSnippetBlockId, setActiveSnippetBlockId] = useState<string | null>(null);
 
+  // External Links Notification
   const [linkSnackbarOpen, setLinkSnackbarOpen] = useState(false);
 
   if (!project) return null;
@@ -95,6 +114,7 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
     navigator.clipboard.writeText(text);
   };
 
+  // PDF Export
   const handlePdfMenuOpen = (e: React.MouseEvent<HTMLElement>) => setPdfMenuAnchor(e.currentTarget);
   const handlePdfMenuClose = () => setPdfMenuAnchor(null);
   
@@ -109,10 +129,12 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
     }, 100);
   };
 
+  // Image Export
   const handleImageExport = async () => {
     setImgExportOpen(false);
     setIsExporting(true);
     setExportMessage("画像生成中...");
+    
     setTimeout(async () => {
       await generateImages(
         project, 
@@ -125,6 +147,7 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
     }, 100);
   };
 
+  // Image Gen Handlers
   const handleGenStart = (prompt: string, target: 'cover' | string) => {
     const fullPrompt = `(Masterpiece, Best Quality), Manga Style. ${prompt}`;
     setCurrentPrompt(fullPrompt);
@@ -189,21 +212,16 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
     }
   };
 
-  // --- Wizard Handlers ---
+  // --- Ticket #5: Open Wizard ---
   const handleOpenWizard = (index: number) => {
     setWizardTargetIndex(index);
     setWizardOpen(true);
   };
 
-  const handleWizardConfirm = (prompt: string, attributes: DirectorAttributes) => {
+  const handleWizardConfirm = (prompt: string) => {
     if (wizardTargetIndex !== null) {
       const block = project.storyboard[wizardTargetIndex];
-      dispatch(updateBlockAttributes({ 
-        projectId: project.id, 
-        blockId: block.id, 
-        attributes, 
-        prompt 
-      }));
+      dispatch(updateBlockPrompt({ projectId: project.id, blockId: block.id, prompt }));
       setLinkSnackbarOpen(true); 
     }
   };
@@ -275,7 +293,7 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
           <MovieIcon />
         </Box>
         
-        {/* Video Preview */}
+        {/* Video Preview / Dropzone */}
         <Box
           sx={{
              width: 240, aspectRatio: '16/9', bgcolor: 'black', borderRadius: 1,
@@ -315,7 +333,7 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
                     <FormatQuoteIcon fontSize="small" />
                 </Button>
              </Tooltip>
-             <Tooltip title="演出ウィザードを開く">
+             <Tooltip title="Director's Wizard (演出ウィザードを開く)">
                <Button 
                  variant="contained" color="primary" sx={{ minWidth: 40, px: 1 }} 
                  onClick={() => handleOpenWizard(index)}
@@ -363,16 +381,26 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
 
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', p: 3, paddingBottom: '8rem' }}>
+      
+      {/* Header Bar */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
         <Button startIcon={<ArrowBackIcon />} onClick={handleBack} sx={{ color: 'text.secondary' }}>
           リストに戻る
         </Button>
         <Stack direction="row" spacing={2}>
-          <Button variant="outlined" color="info" startIcon={<DownloadIcon />} onClick={() => setImgExportOpen(true)} disabled={isExporting}>
+          <Button 
+            variant="outlined" color="info" startIcon={<DownloadIcon />}
+            onClick={() => setImgExportOpen(true)} disabled={isExporting}
+          >
             {isExporting ? exportMessage : "画像DL"}
           </Button>
           <Box>
-            <Button variant="outlined" color="primary" startIcon={isExporting ? <CircularProgress size={20} /> : <PictureAsPdfIcon />} endIcon={!isExporting && <KeyboardArrowDownIcon />} onClick={handlePdfMenuOpen} disabled={isExporting}>
+            <Button 
+              variant="outlined" color="primary"
+              startIcon={isExporting ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
+              endIcon={!isExporting && <KeyboardArrowDownIcon />}
+              onClick={handlePdfMenuOpen} disabled={isExporting}
+            >
               PDF出力
             </Button>
             <Menu anchorEl={pdfMenuAnchor} open={Boolean(pdfMenuAnchor)} onClose={handlePdfMenuClose}>
@@ -392,6 +420,7 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
         </Stack>
       </Box>
 
+      {/* Main Editor Content */}
       <Paper variant="outlined" sx={{ p: 0, mb: 4, overflow: 'hidden', bgcolor: 'background.paper' }}>
         <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider', background: 'linear-gradient(to bottom right, #0f172a, rgba(49, 46, 129, 0.2))' }}>
           <Typography variant="h5" fontWeight="bold" gutterBottom>{project.title}</Typography>
@@ -413,6 +442,7 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
         </Box>
       </Paper>
 
+      {/* Storyboard Loop */}
       <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2, color: 'text.secondary' }}>ストーリーボード (全{project.storyboard.length}ブロック)</Typography>
       <Stack spacing={0}>
         {project.storyboard.map((block, idx) => {
@@ -441,7 +471,12 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
         })}
       </Stack>
 
-      <Menu anchorEl={snippetMenuAnchor} open={Boolean(snippetMenuAnchor)} onClose={handleSnippetMenuClose}>
+      {/* Snippet Menu */}
+      <Menu
+        anchorEl={snippetMenuAnchor}
+        open={Boolean(snippetMenuAnchor)}
+        onClose={handleSnippetMenuClose}
+      >
         <Typography variant="caption" sx={{ px: 2, py: 1, color: 'text.secondary' }}>スタイル定型文を挿入</Typography>
         <Divider />
         {PROMPT_SNIPPETS.map((text, i) => (
@@ -451,13 +486,19 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
         ))}
       </Menu>
 
+      {/* Link Launcher Snackbar */}
       <Snackbar 
         open={linkSnackbarOpen} 
         autoHideDuration={6000} 
         onClose={() => setLinkSnackbarOpen(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={() => setLinkSnackbarOpen(false)} severity="success" sx={{ width: '100%', alignItems: 'center' }} icon={<ContentCopyIcon />}>
+        <Alert 
+            onClose={() => setLinkSnackbarOpen(false)} 
+            severity="success" 
+            sx={{ width: '100%', alignItems: 'center' }}
+            icon={<ContentCopyIcon />}
+        >
             <Box>
                 <Typography variant="subtitle2" fontWeight="bold">プロンプトを更新しました</Typography>
                 <Typography variant="caption" display="block" mb={1}>外部サイトを開いて生成:</Typography>
@@ -465,27 +506,27 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
                     <Button size="small" variant="outlined" color="inherit" startIcon={<LaunchIcon />} href="https://app.runwayml.com" target="_blank">Runway</Button>
                     <Button size="small" variant="outlined" color="inherit" startIcon={<LaunchIcon />} href="https://lumalabs.ai/dream-machine" target="_blank">Luma</Button>
                     <Button size="small" variant="outlined" color="inherit" startIcon={<LaunchIcon />} href="https://klingai.com" target="_blank">Kling</Button>
-                    {/* Flow Correct URL */}
-                    <Button size="small" variant="contained" color="secondary" startIcon={<LaunchIcon />} href="https://labs.google/fx/ja/tools/flow" target="_blank">Flow</Button>
                 </Stack>
             </Box>
         </Alert>
       </Snackbar>
 
+      {/* Modals */}
       <ImageGenModal open={modalOpen} onClose={() => setModalOpen(false)} prompt={currentPrompt} onPasteImage={handleGenFinish} />
       <MangaViewer open={viewerOpen} onClose={() => setViewerOpen(false)} project={project} getAssetUrl={getAssetUrl} />
       
+      {/* Directors Wizard */}
       {wizardTargetIndex !== null && (
         <DirectorsWizard 
           open={wizardOpen} 
           onClose={() => setWizardOpen(false)} 
           project={project} 
           targetIndex={wizardTargetIndex}
-          getAssetUrl={getAssetUrl}
           onConfirm={handleWizardConfirm}
         />
       )}
 
+      {/* Image Export Modal */}
       <Dialog open={imgExportOpen} onClose={() => setImgExportOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <DownloadIcon color="info" /> 画像エクスポート設定
@@ -494,7 +535,14 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
           <Stack spacing={3} sx={{ mt: 1 }}>
             <Box>
               <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.85rem' }}>アスペクト比</FormLabel>
-              <ToggleButtonGroup value={exportRatio} exclusive onChange={(_, v) => v && setExportRatio(v)} fullWidth size="small" color="info">
+              <ToggleButtonGroup
+                value={exportRatio}
+                exclusive
+                onChange={(_, v) => v && setExportRatio(v)}
+                fullWidth
+                size="small"
+                color="info"
+              >
                 <ToggleButton value="9:16"><CropPortraitIcon sx={{ mr: 1 }}/> 9:16 (TikTok)</ToggleButton>
                 <ToggleButton value="16:9"><CropLandscapeIcon sx={{ mr: 1 }}/> 16:9 (YouTube)</ToggleButton>
               </ToggleButtonGroup>
@@ -502,7 +550,10 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
             <Divider />
             <FormControl fullWidth>
               <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.85rem' }}>コンテンツ</FormLabel>
-              <FormControlLabel control={<Switch checked={exportWithText} onChange={e => setExportWithText(e.target.checked)} />} label={exportWithText ? "テロップあり" : "画像のみ"} />
+              <FormControlLabel
+                control={<Switch checked={exportWithText} onChange={e => setExportWithText(e.target.checked)} />}
+                label={exportWithText ? "テロップあり" : "画像のみ"}
+              />
             </FormControl>
             <Divider />
             <FormControl component="fieldset">
@@ -527,3 +578,14 @@ const StoryEditor: React.FC<StoryEditorProps> = ({ getAssetUrl }) => {
 };
 
 export default StoryEditor;
+"""
+
+for filepath, content in files_content.items():
+    dirpath = os.path.dirname(filepath)
+    if dirpath and not os.path.exists(dirpath):
+        os.makedirs(dirpath)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(content)
+        print(f"Fixed: {filepath}")
+
+print("\\nFix complete.")
