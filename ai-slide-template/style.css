@@ -1,0 +1,420 @@
+@charset "UTF-8";
+
+:root {
+    --primary: #2c3e50; /* 信頼感のあるダークネイビー */
+    --primary-light: #ecf0f1;
+    --accent: #e74c3c; /* 警告・注目（赤） */
+    --accent-pop: #f39c12; /* ゴールド（解決策） */
+    --text-main: #333;
+    --text-light: #7f8c8d;
+    --bg-body: #333;
+    --bg-slide: #fff;
+    
+    /* A4サイズ比率 (約 1123 x 794 px) */
+    --slide-w: 1123px;
+    --slide-h: 794px;
+    --header-h: 100px;
+}
+
+/* Base Reset */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    background: var(--bg-body);
+    
+    /* 修正1: "Noto Sans JP" をここに追加しないと、Webフォントが適用されません！ */
+    font-family: "Helvetica Neue", "Arial", "Noto Sans JP", sans-serif;
+    
+    /* 修正2: やっぱりこれが最強です。正規プロパティではなくこちらを使ってください */
+    font-feature-settings: "palt";
+    
+    /* お好みで: 文字間をわずかに詰めるとよりプロっぽくなります */
+    letter-spacing: 0.03em;
+
+    /* 以下、元のコードのまま */
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-main);
+    overflow: hidden;
+}
+
+
+#presentation {
+    width: var(--slide-w);
+    height: var(--slide-h);
+    background: var(--bg-slide);
+    position: relative;
+    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+
+.slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s;
+    background: white;
+    page-break-after: always; /* 印刷用 */
+}
+.slide.active { opacity: 1; visibility: visible; z-index: 10; }
+
+/* Header & Footer */
+.slide-header {
+    height: var(--header-h);
+    padding: 30px 60px 0;
+    border-bottom: 4px solid var(--primary-light);
+    display: flex;
+    align-items: flex-end;
+    flex-shrink: 0; /* 印刷時に潰れないように */
+}
+.chapter-badge {
+    background: var(--primary);
+    color: white;
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 2px;
+    margin-bottom: 5px;
+    display: inline-block;
+    -webkit-print-color-adjust: exact;
+}
+.slide-title {
+    font-size: 36px;
+    color: var(--primary);
+    margin: 0;
+    line-height: 1.2;
+}
+.slide-body {
+    flex: 1;
+    padding: 40px 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+}
+.slide-footer {
+    height: 40px;
+    border-top: 1px solid #eee;
+    padding: 0 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: #999;
+    flex-shrink: 0;
+}
+
+/* Layouts */
+.layout-cover .slide-body {
+    background: var(--primary);
+    color: white;
+    align-items: center;
+    text-align: center;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+.cover-title { font-size: 56px; font-weight: bold; margin-bottom: 30px; }
+.cover-subtitle { font-size: 24px; opacity: 0.9; }
+
+.layout-chapter .slide-body {
+    background: var(--primary-light);
+    align-items: center;
+    text-align: center;
+    -webkit-print-color-adjust: exact;
+}
+.chapter-content h1 { font-size: 48px; color: var(--primary); margin-bottom: 20px; }
+.chapter-deco { 
+    width: 60px; height: 6px; 
+    background: var(--accent); 
+    margin: 20px auto; 
+    -webkit-print-color-adjust: exact;
+}
+
+/* Grid & Components */
+.grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+    height: 100%;
+}
+.point-list li {
+    font-size: 20px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    list-style: none;
+    padding-left: 1.5em;
+    position: relative;
+}
+.point-list li::before {
+    content: "■";
+    color: var(--accent-pop);
+    position: absolute;
+    left: 0;
+    font-size: 0.8em;
+    top: 0.2em;
+}
+.image-box {
+    width: 100%;
+    height: 100%;
+    max-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #eee;
+    padding: 10px;
+}
+.image-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+/* Impact Layout */
+.impact-grid {
+    display: grid;
+    grid-template-columns: 1fr 50px 1fr;
+    gap: 20px;
+    align-items: center;
+    height: 100%;
+}
+.impact-panel {
+    background: #f9f9f9;
+    padding: 40px;
+    border-radius: 10px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    -webkit-print-color-adjust: exact;
+}
+.impact-panel.after {
+    background: #fff5e6;
+    border: 2px solid var(--accent-pop);
+}
+.impact-badge {
+    font-weight: bold;
+    font-size: 14px;
+    padding: 5px 15px;
+    border-radius: 20px;
+    color: white;
+    width: fit-content;
+    margin-bottom: 15px;
+    -webkit-print-color-adjust: exact;
+}
+.impact-arrow { font-size: 40px; color: #ccc; text-align: center; }
+
+/* Big Number Layout */
+.huge-number {
+    font-size: 120px;
+    font-family: "Impact", sans-serif;
+    color: #ccc;
+    line-height: 1;
+}
+.huge-number.accent {
+    color: var(--accent);
+    -webkit-print-color-adjust: exact;
+}
+.big-number-sub {
+    -webkit-print-color-adjust: exact;
+}
+
+/* Pricing */
+.plan-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    break-inside: avoid;
+}
+.plan-card.plan-highlight {
+    border: 3px solid var(--accent-pop);
+    transform: scale(1.05);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    z-index: 2;
+}
+.plan-header {
+    background: #f0f0f0;
+    padding: 20px;
+    text-align: center;
+    -webkit-print-color-adjust: exact;
+}
+.plan-card.plan-highlight .plan-header {
+    background: var(--accent-pop);
+    color: white;
+    -webkit-print-color-adjust: exact;
+}
+.plan-name { font-weight: bold; margin-bottom: 10px; font-size: 18px; }
+.plan-price { font-size: 28px; font-weight: bold; }
+.plan-body { padding: 20px; flex: 1; }
+.feature-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+.feature-label { color: #666; }
+.feature-value { font-weight: bold; }
+
+/* Pricing Note */
+.pricing-note {
+    text-align: right;
+    font-size: 12px;
+    color: #666;
+    margin-top: 20px;
+    margin-right: 10px;
+}
+
+/* Message Layout */
+.message-box {
+    padding: 40px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fafafa;
+    -webkit-print-color-adjust: exact;
+}
+
+/* Controls */
+#controls {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    padding: 10px 20px;
+    border-radius: 30px;
+    z-index: 1000;
+}
+#controls button {
+    background: none;
+    border: none;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 0 10px;
+}
+
+/* --- Image Edit Modal (Additions) --- */
+.image-edit-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.edit-modal {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    text-align: center;
+    min-width: 300px;
+}
+.edit-modal h3 {
+    margin-bottom: 20px;
+    color: var(--primary);
+    font-size: 20px;
+}
+.edit-modal p {
+    margin-bottom: 25px;
+    color: #666;
+    line-height: 1.6;
+    font-size: 14px;
+}
+.edit-modal button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    margin: 0 5px;
+    transition: background 0.3s;
+}
+.edit-modal button:hover {
+    background: var(--accent);
+}
+.edit-modal button:last-child {
+    background: #999;
+}
+.edit-modal button:last-child:hover {
+    background: #777;
+}
+
+/* -----------------------------------------------------------
+   Print Settings (印刷・PDF化のレイアウト崩れを強制修正)
+----------------------------------------------------------- *//* eigyo/style.css の一番下にある @media print ブロックをこれに書き換えてください */
+
+@media print {
+    @page {
+        size: A4 landscape; /* A4横向きを指定 */
+        margin: 0;          /* ブラウザの余白を強制ゼロに */
+    }
+
+    body {
+        background: white;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: auto;
+        display: block !important; /* Flexboxを解除 */
+        overflow: visible !important;
+    }
+
+    #presentation {
+        width: 100% !important;
+        height: auto !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        
+        /* ★ここが修正のキモ：JSによる拡大縮小を無効化 */
+        transform: none !important; 
+        left: 0 !important;
+        top: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* 全スライドを縦に並べて印刷させる */
+    .slide {
+        position: relative !important; /* 重なりを解除して縦並びに */
+        width: 100% !important;        /* 用紙幅いっぱいに */
+        height: 100vh !important;      /* 1ページ分の高さ */
+        
+        opacity: 1 !important;
+        visibility: visible !important;
+        
+        /* 改ページ設定 */
+        page-break-after: always !important;
+        break-after: page !important;
+        
+        /* 余計な装飾をリセット */
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        
+        /* 印刷用に色調整 */
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* コントロールボタンなどを消す */
+    #controls, #importFile, .image-edit-overlay, .slide-footer {
+        display: none !important;
+    }
+
+    /* Pricingのレイアウト崩れ防止 */
+    .plan-card.plan-highlight {
+        transform: none !important;
+        box-shadow: none !important;
+        border: 4px solid var(--accent-pop) !important;
+    }
+}
