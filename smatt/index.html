@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smatt</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            margin: 0; background: #000; color: #fff; 
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
+        }
+        
+        /* タブ */
+        .tabs { 
+            display: flex; background: #111; z-index: 100; flex-shrink: 0; height: 50px; border-bottom: 1px solid #333;
+        }
+        .tab { 
+            flex: 1; display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; color: #666; font-size: 15px; font-weight: bold; transition: 0.2s; user-select: none;
+        }
+        .tab.active { background: #1a1a1a; color: #fff; border-bottom: 2px solid #007bff; }
+        
+        .content { display: none; flex: 1; position: relative; overflow: hidden; }
+        .content.active { display: flex; flex-direction: column; }
+
+        /* --- 入力モード --- */
+        #c-send { padding: 15px; background: #121212; display: none; flex-direction: column; }
+        #c-send.active { display: flex; }
+
+        .header-area {
+            flex-shrink: 0; width: 100%; max-width: 600px; margin: 0 auto;
+        }
+
+        /* ロゴ削除につき入力欄のみ */
+        textarea { 
+            width: 100%; height: 100px; padding: 12px; font-size: 16px; 
+            border-radius: 12px; border: 1px solid #333; outline: none; 
+            background: #222; color: #fff; resize: none; box-sizing: border-box; line-height: 1.4;
+        }
+        textarea:focus { border-color: #007bff; background: #2a2a2a; }
+        
+        #qrcode-container { 
+            flex: 1; margin-top: 15px; background: #fff; border-radius: 16px; 
+            display: flex; justify-content: center; align-items: center; 
+            overflow: hidden; width: 100%; max-width: 600px; align-self: center; 
+            padding: 10px; box-sizing: border-box; position: relative;
+        }
+
+        canvas#qr-output { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        /* ページ番号インジケータ (入力側) */
+        #page-indicator {
+            position: absolute; bottom: 10px; right: 15px;
+            background: rgba(0,0,0,0.6); color: #fff; padding: 4px 10px;
+            border-radius: 12px; font-size: 12px; pointer-events: none;
+            display: none; /* 複数ページの時のみ表示 */
+        }
+
+        .footer-text {
+            flex-shrink: 0; font-size: 12px; color: #666; text-align: center; margin-top: 10px; height: 20px;
+        }
+
+        /* --- 読込モード --- */
+        #c-receive { padding: 0; background: #000; }
+        #cam-wrapper { 
+            position: relative; width: 100%; height: 100%; 
+            display: flex; justify-content: center; align-items: center; background: #000;
+        }
+        #canvas-scan { width: 100%; height: 100%; object-fit: contain; display: block; }
+        
+        /* 共通トースト */
+        #toast {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            padding: 10px 24px; background: rgba(0, 0, 0, 0.85); color: #fff;
+            border-radius: 30px; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+            z-index: 50; white-space: nowrap; border: 1px solid #444;
+        }
+        #toast.show { opacity: 1; }
+
+        /* 結果通知 */
+        #result-modal {
+            display: none; position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 85%; max-width: 350px; background: rgba(30, 30, 30, 0.95); 
+            border: 1px solid #444; color: white; padding: 20px;
+            border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            text-align: center; cursor: pointer; z-index: 20; backdrop-filter: blur(10px); 
+        }
+        #result-modal strong { display: block; font-size: 18px; margin-bottom: 8px; color: #00d4ff; }
+        #result-modal span { display: block; font-size: 13px; color: #ccc; word-break: break-all; line-height: 1.4; }
+        
+        .fade-in { animation: fadeIn 0.3s forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    </style>
+</head>
+<body>
+
+<div class="tabs">
+    <div id="t-send" class="tab" onclick="switchTab('send')">入力</div>
+    <div id="t-receive" class="tab" onclick="switchTab('receive')">読込</div>
+</div>
+
+<div id="toast"></div>
+
+<div id="c-send" class="content">
+    <div class="header-area">
+        <textarea id="inp" placeholder="文字を入力..." autofocus></textarea>
+    </div>
+    
+    <div id="qrcode-container">
+        <canvas id="qr-output"></canvas>
+        <div id="page-indicator">1 / 1</div>
+    </div>
+    
+    <div class="footer-text" id="send-status">入力で生成 (スワイプでページ切替)</div>
+</div>
+
+<div id="c-receive" class="content">
+    <div id="cam-wrapper">
+        <canvas id="canvas-scan"></canvas>
+        <div id="result-modal" onclick="copyResult()">
+            <strong>タップしてコピー</strong>
+            <span id="detected-text">...</span>
+        </div>
+    </div>
+    <video id="video" playsinline style="display:none;"></video>
+</div>
+
+<script>
+    // --- 共通ユーティリティ ---
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+    function showToast(msg, duration = 1500) {
+        toastEl.innerText = msg;
+        toastEl.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
+    }
+
+    // --- 入力 & QR分割ロジック ---
+    const qrCanvas = document.getElementById('qr-output');
+    const inp = document.getElementById('inp');
+    const pageInd = document.getElementById('page-indicator');
+    const qrContainer = document.getElementById('qrcode-container');
+    const sendStatus = document.getElementById('send-status');
+
+    // 設定
+    const CHUNK_SIZE = 800; // 800文字で分割
+    let chunks = [];
+    let currentPage = 0; // 0-based index
+    let currentId = ""; // 文章のID
+
+    function updateQR() {
+        const text = inp.value;
+        if (!text) {
+            chunks = [];
+            generateQR("");
+            pageInd.style.display = 'none';
+            return;
+        }
+
+        // 分割処理
+        if (text.length <= CHUNK_SIZE) {
+            // 分割不要
+            chunks = [text];
+            currentId = ""; // 短い場合はID不要（または単純なテキストとして扱う）
+        } else {
+            // 分割必要
+            chunks = [];
+            currentId = Date.now().toString(36); // 簡易ID生成
+            const total = Math.ceil(text.length / CHUNK_SIZE);
+            for (let i = 0; i < total; i++) {
+                const chunkData = text.substr(i * CHUNK_SIZE, CHUNK_SIZE);
+                // フォーマット: SMT:Index:Total:ID:Data
+                // Indexは1始まりにする
+                const header = `SMT:${i + 1}:${total}:${currentId}:`;
+                chunks.push(header + chunkData);
+            }
+        }
+
+        // ページ範囲チェック
+        if (currentPage >= chunks.length) currentPage = chunks.length - 1;
+        if (currentPage < 0) currentPage = 0;
+
+        // 描画
+        generateQR(chunks[currentPage]);
+        updateUI();
+    }
+
+    function generateQR(data) {
+        const ctx = qrCanvas.getContext('2d');
+        if (!data) {
+            ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+            return;
+        }
+        QRCode.toCanvas(qrCanvas, data, {
+            width: 1024, margin: 1, color: { dark: "#000000", light: "#ffffff" }
+        }, err => { if(err) console.error(err); });
+    }
+
+    function updateUI() {
+        if (chunks.length > 1) {
+            pageInd.innerText = `${currentPage + 1} / ${chunks.length}`;
+            pageInd.style.display = 'block';
+            sendStatus.innerText = `スワイプでページ切替 (${chunks.length}枚構成)`;
+        } else {
+            pageInd.style.display = 'none';
+            sendStatus.innerText = "入力でリアルタイム更新";
+        }
+    }
+
+    inp.addEventListener('input', () => {
+        currentPage = 0; // 入力変わったら先頭へ
+        updateQR();
+    });
+
+    // --- スワイプ操作 ---
+    let startX = 0;
+    qrContainer.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive: true});
+    qrContainer.addEventListener('touchend', e => {
+        const endX = e.changedTouches[0].clientX;
+        const diff = startX - endX;
+        if (Math.abs(diff) > 50) { // 50px以上動いたら
+            if (diff > 0) nextPage(); // 左スワイプ -> 進む
+            else prevPage();          // 右スワイプ -> 戻る
+        }
+    }, {passive: true});
+
+    function nextPage() {
+        if (currentPage < chunks.length - 1) {
+            currentPage++;
+            generateQR(chunks[currentPage]);
+            updateUI();
+            showToast(`ページ ${currentPage + 1} / ${chunks.length}`);
+        }
+    }
+    function prevPage() {
+        if (currentPage > 0) {
+            currentPage--;
+            generateQR(chunks[currentPage]);
+            updateUI();
+            showToast(`ページ ${currentPage + 1} / ${chunks.length}`);
+        }
+    }
+
+    updateQR(); // 初期化
+
+    // --- タブ制御 ---
+    function switchTab(mode) {
+        document.querySelectorAll('.tab, .content').forEach(e => e.classList.remove('active'));
+        document.getElementById('t-' + mode).classList.add('active');
+        document.getElementById('c-' + mode).classList.add('active');
+        localStorage.setItem('smatt_mode', mode);
+
+        if (mode === 'receive') {
+            startCamera();
+        } else {
+            stopCamera();
+            setTimeout(() => { inp.focus(); }, 100);
+        }
+    }
+
+    // --- 読込 & マージロジック ---
+    const video = document.getElementById('video');
+    const canvasScan = document.getElementById('canvas-scan');
+    const ctxScan = canvasScan.getContext('2d', { willReadFrequently: true });
+    const resultModal = document.getElementById('result-modal');
+    const detectedTextSpan = document.getElementById('detected-text');
+    
+    let stream = null;
+    let animeId = null;
+    let isScanning = true;
+    let lastRawData = "";
+
+    // 受信バッファ: { "ID": { total: 3, parts: { 1: "data", 3: "data"... } } }
+    let buffer = {}; 
+
+    async function startCamera() {
+        if(stream) return;
+        showToast("カメラ起動中...");
+        resultModal.style.display = 'none';
+        isScanning = true;
+        buffer = {}; // バッファリセット
+
+        try {
+            const constraints = { video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } };
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = stream;
+            video.setAttribute("playsinline", true); 
+            await video.play();
+            showToast("QRコードを映してください");
+            requestAnimationFrame(tick);
+        } catch (e) {
+            console.error(e);
+            showToast("❌ カメラエラー");
+        }
+    }
+
+    function stopCamera() {
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        if (animeId) cancelAnimationFrame(animeId);
+    }
+
+    function tick() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvasScan.width = video.videoWidth;
+            canvasScan.height = video.videoHeight;
+            ctxScan.drawImage(video, 0, 0, canvasScan.width, canvasScan.height);
+            
+            if(isScanning) {
+                const imageData = ctxScan.getImageData(0, 0, canvasScan.width, canvasScan.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+
+                if (code && code.data) {
+                    drawRect(code.location);
+                    handleScanData(code.data);
+                }
+            }
+        }
+        animeId = requestAnimationFrame(tick);
+    }
+
+    function drawRect(loc) {
+        ctxScan.beginPath();
+        ctxScan.lineWidth = 5;
+        ctxScan.strokeStyle = "#00d4ff"; 
+        ctxScan.moveTo(loc.topLeftCorner.x, loc.topLeftCorner.y);
+        ctxScan.lineTo(loc.topRightCorner.x, loc.topRightCorner.y);
+        ctxScan.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
+        ctxScan.lineTo(loc.bottomLeftCorner.x, loc.bottomLeftCorner.y);
+        ctxScan.closePath();
+        ctxScan.stroke();
+    }
+
+    function handleScanData(data) {
+        if (data === lastRawData) return; // 同じフレームでの重複処理防止
+        lastRawData = data;
+
+        // フォーマット解析: SMT:Index:Total:ID:Data
+        const match = data.match(/^SMT:(\d+):(\d+):([^:]+):(.*)/s);
+
+        if (!match) {
+            // 通常のQR（分割なし）
+            completeScan(data);
+            return;
+        }
+
+        // 分割QRの場合
+        const index = parseInt(match[1]); // 1-based
+        const total = parseInt(match[2]);
+        const id = match[3];
+        const content = match[4];
+
+        if (!buffer[id]) {
+            buffer[id] = { total: total, parts: {} };
+        }
+
+        if (!buffer[id].parts[index]) {
+            // 新しいパーツを受信
+            buffer[id].parts[index] = content;
+            if (navigator.vibrate) navigator.vibrate(30);
+            
+            const count = Object.keys(buffer[id].parts).length;
+            
+            if (count === total) {
+                // 全て揃った！ -> マージ
+                let fullText = "";
+                for (let i = 1; i <= total; i++) {
+                    fullText += buffer[id].parts[i];
+                }
+                completeScan(fullText);
+            } else {
+                // まだ足りない
+                showToast(`データ受信中... (${count} / ${total})`);
+            }
+        } else {
+            // すでに読込済みのパーツ
+            // ユーザーへのフィードバック頻度を下げるため、ここは静かにする
+        }
+    }
+
+    function completeScan(finalText) {
+        isScanning = false;
+        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+
+        showToast("✨ 全データ受信完了！");
+        
+        detectedTextSpan.innerText = finalText.substring(0, 60) + (finalText.length>60?"...":"");
+        resultModal.style.display = "block";
+        resultModal.classList.add('fade-in');
+
+        // 結果保持用
+        window.currentResult = finalText;
+
+        navigator.clipboard.writeText(finalText).then(() => {
+            resultModal.querySelector('strong').innerText = "✅ コピーしました";
+        }).catch(() => {
+            resultModal.querySelector('strong').innerText = "タップしてコピー";
+        });
+    }
+
+    window.copyResult = function() {
+        const text = window.currentResult || "";
+        navigator.clipboard.writeText(text).then(() => {
+            alert("コピーしました");
+            resetScan();
+        }).catch(err => {
+            prompt("手動コピー:", text);
+            resetScan();
+        });
+    };
+
+    function resetScan() {
+        resultModal.style.display = 'none';
+        buffer = {}; // バッファクリア
+        lastRawData = "";
+        showToast("次のQRを待機中...");
+        setTimeout(() => { isScanning = true; }, 500);
+    }
+
+    const savedMode = localStorage.getItem('smatt_mode') || 'send';
+    switchTab(savedMode);
+</script>
+</body>
+</html>
