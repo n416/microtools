@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smatt</title>
     
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -21,7 +21,10 @@
         }
         .tab { 
             flex: 1; display: flex; align-items: center; justify-content: center; 
-            cursor: pointer; color: #666; font-size: 15px; font-weight: bold; transition: 0.2s; user-select: none;
+            cursor: pointer; color: #666; font-size: 15px; font-weight: bold; transition: 0.2s;
+            /* 修正2: Safari対応 */
+            -webkit-user-select: none;
+            user-select: none;
         }
         .tab.active { background: #1a1a1a; color: #fff; border-bottom: 2px solid #007bff; }
         
@@ -36,7 +39,21 @@
             flex-shrink: 0; width: 100%; max-width: 600px; margin: 0 auto;
         }
 
-        /* ロゴ削除につき入力欄のみ */
+        .header-top {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+        }
+        .app-logo {
+            font-size: 20px; font-weight: 800;
+            background: linear-gradient(45deg, #007bff, #00d4ff);
+            /* 修正2: 標準プロパティの追加 */
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .settings-btn {
+            font-size: 20px; cursor: pointer; padding: 5px; opacity: 0.7;
+        }
+
         textarea { 
             width: 100%; height: 100px; padding: 12px; font-size: 16px; 
             border-radius: 12px; border: 1px solid #333; outline: none; 
@@ -53,12 +70,10 @@
 
         canvas#qr-output { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        /* ページ番号インジケータ (入力側) */
         #page-indicator {
             position: absolute; bottom: 10px; right: 15px;
             background: rgba(0,0,0,0.6); color: #fff; padding: 4px 10px;
-            border-radius: 12px; font-size: 12px; pointer-events: none;
-            display: none; /* 複数ページの時のみ表示 */
+            border-radius: 12px; font-size: 12px; pointer-events: none; display: none;
         }
 
         .footer-text {
@@ -73,7 +88,12 @@
         }
         #canvas-scan { width: 100%; height: 100%; object-fit: contain; display: block; }
         
-        /* 共通トースト */
+        /* 修正3: インラインスタイル排除のためここに定義 */
+        #video {
+            display: none;
+        }
+
+        /* トースト */
         #toast {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             padding: 10px 24px; background: rgba(0, 0, 0, 0.85); color: #fff;
@@ -82,18 +102,38 @@
         }
         #toast.show { opacity: 1; }
 
-        /* 結果通知 */
-        #result-modal {
+        /* モーダル共通スタイル */
+        .modal {
             display: none; position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
             width: 85%; max-width: 350px; background: rgba(30, 30, 30, 0.95); 
             border: 1px solid #444; color: white; padding: 20px;
             border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-            text-align: center; cursor: pointer; z-index: 20; backdrop-filter: blur(10px); 
+            text-align: center; z-index: 20;
+            /* 修正2: Safari対応 */
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px); 
         }
+        .modal.active { display: block; animation: fadeIn 0.3s forwards; }
+
+        #settings-modal h3 { margin: 0 0 15px 0; font-size: 16px; color: #ddd; }
+        .control-row {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+        }
+        .btn-adj {
+            background: #444; border: none; color: #fff; padding: 8px 12px;
+            border-radius: 8px; cursor: pointer; font-size: 12px; width: 45px;
+        }
+        .btn-adj:active { background: #666; }
+        #size-display { font-size: 20px; font-weight: bold; color: #00d4ff; width: 60px; }
+        .btn-close {
+            background: #007bff; border: none; color: #fff; padding: 10px 30px;
+            border-radius: 20px; font-size: 14px; cursor: pointer; width: 100%;
+        }
+
+        #result-modal { cursor: pointer; }
         #result-modal strong { display: block; font-size: 18px; margin-bottom: 8px; color: #00d4ff; }
         #result-modal span { display: block; font-size: 13px; color: #ccc; word-break: break-all; line-height: 1.4; }
         
-        .fade-in { animation: fadeIn 0.3s forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
     </style>
 </head>
@@ -108,6 +148,10 @@
 
 <div id="c-send" class="content">
     <div class="header-area">
+        <div class="header-top">
+            <div class="app-logo">Smatt</div>
+            <div class="settings-btn" onclick="openSettings()">⚙️</div>
+        </div>
         <textarea id="inp" placeholder="文字を入力..." autofocus></textarea>
     </div>
     
@@ -116,22 +160,34 @@
         <div id="page-indicator">1 / 1</div>
     </div>
     
-    <div class="footer-text" id="send-status">入力で生成 (スワイプでページ切替)</div>
+    <div class="footer-text" id="send-status">入力で生成</div>
+    
+    <div id="settings-modal" class="modal">
+        <h3>分割サイズ設定 (文字数)</h3>
+        <div class="control-row">
+            <button class="btn-adj" onclick="adjSize(-100)">-100</button>
+            <button class="btn-adj" onclick="adjSize(-10)">-10</button>
+            <span id="size-display">800</span>
+            <button class="btn-adj" onclick="adjSize(10)">+10</button>
+            <button class="btn-adj" onclick="adjSize(100)">+100</button>
+        </div>
+        <button class="btn-close" onclick="closeSettings()">完了</button>
+    </div>
 </div>
 
 <div id="c-receive" class="content">
     <div id="cam-wrapper">
         <canvas id="canvas-scan"></canvas>
-        <div id="result-modal" onclick="copyResult()">
+        <div id="result-modal" class="modal" onclick="copyResult()">
             <strong>タップしてコピー</strong>
             <span id="detected-text">...</span>
         </div>
     </div>
-    <video id="video" playsinline style="display:none;"></video>
+    <video id="video" playsinline></video>
 </div>
 
 <script>
-    // --- 共通ユーティリティ ---
+    // --- ユーティリティ ---
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
     function showToast(msg, duration = 1500) {
@@ -141,18 +197,42 @@
         toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
     }
 
-    // --- 入力 & QR分割ロジック ---
+    // --- 入力 & 設定ロジック ---
     const qrCanvas = document.getElementById('qr-output');
     const inp = document.getElementById('inp');
     const pageInd = document.getElementById('page-indicator');
     const qrContainer = document.getElementById('qrcode-container');
     const sendStatus = document.getElementById('send-status');
+    const settingsModal = document.getElementById('settings-modal');
+    const sizeDisplay = document.getElementById('size-display');
 
-    // 設定
-    const CHUNK_SIZE = 800; // 800文字で分割
+    // 設定値のロード (デフォルト800)
+    let CHUNK_SIZE = parseInt(localStorage.getItem('smatt_chunk_size')) || 800;
+    
+    // 設定UI制御
+    function openSettings() {
+        sizeDisplay.innerText = CHUNK_SIZE;
+        settingsModal.classList.add('active');
+    }
+    function closeSettings() {
+        settingsModal.classList.remove('active');
+        inp.focus(); 
+    }
+    function adjSize(delta) {
+        let newVal = CHUNK_SIZE + delta;
+        if (newVal > 800) newVal = 800;
+        if (newVal < 30) newVal = 30;
+        
+        CHUNK_SIZE = newVal;
+        sizeDisplay.innerText = CHUNK_SIZE;
+        localStorage.setItem('smatt_chunk_size', CHUNK_SIZE);
+        updateQR();
+    }
+
+    // QR分割生成
     let chunks = [];
-    let currentPage = 0; // 0-based index
-    let currentId = ""; // 文章のID
+    let currentPage = 0; 
+    let currentId = ""; 
 
     function updateQR() {
         const text = inp.value;
@@ -160,33 +240,26 @@
             chunks = [];
             generateQR("");
             pageInd.style.display = 'none';
+            sendStatus.innerText = `分割サイズ: ${CHUNK_SIZE}文字`;
             return;
         }
 
-        // 分割処理
         if (text.length <= CHUNK_SIZE) {
-            // 分割不要
             chunks = [text];
-            currentId = ""; // 短い場合はID不要（または単純なテキストとして扱う）
+            currentId = ""; 
         } else {
-            // 分割必要
             chunks = [];
-            currentId = Date.now().toString(36); // 簡易ID生成
+            currentId = Date.now().toString(36); 
             const total = Math.ceil(text.length / CHUNK_SIZE);
             for (let i = 0; i < total; i++) {
                 const chunkData = text.substr(i * CHUNK_SIZE, CHUNK_SIZE);
-                // フォーマット: SMT:Index:Total:ID:Data
-                // Indexは1始まりにする
-                const header = `SMT:${i + 1}:${total}:${currentId}:`;
-                chunks.push(header + chunkData);
+                chunks.push(`SMT:${i + 1}:${total}:${currentId}:${chunkData}`);
             }
         }
 
-        // ページ範囲チェック
         if (currentPage >= chunks.length) currentPage = chunks.length - 1;
         if (currentPage < 0) currentPage = 0;
 
-        // 描画
         generateQR(chunks[currentPage]);
         updateUI();
     }
@@ -206,27 +279,27 @@
         if (chunks.length > 1) {
             pageInd.innerText = `${currentPage + 1} / ${chunks.length}`;
             pageInd.style.display = 'block';
-            sendStatus.innerText = `スワイプでページ切替 (${chunks.length}枚構成)`;
+            sendStatus.innerText = `スワイプで切替 (${chunks.length}枚) / サイズ: ${CHUNK_SIZE}`;
         } else {
             pageInd.style.display = 'none';
-            sendStatus.innerText = "入力でリアルタイム更新";
+            sendStatus.innerText = `完了 (サイズ: ${CHUNK_SIZE})`;
         }
     }
 
     inp.addEventListener('input', () => {
-        currentPage = 0; // 入力変わったら先頭へ
+        currentPage = 0; 
         updateQR();
     });
 
-    // --- スワイプ操作 ---
+    // スワイプ操作
     let startX = 0;
     qrContainer.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive: true});
     qrContainer.addEventListener('touchend', e => {
         const endX = e.changedTouches[0].clientX;
         const diff = startX - endX;
-        if (Math.abs(diff) > 50) { // 50px以上動いたら
-            if (diff > 0) nextPage(); // 左スワイプ -> 進む
-            else prevPage();          // 右スワイプ -> 戻る
+        if (Math.abs(diff) > 50) { 
+            if (diff > 0) nextPage(); 
+            else prevPage();          
         }
     }, {passive: true});
 
@@ -247,7 +320,7 @@
         }
     }
 
-    updateQR(); // 初期化
+    updateQR(); 
 
     // --- タブ制御 ---
     function switchTab(mode) {
@@ -264,7 +337,7 @@
         }
     }
 
-    // --- 読込 & マージロジック ---
+    // --- 読込ロジック ---
     const video = document.getElementById('video');
     const canvasScan = document.getElementById('canvas-scan');
     const ctxScan = canvasScan.getContext('2d', { willReadFrequently: true });
@@ -275,16 +348,14 @@
     let animeId = null;
     let isScanning = true;
     let lastRawData = "";
-
-    // 受信バッファ: { "ID": { total: 3, parts: { 1: "data", 3: "data"... } } }
     let buffer = {}; 
 
     async function startCamera() {
         if(stream) return;
         showToast("カメラ起動中...");
-        resultModal.style.display = 'none';
+        resultModal.classList.remove('active');
         isScanning = true;
-        buffer = {}; // バッファリセット
+        buffer = {}; 
 
         try {
             const constraints = { video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } };
@@ -337,20 +408,17 @@
     }
 
     function handleScanData(data) {
-        if (data === lastRawData) return; // 同じフレームでの重複処理防止
+        if (data === lastRawData) return; 
         lastRawData = data;
 
-        // フォーマット解析: SMT:Index:Total:ID:Data
         const match = data.match(/^SMT:(\d+):(\d+):([^:]+):(.*)/s);
 
         if (!match) {
-            // 通常のQR（分割なし）
             completeScan(data);
             return;
         }
 
-        // 分割QRの場合
-        const index = parseInt(match[1]); // 1-based
+        const index = parseInt(match[1]); 
         const total = parseInt(match[2]);
         const id = match[3];
         const content = match[4];
@@ -360,26 +428,20 @@
         }
 
         if (!buffer[id].parts[index]) {
-            // 新しいパーツを受信
             buffer[id].parts[index] = content;
             if (navigator.vibrate) navigator.vibrate(30);
             
             const count = Object.keys(buffer[id].parts).length;
             
             if (count === total) {
-                // 全て揃った！ -> マージ
                 let fullText = "";
                 for (let i = 1; i <= total; i++) {
                     fullText += buffer[id].parts[i];
                 }
                 completeScan(fullText);
             } else {
-                // まだ足りない
-                showToast(`データ受信中... (${count} / ${total})`);
+                showToast(`受信中... (${count} / ${total})`);
             }
-        } else {
-            // すでに読込済みのパーツ
-            // ユーザーへのフィードバック頻度を下げるため、ここは静かにする
         }
     }
 
@@ -387,13 +449,11 @@
         isScanning = false;
         if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
 
-        showToast("✨ 全データ受信完了！");
+        showToast("✨ 受信完了");
         
         detectedTextSpan.innerText = finalText.substring(0, 60) + (finalText.length>60?"...":"");
-        resultModal.style.display = "block";
-        resultModal.classList.add('fade-in');
+        resultModal.classList.add('active');
 
-        // 結果保持用
         window.currentResult = finalText;
 
         navigator.clipboard.writeText(finalText).then(() => {
@@ -415,10 +475,10 @@
     };
 
     function resetScan() {
-        resultModal.style.display = 'none';
-        buffer = {}; // バッファクリア
+        resultModal.classList.remove('active');
+        buffer = {}; 
         lastRawData = "";
-        showToast("次のQRを待機中...");
+        showToast("待機中...");
         setTimeout(() => { isScanning = true; }, 500);
     }
 
