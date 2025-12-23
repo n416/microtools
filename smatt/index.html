@@ -15,44 +15,63 @@
             display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
         }
         
-        /* タブ */
+        /* --- タブ --- */
         .tabs { 
-            display: flex; background: #111; z-index: 100; flex-shrink: 0; height: 50px; border-bottom: 1px solid #333;
+            display: flex; background: #111; z-index: 50; flex-shrink: 0; height: 50px; border-bottom: 1px solid #333;
         }
         .tab { 
             flex: 1; display: flex; align-items: center; justify-content: center; 
             cursor: pointer; color: #666; font-size: 15px; font-weight: bold; transition: 0.2s;
-            /* 修正2: Safari対応 */
-            -webkit-user-select: none;
-            user-select: none;
+            -webkit-user-select: none; user-select: none;
         }
         .tab.active { background: #1a1a1a; color: #fff; border-bottom: 2px solid #007bff; }
         
         .content { display: none; flex: 1; position: relative; overflow: hidden; }
         .content.active { display: flex; flex-direction: column; }
 
+        /* --- 共通: モーダル & オーバーレイ (修正適用済み) --- */
+        .overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.95); z-index: 9999;
+            display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; padding: 20px; box-sizing: border-box;
+        }
+        /* アニメーション修正済み */
+        .overlay.active { display: flex; animation: fadeInOverlay 0.3s forwards; }
+
+        .intro-box { 
+            max-width: 400px; width: 100%; margin: 0 auto;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .intro-title { font-size: 24px; font-weight: bold; margin-bottom: 30px; color: #00d4ff; }
+        .intro-step { width: 100%; margin-bottom: 25px; text-align: left; background: #222; padding: 15px; border-radius: 10px; border: 1px solid #444; box-sizing: border-box; }
+        .intro-step h4 { margin: 0 0 5px 0; color: #fff; font-size: 16px; }
+        .intro-step p { margin: 0; color: #aaa; font-size: 13px; line-height: 1.5; }
+        
+        .btn-large {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none; color: white; padding: 15px 40px; border-radius: 30px;
+            font-size: 18px; font-weight: bold; cursor: pointer; margin: 10px; width: 80%;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.4);
+        }
+        .btn-large:active { transform: scale(0.98); }
+        .btn-secondary { background: #444; box-shadow: none; }
+
         /* --- 入力モード --- */
         #c-send { padding: 15px; background: #121212; display: none; flex-direction: column; }
         #c-send.active { display: flex; }
 
-        .header-area {
-            flex-shrink: 0; width: 100%; max-width: 600px; margin: 0 auto;
-        }
-
-        .header-top {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
-        }
+        .header-area { flex-shrink: 0; width: 100%; max-width: 600px; margin: 0 auto; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
         .app-logo {
             font-size: 20px; font-weight: 800;
             background: linear-gradient(45deg, #007bff, #00d4ff);
-            /* 修正2: 標準プロパティの追加 */
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
         }
-        .settings-btn {
-            font-size: 20px; cursor: pointer; padding: 5px; opacity: 0.7;
-        }
+        .settings-btn { font-size: 20px; cursor: pointer; padding: 5px; opacity: 0.7; }
 
         textarea { 
             width: 100%; height: 100px; padding: 12px; font-size: 16px; 
@@ -67,18 +86,13 @@
             overflow: hidden; width: 100%; max-width: 600px; align-self: center; 
             padding: 10px; box-sizing: border-box; position: relative;
         }
-
         canvas#qr-output { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
-
         #page-indicator {
             position: absolute; bottom: 10px; right: 15px;
             background: rgba(0,0,0,0.6); color: #fff; padding: 4px 10px;
             border-radius: 12px; font-size: 12px; pointer-events: none; display: none;
         }
-
-        .footer-text {
-            flex-shrink: 0; font-size: 12px; color: #666; text-align: center; margin-top: 10px; height: 20px;
-        }
+        .footer-text { flex-shrink: 0; font-size: 12px; color: #666; text-align: center; margin-top: 10px; height: 20px; }
 
         /* --- 読込モード --- */
         #c-receive { padding: 0; background: #000; }
@@ -87,13 +101,14 @@
             display: flex; justify-content: center; align-items: center; background: #000;
         }
         #canvas-scan { width: 100%; height: 100%; object-fit: contain; display: block; }
-        
-        /* 修正3: インラインスタイル排除のためここに定義 */
-        #video {
-            display: none;
+        #video { display: none; }
+
+        #help-link {
+            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.5); font-size: 13px; text-decoration: underline;
+            cursor: pointer; z-index: 10; padding: 10px;
         }
 
-        /* トースト */
         #toast {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             padding: 10px 24px; background: rgba(0, 0, 0, 0.85); color: #fff;
@@ -102,42 +117,81 @@
         }
         #toast.show { opacity: 1; }
 
-        /* モーダル共通スタイル */
         .modal {
             display: none; position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
             width: 85%; max-width: 350px; background: rgba(30, 30, 30, 0.95); 
             border: 1px solid #444; color: white; padding: 20px;
             border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
             text-align: center; z-index: 20;
-            /* 修正2: Safari対応 */
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); 
         }
-        .modal.active { display: block; animation: fadeIn 0.3s forwards; }
+        .modal.active { display: block; animation: fadeInOverlay 0.3s forwards; }
 
-        #settings-modal h3 { margin: 0 0 15px 0; font-size: 16px; color: #ddd; }
-        .control-row {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
-        }
+        #settings-modal h3, #help-modal h3 { margin: 0 0 15px 0; font-size: 16px; color: #ddd; }
+        .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .btn-adj {
             background: #444; border: none; color: #fff; padding: 8px 12px;
             border-radius: 8px; cursor: pointer; font-size: 12px; width: 45px;
         }
         .btn-adj:active { background: #666; }
         #size-display { font-size: 20px; font-weight: bold; color: #00d4ff; width: 60px; }
+        
         .btn-close {
             background: #007bff; border: none; color: #fff; padding: 10px 30px;
-            border-radius: 20px; font-size: 14px; cursor: pointer; width: 100%;
+            border-radius: 20px; font-size: 14px; cursor: pointer; width: 100%; margin-top: 10px;
+        }
+        .btn-reset {
+            background: transparent; border: 1px solid #444; color: #888; padding: 8px;
+            border-radius: 8px; font-size: 12px; cursor: pointer; width: 100%; margin-top: 15px;
         }
 
         #result-modal { cursor: pointer; }
         #result-modal strong { display: block; font-size: 18px; margin-bottom: 8px; color: #00d4ff; }
         #result-modal span { display: block; font-size: 13px; color: #ccc; word-break: break-all; line-height: 1.4; }
         
-        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        @keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
+
+<div id="intro-select" class="overlay">
+    <div class="intro-box">
+        <div class="intro-title">Smatt</div>
+        <p style="color:#aaa; margin-bottom:30px;">どちらで使用しますか？</p>
+        <button class="btn-large" onclick="introNext('send')">📱 スマホ (入力)</button>
+        <button class="btn-large btn-secondary" onclick="introNext('receive')">💻 PC (読込)</button>
+    </div>
+</div>
+
+<div id="intro-guide-send" class="overlay">
+    <div class="intro-box">
+        <div class="intro-title">使い方 (スマホ)</div>
+        <div class="intro-step">
+            <h4>STEP 1</h4>
+            <p>入力欄にテキストをどんどん入れてください。自動でQRコードになります。</p>
+        </div>
+        <div class="intro-step">
+            <h4>STEP 2</h4>
+            <p>書き終わったら、QRコードをPCのカメラに見せつけるだけ！<br>長い文章はスワイプして全部見せてね。</p>
+        </div>
+        <button class="btn-large" onclick="introFinish('send')">はじめる</button>
+    </div>
+</div>
+
+<div id="intro-guide-receive" class="overlay">
+    <div class="intro-box">
+        <div class="intro-title">使い方 (PC)</div>
+        <div class="intro-step">
+            <h4>STEP 1</h4>
+            <p>カメラへのアクセスを許可して、スマホのQRコードを映してください。</p>
+        </div>
+        <div class="intro-step">
+            <h4>STEP 2</h4>
+            <p>QRが複数ページある場合は、スマホ側をスワイプして全て読み込ませてください。<br>全部揃ったら自動で表示されます。</p>
+        </div>
+        <button class="btn-large" onclick="introFinish('receive')">はじめる</button>
+    </div>
+</div>
 
 <div class="tabs">
     <div id="t-send" class="tab" onclick="switchTab('send')">入力</div>
@@ -172,21 +226,99 @@
             <button class="btn-adj" onclick="adjSize(100)">+100</button>
         </div>
         <button class="btn-close" onclick="closeSettings()">完了</button>
+        <button class="btn-reset" onclick="resetIntro()">説明をもう一度見る</button>
     </div>
 </div>
 
 <div id="c-receive" class="content">
     <div id="cam-wrapper">
         <canvas id="canvas-scan"></canvas>
+        <div id="help-link" onclick="openHelp()">読み取りづらいときは？</div>
         <div id="result-modal" class="modal" onclick="copyResult()">
             <strong>タップしてコピー</strong>
             <span id="detected-text">...</span>
+        </div>
+        
+        <div id="help-modal" class="modal">
+            <h3 style="color:#ff4444;">⚠️ PC側の設定はありません</h3>
+            <p style="font-size:14px; color:#ccc; text-align:left; margin-bottom:20px;">
+                QRコードが読み取れない場合は、<strong style="color:#fff;">スマホ側の設定 (⚙️)</strong> から「分割サイズ」を小さくしてください。<br><br>
+                PC側をいくらいじっても改善しません。
+            </p>
+            <button class="btn-close" onclick="closeHelp()">閉じる</button>
         </div>
     </div>
     <video id="video" playsinline></video>
 </div>
 
 <script>
+    // --- イントロダクション制御 (改良版) ---
+    const introSelect = document.getElementById('intro-select');
+    const introGuideSend = document.getElementById('intro-guide-send');
+    const introGuideRecv = document.getElementById('intro-guide-receive');
+    
+    function checkIntro() {
+        // どちらのチュートリアルも未完了の場合のみ選択画面を出す
+        const doneSend = localStorage.getItem('smatt_intro_send_done');
+        const doneRecv = localStorage.getItem('smatt_intro_receive_done');
+
+        if (!doneSend && !doneRecv) {
+            introSelect.classList.add('active');
+        } else {
+            // どちらか片方でも完了していれば、前回開いていたタブへ
+            // (未完了のタブを開いた時にガイドが出る)
+            const savedMode = localStorage.getItem('smatt_mode') || 'send';
+            switchTab(savedMode);
+        }
+    }
+
+    function introNext(mode) {
+        introSelect.classList.remove('active');
+        // ガイドを表示
+        document.getElementById('intro-guide-' + mode).classList.add('active');
+    }
+
+    function introFinish(mode) {
+        document.getElementById('intro-guide-' + mode).classList.remove('active');
+        localStorage.setItem('smatt_intro_' + mode + '_done', 'true');
+        // 改めてタブ切り替え処理を実行
+        switchTab(mode);
+    }
+
+    function resetIntro() {
+        if(confirm("チュートリアルを再度表示しますか？\n(アプリがリロードされます)")) {
+            localStorage.removeItem('smatt_intro_send_done');
+            localStorage.removeItem('smatt_intro_receive_done');
+            location.reload();
+        }
+    }
+
+    // --- タブ制御 & 割り込みロジック ---
+    function switchTab(mode) {
+        // そのモードのガイドが未完了なら、タブ切り替えの前にガイドを割り込ませる
+        if (!localStorage.getItem('smatt_intro_' + mode + '_done')) {
+            // すでにガイドが表示されていなければ表示
+            const guideEl = document.getElementById('intro-guide-' + mode);
+            if (!guideEl.classList.contains('active')) {
+                guideEl.classList.add('active');
+            }
+            return; // ここで処理中断
+        }
+
+        // --- 通常の切り替え処理 ---
+        document.querySelectorAll('.tab, .content').forEach(e => e.classList.remove('active'));
+        document.getElementById('t-' + mode).classList.add('active');
+        document.getElementById('c-' + mode).classList.add('active');
+        localStorage.setItem('smatt_mode', mode);
+
+        if (mode === 'receive') {
+            startCamera();
+        } else {
+            stopCamera();
+            setTimeout(() => { inp.focus(); }, 100);
+        }
+    }
+
     // --- ユーティリティ ---
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
@@ -206,10 +338,8 @@
     const settingsModal = document.getElementById('settings-modal');
     const sizeDisplay = document.getElementById('size-display');
 
-    // 設定値のロード (デフォルト800)
     let CHUNK_SIZE = parseInt(localStorage.getItem('smatt_chunk_size')) || 800;
     
-    // 設定UI制御
     function openSettings() {
         sizeDisplay.innerText = CHUNK_SIZE;
         settingsModal.classList.add('active');
@@ -222,14 +352,12 @@
         let newVal = CHUNK_SIZE + delta;
         if (newVal > 800) newVal = 800;
         if (newVal < 30) newVal = 30;
-        
         CHUNK_SIZE = newVal;
         sizeDisplay.innerText = CHUNK_SIZE;
         localStorage.setItem('smatt_chunk_size', CHUNK_SIZE);
         updateQR();
     }
 
-    // QR分割生成
     let chunks = [];
     let currentPage = 0; 
     let currentId = ""; 
@@ -291,7 +419,6 @@
         updateQR();
     });
 
-    // スワイプ操作
     let startX = 0;
     qrContainer.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive: true});
     qrContainer.addEventListener('touchend', e => {
@@ -322,33 +449,22 @@
 
     updateQR(); 
 
-    // --- タブ制御 ---
-    function switchTab(mode) {
-        document.querySelectorAll('.tab, .content').forEach(e => e.classList.remove('active'));
-        document.getElementById('t-' + mode).classList.add('active');
-        document.getElementById('c-' + mode).classList.add('active');
-        localStorage.setItem('smatt_mode', mode);
-
-        if (mode === 'receive') {
-            startCamera();
-        } else {
-            stopCamera();
-            setTimeout(() => { inp.focus(); }, 100);
-        }
-    }
-
-    // --- 読込ロジック ---
+    // --- 読込 & ヘルプロジック ---
     const video = document.getElementById('video');
     const canvasScan = document.getElementById('canvas-scan');
     const ctxScan = canvasScan.getContext('2d', { willReadFrequently: true });
     const resultModal = document.getElementById('result-modal');
     const detectedTextSpan = document.getElementById('detected-text');
+    const helpModal = document.getElementById('help-modal');
     
     let stream = null;
     let animeId = null;
     let isScanning = true;
     let lastRawData = "";
     let buffer = {}; 
+
+    function openHelp() { helpModal.classList.add('active'); }
+    function closeHelp() { helpModal.classList.remove('active'); }
 
     async function startCamera() {
         if(stream) return;
@@ -482,8 +598,8 @@
         setTimeout(() => { isScanning = true; }, 500);
     }
 
-    const savedMode = localStorage.getItem('smatt_mode') || 'send';
-    switchTab(savedMode);
+    // 初期起動チェック
+    checkIntro();
 </script>
 </body>
 </html>
