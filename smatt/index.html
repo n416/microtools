@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007bff">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <title>Smatt</title>
     
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -29,7 +32,50 @@
         .content { display: none; flex: 1; position: relative; overflow: hidden; }
         .content.active { display: flex; flex-direction: column; }
 
-        /* --- 共通: モーダル & オーバーレイ (修正適用済み) --- */
+        /* --- チュートリアル用ハイライト・吹き出し --- */
+        /* 画面全体を暗くするバックドロップ */
+        #tutorial-backdrop {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85); z-index: 9000;
+            display: none; pointer-events: auto;
+        }
+        #tutorial-backdrop.active { display: block; animation: fadeInOverlay 0.3s forwards; }
+
+        /* ハイライト要素（z-indexを上げて浮き上がらせるクラス） */
+        .highlight-element {
+            z-index: 9001 !important;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+            background: #222; /* 背景抜け防止 */
+            pointer-events: none; /* チュートリアル中は操作不可 */
+        }
+
+        /* 吹き出し */
+        .tutorial-tooltip {
+            position: absolute; width: 280px; padding: 20px;
+            background: #fff; color: #333; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 9002; display: none; text-align: center;
+            font-weight: bold; font-size: 16px;
+        }
+        .tutorial-tooltip::after {
+            content: ''; position: absolute; border: 10px solid transparent;
+        }
+        /* 下向き矢印 (ボックスは上) */
+        .tooltip-top::after {
+            bottom: -20px; left: 50%; transform: translateX(-50%); border-top-color: #fff;
+        }
+        /* 上向き矢印 (ボックスは下) */
+        .tooltip-bottom::after {
+            top: -20px; left: 50%; transform: translateX(-50%); border-bottom-color: #fff;
+        }
+
+        .btn-next {
+            background: #007bff; color: white; border: none; padding: 10px 30px;
+            border-radius: 20px; margin-top: 15px; cursor: pointer; font-size: 14px;
+        }
+
+        /* --- イントロダクション（デバイス選択） --- */
         .overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             width: 100vw; height: 100vh;
@@ -38,28 +84,26 @@
             flex-direction: column; justify-content: center; align-items: center;
             text-align: center; padding: 20px; box-sizing: border-box;
         }
-        /* アニメーション修正済み */
         .overlay.active { display: flex; animation: fadeInOverlay 0.3s forwards; }
 
-        .intro-box { 
-            max-width: 400px; width: 100%; margin: 0 auto;
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .intro-title { font-size: 24px; font-weight: bold; margin-bottom: 30px; color: #00d4ff; }
-        .intro-step { width: 100%; margin-bottom: 25px; text-align: left; background: #222; padding: 15px; border-radius: 10px; border: 1px solid #444; box-sizing: border-box; }
-        .intro-step h4 { margin: 0 0 5px 0; color: #fff; font-size: 16px; }
-        .intro-step p { margin: 0; color: #aaa; font-size: 13px; line-height: 1.5; }
+        .intro-box { max-width: 400px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; align-items: center; }
+        .intro-title { font-size: 28px; font-weight: 800; margin-bottom: 30px; background: linear-gradient(45deg, #007bff, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
         .btn-large {
             background: linear-gradient(45deg, #007bff, #0056b3);
-            border: none; color: white; padding: 15px 40px; border-radius: 30px;
-            font-size: 18px; font-weight: bold; cursor: pointer; margin: 10px; width: 80%;
-            box-shadow: 0 4px 15px rgba(0,123,255,0.4);
+            border: none; color: white; padding: 18px 40px; border-radius: 40px;
+            font-size: 18px; font-weight: bold; cursor: pointer; margin: 12px; width: 90%;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.4); transition: transform 0.1s;
         }
         .btn-large:active { transform: scale(0.98); }
-        .btn-secondary { background: #444; box-shadow: none; }
+        .btn-secondary { background: #333; box-shadow: none; border: 1px solid #555; }
 
-        /* --- 入力モード --- */
+        /* PC用ガイド */
+        .intro-step { width: 100%; margin-bottom: 25px; text-align: left; background: #222; padding: 15px; border-radius: 10px; border: 1px solid #444; box-sizing: border-box; }
+        .intro-step h4 { margin: 0 0 5px 0; color: #fff; font-size: 16px; }
+        .intro-step p { margin: 0; color: #aaa; font-size: 13px; line-height: 1.5; }
+
+        /* --- コンテンツ --- */
         #c-send { padding: 15px; background: #121212; display: none; flex-direction: column; }
         #c-send.active { display: flex; }
 
@@ -74,9 +118,9 @@
         .settings-btn { font-size: 20px; cursor: pointer; padding: 5px; opacity: 0.7; }
 
         textarea { 
-            width: 100%; height: 100px; padding: 12px; font-size: 16px; 
+            width: 100%; height: 120px; padding: 15px; font-size: 16px; 
             border-radius: 12px; border: 1px solid #333; outline: none; 
-            background: #222; color: #fff; resize: none; box-sizing: border-box; line-height: 1.4;
+            background: #222; color: #fff; resize: none; box-sizing: border-box; line-height: 1.5;
         }
         textarea:focus { border-color: #007bff; background: #2a2a2a; }
         
@@ -94,7 +138,6 @@
         }
         .footer-text { flex-shrink: 0; font-size: 12px; color: #666; text-align: center; margin-top: 10px; height: 20px; }
 
-        /* --- 読込モード --- */
         #c-receive { padding: 0; background: #000; }
         #cam-wrapper { 
             position: relative; width: 100%; height: 100%; 
@@ -154,27 +197,27 @@
 </head>
 <body>
 
+<div id="tutorial-backdrop"></div>
+
+<div id="tip-1" class="tutorial-tooltip tooltip-bottom">
+    ここに入力！<br>
+    <button class="btn-next" onclick="runTutorialStep2()">OK！</button>
+</div>
+<div id="tip-2" class="tutorial-tooltip tooltip-bottom">
+    自由に入力してみる...<br>(自動デモ中)
+</div>
+
+<div id="tip-3" class="tutorial-tooltip tooltip-top">
+    ここにQRが表示されています。<br>これを読み込ませましょう。<br>
+    <button class="btn-next" onclick="finishTutorial()">OK！</button>
+</div>
+
 <div id="intro-select" class="overlay">
     <div class="intro-box">
         <div class="intro-title">Smatt</div>
         <p style="color:#aaa; margin-bottom:30px;">どちらで使用しますか？</p>
         <button class="btn-large" onclick="introNext('send')">📱 スマホ (入力)</button>
         <button class="btn-large btn-secondary" onclick="introNext('receive')">💻 PC (読込)</button>
-    </div>
-</div>
-
-<div id="intro-guide-send" class="overlay">
-    <div class="intro-box">
-        <div class="intro-title">使い方 (スマホ)</div>
-        <div class="intro-step">
-            <h4>STEP 1</h4>
-            <p>入力欄にテキストをどんどん入れてください。自動でQRコードになります。</p>
-        </div>
-        <div class="intro-step">
-            <h4>STEP 2</h4>
-            <p>書き終わったら、QRコードをPCのカメラに見せつけるだけ！<br>長い文章はスワイプして全部見せてね。</p>
-        </div>
-        <button class="btn-large" onclick="introFinish('send')">はじめる</button>
     </div>
 </div>
 
@@ -187,9 +230,9 @@
         </div>
         <div class="intro-step">
             <h4>STEP 2</h4>
-            <p>QRが複数ページある場合は、スマホ側をスワイプして全て読み込ませてください。<br>全部揃ったら自動で表示されます。</p>
+            <p>QRが複数ページある場合は、スマホ側をスワイプして全て読み込ませてください。</p>
         </div>
-        <button class="btn-large" onclick="introFinish('receive')">はじめる</button>
+        <button class="btn-large" onclick="introFinishReceive()">はじめる</button>
     </div>
 </div>
 
@@ -252,21 +295,31 @@
 </div>
 
 <script>
-    // --- イントロダクション制御 (改良版) ---
+    // --- PWA Service Worker ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(console.error);
+        });
+    }
+
+    // --- チュートリアル / イントロロジック ---
     const introSelect = document.getElementById('intro-select');
-    const introGuideSend = document.getElementById('intro-guide-send');
     const introGuideRecv = document.getElementById('intro-guide-receive');
     
+    const backdrop = document.getElementById('tutorial-backdrop');
+    const inpEl = document.getElementById('inp');
+    const qrEl = document.getElementById('qrcode-container');
+    const tip1 = document.getElementById('tip-1');
+    const tip2 = document.getElementById('tip-2');
+    const tip3 = document.getElementById('tip-3');
+
     function checkIntro() {
-        // どちらのチュートリアルも未完了の場合のみ選択画面を出す
         const doneSend = localStorage.getItem('smatt_intro_send_done');
         const doneRecv = localStorage.getItem('smatt_intro_receive_done');
 
         if (!doneSend && !doneRecv) {
             introSelect.classList.add('active');
         } else {
-            // どちらか片方でも完了していれば、前回開いていたタブへ
-            // (未完了のタブを開いた時にガイドが出る)
             const savedMode = localStorage.getItem('smatt_mode') || 'send';
             switchTab(savedMode);
         }
@@ -274,38 +327,118 @@
 
     function introNext(mode) {
         introSelect.classList.remove('active');
-        // ガイドを表示
-        document.getElementById('intro-guide-' + mode).classList.add('active');
+        if (mode === 'receive') {
+            introGuideRecv.classList.add('active');
+        } else {
+            // スマホ(Input)選択時 -> 即座に入力画面へ行きチュートリアル開始
+            switchTab('send'); 
+        }
     }
 
-    function introFinish(mode) {
-        document.getElementById('intro-guide-' + mode).classList.remove('active');
-        localStorage.setItem('smatt_intro_' + mode + '_done', 'true');
-        // 改めてタブ切り替え処理を実行
-        switchTab(mode);
+    function introFinishReceive() {
+        introGuideRecv.classList.remove('active');
+        localStorage.setItem('smatt_intro_receive_done', 'true');
+        switchTab('receive');
     }
 
     function resetIntro() {
-        if(confirm("チュートリアルを再度表示しますか？\n(アプリがリロードされます)")) {
-            localStorage.removeItem('smatt_intro_send_done');
-            localStorage.removeItem('smatt_intro_receive_done');
+        if(confirm("チュートリアルをリセットして再読込しますか？")) {
+            localStorage.clear(); // 全設定クリア
             location.reload();
         }
     }
 
-    // --- タブ制御 & 割り込みロジック ---
+    // --- ウォークスルー (スマホ用) ---
+    function startSendTutorial() {
+        // Step 1: 入力欄ハイライト
+        backdrop.classList.add('active');
+        inpEl.classList.add('highlight-element');
+        
+        // 吹き出し位置調整
+        const rect = inpEl.getBoundingClientRect();
+        tip1.style.top = (rect.bottom + 15) + 'px';
+        tip1.style.left = (rect.left + rect.width/2 - 140) + 'px';
+        tip1.style.display = 'block';
+    }
+
+    window.runTutorialStep2 = function() {
+        // Step 1 終了 -> Step 2 自動入力デモ
+        tip1.style.display = 'none';
+        
+        // 吹き出し2 (入力中...)
+        const rect = inpEl.getBoundingClientRect();
+        tip2.style.top = (rect.bottom + 15) + 'px';
+        tip2.style.left = (rect.left + rect.width/2 - 140) + 'px';
+        tip2.style.display = 'block';
+
+        // タイプライター演出
+        const demoText = "こんにちは！Smattへようこそ。";
+        let i = 0;
+        inpEl.value = "";
+        
+        const timer = setInterval(() => {
+            inpEl.value += demoText.charAt(i);
+            updateQR(); // 都度QR更新
+            i++;
+            if (i >= demoText.length) {
+                clearInterval(timer);
+                setTimeout(runTutorialStep3, 800);
+            }
+        }, 100);
+    };
+
+    function runTutorialStep3() {
+        // Step 2 終了 -> Step 3 QRハイライト
+        tip2.style.display = 'none';
+        inpEl.classList.remove('highlight-element');
+        qrEl.classList.add('highlight-element');
+
+        const rect = qrEl.getBoundingClientRect();
+        // QRの上に表示
+        tip3.style.top = (rect.top - 120) + 'px';
+        tip3.style.left = (rect.left + rect.width/2 - 140) + 'px';
+        tip3.style.display = 'block';
+    }
+
+    window.finishTutorial = function() {
+        tip3.style.display = 'none';
+        qrEl.classList.remove('highlight-element');
+        backdrop.classList.remove('active');
+        
+        // 完了フラグ保存
+        localStorage.setItem('smatt_intro_send_done', 'true');
+        
+        // 入力クリアしてフォーカス
+        inpEl.value = "";
+        updateQR();
+        inpEl.focus();
+    };
+
+
+    // --- タブ制御 ---
     function switchTab(mode) {
-        // そのモードのガイドが未完了なら、タブ切り替えの前にガイドを割り込ませる
-        if (!localStorage.getItem('smatt_intro_' + mode + '_done')) {
-            // すでにガイドが表示されていなければ表示
-            const guideEl = document.getElementById('intro-guide-' + mode);
+        // 未読ならチュートリアルへ誘導
+        if (mode === 'send' && !localStorage.getItem('smatt_intro_send_done')) {
+            // 画面切り替え
+            document.querySelectorAll('.tab, .content').forEach(e => e.classList.remove('active'));
+            document.getElementById('t-' + mode).classList.add('active');
+            document.getElementById('c-' + mode).classList.add('active');
+            localStorage.setItem('smatt_mode', mode);
+            
+            // 少し待ってから開始（レイアウト確定待ち）
+            setTimeout(startSendTutorial, 300);
+            return;
+        }
+
+        if (mode === 'receive' && !localStorage.getItem('smatt_intro_receive_done')) {
+            const guideEl = document.getElementById('intro-guide-receive');
             if (!guideEl.classList.contains('active')) {
                 guideEl.classList.add('active');
             }
-            return; // ここで処理中断
+            return; 
         }
 
-        // --- 通常の切り替え処理 ---
+        // 通常切り替え
         document.querySelectorAll('.tab, .content').forEach(e => e.classList.remove('active'));
         document.getElementById('t-' + mode).classList.add('active');
         document.getElementById('c-' + mode).classList.add('active');
@@ -329,7 +462,7 @@
         toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
     }
 
-    // --- 入力 & 設定ロジック ---
+    // --- QR生成 & UIロジック ---
     const qrCanvas = document.getElementById('qr-output');
     const inp = document.getElementById('inp');
     const pageInd = document.getElementById('page-indicator');
@@ -449,7 +582,7 @@
 
     updateQR(); 
 
-    // --- 読込 & ヘルプロジック ---
+    // --- 読込 & ヘルプ ---
     const video = document.getElementById('video');
     const canvasScan = document.getElementById('canvas-scan');
     const ctxScan = canvasScan.getContext('2d', { willReadFrequently: true });
@@ -598,7 +731,6 @@
         setTimeout(() => { isScanning = true; }, 500);
     }
 
-    // 初期起動チェック
     checkIntro();
 </script>
 </body>
