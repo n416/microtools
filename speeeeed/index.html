@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RAIS-bU</title>
   <style>
     body {
@@ -11,8 +11,8 @@
       overflow: hidden;
       background-color: #000;
       touch-action: none;
-      user-select: none;
       -webkit-user-select: none;
+      user-select: none;
       font-family: 'Arial Black', sans-serif;
     }
 
@@ -508,7 +508,24 @@
         opacity: 0.3
       }
     }
+
+    /* [Patch] Inline styles moved here */
+    #ui,
+    #mobile-controls {
+      display: none;
+    }
+
+    #result-screen h2 {
+      color: #ffdd00;
+      margin: 0 0 10px 0;
+    }
+
+    #final-time {
+      font-size: 30px;
+      margin: 10px 0;
+    }
   </style>
+
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
   <script type="importmap">
     {
@@ -543,7 +560,7 @@
     <div id="btn-view">ZOOM</div>
   </div>
 
-  <div id="ui" style="display:none;">
+  <div id="ui">
     <div id="timer-row">TIME: <span id="timer">00:00.000</span></div>
     <div id="speed-row"><span id="speed-val">0</span> <span class="unit">km/h</span></div>
     <div id="warp-info"><span id="stage-name">STAGE 1</span><span>WARP CHARGE</span></div>
@@ -556,8 +573,8 @@
     </div>
   </div>
   <div id="result-screen">
-    <h2 style="color:#ffdd00; margin:0 0 10px 0;">MISSION COMPLETE</h2>
-    <div style="font-size:30px; margin:10px 0;" id="final-time">00:00.000</div>
+    <h2>MISSION COMPLETE</h2>
+    <div id="final-time">00:00.000</div>
     <input type="text" id="pilot-name" placeholder="PILOT NAME" maxlength="10">
     <br>
     <button id="btn-tweet">SHARE</button>
@@ -567,7 +584,7 @@
       <div id="ranking-content"></div>
     </div>
   </div>
-  <div id="mobile-controls" style="display:none;">
+  <div id="mobile-controls">
     <div id="joystick-zone">
       <div id="joystick-knob"></div>
     </div>
@@ -842,7 +859,52 @@
       document.getElementById('cam-label').style.display = isInspectMode ? 'block' : 'none';
     }
 
+
+
     const scene = new THREE.Scene();
+
+    // [Patch] メモリ解放用の関数を追加
+    function disposeObj(obj) {
+      if (!obj) return;
+      disposeObj(obj);
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose());
+        } else {
+          obj.material.dispose();
+        }
+      }
+      if (obj.children) obj.children.forEach(child => disposeObj(child));
+    }
+
+
+    // [Patch] メモリ解放用の関数を追加
+    function disposeObj(obj) {
+      if (!obj) return;
+      // シーンから削除
+      disposeObj(obj);
+
+      // ジオメトリ（形状データ）の解放
+      if (obj.geometry) {
+        obj.geometry.dispose();
+      }
+
+      // マテリアル（質感データ）の解放
+      if (obj.material) {
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose());
+        } else {
+          obj.material.dispose();
+        }
+      }
+
+      // 子要素があれば再帰的に解放
+      if (obj.children) {
+        obj.children.forEach(child => disposeObj(child));
+      }
+    }
+
     const fogColor = new THREE.Color(CFG.skyBottom);
     scene.fog = new THREE.Fog(fogColor, 100, CFG.fogDist);
     scene.background = fogColor;
@@ -854,6 +916,8 @@
     const renderer = new THREE.WebGLRenderer({
       antialias: true
     });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.NoToneMapping;
     renderer.shadowMap.enabled = true;
@@ -862,7 +926,7 @@
 
     const composer = new EffectComposer(renderer);
     const renderPass = new RenderPass(scene, camera);
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), 1.5, 0.4, 0.85);
     bloomPass.threshold = 0.8;
     bloomPass.strength = 0.5;
     bloomPass.radius = 0.3;
@@ -1237,16 +1301,16 @@
           setStageVisuals(currentStageIdx);
 
           gameSpeed = CFG.initSpeed * 1.5;
-          enemies.forEach(e => scene.remove(e.mesh));
+          enemies.forEach(e => disposeObj(e.mesh));
           enemies = [];
-          buildings.forEach(b => scene.remove(b));
+          buildings.forEach(b => disposeObj(b));
           buildings = [];
           missiles.forEach(m => {
-            scene.remove(m.mesh);
-            if (m.trail) scene.remove(m.trail);
+            disposeObj(m.mesh);
+            if (m.trail) disposeObj(m.trail);
           });
           missiles = [];
-          bullets.forEach(b => scene.remove(b));
+          bullets.forEach(b => disposeObj(b));
           bullets = [];
           setTimeout(() => {
             msg.style.display = 'none';
@@ -1635,12 +1699,12 @@
         if (gameState === 'PLAY' && Math.abs(b.position.z - player.position.z) < 30 && checkCollision(player, b)) {
           takeDamage(15);
           spawnExplosion(player.position, 0xaaaaaa);
-          scene.remove(b);
+          disposeObj(b);
           buildings.splice(i, 1);
           continue;
         }
         if (b.position.z > worldZ + 200) {
-          scene.remove(b);
+          disposeObj(b);
           buildings.splice(i, 1);
         }
       }
@@ -1660,7 +1724,7 @@
       for (let i = bullets.length - 1; i >= 0; i--) {
         bullets[i].position.z -= (gameSpeed + CFG.shotSpeed);
         if (bullets[i].position.z < worldZ - 1200) {
-          scene.remove(bullets[i]);
+          disposeObj(bullets[i]);
           bullets.splice(i, 1);
         }
       }
@@ -1688,7 +1752,7 @@
           });
         }
         if (m.mesh.position.z < worldZ - 1200) {
-          scene.remove(m.mesh);
+          disposeObj(m.mesh);
           missiles.splice(i, 1);
         }
       }
@@ -1712,7 +1776,7 @@
         if (gameState === 'PLAY' && checkCollision(player, e.mesh)) {
           takeDamage(20);
           spawnExplosion(e.mesh.position, 0xff0000);
-          scene.remove(e.mesh);
+          disposeObj(e.mesh);
           enemies.splice(i, 1);
           continue;
         }
@@ -1720,7 +1784,7 @@
         let hit = false;
         for (let j = bullets.length - 1; j >= 0; j--) {
           if (!hit && e.mesh.position.distanceTo(bullets[j].position) < 8) {
-            scene.remove(bullets[j]);
+            disposeObj(bullets[j]);
             bullets.splice(j, 1);
             hit = true;
           }
@@ -1728,7 +1792,7 @@
         if (!hit) {
           for (let j = missiles.length - 1; j >= 0; j--) {
             if (!hit && checkCollision(missiles[j].mesh, e.mesh)) {
-              scene.remove(missiles[j].mesh);
+              disposeObj(missiles[j].mesh);
               missiles.splice(j, 1);
               hit = true;
             }
@@ -1742,12 +1806,12 @@
             const sPos = toScreenPosition(e.mesh, camera);
             if (sPos.z < 1) spawnDestroyedMarker(sPos.x, sPos.y);
           }
-          scene.remove(e.mesh);
+          disposeObj(e.mesh);
           enemies.splice(i, 1);
           score += 500;
           document.getElementById('score').innerText = score;
         } else if (e.mesh.position.z > worldZ + 50) {
-          scene.remove(e.mesh);
+          disposeObj(e.mesh);
           enemies.splice(i, 1);
         }
       }
@@ -1758,7 +1822,7 @@
         p.life -= 0.05;
         p.mesh.scale.setScalar(p.life);
         if (p.life <= 0) {
-          scene.remove(p.mesh);
+          disposeObj(p.mesh);
           particles.splice(i, 1);
         }
       }
@@ -1769,6 +1833,8 @@
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
       composer.setSize(window.innerWidth, window.innerHeight);
     });
