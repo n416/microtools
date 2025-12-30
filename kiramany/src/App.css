@@ -240,3 +240,70 @@
 .icon-btn.active { color: var(--accent-color); }
 .icon-btn.delete:hover { color: #ff5555; }
 .empty-msg { font-size: 0.8rem; color: #444; font-style: italic; padding: 4px; }
+
+
+/* --- Mobile / Responsive Support (Ported from v2) --- */
+@media (max-width: 1100px) {
+  body {
+    overflow: auto !important;
+  }
+  .app-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100dvh; /* dynamic viewport height */
+    overflow: visible;
+  }
+  
+  /* 1. Canvas Area (Top) */
+  .col-studio {
+    order: 1;
+    width: 100%;
+    height: 60vh;
+    min-height: 400px;
+    border-bottom: 1px solid #333;
+    flex: none;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+  }
+  
+  .studio-scale-wrapper {
+    width: 80vw;
+    height: 80vw;
+    max-width: 400px;
+    max-height: 400px;
+  }
+
+  .studio-footer {
+    bottom: 16px;
+    width: 100%;
+    justify-content: center;
+    padding: 0 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  /* 2. Factory / Controls (Middle) */
+  .col-factory {
+    order: 2;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #333;
+    box-shadow: none;
+    padding-bottom: 40px;
+  }
+  
+  /* 3. Layers (Bottom) */
+  .col-layers {
+    order: 3;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: auto;
+    border-left: none;
+    padding-bottom: 60px;
+  }
+  
+  .layer-item {
+    padding: 12px;
+  }
+}
