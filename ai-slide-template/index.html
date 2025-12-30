@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>wowfit 製品ガイド - 株式会社如月システム</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="presentation"></div>
+
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="loadJson(event)">
+
+<div id="controls">
+    <button onclick="prevSlide()"><span class="material-icons-round">arrow_back</span> 前へ</button>
+    <button id="btn-edit" onclick="toggleEditMode()"><span class="material-icons-round">edit</span> 編集</button>
+    <button onclick="downloadJson()"><span class="material-icons-round">save</span> 保存</button>
+    <button onclick="document.getElementById('importFile').click()"><span class="material-icons-round">upload_file</span> 読込</button>
+    <button onclick="clearDatabaseWithConfirmation()" style="color:#ff6b6b;"><span class="material-icons-round">delete_forever</span> 初期化</button>
+    <button onclick="printSlides()"><span class="material-icons-round">print</span> 印刷</button>
+    <button onclick="nextSlide()">次へ <span class="material-icons-round">arrow_forward</span></button>
+</div>
+
+<script src="data.js"></script>
+<script src="layout.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
