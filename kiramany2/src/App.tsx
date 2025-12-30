@@ -6,11 +6,85 @@ import { Layer2D } from './components/Layer2D';
 import { Object3D } from './components/Object3D';
 
 import { 
-  Download, Zap, Palette, Move, RotateCw, Scaling, Layers
+  Download, Zap, Palette, Move, RotateCw, Scaling, Layers, Sliders, X, ArrowLeft
 } from 'lucide-react';
 import './App.css';
+import type { Params2D, Params3D } from './lib/math';
 
-// --- Components ---
+// --- Components: Controls ---
+
+const ControlRow = ({ label, value, min, max, step = 0.1, onChange }: any) => (
+  <div className="control-row">
+    <label>{label}</label>
+    <div className="control-input-group">
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} />
+      <span className="value-badge">{Math.round(value * 100) / 100}</span>
+    </div>
+  </div>
+);
+
+const Controls2D = ({ params, onChange }: { params: Params2D, onChange: (p: Partial<Params2D>) => void }) => (
+  <div className="controls-container animate-fade-in">
+    <div className="control-section-title">Shape</div>
+    <ControlRow label="Points (M)" min={0} max={20} step={1} value={params.m} onChange={(v: number) => onChange({ m: v })} />
+    <ControlRow label="N1" min={0.1} max={50} value={params.n1} onChange={(v: number) => onChange({ n1: v })} />
+    <ControlRow label="N2" min={0.1} max={50} value={params.n2} onChange={(v: number) => onChange({ n2: v })} />
+    <ControlRow label="N3" min={0.1} max={50} value={params.n3} onChange={(v: number) => onChange({ n3: v })} />
+    
+    <div className="divider" />
+    <div className="control-section-title">Transform</div>
+    <ControlRow label="Rotate" min={0} max={6.28} value={params.rotation} onChange={(v: number) => onChange({ rotation: v })} />
+    <ControlRow label="Scale" min={100} max={1000} step={10} value={params.scale} onChange={(v: number) => onChange({ scale: v })} />
+    <ControlRow label="Width" min={1} max={50} value={params.lineWidth} onChange={(v: number) => onChange({ lineWidth: v })} />
+    
+    <div className="divider" />
+    <div className="control-section-title">Style</div>
+    <div className="control-row">
+        <label>Color</label>
+        <input type="color" value={params.colorHex || '#ffffff'} onChange={(e) => onChange({ colorHex: e.target.value })} />
+    </div>
+    <div className="control-row">
+        <label>Fill</label>
+        <input type="checkbox" checked={params.isFilled} onChange={(e) => onChange({ isFilled: e.target.checked })} />
+    </div>
+  </div>
+);
+
+const Controls3D = ({ params, onChange }: { params: Params3D, onChange: (p: Partial<Params3D>) => void }) => (
+  <div className="controls-container animate-fade-in">
+    <div className="control-section-title">Material</div>
+    <div className="control-row">
+        <label>Type</label>
+        <select 
+            value={params.matType} 
+            onChange={(e) => onChange({ matType: e.target.value as any })}
+            className="control-select"
+        >
+            <option value="glass">Glass</option>
+            <option value="metal">Metal</option>
+            <option value="wire">Wire</option>
+            <option value="clay">Clay</option>
+            <option value="toon">Toon</option>
+        </select>
+    </div>
+    <div className="control-row">
+        <label>Color</label>
+        <input type="color" value={params.color} onChange={(e) => onChange({ color: e.target.value })} />
+    </div>
+    
+    <div className="divider" />
+    <div className="control-section-title">Geometry</div>
+    <ControlRow label="Scale" min={0.1} max={3} value={params.scale} onChange={(v: number) => onChange({ scale: v })} />
+    <ControlRow label="M1" min={0} max={20} step={1} value={params.m1} onChange={(v: number) => onChange({ m1: v })} />
+    <ControlRow label="M2" min={0} max={20} step={1} value={params.m2} onChange={(v: number) => onChange({ m2: v })} />
+    <ControlRow label="N1" min={0.1} max={20} value={params.n1} onChange={(v: number) => onChange({ n1: v })} />
+    <ControlRow label="N2" min={0.1} max={20} value={params.n2} onChange={(v: number) => onChange({ n2: v })} />
+    <ControlRow label="N3" min={0.1} max={20} value={params.n3} onChange={(v: number) => onChange({ n3: v })} />
+  </div>
+);
+
+// --- Components: Environment & Utils ---
+
 const GeneratedEnvironment = () => (
   <Environment resolution={256}>
     <group rotation={[-Math.PI / 4, -0.3, 0]}>
@@ -54,51 +128,84 @@ function App() {
     isTransparent, setIsTransparent,
     selectedId, selectLayer,
     transformMode, setTransformMode,
-    paletteName
+    paletteName,
+    updateLayer2D, updateLayer3D
   } = useStore();
 
-  // Space key to Roll
+  const selectedLayer2D = layers2D.find(l => l.id === selectedId);
+  const selectedLayer3D = layers3D.find(l => l.id === selectedId);
+  const isEditing = !!(selectedLayer2D || selectedLayer3D);
+
+  // Space key to Roll (only if not editing)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.code === 'Space') {
+        if (e.code === 'Space' && !isEditing) {
             e.preventDefault();
             roll();
         }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [roll]);
+  }, [roll, isEditing]);
 
   return (
     <div className="app-container">
       
-      {/* --- Left: Control Panel --- */}
-      <div className="col-factory" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff', marginBottom: 4, letterSpacing: -1 }}>KIRAMANY<span style={{color:'var(--accent-color)'}}>2</span></h1>
-        <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: 40 }}>The Icon Gacha</p>
+      {/* --- Left: Control Panel (Switchable) --- */}
+      <div className="col-factory">
         
-        <div style={{ width: '100%', marginBottom: 40 }}>
-            <div style={{fontSize:'0.75rem', color:'#888', marginBottom: 8, textTransform:'uppercase', letterSpacing:1}}>Current Palette</div>
-            <div style={{fontSize:'1.2rem', fontWeight:'bold', color: 'var(--accent-color)'}}>{paletteName}</div>
-        </div>
+        {!isEditing ? (
+            /* GACHA MODE */
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff', marginBottom: 4, letterSpacing: -1 }}>KIRAMANY<span style={{color:'var(--accent-color)'}}>2</span></h1>
+                <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: 40 }}>The Icon Gacha</p>
+                
+                <div style={{ width: '100%', marginBottom: 40 }}>
+                    <div style={{fontSize:'0.75rem', color:'#888', marginBottom: 8, textTransform:'uppercase', letterSpacing:1}}>Current Palette</div>
+                    <div style={{fontSize:'1.2rem', fontWeight:'bold', color: 'var(--accent-color)'}}>{paletteName}</div>
+                </div>
 
-        <button 
-            onClick={roll} 
-            className="btn-action" 
-            style={{ 
-                width: '100%', height: 80, fontSize: '1.5rem', 
-                background: 'linear-gradient(135deg, var(--accent-color), #00d2ff)',
-                color: '#000', border: 'none',
-                boxShadow: '0 10px 30px rgba(0,255,157, 0.3)'
-            }}
-        >
-            <Zap size={24} fill="#000" /> ROLL
-        </button>
-        <p style={{fontSize:'0.7rem', color:'#555', marginTop: 12}}>Press SPACE to reroll</p>
+                <button 
+                    onClick={roll} 
+                    className="btn-action" 
+                    style={{ 
+                        width: '100%', height: 80, fontSize: '1.5rem', 
+                        background: 'linear-gradient(135deg, var(--accent-color), #00d2ff)',
+                        color: '#000', border: 'none',
+                        boxShadow: '0 10px 30px rgba(0,255,157, 0.3)'
+                    }}
+                >
+                    <Zap size={24} fill="#000" /> ROLL
+                </button>
+                <p style={{fontSize:'0.7rem', color:'#555', marginTop: 12}}>Press SPACE to reroll</p>
+                <p style={{fontSize:'0.7rem', color:'#444', marginTop: 40}}>Click objects to Edit</p>
+            </div>
+        ) : (
+            /* EDIT MODE */
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 20, paddingBottom: 10, borderBottom:'1px solid #333' }}>
+                    <h3 className="panel-header" style={{margin:0, color:'#fff', display:'flex', alignItems:'center', gap: 8}}>
+                        <Sliders size={16} /> Edit Layer
+                    </h3>
+                    <button onClick={() => selectLayer(null)} className="icon-btn" title="Close Edit">
+                        <X size={18} />
+                    </button>
+                </div>
 
-        <div style={{marginTop: 'auto', width: '100%'}}>
-           {/* Minimal layer list could go here if needed */}
-        </div>
+                <div className="tuning-scroll" style={{ flex: 1 }}>
+                    {selectedLayer2D ? (
+                        <Controls2D params={selectedLayer2D} onChange={(p) => updateLayer2D(selectedLayer2D.id, p)} />
+                    ) : selectedLayer3D ? (
+                        <Controls3D params={selectedLayer3D} onChange={(p) => updateLayer3D(selectedLayer3D.id, p)} />
+                    ) : null}
+                </div>
+                
+                <button onClick={() => selectLayer(null)} className="btn-action" style={{marginTop: 20, background: '#333', color:'#888'}}>
+                    <ArrowLeft size={16} /> Back to Roll
+                </button>
+            </div>
+        )}
+
       </div>
 
       {/* --- Center: Studio --- */}
@@ -170,25 +277,24 @@ function App() {
         </div>
       </div>
 
-      {/* --- Right: Minimal Layer List --- */}
+      {/* --- Right: Composition Layers --- */}
       <div className="col-layers">
         <h2 className="section-title"><Layers size={14}/> Composition</h2>
         <div className="layer-group">
            {layers3D.map((l) => (
-               <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={() => selectLayer(l.id)}>
+               <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); selectLayer(l.id); }}>
                    <div className="layer-thumb" style={{background: l.color}}></div>
                    <div className="layer-info"><span className="layer-name">3D Object</span></div>
+                   <button className="icon-btn active" style={{fontSize:10}} onClick={(e) => {e.stopPropagation(); selectLayer(l.id)}}>EDIT</button>
                </div>
            ))}
            {layers2D.map((l) => (
-               <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={() => selectLayer(l.id)}>
+               <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); selectLayer(l.id); }}>
                    <div className="layer-thumb" style={{background: l.colorHex || '#fff'}}></div>
                    <div className="layer-info"><span className="layer-name">2D Backdrop</span></div>
+                   <button className="icon-btn active" style={{fontSize:10}} onClick={(e) => {e.stopPropagation(); selectLayer(l.id)}}>EDIT</button>
                </div>
            ))}
-        </div>
-        <div style={{padding: 20, color: '#666', fontSize: '0.8rem', fontStyle:'italic', textAlign:'center'}}>
-            Click objects in the center to move/rotate.
         </div>
       </div>
     </div>
