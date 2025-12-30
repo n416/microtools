@@ -9,7 +9,6 @@ export const downloadSVG = (
   canvas3DId: string
 ) => {
   const size = 1024;
-  const viewScale = 1;
 
   // 1. 3Dキャンバスの画像をBase64で取得
   let bgImage = '';
