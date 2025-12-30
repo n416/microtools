@@ -1,18 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, Lightformer } from '@react-three/drei';
 import { useStore } from './store';
 import { Layer2D } from './components/Layer2D';
 import { Object3D } from './components/Object3D';
+import { compressToEncodedStr, decompressFromEncodedStr } from './lib/share';
 
 import { 
-  Download, Zap, Palette, Move, RotateCw, Scaling, Layers, Sliders, X, ArrowLeft, ChevronUp, ChevronDown
+  Download, Zap, Palette, Move, RotateCw, Scaling, Layers, Sliders, X, ArrowLeft, ChevronUp, ChevronDown, Share2, Undo2, Redo2
 } from 'lucide-react';
 import './App.css';
 import type { Params2D, Params3D } from './lib/math';
 
-// --- Components: Controls ---
-
+// --- Components: Controls (Same as before) ---
 const ControlRow = ({ label, value, min, max, step = 0.1, onChange }: any) => (
   <div className="control-row">
     <label>{label}</label>
@@ -30,50 +30,21 @@ const Controls2D = ({ params, onChange }: { params: Params2D, onChange: (p: Part
     <ControlRow label="N1" min={0.1} max={50} value={params.n1} onChange={(v: number) => onChange({ n1: v })} />
     <ControlRow label="N2" min={0.1} max={50} value={params.n2} onChange={(v: number) => onChange({ n2: v })} />
     <ControlRow label="N3" min={0.1} max={50} value={params.n3} onChange={(v: number) => onChange({ n3: v })} />
-    
     <div className="divider" />
-    <div className="control-section-title">Transform</div>
     <ControlRow label="Rotate" min={0} max={6.28} value={params.rotation} onChange={(v: number) => onChange({ rotation: v })} />
     <ControlRow label="Scale" min={100} max={1000} step={10} value={params.scale} onChange={(v: number) => onChange({ scale: v })} />
     <ControlRow label="Width" min={1} max={50} value={params.lineWidth} onChange={(v: number) => onChange({ lineWidth: v })} />
-    
-    <div className="divider" />
-    <div className="control-section-title">Style</div>
-    <div className="control-row">
-        <label>Color</label>
-        <input type="color" value={params.colorHex || '#ffffff'} onChange={(e) => onChange({ colorHex: e.target.value })} />
-    </div>
-    <div className="control-row">
-        <label>Fill</label>
-        <input type="checkbox" checked={params.isFilled} onChange={(e) => onChange({ isFilled: e.target.checked })} />
-    </div>
+    <div className="control-row"><label>Color</label><input type="color" value={params.colorHex || '#ffffff'} onChange={(e) => onChange({ colorHex: e.target.value })} /></div>
+    <div className="control-row"><label>Fill</label><input type="checkbox" checked={params.isFilled} onChange={(e) => onChange({ isFilled: e.target.checked })} /></div>
   </div>
 );
 
 const Controls3D = ({ params, onChange }: { params: Params3D, onChange: (p: Partial<Params3D>) => void }) => (
   <div className="controls-container animate-fade-in">
     <div className="control-section-title">Material</div>
-    <div className="control-row">
-        <label>Type</label>
-        <select 
-            value={params.matType} 
-            onChange={(e) => onChange({ matType: e.target.value as any })}
-            className="control-select"
-        >
-            <option value="glass">Glass</option>
-            <option value="metal">Metal</option>
-            <option value="wire">Wire</option>
-            <option value="clay">Clay</option>
-            <option value="toon">Toon</option>
-        </select>
-    </div>
-    <div className="control-row">
-        <label>Color</label>
-        <input type="color" value={params.color} onChange={(e) => onChange({ color: e.target.value })} />
-    </div>
-    
+    <div className="control-row"><label>Type</label><select value={params.matType} onChange={(e) => onChange({ matType: e.target.value as any })} className="control-select"><option value="glass">Glass</option><option value="metal">Metal</option><option value="wire">Wire</option><option value="clay">Clay</option><option value="toon">Toon</option></select></div>
+    <div className="control-row"><label>Color</label><input type="color" value={params.color} onChange={(e) => onChange({ color: e.target.value })} /></div>
     <div className="divider" />
-    <div className="control-section-title">Geometry</div>
     <ControlRow label="Scale" min={0.1} max={3} value={params.scale} onChange={(v: number) => onChange({ scale: v })} />
     <ControlRow label="M1" min={0} max={20} step={1} value={params.m1} onChange={(v: number) => onChange({ m1: v })} />
     <ControlRow label="M2" min={0} max={20} step={1} value={params.m2} onChange={(v: number) => onChange({ m2: v })} />
@@ -120,18 +91,28 @@ const downloadImage = (containerId: string, bgColor: string, isTransparent: bool
 
 function App() {
   const { 
-    roll,
+    initialize,
+    roll, undo, redo, past, future,
     layers2D, layers3D, 
     bgColor, setBgColor,
     isTransparent, setIsTransparent,
     selectedId, selectLayer,
     transformMode, setTransformMode,
     paletteName,
-    updateLayer2D, updateLayer3D
+    updateLayer2D, updateLayer3D,
+    loadFromShare,
+    isLoading
   } = useStore();
 
   const [showInfo, setShowInfo] = useState(true);
   const [showStudioControls, setShowStudioControls] = useState(true);
+  
+  const shareCheckRef = useRef(false);
+
+  // ★ Initialize on Mount
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
   const selectedLayer2D = layers2D.find(l => l.id === selectedId);
   const selectedLayer3D = layers3D.find(l => l.id === selectedId);
@@ -143,32 +124,82 @@ function App() {
             e.preventDefault();
             roll();
         }
+        // Undo/Redo Shortcuts
+        if ((e.metaKey || e.ctrlKey) && e.code === 'KeyZ') {
+            e.preventDefault();
+            if (e.shiftKey) redo();
+            else undo();
+        }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [roll, isEditing]);
+  }, [roll, undo, redo, isEditing]);
 
-  // ★背景クリック時のスマートな挙動
-  const handleBackgroundClick = () => {
-    if (selectedId !== null) {
-        // 編集モード中なら、選択解除して戻る（UIは消さない）
-        selectLayer(null);
-    } else {
-        // 編集モードでないなら、UIの表示/非表示を切り替え（プレビュー用）
-        setShowStudioControls(prev => !prev);
+  // Share Logic
+  useEffect(() => {
+    const checkShare = async () => {
+        if (shareCheckRef.current) return;
+        const params = new URLSearchParams(window.location.search);
+        const shareData = params.get('s');
+        if (shareData) {
+            shareCheckRef.current = true; 
+            await new Promise(r => setTimeout(r, 300));
+            if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+
+            if (window.confirm("共有されたアイコンを読み込みますか？\n(現在の作業内容は失われます)")) {
+                try {
+                    const decoded = decodeURIComponent(shareData);
+                    const data = await decompressFromEncodedStr(decoded);
+                    loadFromShare(data);
+                    window.history.replaceState({}, '', window.location.pathname);
+                } catch (e) {
+                    console.error("Share load error:", e);
+                    alert("共有リンクの読み込みに失敗しました。");
+                }
+            }
+        }
+    };
+    checkShare();
+  }, [loadFromShare]);
+
+  const handleShare = async () => {
+    const state = useStore.getState();
+    const data = {
+        bgColor: state.bgColor,
+        layers2D: state.layers2D,
+        layers3D: state.layers3D,
+        paletteName: state.paletteName
+    };
+    try {
+        const encoded = await compressToEncodedStr(data);
+        const urlSafe = encodeURIComponent(encoded);
+        const url = `${window.location.origin}${window.location.pathname}?s=${urlSafe}`;
+        navigator.clipboard.writeText(url).then(() => {
+            alert("🔗 圧縮された共有URLをコピーしました！");
+        });
+    } catch (e) {
+        console.error(e);
+        alert("URLの生成に失敗しました。");
     }
   };
 
-  // オブジェクト選択時は必ずUIを表示させるラッパー
+  const handleBackgroundClick = () => {
+    if (selectedId !== null) selectLayer(null);
+    else setShowStudioControls(prev => !prev);
+  };
   const handleSelectObject = (id: number) => {
     selectLayer(id);
     setShowStudioControls(true);
   };
 
+  if (isLoading) {
+    return <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'#666'}}>Loading...</div>;
+  }
+
   return (
     <div className="app-container">
       
-      {/* --- Left: Control Panel (Switchable) --- */}
+      {/* --- Left: Control Panel --- */}
       <div className="col-factory">
         
         {!isEditing ? (
@@ -176,6 +207,7 @@ function App() {
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', textAlign: 'center' }}>
                 
                 <button 
+                    type="button" 
                     onClick={roll} 
                     className="btn-action" 
                     style={{ 
@@ -189,14 +221,51 @@ function App() {
                     <Zap size={24} fill="#000" /> ROLL
                 </button>
 
-                <button 
-                    onClick={() => setShowInfo(!showInfo)} 
-                    className="icon-btn" 
-                    style={{ color: '#555', marginBottom: 16, padding: '4px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 20 }}
-                >
-                    {showInfo ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    <span style={{fontSize: '0.75rem', marginLeft: 4}}>{showInfo ? 'Hide Info' : 'Show Info'}</span>
-                </button>
+                <div style={{display:'flex', gap: 12, marginBottom: 16, width: '100%', justifyContent:'center'}}>
+                    {/* Undo / Redo Buttons */}
+                    <button 
+                        type="button"
+                        onClick={undo}
+                        disabled={past.length === 0}
+                        className="icon-btn" 
+                        style={{ color: past.length===0?'#333':'#fff', padding: '6px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: 20 }}
+                        title="Undo (Ctrl+Z)"
+                    >
+                        <Undo2 size={16} />
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={redo}
+                        disabled={future.length === 0}
+                        className="icon-btn" 
+                        style={{ color: future.length===0?'#333':'#fff', padding: '6px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: 20 }}
+                        title="Redo (Ctrl+Shift+Z)"
+                    >
+                        <Redo2 size={16} />
+                    </button>
+
+                    <div style={{width: 1, height: 20, background: '#333', margin: '4px 8px'}}></div>
+
+                    <button 
+                        type="button"
+                        onClick={() => setShowInfo(!showInfo)} 
+                        className="icon-btn" 
+                        style={{ color: '#555', padding: '6px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: 20 }}
+                        title="Toggle Info"
+                    >
+                        {showInfo ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                    
+                    <button 
+                        type="button"
+                        onClick={handleShare} 
+                        className="icon-btn" 
+                        style={{ color: 'var(--accent-color)', padding: '6px 14px', background: 'rgba(0,255,157,0.1)', borderRadius: 20, border: '1px solid rgba(0,255,157,0.3)' }}
+                        title="Share URL"
+                    >
+                        <Share2 size={16} />
+                    </button>
+                </div>
 
                 {showInfo && (
                     <div className="animate-fade-in" style={{ width: '100%', opacity: 0.8 }}>
@@ -207,9 +276,6 @@ function App() {
                             <div style={{fontSize:'0.7rem', color:'#888', marginBottom: 6, textTransform:'uppercase', letterSpacing:1}}>Current Palette</div>
                             <div style={{fontSize:'1.1rem', fontWeight:'bold', color: 'var(--accent-color)'}}>{paletteName}</div>
                         </div>
-
-                        <p style={{fontSize:'0.7rem', color:'#444'}}>Press SPACE to reroll</p>
-                        <p style={{fontSize:'0.7rem', color:'#444', marginTop: 4}}>Click objects to Edit</p>
                     </div>
                 )}
             </div>
@@ -220,7 +286,7 @@ function App() {
                     <h3 className="panel-header" style={{margin:0, color:'#fff', display:'flex', alignItems:'center', gap: 8}}>
                         <Sliders size={16} /> Edit Layer
                     </h3>
-                    <button onClick={() => selectLayer(null)} className="icon-btn" title="Close Edit">
+                    <button type="button" onClick={() => selectLayer(null)} className="icon-btn" title="Close Edit">
                         <X size={18} />
                     </button>
                 </div>
@@ -233,7 +299,7 @@ function App() {
                     ) : null}
                 </div>
                 
-                <button onClick={() => selectLayer(null)} className="btn-action" style={{marginTop: 20, background: '#333', color:'#888'}}>
+                <button type="button" onClick={() => selectLayer(null)} className="btn-action" style={{marginTop: 20, background: '#333', color:'#888'}}>
                     <ArrowLeft size={16} /> Back to Roll
                 </button>
             </div>
@@ -241,7 +307,7 @@ function App() {
 
       </div>
 
-      {/* --- Center: Studio --- */}
+      {/* --- Center: Studio (Same) --- */}
       <div className="col-studio" onClick={handleBackgroundClick}>
         
         <div className="studio-scale-wrapper" onClick={(e) => e.stopPropagation()}>
@@ -273,55 +339,35 @@ function App() {
                   <directionalLight position={[5, 10, 7.5]} intensity={3} />
                   <pointLight position={[5, 5, 5]} />
                   <pointLight position={[-5, -5, 5]} color="#ff00ff" />
-                  
                   {layers3D.map((layer) => (
-                       <Object3D 
-                          key={layer.id} 
-                          params={layer} 
-                          isSelected={selectedId === layer.id} 
-                          onSelect={() => handleSelectObject(layer.id)} 
-                       />
+                       <Object3D key={layer.id} params={layer} isSelected={selectedId === layer.id} onSelect={() => handleSelectObject(layer.id)} />
                   ))}
-                  
                   <OrbitControls makeDefault enableRotate={false} />
                </Canvas>
              </div>
           </div>
         </div>
 
-        {/* Studio Footer (Controls) */}
-        <div 
-          className="studio-footer" 
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            opacity: showStudioControls ? 1 : 0,
-            pointerEvents: showStudioControls ? 'auto' : 'none',
-            transition: 'opacity 0.2s',
-            visibility: showStudioControls ? 'visible' : 'hidden'
-          }}
+        <div className="studio-footer" onClick={(e) => e.stopPropagation()}
+          style={{ opacity: showStudioControls ? 1 : 0, pointerEvents: showStudioControls ? 'auto' : 'none', transition: 'opacity 0.2s', visibility: showStudioControls ? 'visible' : 'hidden' }}
         >
           <div className="toolbar-group">
-            <button className={`icon-btn ${transformMode==='translate' ? 'active' : ''}`} onClick={() => setTransformMode('translate')} title="Move"><Move size={18} /></button>
-            <button className={`icon-btn ${transformMode==='rotate' ? 'active' : ''}`} onClick={() => setTransformMode('rotate')} title="Rotate"><RotateCw size={18} /></button>
-            <button className={`icon-btn ${transformMode==='scale' ? 'active' : ''}`} onClick={() => setTransformMode('scale')} title="Scale"><Scaling size={18} /></button>
+            <button type="button" className={`icon-btn ${transformMode==='translate' ? 'active' : ''}`} onClick={() => setTransformMode('translate')} title="Move"><Move size={18} /></button>
+            <button type="button" className={`icon-btn ${transformMode==='rotate' ? 'active' : ''}`} onClick={() => setTransformMode('rotate')} title="Rotate"><RotateCw size={18} /></button>
+            <button type="button" className={`icon-btn ${transformMode==='scale' ? 'active' : ''}`} onClick={() => setTransformMode('scale')} title="Scale"><Scaling size={18} /></button>
           </div>
           <div className="toolbar-group">
             <div className="color-picker-wrapper">
                 <Palette size={16} color="#888" />
                 <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} disabled={isTransparent} />
             </div>
-            <label className="toggle-label">
-                <input type="checkbox" checked={isTransparent} onChange={(e) => setIsTransparent(e.target.checked)} />
-                <span className="toggle-text">Transparent</span>
-            </label>
+            <label className="toggle-label"><input type="checkbox" checked={isTransparent} onChange={(e) => setIsTransparent(e.target.checked)} /><span className="toggle-text">Transparent</span></label>
           </div>
-          <button onClick={() => downloadImage('studio-export-area', bgColor, isTransparent)} className="btn-dl">
-            <Download size={16} /> SAVE ICON
-          </button>
+          <button type="button" onClick={() => downloadImage('studio-export-area', bgColor, isTransparent)} className="btn-dl"><Download size={16} /> SAVE ICON</button>
         </div>
       </div>
 
-      {/* --- Right: Layers --- */}
+      {/* --- Right: Layers (Same) --- */}
       <div className="col-layers">
         <h2 className="section-title"><Layers size={14}/> Composition</h2>
         <div className="layer-group">
@@ -329,14 +375,14 @@ function App() {
                <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); handleSelectObject(l.id); }}>
                    <div className="layer-thumb" style={{background: l.color}}></div>
                    <div className="layer-info"><span className="layer-name">3D Object</span></div>
-                   <button className="icon-btn active" style={{fontSize:10}} onClick={(e) => {e.stopPropagation(); handleSelectObject(l.id)}}>EDIT</button>
+                   <button type="button" className="icon-btn active" style={{fontSize:10}} onClick={(e) => {e.stopPropagation(); handleSelectObject(l.id)}}>EDIT</button>
                </div>
            ))}
            {layers2D.map((l) => (
                <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); handleSelectObject(l.id); }}>
                    <div className="layer-thumb" style={{background: l.colorHex || '#fff'}}></div>
                    <div className="layer-info"><span className="layer-name">2D Backdrop</span></div>
-                   <button className="icon-btn active" style={{fontSize:10}} onClick={(e) => {e.stopPropagation(); handleSelectObject(l.id)}}>EDIT</button>
+                   <button type="button" className="icon-btn active" style={{fontSize:10}} onClick={(e) => {e.stopPropagation(); handleSelectObject(l.id)}}>EDIT</button>
                </div>
            ))}
         </div>
