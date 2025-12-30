@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Manga Studio (Fixed)</title>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* --- CSS Variables --- */
+        :root {
+            /* Palette */
+            --slate-50: #f8fafc; --slate-100: #f1f5f9; --slate-200: #e2e8f0; --slate-300: #cbd5e1;
+            --slate-400: #94a3b8; --slate-500: #64748b; --slate-600: #475569; --slate-700: #334155;
+            --slate-800: #1e293b; --slate-900: #0f172a; --slate-950: #020617;
+            --indigo-400: #818cf8; --indigo-500: #6366f1; --indigo-600: #4f46e5; --indigo-900: #312e81;
+            --green-200: #bbf7d0; --green-400: #4ade80; --green-500: #22c55e;
+            --red-400: #f87171; --yellow-300: #fde047; --blue-400: #60a5fa;
+            --white: #ffffff; --black: #000000;
+            
+            /* Spacing */
+            --radius-sm: 0.125rem; --radius-md: 0.375rem; --radius-lg: 0.5rem; --radius-xl: 0.75rem;
+        }
+
+        /* --- Reset & Base --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            background-color: var(--slate-950);
+            color: var(--slate-100);
+            height: 100vh;
+            overflow: hidden;
+        }
+        button { cursor: pointer; border: none; background: none; color: inherit; font-family: inherit; }
+        input, textarea { font-family: inherit; color: inherit; }
+
+        /* --- Scrollbar --- */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--slate-900); }
+        ::-webkit-scrollbar-thumb { background: var(--slate-700); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--slate-600); }
+
+        /* --- Animations --- */
+        .fade-in { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .popover-enter { opacity: 0; transform: scale(0.9); }
+        .popover-enter-active { opacity: 1; transform: scale(1); transition: opacity 100ms, transform 100ms; }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+            50% { transform: none; animation-timing-function: cubic-bezier(0,0,0.2,1); }
+        }
+        .animate-bounce { animation: bounce 1s infinite; }
+
+        /* --- Utility Classes --- */
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .justify-end { justify-content: flex-end; }
+        .gap-1 { gap: 0.25rem; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-3 { gap: 0.75rem; }
+        .gap-4 { gap: 1rem; }
+        .flex-1 { flex: 1; }
+        .shrink-0 { flex-shrink: 0; }
+        .w-full { width: 100%; }
+        .h-full { height: 100%; }
+        .relative { position: relative; }
+        .absolute { position: absolute; }
+        .hidden { display: none; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: bold; }
+        .text-xs { font-size: 0.75rem; }
+        .text-sm { font-size: 0.875rem; }
+        .text-lg { font-size: 1.125rem; }
+        .text-xl { font-size: 1.25rem; }
+        .text-2xl { font-size: 1.5rem; }
+        .overflow-hidden { overflow: hidden; }
+        .overflow-y-auto { overflow-y: auto; }
+        .object-cover { object-fit: cover; }
+        .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+
+        /* --- Component Styles --- */
+        
+        /* Layout */
+        .pane-left { width: 50%; height: 100%; background-color: rgba(15, 23, 42, 0.5); border-right: 1px solid var(--slate-800); display: flex; flex-direction: column; overflow: hidden; }
+        .pane-right { width: 50%; height: 100%; background-color: var(--slate-950); overflow: hidden; }
+
+        /* Buttons & Inputs */
+        .icon { width: 1.25rem; height: 1.25rem; }
+        .icon.sm { width: 1rem; height: 1rem; }
+        .icon.lg { width: 2rem; height: 2rem; }
+        .icon.xl { width: 3rem; height: 3rem; }
+
+        .btn-primary {
+            background-color: var(--indigo-600); color: var(--white); font-weight: bold;
+            padding: 0.75rem; border-radius: var(--radius-lg); display: flex; justify-content: center; align-items: center; gap: 0.5rem;
+            transition: background-color 0.2s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary:hover { background-color: var(--indigo-500); }
+
+        .btn-ghost { color: var(--slate-500); transition: color 0.2s; }
+        .btn-ghost:hover { color: var(--white); }
+        .btn-ghost.red:hover { color: var(--red-400); }
+
+        .input-text {
+            background-color: var(--slate-800); border: 1px solid var(--slate-700);
+            border-radius: var(--radius-md); padding: 0.5rem 0.75rem; outline: none; width: 100%;
+        }
+        .input-text:focus { border-color: var(--indigo-500); }
+
+        .card { background-color: var(--slate-900); border: 1px solid var(--slate-800); border-radius: var(--radius-xl); padding: 1.5rem; }
+
+        /* Project List */
+        .genre-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .btn-add-genre {
+            width: 100%; padding: 0.5rem; border: 1px dashed var(--slate-700); color: var(--slate-500);
+            border-radius: var(--radius-md); display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-bottom: 1rem;
+        }
+        .btn-add-genre:hover { color: var(--indigo-400); border-color: var(--indigo-400); }
+
+        .project-item {
+            background-color: var(--slate-900); border: 1px solid var(--slate-800); padding: 1rem;
+            border-radius: var(--radius-lg); cursor: pointer; transition: border-color 0.2s; position: relative;
+        }
+        .project-item:hover { border-color: var(--indigo-500); }
+        .project-date { position: absolute; top: 1rem; right: 1rem; font-size: 0.625rem; font-family: monospace; color: var(--slate-600); }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* Story Editor */
+        .cover-section {
+            background-color: var(--slate-900); border: 1px solid var(--slate-800); border-radius: var(--radius-xl);
+            overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); margin-bottom: 2rem;
+        }
+        .cover-header {
+            padding: 1.5rem; border-bottom: 1px solid var(--slate-800);
+            background: linear-gradient(to bottom right, var(--slate-900), rgba(49, 46, 129, 0.1));
+        }
+        .tag { font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: var(--radius-md); border: 1px solid; display: inline-block; }
+        .tag.indigo { background: rgba(99, 102, 241, 0.1); color: var(--indigo-300); border-color: rgba(99, 102, 241, 0.2); }
+        .tag.yellow { background: rgba(234, 179, 8, 0.1); color: var(--yellow-300); border-color: rgba(234, 179, 8, 0.2); }
+        
+        .synopsis-text {
+            font-size: 0.875rem; color: var(--slate-300); font-style: italic;
+            border-left: 2px solid var(--indigo-500); padding-left: 0.75rem; margin-top: 0.5rem;
+        }
+        
+        .cover-body { padding: 1.5rem; display: flex; gap: 1.5rem; }
+        
+        .img-placeholder {
+            background-color: var(--black); border: 2px dashed var(--slate-700); border-radius: var(--radius-md);
+            position: relative; cursor: pointer; transition: border-color 0.2s; overflow: hidden;
+        }
+        .img-placeholder:hover { border-color: var(--indigo-500); }
+        .img-placeholder.has-image { border-style: solid; border-color: var(--slate-600); }
+        .img-placeholder-content {
+            position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--slate-500); text-align: center;
+        }
+
+        .editor-note {
+            flex: 1; background-color: rgba(2, 6, 23, 0.5); padding: 1rem;
+            border-radius: var(--radius-md); border: 1px solid var(--slate-800);
+        }
+
+        .page-item {
+            background-color: var(--slate-900); border: 1px solid var(--slate-800); border-radius: var(--radius-lg);
+            padding: 1rem; display: flex; gap: 1rem; transition: border-color 0.2s;
+        }
+        .page-item:hover { border-color: var(--slate-700); }
+        .page-num { width: 2rem; text-align: center; font-weight: bold; font-size: 1.25rem; color: var(--slate-600); padding-top: 0.5rem; }
+        .page-dialogue {
+            font-size: 0.875rem; color: var(--indigo-200); background-color: var(--slate-950);
+            padding: 0.75rem; border-radius: var(--radius-md); border-left: 2px solid var(--indigo-500); margin-bottom: 0.5rem;
+        }
+        .prompt-code {
+            font-family: monospace; font-size: 0.625rem; color: var(--slate-500); background-color: var(--slate-950);
+            padding: 0.25rem 0.5rem; border-radius: var(--radius-sm); white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis; max-width: 300px; display: inline-block;
+        }
+
+        /* Asset Pool */
+        .pool-header {
+            height: 4rem; flex: none; border-bottom: 1px solid var(--slate-800); display: flex; align-items: center; justify-content: space-between;
+            padding: 0 1rem; background-color: var(--slate-900); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); z-index: 10;
+        }
+        .tab-bar { flex: none; display: flex; border-bottom: 1px solid var(--slate-800); background-color: rgba(15, 23, 42, 0.5); }
+        .tab-btn {
+            flex: 1; padding: 0.75rem 0; font-size: 0.75rem; font-weight: bold; transition: all 0.2s; border-bottom: 2px solid transparent;
+        }
+        .tab-btn.inactive { color: var(--slate-500); }
+        .tab-btn.inactive:hover { color: var(--slate-300); }
+        .tab-btn.active-mat { color: var(--indigo-400); border-bottom-color: var(--indigo-500); background-color: rgba(99, 102, 241, 0.1); }
+        .tab-btn.active-gen { color: var(--green-400); border-bottom-color: var(--green-500); background-color: rgba(74, 222, 128, 0.1); }
+
+        .asset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+        .asset-item {
+            aspect-ratio: 1/1; background-color: var(--black); border: 1px solid var(--slate-800);
+            border-radius: var(--radius-md); overflow: hidden; position: relative; cursor: grab; transition: border-color 0.2s;
+        }
+        .asset-item:active { cursor: grabbing; }
+        .asset-item:hover { border-color: var(--indigo-500); }
+        .asset-thumb {
+            width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s, opacity 0.2s; opacity: 0.8;
+        }
+        .asset-item:hover .asset-thumb { transform: scale(1.1); opacity: 1; }
+        .asset-overlay {
+            position: absolute; inset: 0; background-color: rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.2s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--white); pointer-events: none;
+        }
+        .asset-item:hover .asset-overlay { opacity: 1; }
+
+        /* Popover */
+        .popover-menu {
+            position: absolute; background-color: var(--slate-800); border: 1px solid var(--slate-600);
+            border-radius: var(--radius-lg); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); z-index: 50; overflow: hidden; min-width: 180px;
+        }
+        .menu-item {
+            width: 100%; text-align: left; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.875rem; transition: background-color 0.1s;
+        }
+        .menu-item:hover { background-color: var(--slate-700); }
+        .menu-divider { border-top: 1px solid var(--slate-700); margin: 0.25rem 0; }
+        .text-red { color: var(--red-400); } .text-blue { color: var(--blue-400); } .text-green { color: var(--green-400); }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+            background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background-color: var(--slate-900); border: 1px solid var(--slate-700); border-radius: var(--radius-xl);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 100%;
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--slate-800); padding: 1rem 1.5rem;
+        }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer {
+            padding: 1rem 1.5rem; border-top: 1px solid var(--slate-800); background-color: var(--slate-900);
+            display: flex; justify-content: flex-end;
+        }
+        
+        .code-block {
+            background-color: var(--slate-950); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--slate-800);
+            font-size: 0.75rem; font-family: monospace; user-select: all; white-space: pre-wrap;
+        }
+
+        .drop-zone {
+            height: 12rem; border: 2px dashed rgba(34, 197, 94, 0.3); background-color: rgba(34, 197, 94, 0.1);
+            border-radius: var(--radius-xl); display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; transition: background-color 0.2s;
+        }
+        .drop-zone:hover { background-color: rgba(34, 197, 94, 0.2); }
+
+        .toast {
+            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background-color: var(--indigo-600);
+            color: var(--white); padding: 0.75rem 1.5rem; border-radius: 9999px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            font-weight: bold; font-size: 0.875rem; z-index: 100; display: flex; align-items: center; gap: 0.5rem;
+        }
+
+        /* Utils */
+        .text-indigo-400 { color: var(--indigo-400); } .text-green-400 { color: var(--green-400); }
+        .text-green-200 { color: var(--green-200); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, memo, useCallback } = React;
+
+        // --- Icons ---
+        const Icon = ({ path, className = "icon", ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{path}</svg>
+        );
+        const Icons = {
+            Plus: (p) => <Icon path={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} {...p} />,
+            Trash: (p) => <Icon path={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>} {...p} />,
+            Play: (p) => <Icon path={<polygon points="5 3 19 12 5 21 5 3"/>} {...p} />,
+            Image: (p) => <Icon path={<><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>} {...p} />,
+            Copy: (p) => <Icon path={<><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>} {...p} />,
+            X: (p) => <Icon path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} {...p} />,
+            Check: (p) => <Icon path={<polyline points="20 6 9 17 4 12"/>} {...p} />,
+            ArrowLeft: (p) => <Icon path={<><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></>} {...p} />,
+            Upload: (p) => <Icon path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>} {...p} />,
+            List: (p) => <Icon path={<><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>} {...p} />,
+            MoreVertical: (p) => <Icon path={<><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></>} {...p} />,
+            Files: (p) => <Icon path={<><path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5-.3.3-.5.7-.5 1.1v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8c.4 0 .8-.2 1.1-.5.3-.3.5-.7.5-1.1V6.5L15.5 2z"/><path d="M3 7.6v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8"/><path d="M15 2v5h5"/></>} {...p} />,
+        };
+
+        // --- Database (IndexedDB) ---
+        const DB_NAME = 'MangaStudio_Ultimate_Fixed_v3';
+        const DB_VERSION = 1;
+
+        const openDB = () => new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects', { keyPath: 'id' });
+                if (!db.objectStoreNames.contains('assets')) db.createObjectStore('assets', { keyPath: 'id' });
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+
+        // Projects
+        const saveProject = async (project) => {
+            const db = await openDB();
+            return new Promise((resolve) => {
+                const tx = db.transaction('projects', 'readwrite');
+                tx.objectStore('projects').put(project);
+                tx.oncomplete = () => resolve(project);
+            });
+        };
+
+        const getAllProjects = async () => {
+            const db = await openDB();
+            return new Promise((resolve) => {
+                const tx = db.transaction('projects', 'readonly');
+                tx.objectStore('projects').getAll().onsuccess = (e) => resolve(e.target.result.sort((a,b) => b.updatedAt - a.updatedAt));
+            });
+        };
+
+        // Assets
+        const saveAsset = async (blob, category = 'material') => {
+            const db = await openDB();
+            return new Promise((resolve) => {
+                const id = crypto.randomUUID();
+                const item = { id, blob, category, created: Date.now() };
+                const tx = db.transaction('assets', 'readwrite');
+                tx.objectStore('assets').put(item);
+                tx.oncomplete = () => resolve({ ...item, url: URL.createObjectURL(blob) });
+            });
+        };
+
+        const updateAssetCategory = async (id, newCategory) => {
+            const db = await openDB();
+            return new Promise((resolve) => {
+                const tx = db.transaction('assets', 'readwrite');
+                const store = tx.objectStore('assets');
+                store.get(id).onsuccess = (e) => {
+                    const data = e.target.result;
+                    if (data) {
+                        data.category = newCategory;
+                        store.put(data);
+                    }
+                    tx.oncomplete = () => resolve();
+                };
+            });
+        };
+
+        const deleteAsset = async (id) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('assets', 'readwrite');
+                const req = tx.objectStore('assets').delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+                req.onerror = () => reject(req.error);
+            });
+        };
+
+        const getAllAssets = async () => {
+            const db = await openDB();
+            return new Promise((resolve) => {
+                const tx = db.transaction('assets', 'readonly');
+                tx.objectStore('assets').getAll().onsuccess = (e) => {
+                    const items = e.target.result.sort((a, b) => b.created - a.created);
+                    const validItems = items.map(i => i.blob instanceof Blob ? { ...i, url: URL.createObjectURL(i.blob) } : null).filter(Boolean);
+                    resolve(validItems);
+                };
+            });
+        };
+
+        // --- Utils ---
+        const copyToClipboard = async (text) => {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch {
+                try {
+                    const t = document.createElement("textarea");
+                    t.value = text;
+                    t.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+                    document.body.appendChild(t);
+                    t.focus(); t.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(t);
+                    return true;
+                } catch(e) { return false; }
+            }
+        };
+
+        const copyImageBlob = async (url) => {
+            try {
+                const res = await fetch(url);
+                let blob = await res.blob();
+                if(blob.type !== 'image/png') {
+                    const img = new Image(); img.src = url;
+                    await new Promise(r => img.onload = r);
+                    const cvs = document.createElement('canvas');
+                    cvs.width = img.width; cvs.height = img.height;
+                    cvs.getContext('2d').drawImage(img,0,0);
+                    blob = await new Promise(r => cvs.toBlob(r, 'image/png'));
+                }
+                await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+                return true;
+            } catch(e) { console.error(e); return false; }
+        };
+
+        // --- Sub Components ---
+
+        const ProjectList = memo(({ genres, projects, setGenres, handleCreateStory, onSelectProject }) => (
+            <div className="h-full overflow-y-auto fade-in" style={{padding: '1.5rem'}}>
+                <div style={{marginBottom: '2rem'}}>
+                    <h2 className="text-xl font-bold" style={{color: 'var(--slate-300)', marginBottom: '1rem'}}>新規プロジェクト</h2>
+                    <div className="card" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                        <label className="text-sm font-bold" style={{color: 'var(--slate-400)'}}>漫画のテーマ・ジャンル</label>
+                        {genres.map((g, i) => (
+                            <div key={i} className="genre-row">
+                                <input value={g} onChange={e=>{const n=[...genres];n[i]=e.target.value;setGenres(n)}} className="input-text flex-1"/>
+                                {genres.length>1 && <button onClick={()=>setGenres(genres.filter((_,x)=>x!==i))} className="btn-ghost red"><Icons.Trash /></button>}
+                            </div>
+                        ))}
+                        <button onClick={()=>setGenres([...genres,''])} className="btn-add-genre"><Icons.Plus /> 追加</button>
+                        <button onClick={handleCreateStory} className="btn-primary w-full"><Icons.Play /> 物語を生成 (APIなし)</button>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 className="text-xl font-bold flex items-center gap-2" style={{color: 'var(--slate-300)', marginBottom: '1rem'}}><Icons.List/> プロジェクトリスト</h2>
+                    {projects.length === 0 && <p className="text-sm" style={{color: 'var(--slate-500)'}}>まだプロジェクトがありません。</p>}
+                    <div className="flex flex-col gap-3">
+                        {projects.map(p => (
+                            <div key={p.id} onClick={() => onSelectProject(p)} className="project-item group">
+                                <h3 className="font-bold text-lg" style={{marginBottom: '0.25rem'}}>{p.title}</h3>
+                                <p className="text-xs line-clamp-2" style={{color: 'var(--slate-400)'}}>{p.synopsis}</p>
+                                <span className="project-date">{new Date(p.updatedAt).toLocaleDateString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        ));
+
+        const StoryEditor = memo(({ project, onBack, onImageGenStart, onDropAssign, getAssetUrl, showToast }) => (
+            <div className="h-full overflow-y-auto fade-in" style={{padding: '1.5rem', paddingBottom: '8rem'}}>
+                <button onClick={onBack} className="text-sm flex items-center gap-1 btn-ghost" style={{marginBottom: '1rem'}}>
+                    <Icons.ArrowLeft className="icon sm"/> リストに戻る
+                </button>
+
+                {/* Cover */}
+                <div className="cover-section">
+                    <div className="cover-header">
+                        <h1 className="text-2xl font-bold" style={{marginBottom: '0.5rem'}}>{project.title}</h1>
+                        <div className="flex gap-2" style={{marginBottom: '1rem'}}>
+                            <span className="tag indigo">{project.gachaResult.themeA}</span>
+                            <span className="tag indigo">{project.gachaResult.themeB}</span>
+                            <span className="tag yellow">★ {project.gachaResult.secretIngredient}</span>
+                        </div>
+                        <p className="synopsis-text">{project.synopsis}</p>
+                    </div>
+                    <div className="cover-body">
+                        <div className={`img-placeholder shrink-0 ${project.coverAssetId ? 'has-image' : ''}`}
+                            style={{width: '160px', aspectRatio: '2/3'}}
+                            onClick={()=>onImageGenStart(project.coverImagePrompt, 'cover')}
+                            onDragOver={e=>e.preventDefault()} onDrop={e=>onDropAssign(e, 'cover')}>
+                            {project.coverAssetId ? <img src={getAssetUrl(project.coverAssetId)} className="w-full h-full object-cover"/> :
+                            <div className="img-placeholder-content"><Icons.Image className="icon lg" style={{marginBottom: '0.5rem'}}/><span className="text-xs">表紙生成</span></div>}
+                        </div>
+                        <div className="editor-note">
+                            <h4 className="text-xs font-bold" style={{color: 'var(--slate-500)', marginBottom: '0.5rem'}}>EDITOR'S NOTE</h4>
+                            <p className="text-sm" style={{color: 'var(--slate-400)'}}>{project.editorNote}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Pages */}
+                <div className="flex flex-col gap-4">
+                    <h3 className="font-bold text-sm" style={{color: 'var(--slate-400)', paddingLeft: '0.25rem'}}>ネーム構成 (全{project.pages.length}P)</h3>
+                    {project.pages.map((page, idx) => (
+                        <div key={idx} className="page-item">
+                            <div className="page-num">{page.pageNumber}</div>
+                            <div className={`img-placeholder shrink-0 ${page.assignedAssetId ? 'has-image' : ''}`}
+                                style={{width: '128px', height: '128px'}}
+                                onClick={()=>onImageGenStart(page.imagePrompt, idx)}
+                                onDragOver={e=>e.preventDefault()} onDrop={e=>onDropAssign(e, idx)}>
+                                {page.assignedAssetId ? <img src={getAssetUrl(page.assignedAssetId)} className="w-full h-full object-cover"/> :
+                                <div className="img-placeholder-content"><Icons.Image className="icon" style={{marginBottom: '0.25rem'}}/><span className="text-[10px]">画像生成</span></div>}
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-bold text-slate-200" style={{marginBottom: '0.5rem'}}>{page.sceneDescription}</p>
+                                <div className="page-dialogue">{page.dialogue}</div>
+                                <div className="flex justify-between items-center" style={{marginTop: '0.25rem'}}>
+                                    <code className="prompt-code">{page.imagePrompt}</code>
+                                    <button onClick={(e)=>{e.stopPropagation(); copyToClipboard(page.imagePrompt); showToast('Copied')}} className="btn-ghost" style={{padding: '4px'}}><Icons.Copy/></button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        ));
+
+        const AssetPool = memo(({ assets, activeTab, setActiveTab, onDragStart, onPoolDrop, onAssetClick, showToast, onCopyImage }) => {
+            const filteredAssets = useMemo(() => assets.filter(a => a.category === activeTab), [assets, activeTab]);
+
+            return (
+                <div className="h-full flex flex-col">
+                    <div className="pool-header">
+                        <h2 className="font-bold text-sm flex items-center gap-2" style={{color: 'var(--slate-300)'}}><Icons.Image/> 画像プール</h2>
+                        <span className="text-xs" style={{color: 'var(--slate-500)'}}>Drop or Paste to Upload</span>
+                    </div>
+                    <div className="tab-bar">
+                        <button onClick={()=>setActiveTab('material')} onDragOver={e=>e.preventDefault()} onDrop={e=>onPoolDrop(e, 'material')}
+                            className={`tab-btn ${activeTab==='material'?'active-mat':'inactive'}`}>素材 (Materials)</button>
+                        <button onClick={()=>setActiveTab('generated')} onDragOver={e=>e.preventDefault()} onDrop={e=>onPoolDrop(e, 'generated')}
+                            className={`tab-btn ${activeTab==='generated'?'active-gen':'inactive'}`}>生成結果 (Generations)</button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto" style={{padding: '1rem'}} onDragOver={e=>e.preventDefault()} onDrop={e=>onPoolDrop(e, activeTab)}>
+                        <div className="asset-grid">
+                            {filteredAssets.map(a => (
+                                <div key={a.id} draggable onDragStart={e=>onDragStart(e, a.id)} className="asset-item group" onClick={(e)=>onAssetClick(e, a.id)}>
+                                    <img src={a.url} className="asset-thumb"/>
+                                    <div className="asset-overlay">
+                                        <Icons.MoreVertical style={{marginBottom: '0.25rem'}}/><span className="text-[10px] font-bold">Menu / Drag</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {filteredAssets.length === 0 && <div className="text-center text-xs" style={{marginTop: '2.5rem', color: 'var(--slate-600)'}}>画像がありません<br/>(Drag & Drop Here)</div>}
+                    </div>
+                </div>
+            );
+        });
+
+        const AssetMenu = ({ isOpen, x, y, onClose, onAction }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                const handleClickOutside = (event) => { if (ref.current && !ref.current.contains(event.target)) onClose(); };
+                if(isOpen) document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [isOpen, onClose]);
+            if (!isOpen) return null;
+            return (
+                <div ref={ref} className="popover-menu popover-enter popover-enter-active" style={{ top: y, left: x - 100 }}>
+                    <button onClick={() => onAction('copy_clipboard')} className="menu-item"><Icons.Copy className="icon sm text-blue"/> クリップボードにコピー</button>
+                    <button onClick={() => onAction('duplicate')} className="menu-item"><Icons.Files className="icon sm text-green"/> 複製 (Duplicate)</button>
+                    <div className="menu-divider"></div>
+                    <button onClick={() => onAction('delete')} className="menu-item text-red"><Icons.Trash className="icon sm"/> 削除</button>
+                </div>
+            );
+        };
+
+        const ImageGenModal = ({ isOpen, onClose, prompt, onPasteImage }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="modal-overlay fade-in" onClick={onClose}>
+                    <div className="modal-content" style={{width: '600px'}} onClick={e=>e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="font-bold text-lg text-green-400 flex items-center gap-2"><Icons.Image/> 画像生成</h3>
+                            <button onClick={onClose} className="btn-ghost"><Icons.X/></button>
+                        </div>
+                        <div className="modal-body flex flex-col gap-6">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-bold" style={{color: 'var(--slate-400)'}}>プロンプト (コピー済み)</label>
+                                <div className="code-block text-green-400">{prompt}</div>
+                            </div>
+                            <div className="drop-zone"
+                                onPaste={e => { e.stopPropagation(); onPasteImage(e.clipboardData.files); }}
+                                onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); onPasteImage(e.dataTransfer.files); }}>
+                                <Icons.Upload className="icon xl text-green-400 animate-bounce" style={{marginBottom: '0.5rem'}}/>
+                                <p className="font-bold text-green-200">画像を貼り付け (Ctrl+V)</p>
+                                <p className="text-xs" style={{color: 'var(--slate-400)', marginTop: '0.5rem'}}>生成された画像をここへドロップ</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const StoryGenModal = ({ isOpen, onClose, prompt, onImport }) => {
+            const [val, setVal] = useState('');
+            if (!isOpen) return null;
+            return (
+                <div className="modal-overlay fade-in" onClick={onClose}>
+                    <div className="modal-content" style={{width: '800px', height: '80vh', display: 'flex', flexDirection: 'column'}} onClick={e=>e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="font-bold text-lg text-indigo-400 flex items-center gap-2"><Icons.Play/> 物語生成</h3>
+                            <button onClick={onClose} className="btn-ghost"><Icons.X/></button>
+                        </div>
+                        <div className="modal-body flex-1 overflow-y-auto flex flex-col gap-6">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-bold" style={{color: 'var(--slate-400)'}}>プロンプト (コピー済み)</label>
+                                <div className="code-block" style={{color: 'var(--slate-300)'}}>{prompt}</div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-bold" style={{color: 'var(--slate-400)'}}>AIからのJSONを貼り付け</label>
+                                <textarea className="input-text" style={{height: '12rem', fontFamily: 'monospace', fontSize: '0.875rem'}}
+                                    placeholder='{ "title": "...", "pages": [...] }' value={val} onChange={e=>setVal(e.target.value)}/>
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button onClick={()=>onImport(val)} className="btn-primary" style={{padding: '0.5rem 1.5rem'}}><Icons.Check/> 完了</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState('list');
+            const [genres, setGenres] = useState(['サイバーパンク', '日常']);
+            const [projects, setProjects] = useState([]);
+            const [currentProject, setCurrentProject] = useState(null);
+            const [assets, setAssets] = useState([]);
+            const [activeTab, setActiveTab] = useState('material');
+            const [toast, setToast] = useState(null);
+            const [modal, setModal] = useState({ type: null, data: null }); 
+            const [menu, setMenu] = useState({ open: false, id: null, x: 0, y: 0 });
+
+            useEffect(() => {
+                getAllProjects().then(setProjects);
+                getAllAssets().then(setAssets);
+            }, []);
+
+            useEffect(() => {
+                if (currentProject) {
+                    const updated = { ...currentProject, updatedAt: Date.now() };
+                    saveProject(updated).then(() => getAllProjects().then(setProjects));
+                }
+            }, [currentProject]);
+
+            const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+            // Logic
+            const handleUpload = useCallback(async (files, category) => {
+                if(!files || !files.length) return;
+                let cnt = 0, lastId = null;
+                for(let i=0; i<files.length; i++) {
+                    if(files[i].type.startsWith('image/')) {
+                        const res = await saveAsset(files[i], category);
+                        cnt++; lastId = res.id;
+                    }
+                }
+                if(cnt) {
+                    setAssets(await getAllAssets());
+                    showToast(`${cnt}枚追加 (${category === 'generated' ? '生成結果' : '素材'})`);
+                    if (category === 'generated') setActiveTab('generated');
+                    return lastId;
+                }
+            }, []);
+
+            // Global Paste Listener (The Fix)
+            useEffect(() => {
+                const handleGlobalPaste = (e) => {
+                    if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+                    
+                    const files = e.clipboardData?.files;
+                    const items = e.clipboardData?.items;
+                    
+                    if (files && files.length > 0) {
+                        e.preventDefault();
+                        handleUpload(files, activeTab);
+                    } else if (items) {
+                        for (let i = 0; i < items.length; i++) {
+                            if (items[i].type.indexOf('image') !== -1) {
+                                const blob = items[i].getAsFile();
+                                handleUpload([blob], activeTab);
+                                e.preventDefault();
+                                return;
+                            }
+                        }
+                    }
+                };
+                window.addEventListener('paste', handleGlobalPaste);
+                return () => window.removeEventListener('paste', handleGlobalPaste);
+            }, [activeTab, handleUpload]);
+
+            // Handlers
+            const handleAssetClick = (e, assetId) => {
+                e.preventDefault(); e.stopPropagation();
+                setMenu({ open: true, id: assetId, x: e.clientX, y: e.clientY });
+            };
+
+            const handleMenuAction = async (action) => {
+                const targetAsset = assets.find(a => a.id === menu.id);
+                if (!targetAsset) return;
+                if (action === 'delete') {
+                    if (confirm('画像を削除しますか？')) {
+                        await deleteAsset(menu.id); setAssets(await getAllAssets()); showToast('削除しました');
+                    }
+                } else if (action === 'duplicate') {
+                    const res = await fetch(targetAsset.url);
+                    await saveAsset(await res.blob(), targetAsset.category);
+                    setAssets(await getAllAssets()); showToast('複製しました');
+                } else if (action === 'copy_clipboard') {
+                    const success = await copyImageBlob(targetAsset.url);
+                    showToast(success ? 'コピー完了' : 'コピー失敗');
+                }
+                setMenu({ ...menu, open: false });
+            };
+
+            const handleCreateStory = () => {
+                const prompt = `あなたは「予想外の展開」を得意とする超一流の漫画原作者であり、同時に優秀なAI漫画画像プロンプターです。
+ユーザーから提供される「${genres.join('と')}」をもとに、24ページの読み切り漫画の企画、ネーム構成、そして表紙イラストを作成します。
+### Process (Chain)
+1. **アイデアの化学反応 (Gacha Logic):**
+   * 提供されたテーマを極端に解釈し、ランダムな「隠し味のジャンル」を1つ追加して独自の設定を作る。
+   * **この段階で、表紙イラストの具体的な構図を決定する。**
+2. **24ページの構成設計:**
+   * P1-4(起), P5-12(承), P13-19(転), P20-24(結)。
+
+### 出力形式 (JSONのみ)
+\`\`\`json
+{
+  "coverImagePrompt": "表紙イラスト生成用プロンプト (英語)",
+  "title": "タイトル (日本語)",
+  "gachaResult": { "themeA": "テーマA", "themeB": "テーマB", "secretIngredient": "隠し味" },
+  "synopsis": "3行あらすじ (日本語)",
+  "pages": [
+    { "pageNumber": 1, "sceneDescription": "シーン詳細(日)", "dialogue": "セリフ(日)", "imagePrompt": "画像プロンプト(英)" },
+    ...
+  ],
+  "editorNote": "原作者コメント(日)"
+}
+\`\`\``;
+                setModal({ type: 'story', data: prompt });
+                copyToClipboard(prompt); showToast('プロンプトをコピーしました');
+            };
+
+            const handleImportStory = (json) => {
+                try {
+                    let clean = json.trim().replace(/```json/g, '').replace(/```/g, '');
+                    const s = clean.indexOf('{'), e = clean.lastIndexOf('}');
+                    if(s > -1 && e > -1) clean = clean.substring(s, e+1);
+                    clean = clean.replace(/\.\.\.\s*\(P\d+.*?\)/g, '').replace(/,\s*\.\.\./g, ',').replace(/,(\s*[}\]])/g, '$1');
+                    
+                    const data = JSON.parse(clean);
+                    if(!data.pages) throw new Error("ページデータなし");
+
+                    const newProject = {
+                        id: crypto.randomUUID(), ...data,
+                        pages: data.pages.map(p => ({ ...p, assignedAssetId: null })),
+                        coverAssetId: null, createdAt: Date.now(), updatedAt: Date.now()
+                    };
+                    saveProject(newProject).then(() => {
+                        setProjects(prev => [newProject, ...prev]); setCurrentProject(newProject);
+                        setView('editor'); setModal({ type: null }); showToast('プロジェクト作成完了');
+                    });
+                } catch(e) { alert('JSONエラー: ' + e.message); }
+            };
+
+            const handleImageGenStart = (prompt, targetIndex) => {
+                const fullPrompt = `(Masterpiece, Best Quality), Manga Style. ${prompt}`;
+                copyToClipboard(fullPrompt);
+                setModal({ type: 'image', data: { prompt: fullPrompt, targetIndex } });
+                showToast('プロンプトをコピーしました');
+            };
+
+            const handleImageGenFinish = async (files) => {
+                const assetId = await handleUpload(files, 'generated');
+                if (assetId && currentProject && modal.type === 'image') {
+                    const idx = modal.data.targetIndex;
+                    const p = { ...currentProject };
+                    if (idx === 'cover') p.coverAssetId = assetId;
+                    else p.pages[idx].assignedAssetId = assetId;
+                    setCurrentProject(p);
+                    setModal({ type: null });
+                    showToast('画像を反映しました');
+                }
+            };
+
+            const handleDragStart = (e, assetId) => { e.dataTransfer.setData('assetId', assetId); e.dataTransfer.effectAllowed = 'move'; };
+
+            const handleDropAssign = (e, idx) => {
+                e.preventDefault();
+                const assetId = e.dataTransfer.getData('assetId');
+                if (assetId && currentProject) {
+                    const p = { ...currentProject };
+                    if (idx === 'cover') p.coverAssetId = assetId;
+                    else p.pages[idx].assignedAssetId = assetId;
+                    setCurrentProject(p); showToast('画像を割り当てました');
+                } else if (e.dataTransfer.files.length > 0) {
+                    handleUpload(e.dataTransfer.files, 'material').then(newId => {
+                        if(newId && currentProject) {
+                            const p = { ...currentProject };
+                            if (idx === 'cover') p.coverAssetId = newId;
+                            else p.pages[idx].assignedAssetId = newId;
+                            setCurrentProject(p);
+                        }
+                    });
+                }
+            };
+
+            const handlePoolDrop = async (e, targetCategory) => {
+                e.preventDefault();
+                const assetId = e.dataTransfer.getData('assetId');
+                if (assetId) {
+                    const asset = assets.find(a => a.id === assetId);
+                    if (asset && asset.category !== targetCategory) {
+                        await updateAssetCategory(assetId, targetCategory);
+                        setAssets(await getAllAssets()); setActiveTab(targetCategory); showToast('移動しました');
+                    }
+                } else handleUpload(e.dataTransfer.files, targetCategory);
+            };
+
+            return (
+                <div style={{width:'100%', height:'100%', display:'flex'}} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault(); handleUpload(e.dataTransfer.files, activeTab);}}>
+                    <div className="pane-left">
+                        {view === 'list' ? 
+                            <ProjectList genres={genres} projects={projects} setGenres={setGenres} handleCreateStory={handleCreateStory} onSelectProject={(p)=>{setCurrentProject(p); setView('editor')}}/> : 
+                            <StoryEditor project={currentProject} onBack={()=>setView('list')} onImageGenStart={handleImageGenStart} onDropAssign={handleDropAssign} getAssetUrl={id=>assets.find(a=>a.id===id)?.url} showToast={showToast}/>
+                        }
+                    </div>
+                    <div className="pane-right">
+                        <AssetPool assets={assets} activeTab={activeTab} setActiveTab={setActiveTab} onDragStart={handleDragStart} onPoolDrop={handlePoolDrop} onAssetClick={handleAssetClick} showToast={showToast} onCopyImage={copyImageBlob}/>
+                    </div>
+                    <AssetMenu isOpen={menu.open} x={menu.x} y={menu.y} onClose={()=>setMenu({...menu, open:false})} onAction={handleMenuAction} />
+                    <StoryGenModal isOpen={modal.type==='story'} onClose={()=>setModal({type:null})} prompt={modal.data} onImport={handleImportStory}/>
+                    <ImageGenModal isOpen={modal.type==='image'} onClose={()=>setModal({type:null})} prompt={modal.data?.prompt} onPasteImage={handleImageGenFinish}/>
+                    {toast && <div className="toast fade-in"><Icons.Check/> {toast}</div>}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

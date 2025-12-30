@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007bff">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Smatt</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            margin: 0; background: #000; color: #fff; 
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
+        }
+        
+        /* --- タブ --- */
+        .tabs { 
+            display: flex; background: #111; z-index: 50; flex-shrink: 0; height: 50px; border-bottom: 1px solid #333;
+        }
+        .tab { 
+            flex: 1; display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; color: #666; font-size: 15px; font-weight: bold; transition: 0.2s;
+            -webkit-user-select: none; user-select: none;
+        }
+        .tab.active { background: #1a1a1a; color: #fff; border-bottom: 2px solid #007bff; }
+        
+        .content { display: none; flex: 1; position: relative; overflow: hidden; }
+        .content.active { display: flex; flex-direction: column; }
+
+        /* --- チュートリアル用ハイライト・吹き出し --- */
+        /* 画面全体を暗くするバックドロップ */
+        #tutorial-backdrop {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85); z-index: 9000;
+            display: none; pointer-events: auto;
+        }
+        #tutorial-backdrop.active { display: block; animation: fadeInOverlay 0.3s forwards; }
+
+        /* ハイライト要素（z-indexを上げて浮き上がらせるクラス） */
+        .highlight-element {
+            z-index: 9001 !important;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+            background: #222; /* 背景抜け防止 */
+            pointer-events: none; /* チュートリアル中は操作不可 */
+        }
+
+        /* 吹き出し */
+        .tutorial-tooltip {
+            position: absolute; width: 280px; padding: 20px;
+            background: #fff; color: #333; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 9002; display: none; text-align: center;
+            font-weight: bold; font-size: 16px;
+        }
+        .tutorial-tooltip::after {
+            content: ''; position: absolute; border: 10px solid transparent;
+        }
+        /* 下向き矢印 (ボックスは上) */
+        .tooltip-top::after {
+            bottom: -20px; left: 50%; transform: translateX(-50%); border-top-color: #fff;
+        }
+        /* 上向き矢印 (ボックスは下) */
+        .tooltip-bottom::after {
+            top: -20px; left: 50%; transform: translateX(-50%); border-bottom-color: #fff;
+        }
+
+        .btn-next {
+            background: #007bff; color: white; border: none; padding: 10px 30px;
+            border-radius: 20px; margin-top: 15px; cursor: pointer; font-size: 14px;
+        }
+
+        /* --- イントロダクション（デバイス選択） --- */
+        .overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.95); z-index: 9999;
+            display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; padding: 20px; box-sizing: border-box;
+        }
+        .overlay.active { display: flex; animation: fadeInOverlay 0.3s forwards; }
+
+        .intro-box { max-width: 400px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; align-items: center; }
+        .intro-title { font-size: 28px; font-weight: 800; margin-bottom: 30px; background: linear-gradient(45deg, #007bff, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .btn-large {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none; color: white; padding: 18px 40px; border-radius: 40px;
+            font-size: 18px; font-weight: bold; cursor: pointer; margin: 12px; width: 90%;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.4); transition: transform 0.1s;
+        }
+        .btn-large:active { transform: scale(0.98); }
+        .btn-secondary { background: #333; box-shadow: none; border: 1px solid #555; }
+
+        /* PC用ガイド */
+        .intro-step { width: 100%; margin-bottom: 25px; text-align: left; background: #222; padding: 15px; border-radius: 10px; border: 1px solid #444; box-sizing: border-box; }
+        .intro-step h4 { margin: 0 0 5px 0; color: #fff; font-size: 16px; }
+        .intro-step p { margin: 0; color: #aaa; font-size: 13px; line-height: 1.5; }
+
+        /* --- コンテンツ --- */
+        #c-send { padding: 15px; background: #121212; display: none; flex-direction: column; }
+        #c-send.active { display: flex; }
+
+        .header-area { flex-shrink: 0; width: 100%; max-width: 600px; margin: 0 auto; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
+        .app-logo {
+            font-size: 20px; font-weight: 800;
+            background: linear-gradient(45deg, #007bff, #00d4ff);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .settings-btn { font-size: 20px; cursor: pointer; padding: 5px; opacity: 0.7; }
+
+        textarea { 
+            width: 100%; height: 120px; padding: 15px; font-size: 16px; 
+            border-radius: 12px; border: 1px solid #333; outline: none; 
+            background: #222; color: #fff; resize: none; box-sizing: border-box; line-height: 1.5;
+        }
+        textarea:focus { border-color: #007bff; background: #2a2a2a; }
+        
+        #qrcode-container { 
+            flex: 1; margin-top: 15px; background: #fff; border-radius: 16px; 
+            display: flex; justify-content: center; align-items: center; 
+            overflow: hidden; width: 100%; max-width: 600px; align-self: center; 
+            padding: 10px; box-sizing: border-box; position: relative;
+        }
+        canvas#qr-output { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+        #page-indicator {
+            position: absolute; bottom: 10px; right: 15px;
+            background: rgba(0,0,0,0.6); color: #fff; padding: 4px 10px;
+            border-radius: 12px; font-size: 12px; pointer-events: none; display: none;
+        }
+        .footer-text { flex-shrink: 0; font-size: 12px; color: #666; text-align: center; margin-top: 10px; height: 20px; }
+
+        #c-receive { padding: 0; background: #000; }
+        #cam-wrapper { 
+            position: relative; width: 100%; height: 100%; 
+            display: flex; justify-content: center; align-items: center; background: #000;
+        }
+        #canvas-scan { width: 100%; height: 100%; object-fit: contain; display: block; }
+        #video { display: none; }
+
+        #help-link {
+            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.5); font-size: 13px; text-decoration: underline;
+            cursor: pointer; z-index: 10; padding: 10px;
+        }
+
+        #toast {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            padding: 10px 24px; background: rgba(0, 0, 0, 0.85); color: #fff;
+            border-radius: 30px; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+            z-index: 50; white-space: nowrap; border: 1px solid #444;
+        }
+        #toast.show { opacity: 1; }
+
+        .modal {
+            display: none; position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 85%; max-width: 350px; background: rgba(30, 30, 30, 0.95); 
+            border: 1px solid #444; color: white; padding: 20px;
+            border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            text-align: center; z-index: 20;
+            -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); 
+        }
+        .modal.active { display: block; animation: fadeInOverlay 0.3s forwards; }
+
+        #settings-modal h3, #help-modal h3 { margin: 0 0 15px 0; font-size: 16px; color: #ddd; }
+        .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-adj {
+            background: #444; border: none; color: #fff; padding: 8px 12px;
+            border-radius: 8px; cursor: pointer; font-size: 12px; width: 45px;
+        }
+        .btn-adj:active { background: #666; }
+        #size-display { font-size: 20px; font-weight: bold; color: #00d4ff; width: 60px; }
+        
+        .btn-close {
+            background: #007bff; border: none; color: #fff; padding: 10px 30px;
+            border-radius: 20px; font-size: 14px; cursor: pointer; width: 100%; margin-top: 10px;
+        }
+        .btn-reset {
+            background: transparent; border: 1px solid #444; color: #888; padding: 8px;
+            border-radius: 8px; font-size: 12px; cursor: pointer; width: 100%; margin-top: 15px;
+        }
+
+        #result-modal { cursor: pointer; }
+        #result-modal strong { display: block; font-size: 18px; margin-bottom: 8px; color: #00d4ff; }
+        #result-modal span { display: block; font-size: 13px; color: #ccc; word-break: break-all; line-height: 1.4; }
+        
+        @keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div id="tutorial-backdrop"></div>
+
+<div id="tip-1" class="tutorial-tooltip tooltip-bottom">
+    ここに入力！<br>
+    <button class="btn-next" onclick="runTutorialStep2()">OK！</button>
+</div>
+<div id="tip-2" class="tutorial-tooltip tooltip-bottom">
+    自由に入力してみる...<br>(自動デモ中)
+</div>
+
+<div id="tip-3" class="tutorial-tooltip tooltip-top">
+    ここにQRが表示されています。<br>これを読み込ませましょう。<br>
+    <button class="btn-next" onclick="finishTutorial()">OK！</button>
+</div>
+
+<div id="intro-select" class="overlay">
+    <div class="intro-box">
+        <div class="intro-title">Smatt</div>
+        <p style="color:#aaa; margin-bottom:30px;">どちらで使用しますか？</p>
+        <button class="btn-large" onclick="introNext('send')">📱 スマホ (入力)</button>
+        <button class="btn-large btn-secondary" onclick="introNext('receive')">💻 PC (読込)</button>
+    </div>
+</div>
+
+<div id="intro-guide-receive" class="overlay">
+    <div class="intro-box">
+        <div class="intro-title">使い方 (PC)</div>
+        <div class="intro-step">
+            <h4>STEP 1</h4>
+            <p>カメラへのアクセスを許可して、スマホのQRコードを映してください。</p>
+        </div>
+        <div class="intro-step">
+            <h4>STEP 2</h4>
+            <p>QRが複数ページある場合は、スマホ側をスワイプして全て読み込ませてください。</p>
+        </div>
+        <button class="btn-large" onclick="introFinishReceive()">はじめる</button>
+    </div>
+</div>
+
+<div class="tabs">
+    <div id="t-send" class="tab" onclick="switchTab('send')">入力</div>
+    <div id="t-receive" class="tab" onclick="switchTab('receive')">読込</div>
+</div>
+
+<div id="toast"></div>
+
+<div id="c-send" class="content">
+    <div class="header-area">
+        <div class="header-top">
+            <div class="app-logo">Smatt</div>
+            <div class="settings-btn" onclick="openSettings()">⚙️</div>
+        </div>
+        <textarea id="inp" placeholder="文字を入力..." autofocus></textarea>
+    </div>
+    
+    <div id="qrcode-container">
+        <canvas id="qr-output"></canvas>
+        <div id="page-indicator">1 / 1</div>
+    </div>
+    
+    <div class="footer-text" id="send-status">入力で生成</div>
+    
+    <div id="settings-modal" class="modal">
+        <h3>分割サイズ設定 (文字数)</h3>
+        <div class="control-row">
+            <button class="btn-adj" onclick="adjSize(-100)">-100</button>
+            <button class="btn-adj" onclick="adjSize(-10)">-10</button>
+            <span id="size-display">800</span>
+            <button class="btn-adj" onclick="adjSize(10)">+10</button>
+            <button class="btn-adj" onclick="adjSize(100)">+100</button>
+        </div>
+        <button class="btn-close" onclick="closeSettings()">完了</button>
+        <button class="btn-reset" onclick="resetIntro()">説明をもう一度見る</button>
+    </div>
+</div>
+
+<div id="c-receive" class="content">
+    <div id="cam-wrapper">
+        <canvas id="canvas-scan"></canvas>
+        <div id="help-link" onclick="openHelp()">読み取りづらいときは？</div>
+        <div id="result-modal" class="modal" onclick="copyResult()">
+            <strong>タップしてコピー</strong>
+            <span id="detected-text">...</span>
+        </div>
+        
+        <div id="help-modal" class="modal">
+            <h3 style="color:#ff4444;">⚠️ PC側の設定はありません</h3>
+            <p style="font-size:14px; color:#ccc; text-align:left; margin-bottom:20px;">
+                QRコードが読み取れない場合は、<strong style="color:#fff;">スマホ側の設定 (⚙️)</strong> から「分割サイズ」を小さくしてください。<br><br>
+                PC側をいくらいじっても改善しません。
+            </p>
+            <button class="btn-close" onclick="closeHelp()">閉じる</button>
+        </div>
+    </div>
+    <video id="video" playsinline></video>
+</div>
+
+<script>
+    // --- PWA Service Worker ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(console.error);
+        });
+    }
+
+    // --- チュートリアル / イントロロジック ---
+    const introSelect = document.getElementById('intro-select');
+    const introGuideRecv = document.getElementById('intro-guide-receive');
+    
+    const backdrop = document.getElementById('tutorial-backdrop');
+    const inpEl = document.getElementById('inp');
+    const qrEl = document.getElementById('qrcode-container');
+    const tip1 = document.getElementById('tip-1');
+    const tip2 = document.getElementById('tip-2');
+    const tip3 = document.getElementById('tip-3');
+
+    function checkIntro() {
+        const doneSend = localStorage.getItem('smatt_intro_send_done');
+        const doneRecv = localStorage.getItem('smatt_intro_receive_done');
+
+        if (!doneSend && !doneRecv) {
+            introSelect.classList.add('active');
+        } else {
+            const savedMode = localStorage.getItem('smatt_mode') || 'send';
+            switchTab(savedMode);
+        }
+    }
+
+    function introNext(mode) {
+        introSelect.classList.remove('active');
+        if (mode === 'receive') {
+            introGuideRecv.classList.add('active');
+        } else {
+            // スマホ(Input)選択時 -> 即座に入力画面へ行きチュートリアル開始
+            switchTab('send'); 
+        }
+    }
+
+    function introFinishReceive() {
+        introGuideRecv.classList.remove('active');
+        localStorage.setItem('smatt_intro_receive_done', 'true');
+        switchTab('receive');
+    }
+
+    function resetIntro() {
+        if(confirm("チュートリアルをリセットして再読込しますか？")) {
+            localStorage.clear(); // 全設定クリア
+            location.reload();
+        }
+    }
+
+    // --- ウォークスルー (スマホ用) ---
+    function startSendTutorial() {
+        // Step 1: 入力欄ハイライト
+        backdrop.classList.add('active');
+        inpEl.classList.add('highlight-element');
+        
+        // 吹き出し位置調整
+        const rect = inpEl.getBoundingClientRect();
+        tip1.style.top = (rect.bottom + 15) + 'px';
+        tip1.style.left = (rect.left + rect.width/2 - 140) + 'px';
+        tip1.style.display = 'block';
+    }
+
+    window.runTutorialStep2 = function() {
+        // Step 1 終了 -> Step 2 自動入力デモ
+        tip1.style.display = 'none';
+        
+        // 吹き出し2 (入力中...)
+        const rect = inpEl.getBoundingClientRect();
+        tip2.style.top = (rect.bottom + 15) + 'px';
+        tip2.style.left = (rect.left + rect.width/2 - 140) + 'px';
+        tip2.style.display = 'block';
+
+        // タイプライター演出
+        const demoText = "こんにちは！Smattへようこそ。";
+        let i = 0;
+        inpEl.value = "";
+        
+        const timer = setInterval(() => {
+            inpEl.value += demoText.charAt(i);
+            updateQR(); // 都度QR更新
+            i++;
+            if (i >= demoText.length) {
+                clearInterval(timer);
+                setTimeout(runTutorialStep3, 800);
+            }
+        }, 100);
+    };
+
+    function runTutorialStep3() {
+        // Step 2 終了 -> Step 3 QRハイライト
+        tip2.style.display = 'none';
+        inpEl.classList.remove('highlight-element');
+        qrEl.classList.add('highlight-element');
+
+        const rect = qrEl.getBoundingClientRect();
+        // QRの上に表示
+        tip3.style.top = (rect.top - 120) + 'px';
+        tip3.style.left = (rect.left + rect.width/2 - 140) + 'px';
+        tip3.style.display = 'block';
+    }
+
+    window.finishTutorial = function() {
+        tip3.style.display = 'none';
+        qrEl.classList.remove('highlight-element');
+        backdrop.classList.remove('active');
+        
+        // 完了フラグ保存
+        localStorage.setItem('smatt_intro_send_done', 'true');
+        
+        // 入力クリアしてフォーカス
+        inpEl.value = "";
+        updateQR();
+        inpEl.focus();
+    };
+
+
+    // --- タブ制御 ---
+    function switchTab(mode) {
+        // 未読ならチュートリアルへ誘導
+        if (mode === 'send' && !localStorage.getItem('smatt_intro_send_done')) {
+            // 画面切り替え
+            document.querySelectorAll('.tab, .content').forEach(e => e.classList.remove('active'));
+            document.getElementById('t-' + mode).classList.add('active');
+            document.getElementById('c-' + mode).classList.add('active');
+            localStorage.setItem('smatt_mode', mode);
+            
+            // 少し待ってから開始（レイアウト確定待ち）
+            setTimeout(startSendTutorial, 300);
+            return;
+        }
+
+        if (mode === 'receive' && !localStorage.getItem('smatt_intro_receive_done')) {
+            const guideEl = document.getElementById('intro-guide-receive');
+            if (!guideEl.classList.contains('active')) {
+                guideEl.classList.add('active');
+            }
+            return; 
+        }
+
+        // 通常切り替え
+        document.querySelectorAll('.tab, .content').forEach(e => e.classList.remove('active'));
+        document.getElementById('t-' + mode).classList.add('active');
+        document.getElementById('c-' + mode).classList.add('active');
+        localStorage.setItem('smatt_mode', mode);
+
+        if (mode === 'receive') {
+            startCamera();
+        } else {
+            stopCamera();
+            setTimeout(() => { inp.focus(); }, 100);
+        }
+    }
+
+    // --- ユーティリティ ---
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+    function showToast(msg, duration = 1500) {
+        toastEl.innerText = msg;
+        toastEl.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
+    }
+
+    // --- QR生成 & UIロジック ---
+    const qrCanvas = document.getElementById('qr-output');
+    const inp = document.getElementById('inp');
+    const pageInd = document.getElementById('page-indicator');
+    const qrContainer = document.getElementById('qrcode-container');
+    const sendStatus = document.getElementById('send-status');
+    const settingsModal = document.getElementById('settings-modal');
+    const sizeDisplay = document.getElementById('size-display');
+
+    let CHUNK_SIZE = parseInt(localStorage.getItem('smatt_chunk_size')) || 800;
+    
+    function openSettings() {
+        sizeDisplay.innerText = CHUNK_SIZE;
+        settingsModal.classList.add('active');
+    }
+    function closeSettings() {
+        settingsModal.classList.remove('active');
+        inp.focus(); 
+    }
+    function adjSize(delta) {
+        let newVal = CHUNK_SIZE + delta;
+        if (newVal > 800) newVal = 800;
+        if (newVal < 30) newVal = 30;
+        CHUNK_SIZE = newVal;
+        sizeDisplay.innerText = CHUNK_SIZE;
+        localStorage.setItem('smatt_chunk_size', CHUNK_SIZE);
+        updateQR();
+    }
+
+    let chunks = [];
+    let currentPage = 0; 
+    let currentId = ""; 
+
+    function updateQR() {
+        const text = inp.value;
+        if (!text) {
+            chunks = [];
+            generateQR("");
+            pageInd.style.display = 'none';
+            sendStatus.innerText = `分割サイズ: ${CHUNK_SIZE}文字`;
+            return;
+        }
+
+        if (text.length <= CHUNK_SIZE) {
+            chunks = [text];
+            currentId = ""; 
+        } else {
+            chunks = [];
+            currentId = Date.now().toString(36); 
+            const total = Math.ceil(text.length / CHUNK_SIZE);
+            for (let i = 0; i < total; i++) {
+                const chunkData = text.substr(i * CHUNK_SIZE, CHUNK_SIZE);
+                chunks.push(`SMT:${i + 1}:${total}:${currentId}:${chunkData}`);
+            }
+        }
+
+        if (currentPage >= chunks.length) currentPage = chunks.length - 1;
+        if (currentPage < 0) currentPage = 0;
+
+        generateQR(chunks[currentPage]);
+        updateUI();
+    }
+
+    function generateQR(data) {
+        const ctx = qrCanvas.getContext('2d');
+        if (!data) {
+            ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+            return;
+        }
+        QRCode.toCanvas(qrCanvas, data, {
+            width: 1024, margin: 1, color: { dark: "#000000", light: "#ffffff" }
+        }, err => { if(err) console.error(err); });
+    }
+
+    function updateUI() {
+        if (chunks.length > 1) {
+            pageInd.innerText = `${currentPage + 1} / ${chunks.length}`;
+            pageInd.style.display = 'block';
+            sendStatus.innerText = `スワイプで切替 (${chunks.length}枚) / サイズ: ${CHUNK_SIZE}`;
+        } else {
+            pageInd.style.display = 'none';
+            sendStatus.innerText = `完了 (サイズ: ${CHUNK_SIZE})`;
+        }
+    }
+
+    inp.addEventListener('input', () => {
+        currentPage = 0; 
+        updateQR();
+    });
+
+    let startX = 0;
+    qrContainer.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive: true});
+    qrContainer.addEventListener('touchend', e => {
+        const endX = e.changedTouches[0].clientX;
+        const diff = startX - endX;
+        if (Math.abs(diff) > 50) { 
+            if (diff > 0) nextPage(); 
+            else prevPage();          
+        }
+    }, {passive: true});
+
+    function nextPage() {
+        if (currentPage < chunks.length - 1) {
+            currentPage++;
+            generateQR(chunks[currentPage]);
+            updateUI();
+            showToast(`ページ ${currentPage + 1} / ${chunks.length}`);
+        }
+    }
+    function prevPage() {
+        if (currentPage > 0) {
+            currentPage--;
+            generateQR(chunks[currentPage]);
+            updateUI();
+            showToast(`ページ ${currentPage + 1} / ${chunks.length}`);
+        }
+    }
+
+    updateQR(); 
+
+    // --- 読込 & ヘルプ ---
+    const video = document.getElementById('video');
+    const canvasScan = document.getElementById('canvas-scan');
+    const ctxScan = canvasScan.getContext('2d', { willReadFrequently: true });
+    const resultModal = document.getElementById('result-modal');
+    const detectedTextSpan = document.getElementById('detected-text');
+    const helpModal = document.getElementById('help-modal');
+    
+    let stream = null;
+    let animeId = null;
+    let isScanning = true;
+    let lastRawData = "";
+    let buffer = {}; 
+
+    function openHelp() { helpModal.classList.add('active'); }
+    function closeHelp() { helpModal.classList.remove('active'); }
+
+    async function startCamera() {
+        if(stream) return;
+        showToast("カメラ起動中...");
+        resultModal.classList.remove('active');
+        isScanning = true;
+        buffer = {}; 
+
+        try {
+            const constraints = { video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } };
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = stream;
+            video.setAttribute("playsinline", true); 
+            await video.play();
+            showToast("QRコードを映してください");
+            requestAnimationFrame(tick);
+        } catch (e) {
+            console.error(e);
+            showToast("❌ カメラエラー");
+        }
+    }
+
+    function stopCamera() {
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        if (animeId) cancelAnimationFrame(animeId);
+    }
+
+    function tick() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvasScan.width = video.videoWidth;
+            canvasScan.height = video.videoHeight;
+            ctxScan.drawImage(video, 0, 0, canvasScan.width, canvasScan.height);
+            
+            if(isScanning) {
+                const imageData = ctxScan.getImageData(0, 0, canvasScan.width, canvasScan.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+
+                if (code && code.data) {
+                    drawRect(code.location);
+                    handleScanData(code.data);
+                }
+            }
+        }
+        animeId = requestAnimationFrame(tick);
+    }
+
+    function drawRect(loc) {
+        ctxScan.beginPath();
+        ctxScan.lineWidth = 5;
+        ctxScan.strokeStyle = "#00d4ff"; 
+        ctxScan.moveTo(loc.topLeftCorner.x, loc.topLeftCorner.y);
+        ctxScan.lineTo(loc.topRightCorner.x, loc.topRightCorner.y);
+        ctxScan.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
+        ctxScan.lineTo(loc.bottomLeftCorner.x, loc.bottomLeftCorner.y);
+        ctxScan.closePath();
+        ctxScan.stroke();
+    }
+
+    function handleScanData(data) {
+        if (data === lastRawData) return; 
+        lastRawData = data;
+
+        const match = data.match(/^SMT:(\d+):(\d+):([^:]+):(.*)/s);
+
+        if (!match) {
+            completeScan(data);
+            return;
+        }
+
+        const index = parseInt(match[1]); 
+        const total = parseInt(match[2]);
+        const id = match[3];
+        const content = match[4];
+
+        if (!buffer[id]) {
+            buffer[id] = { total: total, parts: {} };
+        }
+
+        if (!buffer[id].parts[index]) {
+            buffer[id].parts[index] = content;
+            if (navigator.vibrate) navigator.vibrate(30);
+            
+            const count = Object.keys(buffer[id].parts).length;
+            
+            if (count === total) {
+                let fullText = "";
+                for (let i = 1; i <= total; i++) {
+                    fullText += buffer[id].parts[i];
+                }
+                completeScan(fullText);
+            } else {
+                showToast(`受信中... (${count} / ${total})`);
+            }
+        }
+    }
+
+    function completeScan(finalText) {
+        isScanning = false;
+        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+
+        showToast("✨ 受信完了");
+        
+        detectedTextSpan.innerText = finalText.substring(0, 60) + (finalText.length>60?"...":"");
+        resultModal.classList.add('active');
+
+        window.currentResult = finalText;
+
+        navigator.clipboard.writeText(finalText).then(() => {
+            resultModal.querySelector('strong').innerText = "✅ コピーしました";
+        }).catch(() => {
+            resultModal.querySelector('strong').innerText = "タップしてコピー";
+        });
+    }
+
+    window.copyResult = function() {
+        const text = window.currentResult || "";
+        navigator.clipboard.writeText(text).then(() => {
+            alert("コピーしました");
+            resetScan();
+        }).catch(err => {
+            prompt("手動コピー:", text);
+            resetScan();
+        });
+    };
+
+    function resetScan() {
+        resultModal.classList.remove('active');
+        buffer = {}; 
+        lastRawData = "";
+        showToast("待機中...");
+        setTimeout(() => { isScanning = true; }, 500);
+    }
+
+    checkIntro();
+</script>
+</body>
+</html>
