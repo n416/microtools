@@ -3,6 +3,11 @@ export const rand = (min: number, max: number) => Math.random() * (max - min) + 
 export const randInt = (min: number, max: number) => Math.floor(rand(min, max + 1));
 export const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
 
+// ★ID生成用のヘルパー関数
+export const generateId = () => {
+  return Date.now() + Math.random(); 
+};
+
 // --- Types ---
 export type Params2D = {
   id: number;
@@ -14,6 +19,7 @@ export type Params2D = {
   a: number;
   b: number;
   rotation: number;
+  position: [number, number];
   hue: number;
   sat: number;
   bri: number;
@@ -42,7 +48,6 @@ export type Params3D = {
 };
 
 // --- Core Math ---
-
 const calculateRadius = (phi: number, m: number, n1: number, n2: number, n3: number, a: number = 1, b: number = 1) => {
   const t1 = Math.abs(Math.cos((m * phi) / 4) / a);
   const t2 = Math.abs(Math.sin((m * phi) / 4) / b);
@@ -52,11 +57,9 @@ const calculateRadius = (phi: number, m: number, n1: number, n2: number, n3: num
 };
 
 // --- Validators ---
-
 const isValid2DParams = (p: Params2D): { valid: boolean; reason?: string } => {
-  if (p.n1 < 0.2) return { valid: false, reason: "n1が小さすぎる" };
-  // 変異中に少し緩めるが、基本ルールは維持
-  if (p.n1 > 20) return { valid: false, reason: "n1が大きすぎる" };
+  if (p.n1 < 0.2) return { valid: false, reason: "n1 too small" };
+  if (p.n1 > 20) return { valid: false, reason: "n1 too big" };
 
   let maxR = 0;
   let minR = Infinity;
@@ -77,18 +80,18 @@ const isValid2DParams = (p: Params2D): { valid: boolean; reason?: string } => {
   return { valid: true };
 };
 
-// --- Generators & Mutators ---
-
+// --- Generators ---
 export const create2DParams = (): Params2D => {
   let attempt = 0;
   while (attempt < 20) {
     const params: Params2D = {
-      id: Date.now(),
+      id: generateId(), // ★修正
       visible: true,
       m: [2, 3, 4, 5, 6, 8, 10, 12, 16][randInt(0, 8)], 
       n1: rand(0.3, 8), n2: rand(0.5, 10), n3: rand(0.5, 10),
       a: 1, b: 1,
       rotation: rand(0, Math.PI * 2),
+      position: [0, 0],
       hue: randInt(0, 360), sat: randInt(60, 100), bri: randInt(70, 100),
       isFilled: Math.random() > 0.5,
       lineWidth: rand(5, 30),
@@ -97,34 +100,28 @@ export const create2DParams = (): Params2D => {
     if (isValid2DParams(params).valid) return params;
     attempt++;
   }
-  return { id: Date.now(), visible: true, m: 4, n1: 1, n2: 1, n3: 1, a: 1, b: 1, rotation: 0, hue: 100, sat: 100, bri: 50, isFilled: false, lineWidth: 10, scale: 300 };
+  return { id: generateId(), visible: true, m: 4, n1: 1, n2: 1, n3: 1, a: 1, b: 1, rotation: 0, position: [0,0], hue: 100, sat: 100, bri: 50, isFilled: false, lineWidth: 10, scale: 300 };
 };
 
-// ★追加: 突然変異ロジック (2D)
 export const mutate2D = (base: Params2D): Params2D => {
   let attempt = 0;
   while (attempt < 10) {
-    // パラメータを少しずらす
     const drift = (v: number, range: number) => v + rand(-range, range);
-    
     const newParams: Params2D = {
       ...base,
-      // m (角数) はたまに変化させる (10%の確率)
       m: Math.random() < 0.1 ? [2,3,4,5,6,8,10,12,16][randInt(0,8)] : base.m,
       n1: clamp(drift(base.n1, 1.0), 0.3, 15),
       n2: clamp(drift(base.n2, 1.0), 0.5, 15),
       n3: clamp(drift(base.n3, 1.0), 0.5, 15),
       rotation: drift(base.rotation, 0.5),
-      // 色も少し変化させる
       hue: (base.hue + randInt(-20, 20) + 360) % 360,
       scale: clamp(drift(base.scale, 20), 100, 800),
       lineWidth: clamp(drift(base.lineWidth, 2), 1, 50),
     };
-
     if (isValid2DParams(newParams).valid) return newParams;
     attempt++;
   }
-  return base; // 失敗したら元の値を返す
+  return base;
 };
 
 export const create3DParams = (): Params3D => {
@@ -137,7 +134,7 @@ export const create3DParams = (): Params3D => {
   else if (typeRand < 0.7) matType = 'normal';
 
   return {
-    id: Date.now(),
+    id: generateId(), // ★修正
     visible: true,
     m1: randInt(0, 8), m2: randInt(0, 8),
     n1: rand(0.5, 5), n2: rand(0.5, 5), n3: rand(0.5, 5),
@@ -148,18 +145,13 @@ export const create3DParams = (): Params3D => {
   };
 };
 
-// ★追加: 突然変異ロジック (3D)
 export const mutate3D = (base: Params3D): Params3D => {
     const drift = (v: number, range: number) => v + rand(-range, range);
-    // 色相を抽出してずらす簡易実装
-    // (本来はHSLパースが必要だが、ここではランダム再割り当てに近い挙動で簡易化、あるいは色相環シフト)
-    
     return {
         ...base,
         n1: clamp(drift(base.n1, 0.5), 0.3, 10),
         n2: clamp(drift(base.n2, 0.5), 0.3, 10),
         n3: clamp(drift(base.n3, 0.5), 0.3, 10),
-        // mは変えない方が「進化」っぽくなる
         scale: clamp(drift(base.scale, 0.1), 0.5, 2.0),
     };
 };
