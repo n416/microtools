@@ -1,13 +1,15 @@
+import { useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, Lightformer } from '@react-three/drei';
 import { useStore } from './store';
 import { Layer2D } from './components/Layer2D';
 import { Object3D } from './components/Object3D';
-
+import { downloadSVG } from './lib/exporter';
+import { encodeState } from './lib/storage';
 import { 
   Eye, Trash2, Download, Zap, Plus, Palette, 
   ArrowUp, ArrowDown, Sliders, Layers, Link as LinkIcon, 
-  Move, RotateCw, Scaling, X
+  Move, RotateCw, Scaling, X, FileJson, Dna, Share2
 } from 'lucide-react';
 import './App.css';
 import type { Params2D, Params3D } from './lib/math';
@@ -86,14 +88,12 @@ const Controls3D = ({ params, onChange }: { params: Params3D, onChange: (p: Part
         <label>Color</label>
         <input type="color" value={params.color} onChange={(e) => onChange({ color: e.target.value })} disabled={params.matType === 'normal'} />
     </div>
-    
     {params.matType === 'wire' && (
         <div className="control-row">
             <label>Hide Back</label>
             <input type="checkbox" checked={params.wireOcclusion ?? false} onChange={(e) => onChange({ wireOcclusion: e.target.checked })} />
         </div>
     )}
-
     {params.matType === 'glass' && (
         <ControlRow label="Trans." min={0} max={1} step={0.01} value={params.transmission ?? 0.9} onChange={(v: number) => onChange({ transmission: v })} />
     )}
@@ -141,19 +141,40 @@ function App() {
   const { 
     mode, setMode, 
     factory2D, factory3D, updateFactory2D, updateFactory3D,
-    generate, keep,
+    generate, keep, mutate,
     layers2D, layers3D, toggle2D, delete2D, toggle3D, delete3D,
     moveLayer2D, moveLayer3D, 
     bgColor, setBgColor,
     isTransparent, setIsTransparent,
     selectedId, selectLayer, toggleLink,
     transformMode, setTransformMode,
-    updateLayer2D, updateLayer3D
+    updateLayer2D, updateLayer3D,
+    initialize, isLoading
   } = useStore();
+
+  useEffect(() => {
+      initialize();
+  }, []);
 
   const selectedLayer2D = layers2D.find(l => l.id === selectedId);
   const selectedLayer3D = layers3D.find(l => l.id === selectedId);
   const isEditing = !!(selectedLayer2D || selectedLayer3D);
+  const handleDownloadSVG = () => { downloadSVG(layers2D, bgColor, isTransparent, 'studio-canvas-3d'); };
+
+  const handleShare = async () => {
+      const state = { layers2D, layers3D, bgColor };
+      try {
+          const encoded = await encodeState(state);
+          const url = `${window.location.origin}${window.location.pathname}?s=${encodeURIComponent(encoded)}`;
+          await navigator.clipboard.writeText(url);
+          alert("URL copied to clipboard!");
+      } catch (e) {
+          console.error(e);
+          alert("Failed to generate share URL");
+      }
+  };
+
+  if (isLoading) return <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666'}}>Loading...</div>;
 
   return (
     <div className="app-container">
@@ -188,11 +209,14 @@ function App() {
         </div>
 
         <div style={{display:'flex', gap: 8, marginBottom: 20}}>
-            <button onClick={generate} className="btn-action btn-gen" style={{marginBottom:0, flex:1}}>
-            <Zap size={16} /> GEN
+            <button onClick={generate} className="btn-action btn-gen" style={{marginBottom:0, flex:1}} title="Random Generate">
+                <Zap size={16} /> GEN
             </button>
-            <button onClick={keep} className="btn-action btn-keep" style={{marginBottom:0, flex:1.5}}>
-            KEEP <Plus size={16} />
+            <button onClick={mutate} className="btn-action" style={{marginBottom:0, flex:1, background:'#444', color:'#aaf', border:'1px solid #556'}} title="Mutate (Evolve)">
+                <Dna size={16} /> EVO
+            </button>
+            <button onClick={keep} className="btn-action btn-keep" style={{marginBottom:0, flex:1.5}} title="Keep to Layer">
+                KEEP <Plus size={16} />
             </button>
         </div>
 
@@ -243,7 +267,7 @@ function App() {
                {layers2D.map((layer) => <Layer2D key={layer.id} params={layer} size={1024} />)}
              </div>
 
-             <div style={{position:'absolute', inset:0, zIndex:10}}>
+             <div id="studio-canvas-3d" style={{position:'absolute', inset:0, zIndex:10}}>
                <Canvas 
                   dpr={1024 / 500} 
                   camera={{ position: [0, 0, 3.5] }} 
@@ -274,8 +298,16 @@ function App() {
                 <span className="toggle-text">Transparent</span>
             </label>
           </div>
-          <button onClick={() => downloadImage('studio-export-area', bgColor, isTransparent)} className="btn-dl">
-            <Download size={16} /> DOWNLOAD
+          
+          <button onClick={handleShare} className="icon-btn" title="Share URL" style={{padding:'8px 12px', background: 'var(--accent-color)', color: '#000'}}>
+             <Share2 size={18} />
+          </button>
+
+          <button onClick={handleDownloadSVG} className="btn-dl" title="Export as SVG" style={{padding: '12px 16px'}}>
+            <FileJson size={16} /> SVG
+          </button>
+          <button onClick={() => downloadImage('studio-export-area', bgColor, isTransparent)} className="btn-dl" title="Export as PNG">
+            <Download size={16} /> PNG
           </button>
         </div>
       </div>
