@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, Lightformer } from '@react-three/drei';
 import { useStore } from './store';
@@ -9,7 +9,7 @@ import { encodeState } from './lib/storage';
 import { 
   Eye, Trash2, Download, Zap, Plus, Palette, 
   ArrowUp, ArrowDown, Sliders, Layers, Link as LinkIcon, 
-  Move, RotateCw, Scaling, X, FileJson, Dna, Share2
+  Move, RotateCw, Scaling, X, FileJson, Dna, Share2, RotateCcw
 } from 'lucide-react';
 import './App.css';
 import type { Params2D, Params3D } from './lib/math';
@@ -30,7 +30,27 @@ const downloadImage = (containerId: string, bgColor: string, isTransparent: bool
   }
   const canvases = container.querySelectorAll('canvas');
   canvases.forEach((canvas) => {
-    ctx.drawImage(canvas, 0, 0, 1024, 1024);
+    // 2Dレイヤーのtransformを解析して反映する
+    // Layer2Dは % 指定に変更されたため、% を px(1024ベース) に戻す処理を追加
+    const transform = canvas.style.transform;
+    let tx = 0, ty = 0;
+    if (transform && transform.includes('translate3d')) {
+        // pxの場合 (後方互換)
+        let match = transform.match(/translate3d\(([-\d.]+)px, ([-\d.]+)px/);
+        if (match) {
+            tx = parseFloat(match[1]);
+            ty = parseFloat(match[2]);
+        } else {
+            // %の場合 (新方式)
+            match = transform.match(/translate3d\(([-\d.]+)%, ([-\d.]+)%/);
+            if (match) {
+                // 100% = 1024px
+                tx = (parseFloat(match[1]) / 100) * 1024;
+                ty = (parseFloat(match[2]) / 100) * 1024;
+            }
+        }
+    }
+    ctx.drawImage(canvas, tx, ty, 1024, 1024);
   });
   const link = document.createElement('a');
   link.download = `kiramany-icon-${Date.now()}.png`;
@@ -50,6 +70,9 @@ const ControlRow = ({ label, value, min, max, step = 0.1, onChange }: any) => (
 
 const Controls2D = ({ params, onChange }: { params: Params2D, onChange: (p: Partial<Params2D>) => void }) => (
   <>
+    <ControlRow label="Pos X" min={-512} max={512} step={1} value={params.position ? params.position[0] : 0} onChange={(v: number) => onChange({ position: [v, params.position ? params.position[1] : 0] })} />
+    <ControlRow label="Pos Y" min={-512} max={512} step={1} value={params.position ? params.position[1] : 0} onChange={(v: number) => onChange({ position: [params.position ? params.position[0] : 0, v] })} />
+    <hr className="divider" />
     <ControlRow label="Points (M)" min={0} max={20} step={1} value={params.m} onChange={(v: number) => onChange({ m: v })} />
     <ControlRow label="N1" min={0.1} max={30} value={params.n1} onChange={(v: number) => onChange({ n1: v })} />
     <ControlRow label="N2" min={0.1} max={30} value={params.n2} onChange={(v: number) => onChange({ n2: v })} />
@@ -149,15 +172,16 @@ function App() {
     selectedId, selectLayer, toggleLink,
     transformMode, setTransformMode,
     updateLayer2D, updateLayer3D,
-    initialize, isLoading
-  } = useStore();
+    initialize, isLoading,
+    resetLayer 
+  } = useStore() as any; 
 
   useEffect(() => {
       initialize();
   }, []);
 
-  const selectedLayer2D = layers2D.find(l => l.id === selectedId);
-  const selectedLayer3D = layers3D.find(l => l.id === selectedId);
+  const selectedLayer2D = layers2D.find((l: Params2D) => l.id === selectedId);
+  const selectedLayer3D = layers3D.find((l: Params3D) => l.id === selectedId);
   const isEditing = !!(selectedLayer2D || selectedLayer3D);
   const handleDownloadSVG = () => { downloadSVG(layers2D, bgColor, isTransparent, 'studio-canvas-3d'); };
 
@@ -172,6 +196,58 @@ function App() {
           console.error(e);
           alert("Failed to generate share URL");
       }
+  };
+  
+  // ★マウス操作ロジック
+  const isDraggingRef = useRef(false);
+  const lastPosRef = useRef({x:0, y:0});
+  
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (selectedLayer2D && (transformMode === 'translate' || transformMode === 'rotate' || transformMode === 'scale')) {
+       isDraggingRef.current = true;
+       lastPosRef.current = { x: e.clientX, y: e.clientY };
+       e.stopPropagation();
+       (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    }
+  };
+  
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (isDraggingRef.current && selectedLayer2D) {
+       const dx = e.clientX - lastPosRef.current.x;
+       const dy = e.clientY - lastPosRef.current.y;
+       lastPosRef.current = { x: e.clientX, y: e.clientY };
+       
+       const el = document.getElementById('studio-export-area');
+       const scaleFactor = el ? (1024 / el.clientWidth) : 1;
+
+       if (transformMode === 'translate') {
+           const currentPos = selectedLayer2D.position || [0, 0];
+           updateLayer2D(selectedLayer2D.id, { 
+               position: [
+                   currentPos[0] + dx * scaleFactor, 
+                   currentPos[1] + dy * scaleFactor
+               ] 
+           });
+       } else if (transformMode === 'rotate') {
+           const sensitivity = 0.01;
+           updateLayer2D(selectedLayer2D.id, { 
+               rotation: selectedLayer2D.rotation + dx * sensitivity 
+           });
+       } else if (transformMode === 'scale') {
+           const sensitivity = 2.0;
+           const newScale = Math.max(10, selectedLayer2D.scale - dy * sensitivity);
+           updateLayer2D(selectedLayer2D.id, { 
+               scale: newScale
+           });
+       }
+    }
+  };
+  
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    }
   };
 
   if (isLoading) return <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666'}}>Loading...</div>;
@@ -260,14 +336,19 @@ function App() {
                 backgroundColor: isTransparent ? 'transparent' : bgColor,
                 backgroundImage: isTransparent ? 'linear-gradient(45deg, #222 25%, transparent 25%), linear-gradient(-45deg, #222 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #222 75%), linear-gradient(-45deg, transparent 75%, #222 75%)' : 'none',
                 backgroundSize: '40px 40px',
-                backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0px'
+                backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0px',
+                touchAction: 'none'
             }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
           >
              <div style={{position:'absolute', inset:0, zIndex:0}}>
-               {layers2D.map((layer) => <Layer2D key={layer.id} params={layer} size={1024} />)}
+               {layers2D.map((layer: Params2D) => <Layer2D key={layer.id} params={layer} size={1024} />)}
              </div>
 
-             <div id="studio-canvas-3d" style={{position:'absolute', inset:0, zIndex:10}}>
+             <div id="studio-canvas-3d" style={{position:'absolute', inset:0, zIndex:10, pointerEvents: selectedLayer2D ? 'none' : 'auto'}}>
                <Canvas 
                   dpr={1024 / 500} 
                   camera={{ position: [0, 0, 3.5] }} 
@@ -287,6 +368,8 @@ function App() {
             <button className={`icon-btn ${transformMode==='translate' ? 'active' : ''}`} onClick={() => setTransformMode('translate')} title="Move"><Move size={18} /></button>
             <button className={`icon-btn ${transformMode==='rotate' ? 'active' : ''}`} onClick={() => setTransformMode('rotate')} title="Rotate"><RotateCw size={18} /></button>
             <button className={`icon-btn ${transformMode==='scale' ? 'active' : ''}`} onClick={() => setTransformMode('scale')} title="Scale"><Scaling size={18} /></button>
+            <div style={{width: 1, height: 16, background: '#444', margin: '0 4px'}}></div>
+            <button onClick={resetLayer} className="icon-btn" title="Reset Position"><RotateCcw size={18} /></button>
           </div>
           <div className="toolbar-group">
             <div className="color-picker-wrapper">
@@ -295,7 +378,7 @@ function App() {
             </div>
             <label className="toggle-label">
                 <input type="checkbox" checked={isTransparent} onChange={(e) => setIsTransparent(e.target.checked)} />
-                <span className="toggle-text">Transparent</span>
+                <span className="toggle-text">Trans.</span>
             </label>
           </div>
           
@@ -319,7 +402,7 @@ function App() {
           <h3 className="layer-group-title">Foreground (3D)</h3>
           {layers3D.length === 0 && <div className="empty-msg">No 3D objects.</div>}
           <div style={{display:'flex', flexDirection:'column-reverse'}}>
-            {layers3D.map((l, i) => {
+            {layers3D.map((l: Params3D, i: number) => {
               const isSelected = selectedId === l.id;
               return (
               <div 
@@ -357,7 +440,7 @@ function App() {
           <h3 className="layer-group-title">Background (2D)</h3>
           {layers2D.length === 0 && <div className="empty-msg">No 2D layers.</div>}
           <div style={{display:'flex', flexDirection:'column-reverse'}}>
-            {layers2D.map((l, i) => {
+            {layers2D.map((l: Params2D, i: number) => {
               const isSelected = selectedId === l.id;
               return (
               <div 

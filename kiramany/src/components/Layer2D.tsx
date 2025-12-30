@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { getSuperformulaPoint } from '../lib/math';
 import type { Params2D } from '../lib/math';
@@ -46,7 +47,6 @@ export const Layer2D = ({ params, size, isPreview = false }: Props) => {
     }
     ctx.closePath();
 
-    // ★修正: 未使用変数を削除し、描画ロジックのみ残す
     const gradSize = 300 * viewScale;
 
     if (isFilled) {
@@ -75,7 +75,27 @@ export const Layer2D = ({ params, size, isPreview = false }: Props) => {
     }
 
     ctx.restore();
-  }, [params, size, isPreview]);
+  }, [params.m, params.n1, params.n2, params.n3, params.rotation, params.hue, params.sat, params.bri, params.isFilled, params.lineWidth, params.scale, params.visible, size, isPreview]);
+  
+  // ★修正: 1024座標系における位置を % に変換して適用
+  // これにより、画面上の表示サイズ(500px等)に関わらず、マウス移動量(App.tsxでの計算結果)と見た目の移動量が一致する
+  const tx = params.position ? (params.position[0] / 1024) * 100 : 0;
+  const ty = params.position ? (params.position[1] / 1024) * 100 : 0;
 
-  return <canvas ref={canvasRef} width={size} height={size} style={{position:'absolute', top:0, left:0, width:'100%', height:'100%', pointerEvents:'none'}} />;
+  return (
+    <canvas 
+      ref={canvasRef} 
+      width={size} 
+      height={size} 
+      style={{
+        position:'absolute', 
+        top:0, 
+        left:0, 
+        width:'100%', 
+        height:'100%', 
+        pointerEvents:'none',
+        transform: `translate3d(${tx}%, ${ty}%, 0)` // px -> %
+      }} 
+    />
+  );
 };
