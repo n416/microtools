@@ -1,0 +1,28 @@
+:root {
+  --bg-color: #050505;
+  --panel-bg: #111;
+  --border-color: #222;
+  --text-main: #eee;
+  --text-muted: #888;
+  --accent-color: #00ff9d;
+  --accent-hover: #5cffc0;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+* { box-sizing: border-box; }
+button { cursor: pointer; border: none; font-family: inherit; }
+
+/* ★重要: R3Fがstyle属性を書き換えても負けないように !important を使う 
+*/
+.force-1024 canvas {
+  width: 1024px !important;
+  height: 1024px !important;
+  display: block;
+}
