@@ -1,308 +1,246 @@
 import os
 
-# Kiramany2 Patch Fix (Build Error Fixes)
+# Kiramany2 Patch: V3 Layout (Strict Vertical Stacking)
 # -----------------------------
 
-# 1. src/store.ts
-# 未使用のimportと引数(get)を削除
-store_ts = """
-import { create } from 'zustand';
-import { generateScene } from './lib/math';
-import type { Params2D, Params3D } from './lib/math';
+# src/App.css
+# ブレイクポイントを 1100px に設定。
+# それ以下では「スタジオ(上) → 操作盤(中) → レイヤー(下)」の完全な縦積み3段にします。
 
-type State = {
-  // Gacha State
-  paletteName: string;
-  layers2D: Params2D[]; 
-  layers3D: Params3D[];
-  bgColor: string;
+app_css = """
+/* =========================================
+   BASE LAYOUT (Desktop Wide > 1100px)
+   ========================================= */
 
-  // Editor State
-  isTransparent: boolean;
-  selectedId: number | null;
-  transformMode: 'translate' | 'rotate' | 'scale';
-
-  // Actions
-  roll: () => void;
-  
-  setBgColor: (color: string) => void;
-  setIsTransparent: (isTransparent: boolean) => void;
-  selectLayer: (id: number | null) => void;
-  setTransformMode: (mode: 'translate' | 'rotate' | 'scale') => void;
-  
-  updateLayer2D: (id: number, params: Partial<Params2D>) => void;
-  updateLayer3D: (id: number, params: Partial<Params3D>) => void;
-  update3DTransform: (id: number, pos: [number,number,number], rot: [number,number,number], scale: number) => void;
-  
-  delete2D: (idx: number) => void;
-  delete3D: (idx: number) => void;
-};
-
-// Initial Roll
-const initialScene = generateScene();
-
-export const useStore = create<State>((set) => ({
-  paletteName: initialScene.paletteName,
-  layers2D: [initialScene.layer2D],
-  layers3D: [initialScene.layer3D],
-  bgColor: initialScene.bgColor,
-  
-  isTransparent: false,
-  selectedId: null,
-  transformMode: 'translate',
-
-  // --- The Core Action ---
-  roll: () => {
-    const scene = generateScene();
-    set({
-        bgColor: scene.bgColor,
-        layers2D: [scene.layer2D],
-        layers3D: [scene.layer3D],
-        paletteName: scene.paletteName,
-        selectedId: null,
-    });
-  },
-  // -----------------------
-
-  setBgColor: (color) => set({ bgColor: color }),
-  setIsTransparent: (isTransparent) => set({ isTransparent }),
-  selectLayer: (id) => set({ selectedId: id }),
-  setTransformMode: (mode) => set({ transformMode: mode }),
-
-  updateLayer2D: (id, params) => set((s) => ({
-    layers2D: s.layers2D.map(l => l.id === id ? { ...l, ...params } : l)
-  })),
-
-  updateLayer3D: (id, params) => set((s) => ({
-    layers3D: s.layers3D.map(l => l.id === id ? { ...l, ...params } : l)
-  })),
-
-  update3DTransform: (id, newPos, newRot, newScale) => {
-    set((state) => ({
-      layers3D: state.layers3D.map((l) => {
-        if (l.id === id) {
-          return { ...l, position: newPos, rotation: newRot, scale: newScale };
-        }
-        return l;
-      }),
-    }));
-  },
-
-  delete2D: (i) => set((s) => { 
-    const l = [...s.layers2D]; l.splice(i, 1); return { layers2D: l }; 
-  }),
-  delete3D: (i) => set((s) => { 
-    const l = [...s.layers3D]; l.splice(i, 1); return { layers3D: l }; 
-  }),
-}));
-"""
-
-# 2. src/App.tsx
-# 未使用変数(update3DTransform, i)を削除
-app_tsx = """
-import { useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, Lightformer } from '@react-three/drei';
-import { useStore } from './store';
-import { Layer2D } from './components/Layer2D';
-import { Object3D } from './components/Object3D';
-
-import { 
-  Download, Zap, Palette, Move, RotateCw, Scaling, Layers
-} from 'lucide-react';
-import './App.css';
-
-// --- Components ---
-const GeneratedEnvironment = () => (
-  <Environment resolution={256}>
-    <group rotation={[-Math.PI / 4, -0.3, 0]}>
-        <Lightformer intensity={4} rotation-x={Math.PI / 2} position={[0, 5, -9]} scale={[10, 10, 1]} />
-        <Lightformer intensity={2} rotation-y={Math.PI / 2} position={[-5, 1, -1]} scale={[10, 2, 1]} />
-        <Lightformer intensity={2} rotation-y={-Math.PI / 2} position={[10, 1, 0]} scale={[20, 2, 1]} />
-        <Lightformer type="ring" intensity={2} rotation-y={Math.PI / 2} position={[-0.1, -1, -5]} scale={10} />
-    </group>
-  </Environment>
-);
-
-const downloadImage = (containerId: string, bgColor: string, isTransparent: boolean) => {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  const finalCanvas = document.createElement('canvas');
-  finalCanvas.width = 1024;
-  finalCanvas.height = 1024;
-  const ctx = finalCanvas.getContext('2d');
-  if (!ctx) return;
-  if (!isTransparent) {
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, 1024, 1024);
-  } else {
-    ctx.clearRect(0, 0, 1024, 1024);
-  }
-  const canvases = container.querySelectorAll('canvas');
-  canvases.forEach((canvas) => {
-    ctx.drawImage(canvas, 0, 0, 1024, 1024);
-  });
-  const link = document.createElement('a');
-  link.download = `kiramany2-${Date.now()}.png`;
-  link.href = finalCanvas.toDataURL('image/png');
-  link.click();
-};
-
-function App() {
-  const { 
-    roll,
-    layers2D, layers3D, 
-    bgColor, setBgColor,
-    isTransparent, setIsTransparent,
-    selectedId, selectLayer,
-    transformMode, setTransformMode,
-    paletteName
-  } = useStore();
-
-  // Space key to Roll
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.code === 'Space') {
-            e.preventDefault();
-            roll();
-        }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [roll]);
-
-  return (
-    <div className="app-container">
-      
-      {/* --- Left: Control Panel --- */}
-      <div className="col-factory" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff', marginBottom: 4, letterSpacing: -1 }}>KIRAMANY<span style={{color:'var(--accent-color)'}}>2</span></h1>
-        <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: 40 }}>The Icon Gacha</p>
-        
-        <div style={{ width: '100%', marginBottom: 40 }}>
-            <div style={{fontSize:'0.75rem', color:'#888', marginBottom: 8, textTransform:'uppercase', letterSpacing:1}}>Current Palette</div>
-            <div style={{fontSize:'1.2rem', fontWeight:'bold', color: 'var(--accent-color)'}}>{paletteName}</div>
-        </div>
-
-        <button 
-            onClick={roll} 
-            className="btn-action" 
-            style={{ 
-                width: '100%', height: 80, fontSize: '1.5rem', 
-                background: 'linear-gradient(135deg, var(--accent-color), #00d2ff)',
-                color: '#000', border: 'none',
-                boxShadow: '0 10px 30px rgba(0,255,157, 0.3)'
-            }}
-        >
-            <Zap size={24} fill="#000" /> ROLL
-        </button>
-        <p style={{fontSize:'0.7rem', color:'#555', marginTop: 12}}>Press SPACE to reroll</p>
-
-        <div style={{marginTop: 'auto', width: '100%'}}>
-           {/* Minimal layer list could go here if needed */}
-        </div>
-      </div>
-
-      {/* --- Center: Studio --- */}
-      <div className="col-studio" onClick={() => selectLayer(null)}>
-        <div className="studio-scale-wrapper" onClick={(e) => e.stopPropagation()}>
-          <div 
-            id="studio-export-area" 
-            className="studio-canvas-real-size" 
-            style={{ 
-                backgroundColor: isTransparent ? 'transparent' : bgColor,
-                backgroundImage: isTransparent ? 'linear-gradient(45deg, #222 25%, transparent 25%), linear-gradient(-45deg, #222 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #222 75%), linear-gradient(-45deg, transparent 75%, #222 75%)' : 'none',
-                backgroundSize: '40px 40px',
-                backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0px',
-                transition: 'background-color 0.3s'
-            }}
-          >
-             <div style={{position:'absolute', inset:0, zIndex:0}}>
-               {layers2D.map((layer) => <Layer2D key={layer.id} params={layer} size={1024} />)}
-             </div>
-
-             <div style={{position:'absolute', inset:0, zIndex:10}}>
-               <Canvas 
-                  dpr={1024 / 500} 
-                  camera={{ position: [0, 0, 3.5] }} 
-                  gl={{ preserveDrawingBuffer: true, alpha: true }}
-                  onPointerMissed={() => selectLayer(null)}
-                  style={{ width: '100%', height: '100%' }}
-               >
-                  <GeneratedEnvironment />
-                  <ambientLight intensity={0.2} />
-                  <directionalLight position={[5, 10, 7.5]} intensity={3} />
-                  <pointLight position={[5, 5, 5]} />
-                  <pointLight position={[-5, -5, 5]} color="#ff00ff" />
-                  
-                  {layers3D.map((layer) => (
-                       <Object3D 
-                          key={layer.id} 
-                          params={layer} 
-                          isSelected={selectedId === layer.id} 
-                          onSelect={() => selectLayer(layer.id)} 
-                       />
-                  ))}
-                  
-                  <OrbitControls makeDefault enableRotate={false} />
-               </Canvas>
-             </div>
-          </div>
-        </div>
-
-        <div className="studio-footer" onClick={(e) => e.stopPropagation()}>
-          <div className="toolbar-group">
-            <button className={`icon-btn ${transformMode==='translate' ? 'active' : ''}`} onClick={() => setTransformMode('translate')} title="Move"><Move size={18} /></button>
-            <button className={`icon-btn ${transformMode==='rotate' ? 'active' : ''}`} onClick={() => setTransformMode('rotate')} title="Rotate"><RotateCw size={18} /></button>
-            <button className={`icon-btn ${transformMode==='scale' ? 'active' : ''}`} onClick={() => setTransformMode('scale')} title="Scale"><Scaling size={18} /></button>
-          </div>
-          <div className="toolbar-group">
-            <div className="color-picker-wrapper">
-                <Palette size={16} color="#888" />
-                <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} disabled={isTransparent} />
-            </div>
-            <label className="toggle-label">
-                <input type="checkbox" checked={isTransparent} onChange={(e) => setIsTransparent(e.target.checked)} />
-                <span className="toggle-text">Transparent</span>
-            </label>
-          </div>
-          <button onClick={() => downloadImage('studio-export-area', bgColor, isTransparent)} className="btn-dl">
-            <Download size={16} /> SAVE ICON
-          </button>
-        </div>
-      </div>
-
-      {/* --- Right: Minimal Layer List --- */}
-      <div className="col-layers">
-        <h2 className="section-title"><Layers size={14}/> Composition</h2>
-        <div className="layer-group">
-           {layers3D.map((l) => (
-               <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={() => selectLayer(l.id)}>
-                   <div className="layer-thumb" style={{background: l.color}}></div>
-                   <div className="layer-info"><span className="layer-name">3D Object</span></div>
-               </div>
-           ))}
-           {layers2D.map((l) => (
-               <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={() => selectLayer(l.id)}>
-                   <div className="layer-thumb" style={{background: l.colorHex || '#fff'}}></div>
-                   <div className="layer-info"><span className="layer-name">2D Backdrop</span></div>
-               </div>
-           ))}
-        </div>
-        <div style={{padding: 20, color: '#666', fontSize: '0.8rem', fontStyle:'italic', textAlign:'center'}}>
-            Click objects in the center to move/rotate.
-        </div>
-      </div>
-    </div>
-  )
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden; /* デスクトップではスクロールさせない */
 }
 
-export default App
+/* --- 1. Left: Factory (Control Panel) --- */
+.col-factory {
+  width: 320px;
+  background-color: var(--panel-bg);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  z-index: 20;
+  box-shadow: 4px 0 10px rgba(0,0,0,0.3);
+  flex-shrink: 0;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-section-title {
+    font-size: 0.7rem; color: var(--accent-color); font-weight: bold; text-transform: uppercase; margin: 16px 0 8px 0;
+}
+
+.tuning-scroll {
+    overflow-y: auto;
+    padding-right: 4px;
+    -webkit-overflow-scrolling: touch; 
+}
+
+/* Controls Components */
+.control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.control-row label { font-size: 0.8rem; color: #888; width: 70px; }
+.control-input-group { flex: 1; display: flex; align-items: center; gap: 8px; }
+.control-input-group input[type="range"] { flex: 1; accent-color: var(--accent-color); }
+.value-badge { font-size: 0.7rem; color: #fff; background: #333; padding: 2px 5px; border-radius: 4px; min-width: 30px; text-align: center; }
+.control-select { flex: 1; background: #222; color: #fff; border: 1px solid #444; padding: 4px; border-radius: 4px; }
+.divider { border-top: 1px solid #222; margin: 16px 0; }
+
+.btn-action {
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: 0.2s;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+.btn-action:active { transform: scale(0.96); }
+
+/* Animation */
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+
+/* --- 2. Center: Studio (Preview) --- */
+.col-studio {
+  flex: 1;
+  background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.studio-scale-wrapper {
+  /* デスクトップでは最大500px、画面に合わせて縮小 */
+  width: 90%;
+  max-width: 500px;
+  aspect-ratio: 1 / 1;
+  position: relative;
+  transition: width 0.3s;
+}
+
+.studio-canvas-real-size {
+  width: 100%; height: 100%;
+  border-radius: 15%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  border: 2px solid #222;
+  overflow: hidden;
+  position: absolute; top: 0; left: 0;
+}
+
+.studio-footer {
+    position: absolute; bottom: 40px;
+    display: flex; gap: 16px; align-items: center;
+    z-index: 30;
+    pointer-events: none;
+}
+.studio-footer > * { pointer-events: auto; }
+
+.toolbar-group {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(34, 34, 34, 0.9); backdrop-filter: blur(4px);
+    padding: 8px 16px; border-radius: 30px; border: 1px solid #444;
+}
+
+.color-picker-wrapper { display: flex; align-items: center; gap: 8px; padding-right: 12px; border-right: 1px solid #444; }
+.color-picker-wrapper input { border: none; background: none; width: 24px; height: 24px; cursor: pointer; padding: 0; }
+.toggle-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; color: #ccc; user-select: none; }
+.toggle-label input { accent-color: var(--accent-color); }
+
+.btn-dl {
+  padding: 12px 30px; background: rgba(255,255,255,0.05); border: 1px solid #555;
+  color: var(--text-muted); border-radius: 30px; font-weight: bold;
+  display: flex; align-items: center; gap: 8px; transition: 0.2s; cursor: pointer;
+}
+.btn-dl:hover { color: #fff; border-color: #fff; background: rgba(255,255,255,0.1); }
+
+
+/* --- 3. Right: Layers (Composition) --- */
+.col-layers {
+  width: 250px;
+  background-color: var(--panel-bg);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow-y: auto;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.layer-group { margin-bottom: 24px; }
+.layer-item { 
+    display: flex; align-items: center; gap: 8px; background: #222; padding: 8px; 
+    border-radius: 6px; border: 1px solid #333; margin-bottom: 6px; transition: 0.2s; cursor: pointer;
+}
+.layer-item:hover { border-color: #555; }
+.layer-item.selected { border-color: var(--accent-color); background: #333; }
+.layer-thumb { width: 24px; height: 24px; border-radius: 4px; background: #000; border: 1px solid #444; flex-shrink: 0; overflow: hidden; }
+.layer-info { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.layer-name { font-size: 0.8rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon-btn { background: none; color: #666; padding: 4px; border-radius: 4px; display: flex; }
+.icon-btn:hover { color: #fff; background: #333; }
+.icon-btn.active { color: var(--accent-color); }
+
+
+/* =========================================
+   RESPONSIVE: VERTICAL STACK (< 1100px)
+   ========================================= */
+
+@media (max-width: 1100px) {
+  .app-container {
+    flex-direction: column; /* 横並びをやめて縦積み */
+    height: auto;           /* 画面高さいっぱいではなく、中身に応じて伸びる */
+    min-height: 100dvh;
+    overflow-y: auto;       /* 縦スクロール許可 */
+    overflow-x: hidden;
+  }
+
+  /* 1段目: 画像表示エリア (Studio) */
+  .col-studio {
+    order: 1;
+    width: 100%;
+    height: 60vh; /* 画面の6割を占有 */
+    min-height: 400px;
+    border-bottom: 1px solid #333;
+    flex: none; /* 伸縮させない */
+  }
+
+  .studio-scale-wrapper {
+    /* 少し大きめに表示 */
+    width: 80vw;
+    height: 80vw;
+    max-width: 400px;
+    max-height: 400px;
+  }
+
+  .studio-footer {
+    bottom: 16px; width: 100%; justify-content: center; padding: 0 16px; flex-wrap: wrap;
+  }
+
+  /* 2段目: 操作パネル (Factory) */
+  .col-factory {
+    order: 2;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #333;
+    box-shadow: none;
+    padding-bottom: 40px;
+  }
+  
+  /* 操作パネル内のレイアウト微調整 */
+  .col-factory h1 { margin-top: 0; }
+
+  /* 3段目: レイヤー一覧 (Layers) */
+  .col-layers {
+    order: 3;
+    display: flex; /* 隠さずに表示！ */
+    width: 100%;
+    height: auto;
+    border-left: none;
+    padding-bottom: 60px; /* スクロール余裕 */
+  }
+  
+  /* レイヤーアイテムを少し大きく押しやすく */
+  .layer-item {
+      padding: 12px;
+  }
+}
 """
 
 files = {
-    "src/store.ts": store_ts,
-    "src/App.tsx": app_tsx,
+    "src/App.css": app_css,
 }
 
 for path, content in files.items():
@@ -311,4 +249,4 @@ for path, content in files.items():
         f.write(content.strip())
     print(f"Updated {path}")
 
-print("\\n✅ Kiramany2 Build Fix applied!")
+print("\\n✅ Layout V3 Applied: Fixed Vertical Stacking for Narrow Screens!")
