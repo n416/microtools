@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, Lightformer } from '@react-three/drei';
 import { useStore } from './store';
@@ -6,7 +6,7 @@ import { Layer2D } from './components/Layer2D';
 import { Object3D } from './components/Object3D';
 
 import { 
-  Download, Zap, Palette, Move, RotateCw, Scaling, Layers, Sliders, X, ArrowLeft
+  Download, Zap, Palette, Move, RotateCw, Scaling, Layers, Sliders, X, ArrowLeft, ChevronUp, ChevronDown
 } from 'lucide-react';
 import './App.css';
 import type { Params2D, Params3D } from './lib/math';
@@ -83,8 +83,6 @@ const Controls3D = ({ params, onChange }: { params: Params3D, onChange: (p: Part
   </div>
 );
 
-// --- Components: Environment & Utils ---
-
 const GeneratedEnvironment = () => (
   <Environment resolution={256}>
     <group rotation={[-Math.PI / 4, -0.3, 0]}>
@@ -132,11 +130,13 @@ function App() {
     updateLayer2D, updateLayer3D
   } = useStore();
 
+  const [showInfo, setShowInfo] = useState(true);
+  const [showStudioControls, setShowStudioControls] = useState(true);
+
   const selectedLayer2D = layers2D.find(l => l.id === selectedId);
   const selectedLayer3D = layers3D.find(l => l.id === selectedId);
   const isEditing = !!(selectedLayer2D || selectedLayer3D);
 
-  // Space key to Roll (only if not editing)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
         if (e.code === 'Space' && !isEditing) {
@@ -148,6 +148,23 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [roll, isEditing]);
 
+  // ★背景クリック時のスマートな挙動
+  const handleBackgroundClick = () => {
+    if (selectedId !== null) {
+        // 編集モード中なら、選択解除して戻る（UIは消さない）
+        selectLayer(null);
+    } else {
+        // 編集モードでないなら、UIの表示/非表示を切り替え（プレビュー用）
+        setShowStudioControls(prev => !prev);
+    }
+  };
+
+  // オブジェクト選択時は必ずUIを表示させるラッパー
+  const handleSelectObject = (id: number) => {
+    selectLayer(id);
+    setShowStudioControls(true);
+  };
+
   return (
     <div className="app-container">
       
@@ -156,29 +173,45 @@ function App() {
         
         {!isEditing ? (
             /* GACHA MODE */
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff', marginBottom: 4, letterSpacing: -1 }}>KIRAMANY<span style={{color:'var(--accent-color)'}}>2</span></h1>
-                <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: 40 }}>The Icon Gacha</p>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', textAlign: 'center' }}>
                 
-                <div style={{ width: '100%', marginBottom: 40 }}>
-                    <div style={{fontSize:'0.75rem', color:'#888', marginBottom: 8, textTransform:'uppercase', letterSpacing:1}}>Current Palette</div>
-                    <div style={{fontSize:'1.2rem', fontWeight:'bold', color: 'var(--accent-color)'}}>{paletteName}</div>
-                </div>
-
                 <button 
                     onClick={roll} 
                     className="btn-action" 
                     style={{ 
-                        width: '100%', height: 80, fontSize: '1.5rem', 
+                        width: '100%', height: 72, fontSize: '1.4rem', 
                         background: 'linear-gradient(135deg, var(--accent-color), #00d2ff)',
                         color: '#000', border: 'none',
-                        boxShadow: '0 10px 30px rgba(0,255,157, 0.3)'
+                        boxShadow: '0 8px 24px rgba(0,255,157, 0.25)',
+                        marginBottom: 16
                     }}
                 >
                     <Zap size={24} fill="#000" /> ROLL
                 </button>
-                <p style={{fontSize:'0.7rem', color:'#555', marginTop: 12}}>Press SPACE to reroll</p>
-                <p style={{fontSize:'0.7rem', color:'#444', marginTop: 40}}>Click objects to Edit</p>
+
+                <button 
+                    onClick={() => setShowInfo(!showInfo)} 
+                    className="icon-btn" 
+                    style={{ color: '#555', marginBottom: 16, padding: '4px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 20 }}
+                >
+                    {showInfo ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    <span style={{fontSize: '0.75rem', marginLeft: 4}}>{showInfo ? 'Hide Info' : 'Show Info'}</span>
+                </button>
+
+                {showInfo && (
+                    <div className="animate-fade-in" style={{ width: '100%', opacity: 0.8 }}>
+                        <h1 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#fff', marginBottom: 4, letterSpacing: -1, marginTop: 0 }}>KIRAMANY<span style={{color:'var(--accent-color)'}}>2</span></h1>
+                        <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: 24 }}>The Icon Gacha</p>
+                        
+                        <div style={{ width: '100%', marginBottom: 20, padding: 12, border: '1px solid #333', borderRadius: 8, background: 'rgba(0,0,0,0.3)' }}>
+                            <div style={{fontSize:'0.7rem', color:'#888', marginBottom: 6, textTransform:'uppercase', letterSpacing:1}}>Current Palette</div>
+                            <div style={{fontSize:'1.1rem', fontWeight:'bold', color: 'var(--accent-color)'}}>{paletteName}</div>
+                        </div>
+
+                        <p style={{fontSize:'0.7rem', color:'#444'}}>Press SPACE to reroll</p>
+                        <p style={{fontSize:'0.7rem', color:'#444', marginTop: 4}}>Click objects to Edit</p>
+                    </div>
+                )}
             </div>
         ) : (
             /* EDIT MODE */
@@ -209,7 +242,8 @@ function App() {
       </div>
 
       {/* --- Center: Studio --- */}
-      <div className="col-studio" onClick={() => selectLayer(null)}>
+      <div className="col-studio" onClick={handleBackgroundClick}>
+        
         <div className="studio-scale-wrapper" onClick={(e) => e.stopPropagation()}>
           <div 
             id="studio-export-area" 
@@ -231,7 +265,7 @@ function App() {
                   dpr={1024 / 500} 
                   camera={{ position: [0, 0, 3.5] }} 
                   gl={{ preserveDrawingBuffer: true, alpha: true }}
-                  onPointerMissed={() => selectLayer(null)}
+                  onPointerMissed={handleBackgroundClick}
                   style={{ width: '100%', height: '100%' }}
                >
                   <GeneratedEnvironment />
@@ -245,7 +279,7 @@ function App() {
                           key={layer.id} 
                           params={layer} 
                           isSelected={selectedId === layer.id} 
-                          onSelect={() => selectLayer(layer.id)} 
+                          onSelect={() => handleSelectObject(layer.id)} 
                        />
                   ))}
                   
@@ -255,7 +289,17 @@ function App() {
           </div>
         </div>
 
-        <div className="studio-footer" onClick={(e) => e.stopPropagation()}>
+        {/* Studio Footer (Controls) */}
+        <div 
+          className="studio-footer" 
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            opacity: showStudioControls ? 1 : 0,
+            pointerEvents: showStudioControls ? 'auto' : 'none',
+            transition: 'opacity 0.2s',
+            visibility: showStudioControls ? 'visible' : 'hidden'
+          }}
+        >
           <div className="toolbar-group">
             <button className={`icon-btn ${transformMode==='translate' ? 'active' : ''}`} onClick={() => setTransformMode('translate')} title="Move"><Move size={18} /></button>
             <button className={`icon-btn ${transformMode==='rotate' ? 'active' : ''}`} onClick={() => setTransformMode('rotate')} title="Rotate"><RotateCw size={18} /></button>
@@ -277,22 +321,22 @@ function App() {
         </div>
       </div>
 
-      {/* --- Right: Composition Layers --- */}
+      {/* --- Right: Layers --- */}
       <div className="col-layers">
         <h2 className="section-title"><Layers size={14}/> Composition</h2>
         <div className="layer-group">
            {layers3D.map((l) => (
-               <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); selectLayer(l.id); }}>
+               <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); handleSelectObject(l.id); }}>
                    <div className="layer-thumb" style={{background: l.color}}></div>
                    <div className="layer-info"><span className="layer-name">3D Object</span></div>
-                   <button className="icon-btn active" style={{fontSize:10}} onClick={(e) => {e.stopPropagation(); selectLayer(l.id)}}>EDIT</button>
+                   <button className="icon-btn active" style={{fontSize:10}} onClick={(e) => {e.stopPropagation(); handleSelectObject(l.id)}}>EDIT</button>
                </div>
            ))}
            {layers2D.map((l) => (
-               <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); selectLayer(l.id); }}>
+               <div key={l.id} className={`layer-item ${selectedId === l.id ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); handleSelectObject(l.id); }}>
                    <div className="layer-thumb" style={{background: l.colorHex || '#fff'}}></div>
                    <div className="layer-info"><span className="layer-name">2D Backdrop</span></div>
-                   <button className="icon-btn active" style={{fontSize:10}} onClick={(e) => {e.stopPropagation(); selectLayer(l.id)}}>EDIT</button>
+                   <button className="icon-btn active" style={{fontSize:10}} onClick={(e) => {e.stopPropagation(); handleSelectObject(l.id)}}>EDIT</button>
                </div>
            ))}
         </div>
