@@ -7,7 +7,7 @@ import { Object3D } from './components/Object3D';
 import { compressToEncodedStr, decompressFromEncodedStr } from './lib/share';
 
 import { 
-  Download, Zap, Palette, Move, RotateCw, Scaling, Layers, Sliders, X, ArrowLeft, ChevronUp, ChevronDown, Share2, Undo2, Redo2
+  Download, Zap, Palette, Move, RotateCw, Scaling, Layers, Sliders, X, ArrowLeft, ChevronUp, ChevronDown, Share2, Undo2, Redo2, ExternalLink
 } from 'lucide-react';
 import './App.css';
 import type { Params2D, Params3D } from './lib/math';
@@ -183,6 +183,25 @@ function App() {
     }
   };
 
+  const handleAdvancedEdit = async () => {
+    const state = useStore.getState();
+    const data = {
+        bgColor: state.bgColor,
+        layers2D: state.layers2D,
+        layers3D: state.layers3D,
+        paletteName: state.paletteName
+    };
+    try {
+        const encoded = await compressToEncodedStr(data);
+        const urlSafe = encodeURIComponent(encoded);
+        const url = `https://n416.github.io/microtools/kiramany/dist/index.html?s=${urlSafe}`;
+        window.open(url, '_blank');
+    } catch (e) {
+        console.error(e);
+        alert("連携URLの生成に失敗しました。");
+    }
+  };
+
   const handleBackgroundClick = () => {
     if (selectedId !== null) selectLayer(null);
     else setShowStudioControls(prev => !prev);
@@ -264,6 +283,20 @@ function App() {
                         title="Share URL"
                     >
                         <Share2 size={16} />
+                    </button>
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                    <button 
+                        type="button" 
+                        onClick={handleAdvancedEdit}
+                        style={{ 
+                            background: 'none', border: 'none', cursor: 'pointer', 
+                            color: '#666', fontSize: '0.8rem', textDecoration: 'underline',
+                            display: 'flex', alignItems: 'center', gap: 4, margin: '0 auto'
+                        }}
+                    >
+                        Advanced Edit <ExternalLink size={12} />
                     </button>
                 </div>
 
