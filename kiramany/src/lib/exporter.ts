@@ -31,6 +31,7 @@ export const downloadSVG = (
     const cosR = Math.cos(layer.rotation);
     const sinR = Math.sin(layer.rotation);
     const center = size / 2;
+    const [tx, ty] = layer.position || [0, 0];
 
     for (let i = 0; i <= steps; i++) {
       const phi = (2 * Math.PI * i) / steps;
@@ -39,8 +40,8 @@ export const downloadSVG = (
       const rx = p.x * cosR - p.y * sinR;
       const ry = p.x * sinR + p.y * cosR;
 
-      const x = center + rx;
-      const y = center + ry;
+      const x = center + rx + tx;
+      const y = center + ry + ty;
 
       if (i === 0) d += `M ${x.toFixed(2)} ${y.toFixed(2)}`;
       else d += ` L ${x.toFixed(2)} ${y.toFixed(2)}`;
