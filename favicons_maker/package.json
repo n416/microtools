@@ -1,0 +1,12 @@
+{
+  "name": "favicons-maker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node index.js"
+  },
+  "dependencies": {
+    "favicons": "^7.1.0",
+    "to-ico": "^1.1.5"
+  }
+}
