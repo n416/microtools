@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>16x16 Pixel Studio v16</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-left">
+                <i class="material-icons app-icon">border_all</i>
+                <span class="app-title">Pixel Studio v16</span>
+            </div>
+            <div class="header-right">
+                <span class="hint">Wheel: Zoom Canvas | Ref Mode: Drag/Wheel to Adjust Ref</span>
+            </div>
+        </header>
+
+        <div class="main-workspace">
+            <aside class="toolbar">
+                <div class="tool-group">
+                    <button class="tool-btn active" id="btnPen" data-tool="pen" title="Pen (P)"><i class="material-icons">edit</i></button>
+                    <button class="tool-btn" id="btnEraser" data-tool="eraser" title="Eraser (E)"><i class="material-icons">auto_fix_normal</i></button>
+                    <button class="tool-btn" id="btnEyedropper" data-tool="eyedropper" title="Eyedropper (I)"><i class="material-icons">colorize</i></button>
+                    <button class="tool-btn" id="btnFill" data-tool="fill" title="Bucket Fill (F)"><i class="material-icons">format_color_fill</i></button>
+                </div>
+                <div class="tool-separator"></div>
+                <div class="tool-group">
+                    <button class="tool-btn" id="btnLine" data-tool="line" title="Line Tool (L)"><i class="material-icons">horizontal_rule</i></button>
+                    <button class="tool-btn" id="btnEllipse" data-tool="ellipse" title="Ellipse Tool (O)"><i class="material-icons">circle</i></button>
+                    <button class="tool-btn" id="btnSelect" data-tool="select" title="Marquee Select (S)"><i class="material-icons">crop_free</i></button>
+                </div>
+                <div class="tool-spacer"></div>
+                <div class="tool-group bottom">
+                    <button class="tool-btn action-btn" id="btnUndo" title="Undo (Ctrl+Z)"><i class="material-icons">undo</i></button>
+                    <button class="tool-btn action-btn" id="btnRedo" title="Redo (Ctrl+Y)"><i class="material-icons">redo</i></button>
+                </div>
+            </aside>
+
+            <main class="canvas-viewport" id="canvasArea">
+                <canvas id="bgCanvas"></canvas>
+                <div class="canvas-wrapper shadow-box" id="canvasContainer">
+                    <canvas id="mainCanvas" width="16" height="16"></canvas>
+                    <div id="gridOverlay"></div>
+                    <canvas id="uiCanvas"></canvas>
+                </div>
+                <div class="zoom-panel">
+                    <i class="material-icons" style="font-size:14px">search</i>
+                    <span id="zoomLabel">100%</span>
+                </div>
+                <div class="palette-window panel-box">
+                    <div class="panel-header drag-handle">
+                        <span>Palette</span>
+                        <div class="mode-switch">
+                            <button id="palModePick" class="mode-btn active" title="Pick Color">Pick</button>
+                            <button id="palModeDraw" class="mode-btn" title="Mix Color">Mix</button>
+                        </div>
+                    </div>
+                    <div class="palette-body">
+                        <canvas id="paletteCanvas" width="200" height="200"></canvas>
+                    </div>
+                    <div class="panel-footer">
+                        <button id="btnPalLoad" class="icon-btn" title="Load"><i class="material-icons">folder_open</i></button>
+                        <button id="btnPalSave" class="icon-btn" title="Save"><i class="material-icons">save</i></button>
+                        <button id="btnPalClear" class="icon-btn danger" title="Clear"><i class="material-icons">delete</i></button>
+                        <input type="file" id="palFileInput" style="display:none" accept="image/*">
+                    </div>
+                </div>
+            </main>
+
+            <aside class="sidebar-panels">
+                <div class="panel-section">
+                    <div class="panel-header">Preview</div>
+                    <div class="preview-wrapper">
+                        <canvas id="previewCanvas" width="16" height="16"></canvas>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <div class="panel-header">Color</div>
+                    <div class="color-control">
+                        <input type="color" id="primaryColor" value="#3498db">
+                        <span id="colorHex" class="hex-label">#3498db</span>
+                    </div>
+                </div>
+                <div class="panel-section flex-grow">
+                    <div class="panel-header">
+                        <span>Layers</span>
+                        <button id="btnAddLayer" class="icon-btn-sm" title="New Layer"><i class="material-icons">add</i></button>
+                    </div>
+                    <div class="layer-list-container">
+                        <ul id="layerList" class="layer-list"></ul>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <div class="panel-header">Reference Image</div>
+                    <div class="control-grid">
+                        <button id="btnBgLoad" class="full-width-btn">Load Image</button>
+                        <input type="file" id="bgFileInput" style="display:none" accept="image/*">
+                        <button id="btnBgEditMode" class="full-width-btn toggle-btn">
+                            <i class="material-icons" style="font-size:16px; vertical-align:middle;">open_with</i>
+                            <span>Move / Scale</span>
+                        </button>
+                        <div class="hint" style="text-align:center; margin-bottom:5px;">Drag & Wheel to adjust</div>
+                        <div class="row-center">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="bgOnTop" checked> Overlay
+                            </label>
+                            <button id="btnBgClear" class="text-btn danger">Clear</button>
+                        </div>
+                        <div class="slider-group">
+                            <label>Opacity</label>
+                            <input type="range" id="bgOpacity" min="0" max="1" step="0.1" value="0.5">
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <div class="panel-header">Project</div>
+                    <div class="control-grid">
+                        <div class="input-group">
+                            <input type="text" id="saveName" placeholder="Filename">
+                            <button id="btnSave" class="icon-btn-primary"><i class="material-icons">save</i></button>
+                        </div>
+                        <ul id="fileList" class="file-list"></ul>
+                        <div class="export-actions">
+                            <button id="btnExportPNG" class="action-btn success">Export PNG</button>
+                            <label for="importFile" class="action-btn secondary">Import Image</label>
+                            <input type="file" id="importFile" style="display:none" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
