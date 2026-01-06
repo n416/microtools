@@ -1,70 +1,94 @@
 import os
-import shutil
-from pathlib import Path
+import re
+import json
 
-def main():
-    print("--- 📦 ディレクトリ構成の最適化（フラット化）を開始します ---")
+def patch_package_json():
+    print("📦 package.json の依存関係を更新しています...")
+    try:
+        with open("package.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        # to-ico を削除し、png-to-ico を追加
+        if "dependencies" in data:
+            if "to-ico" in data["dependencies"]:
+                del data["dependencies"]["to-ico"]
+            # png-to-ico のバージョン指定 (最新安定版付近)
+            data["dependencies"]["png-to-ico"] = "^2.1.8"
+            
+        with open("package.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        print("✅ package.json を更新しました。")
+    except Exception as e:
+        print(f"❌ package.json の更新に失敗しました: {e}")
 
-    # 現在のルートディレクトリ (C:\...\favicons_maker)
-    root_dir = Path(".")
+def patch_js_file():
+    print("📜 generate-favicons.js のコードを書き換えています...")
+    js_path = "generate-favicons.js"
     
-    # 深くなってしまったディレクトリ
-    deep_dir = root_dir / "scripts" / "favicons_maker"
-
-    # 移動対象のファイル群
-    targets = ["package.json", "index.js", "README.md", "generate-favicons.js"]
-
-    if not deep_dir.exists():
-        print(f"[Info] {deep_dir} が見つかりません。すでに移動済みか、構成が異なります。")
-        # 念のため、もしルートにまだ何もないなら確認するロジックを入れてもいいですが
-        # ここではシンプルに終了します
+    if not os.path.exists(js_path):
+        print(f"❌ {js_path} が見つかりません。")
         return
 
-    # 1. ファイルをルートに移動
-    for filename in targets:
-        src_path = deep_dir / filename
-        
-        # index.js は generate-favicons.js という名前に戻して移動すると分かりやすい
-        if filename == "index.js":
-            dst_name = "generate-favicons.js"
-        else:
-            dst_name = filename
+    with open(js_path, "r", encoding="utf-8") as f:
+        content = f.read()
 
-        dst_path = root_dir / dst_name
+    # 1. require の書き換え
+    if "require('to-ico')" in content:
+        content = content.replace("require('to-ico')", "require('png-to-ico')")
+        content = content.replace("const toIco", "const pngToIco")
+        print("   - require文を置換しました。")
 
-        if src_path.exists():
-            # ルートに同名ファイルがある場合はバックアップまたは上書き
-            # ここでは上書き移動します
-            if dst_path.exists():
-                print(f"[Override] ルートの {dst_name} を上書きします。")
-                os.remove(dst_path)
-            
-            shutil.move(str(src_path), str(dst_path))
-            print(f"[Move] {filename} -> ./{dst_name}")
-
-    # 2. 不要になった深いフォルダを削除
-    # node_modules が深いところにあると重いので削除推奨
-    deep_node_modules = deep_dir / "node_modules"
-    if deep_node_modules.exists():
-        print("[Delete] 古い node_modules を削除しています... (少し時間がかかります)")
-        # Windowsでの権限エラー回避のため ignore_errors=True にすることもありますが
-        # 基本的にはこれで消します
-        shutil.rmtree(deep_node_modules, ignore_errors=True)
-
-    # scripts フォルダごと削除（中に他に重要なものがなければ）
-    # 安全のため、scripts/favicons_maker だけ消して、scripts は空なら消す
-    shutil.rmtree(deep_dir, ignore_errors=True)
+    # 2. ICO生成ロジックの書き換え
+    # 正規表現で「4. 手打ち画像の適用処理」から「警告」が出る部分までのブロックを特定して置換
+    # png-to-ico はファイルパスの配列を受け取る仕様のため、ロジックをそれに合わせます
     
-    scripts_dir = root_dir / "scripts"
-    if scripts_dir.exists() and not any(scripts_dir.iterdir()):
-        scripts_dir.rmdir()
-        print("[Delete] 空になった scripts フォルダを削除しました。")
+    new_logic = """        // 4. 手打ち画像の適用処理 (png-to-ico版)
+        if (fs.existsSync(PIXEL_IMAGE)) {
+            // png-to-ico はファイルパスの配列を受け取ります
+            const inputs = [PIXEL_IMAGE]; // 16px (優先)
 
-    print("\n✅ 完了しました！")
-    print("ディレクトリがスッキリしました。以下の手順でセットアップし直してください。")
+            // 自動生成された32pxがあれば追加してマルチアイコン化
+            const icon32Path = path.join(OUTPUT_DIR, 'favicon-32x32.png');
+            if (fs.existsSync(icon32Path)) {
+                inputs.push(icon32Path);
+            }
+
+            try {
+                // png-to-ico で生成
+                const icoBuffer = await pngToIco(inputs);
+                fs.writeFileSync(path.join(OUTPUT_DIR, 'favicon.ico'), icoBuffer);
+                console.log('✨ favicon.ico generated with png-to-ico (clean dependencies).');
+            } catch (err) {
+                console.error('❌ Failed to generate ico:', err);
+            }
+
+            fs.copyFileSync(PIXEL_IMAGE, path.join(OUTPUT_DIR, 'favicon-16x16.png'));
+            console.log('✨ favicon-16x16.png overwritten.');
+        } else {
+            console.warn(`⚠️ Manual source not found at ${PIXEL_IMAGE}.`);
+        }"""
+
+    # 置換対象のパターン（前回の修正有無に関わらずマッチするように広めに取る）
+    pattern = r"// 4\. 手打ち画像の適用処理[\s\S]*?console\.warn.*?\n\s+}"
+    
+    match = re.search(pattern, content)
+    if match:
+        content = content.replace(match.group(0), new_logic)
+        print("   - ICO生成ロジックを png-to-ico 用に更新しました。")
+    else:
+        print("⚠️ 置換対象のコードブロックが見つかりませんでした。すでに変更されている可能性があります。")
+
+    with open(js_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    print("✅ generate-favicons.js を保存しました。")
+
+def main():
+    patch_package_json()
+    patch_js_file()
+    print("\n🎉 パッチ適用完了！ 以下のコマンドを実行して依存関係を更新してください:")
     print("---------------------------------------------------")
-    print("1. npm install               (ルートで依存関係を入れ直す)")
-    print("2. node generate-favicons.js (実行コマンドもシンプルになりました)")
+    print("npm install")
+    print("node generate-favicons.js")
     print("---------------------------------------------------")
 
 if __name__ == "__main__":
