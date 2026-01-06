@@ -6,7 +6,7 @@
     "build": "node index.js"
   },
   "dependencies": {
-    "favicons": "^7.1.0",
-    "to-ico": "^1.1.5"
+    "favicons": "^7.2.0",
+    "png-to-ico": "^2.1.8"
   }
 }
