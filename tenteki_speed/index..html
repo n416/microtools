@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>点滴予測ツール（自動入力対応版）</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        /* --- 色定義 (CSS変数) --- */
+        :root {
+            /* ライトモード */
+            --bg-body: #ecf0f1;
+            --text-main: #2c3e50;
+            --text-sub: #7f8c8d;
+            --card-bg: #ffffff;
+            --card-shadow: rgba(0,0,0,0.05);
+            
+            --speed-box-bg: #f8f9fa;
+            
+            --rt-card-bg: #e8f6f3;
+            --rt-border: #1abc9c;
+            --rt-title: #16a085;
+            --rt-val: #0e6655;
+            
+            --input-area-bg: #ecf0f1;
+            --key-bg: #fdfdfd;
+            --key-text: #333;
+            --key-shadow: rgba(0,0,0,0.1);
+            --key-active: #ecf0f1;
+            
+            --chart-grid: #ddd;
+            --chart-text: #666;
+
+            --btn-suspend-bg: #95a5a6;
+            --btn-resume-bg: #2ecc71;
+            --btn-text: #fff;
+        }
+
+        body.dark-mode {
+            /* ダークモード */
+            --bg-body: #121212;
+            --text-main: #e0e0e0;
+            --text-sub: #a0a0a0;
+            --card-bg: #1e1e1e;
+            --card-shadow: rgba(0,0,0,0.5);
+            
+            --speed-box-bg: #2c2c2c;
+            
+            --rt-card-bg: #0b2b24; 
+            --rt-border: #16a085;
+            --rt-title: #1abc9c;
+            --rt-val: #a3e4d7;
+            
+            --input-area-bg: #2c2c2c;
+            --key-bg: #333;
+            --key-text: #eee;
+            --key-shadow: rgba(0,0,0,0.3);
+            --key-active: #444;
+            
+            --chart-grid: #444;
+            --chart-text: #aaa;
+
+            --btn-suspend-bg: #7f8c8d;
+            --btn-resume-bg: #27ae60;
+        }
+
+        /* 全体レイアウト */
+        * { box-sizing: border-box; transition: background-color 0.3s, color 0.3s; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            margin: 0; padding: 0; 
+            background: var(--bg-body); 
+            height: 100vh; 
+            width: 100vw;
+            overflow: hidden; 
+            display: flex;
+            color: var(--text-main);
+        }
+
+        /* 左側パネル */
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            gap: 15px;
+            height: 100%;
+        }
+
+        /* 右側パネル */
+        .right-panel {
+            width: 320px;
+            background: var(--card-bg);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 10px var(--card-shadow);
+            z-index: 10;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 5px var(--card-shadow);
+            padding: 12px 15px;
+        }
+
+        /* 1. 終了予定カード */
+        .status-card {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+        .finish-label { font-size: 0.8rem; color: var(--text-sub); }
+        .finish-time { font-size: 3rem; font-weight: 800; line-height: 1; color: var(--text-main); letter-spacing: -2px; }
+        .finish-sub { font-size: 0.8rem; color: var(--text-sub); margin-top: 5px;}
+        
+        .speed-box {
+            background: var(--speed-box-bg); border-radius: 8px; padding: 8px;
+            display: flex; flex-direction: column; justify-content: center; height: 100%;
+        }
+        .speed-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.9rem;}
+        .speed-val { font-weight: bold; font-size: 1.2rem; }
+
+        /* 2. リアルタイム推定カード */
+        .realtime-card {
+            background: var(--rt-card-bg);
+            border-left: 5px solid var(--rt-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .rt-title { font-size: 0.9rem; color: var(--rt-title); font-weight: bold; }
+        .rt-value { font-size: 2.2rem; font-weight: bold; color: var(--rt-val); }
+        .rt-range { font-size: 0.9rem; color: var(--rt-title); text-align: right; }
+        .rt-blink { animation: blink 2s infinite; color: var(--rt-title); font-size: 0.8em;}
+        
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* 3. グラフエリア */
+        .chart-card {
+            flex: 1; 
+            position: relative;
+            min-height: 0; 
+        }
+        #chart-container {
+            position: absolute;
+            top: 10px; left: 10px; right: 10px; bottom: 10px;
+        }
+
+        /* 右側UIパーツ */
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .app-title { font-weight: bold; font-size: 1.1rem; }
+        
+        .header-buttons { display: flex; gap: 8px; }
+        .btn-common { border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
+        .btn-reset { background: #e74c3c; color: white; }
+        .btn-theme { background: var(--speed-box-bg); color: var(--text-main); border: 1px solid var(--text-sub); }
+        
+        .input-display-area {
+            background: var(--input-area-bg); border-radius: 8px; padding: 15px;
+            text-align: right; margin-bottom: 10px; height: 70px;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .input-val { font-size: 2.2rem; font-weight: bold; color: var(--text-main); line-height: 1; }
+        
+        /* 状態切り替えボタン */
+        .state-buttons {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;
+        }
+        .btn-state {
+            border: none; padding: 12px; border-radius: 6px;
+            font-weight: bold; color: var(--btn-text); cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn-suspend { background: var(--btn-suspend-bg); }
+        .btn-resume { background: var(--btn-resume-bg); }
+        .btn-state:active { opacity: 0.8; transform: scale(0.98); }
+        
+        .numpad { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .key {
+            border: none; background: var(--key-bg); border-radius: 6px;
+            font-size: 1.4rem; font-weight: 600; color: var(--key-text);
+            box-shadow: 0 2px 3px var(--key-shadow);
+            cursor: pointer; touch-action: manipulation;
+        }
+        .key:active { background: var(--key-active); transform: scale(0.98); }
+        .key-enter { grid-column: span 2; background: #3498db; color: white; font-size: 1.1rem; }
+        .key-enter:active { background: #2980b9; }
+        .key-undo { background: #f39c12; color: white; font-size: 0.9rem; }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; overflow: auto; height: auto; }
+            .left-panel { height: auto; flex: none; }
+            .chart-card { height: 300px; }
+            .right-panel { width: 100%; flex: none; position: sticky; bottom: 0; border-top: 1px solid #444; padding-bottom: 30px;} 
+            .numpad { height: 220px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="left-panel">
+        <div class="card status-card">
+            <div>
+                <div class="finish-label">終了予定時刻 (予測)</div>
+                <div class="finish-time" id="finishTime">--:--</div>
+                <div class="finish-sub" id="finishSub">データ待機中</div>
+            </div>
+            <div class="speed-box">
+                <div class="speed-row"><span>分速</span> <span><span class="speed-val" id="speedMin">0.0</span> ml</span></div>
+                <div style="height:1px; background:var(--text-sub); opacity:0.3; margin:4px 0;"></div>
+                <div class="speed-row"><span>時速</span> <span><span class="speed-val" id="speedHour">0</span> ml</span></div>
+            </div>
+        </div>
+
+        <div class="card realtime-card">
+            <div>
+                <div class="rt-title">現在残量（推定）<span class="rt-blink" id="rtIndicator">●</span></div>
+                <div class="rt-value" id="rtCurrent">-- ml</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size:0.7rem; color:var(--rt-title);">予測範囲</div>
+                <div class="rt-range" id="rtRange">-- 〜 -- ml</div>
+            </div>
+        </div>
+
+        <div class="card chart-card">
+            <div id="chart-container">
+                <canvas id="ivChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="header-row">
+            <div class="app-title">💧 点滴管理</div>
+            <div class="header-buttons">
+                <button class="btn-common btn-theme" onclick="toggleTheme()" id="themeBtn">☀️</button>
+                <button class="btn-common btn-reset" onclick="resetData()">全消去</button>
+            </div>
+        </div>
+
+        <div class="input-display-area">
+            <div style="font-size:0.7rem; color:var(--text-sub);">記録する残量 (ml)</div>
+            <div class="input-val"><span id="inputDisplay"></span><span style="border-right:2px solid #3498db; margin-left:2px; animation:blink 1s infinite;"></span></div>
+        </div>
+        
+        <div class="state-buttons">
+            <button class="btn-state btn-suspend" onclick="submitLog('suspend')">⏸ 取外し (中断)</button>
+            <button class="btn-state btn-resume" onclick="submitLog('resume')">▶ 取付け (再開)</button>
+        </div>
+
+        <div class="numpad">
+            <button class="key" onclick="press(7)">7</button>
+            <button class="key" onclick="press(8)">8</button>
+            <button class="key" onclick="press(9)">9</button>
+            <button class="key" onclick="press(4)">4</button>
+            <button class="key" onclick="press(5)">5</button>
+            <button class="key" onclick="press(6)">6</button>
+            <button class="key" onclick="press(1)">1</button>
+            <button class="key" onclick="press(2)">2</button>
+            <button class="key" onclick="press(3)">3</button>
+            <button class="key key-undo" onclick="undo()">訂正</button>
+            <button class="key" onclick="press(0)">0</button>
+            <button class="key key-enter" onclick="submitLog('normal')">記録する</button>
+        </div>
+    </div>
+
+<script>
+    let logs = []; 
+    let currentInput = "";
+    const STORAGE_KEY = 'iv_tool_tablet_v3';
+    const THEME_KEY = 'iv_tool_theme_mode';
+    
+    // チャート初期化
+    const ctx = document.getElementById('ivChart').getContext('2d');
+    let chart;
+
+    function initChart() {
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [{
+                label: '実測値',
+                data: [],
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                fill: true,
+                tension: 0,
+                pointRadius: 5
+            }, {
+                label: '予測線',
+                data: [],
+                borderColor: '#e74c3c',
+                borderDash: [5, 5],
+                pointRadius: 0,
+                borderWidth: 2
+            }]},
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: 5 },
+                scales: {
+                    x: { 
+                        type: 'time', 
+                        time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } },
+                        grid: { color: getComputedStyle(document.body).getPropertyValue('--chart-grid') },
+                        ticks: { color: getComputedStyle(document.body).getPropertyValue('--chart-text') }
+                    },
+                    y: { 
+                        min: 0, 
+                        title: { display: true, text: '残量 (ml)', color: getComputedStyle(document.body).getPropertyValue('--chart-text') },
+                        grid: { color: getComputedStyle(document.body).getPropertyValue('--chart-grid') },
+                        ticks: { color: getComputedStyle(document.body).getPropertyValue('--chart-text') }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    // --- テーマ管理 ---
+    function initTheme() {
+        const saved = localStorage.getItem(THEME_KEY);
+        const hour = new Date().getHours();
+        let isDark = saved === 'dark' || (!saved && (hour >= 18 || hour < 6));
+        applyTheme(isDark);
+        initChart();
+        loadData();
+    }
+
+    function toggleTheme() {
+        const isDark = document.body.classList.contains('dark-mode');
+        applyTheme(!isDark);
+        localStorage.setItem(THEME_KEY, !isDark ? 'dark' : 'light');
+    }
+
+    function applyTheme(isDark) {
+        const btn = document.getElementById('themeBtn');
+        if (isDark) {
+            document.body.classList.add('dark-mode');
+            btn.innerText = '🌙';
+        } else {
+            document.body.classList.remove('dark-mode');
+            btn.innerText = '☀️';
+        }
+        if (chart) {
+            const styles = getComputedStyle(document.body);
+            const gridColor = styles.getPropertyValue('--chart-grid');
+            const textColor = styles.getPropertyValue('--chart-text');
+            chart.options.scales.x.grid.color = gridColor;
+            chart.options.scales.x.ticks.color = textColor;
+            chart.options.scales.y.grid.color = gridColor;
+            chart.options.scales.y.ticks.color = textColor;
+            chart.options.scales.y.title.color = textColor;
+            chart.update();
+        }
+    }
+
+    // --- メインロジック ---
+
+    setInterval(updateRealTimeStatus, 1000);
+
+    function press(num) {
+        if (currentInput.length > 3) return;
+        currentInput += num;
+        document.getElementById('inputDisplay').innerText = currentInput;
+    }
+
+    function submitLog(type = 'normal') {
+        let val;
+        
+        // 入力がある場合はそれを優先
+        if (currentInput !== "") {
+            val = parseFloat(currentInput);
+        } else {
+            // --- 自動補完ロジック ---
+            if (logs.length === 0) {
+                alert("最初の残量は入力してください");
+                return;
+            }
+            const lastLog = logs[logs.length - 1];
+
+            if (type === 'suspend') {
+                // 中断時は「現在の推定値」を自動採用
+                const rate = getLastValidRate();
+                const elapsed = (new Date() - lastLog.time) / 60000;
+                
+                if (lastLog.type === 'suspend') {
+                    // 既に中断中なら値を変えない
+                    val = lastLog.volume; 
+                } else {
+                    // 推定値を計算して採用
+                    let est = lastLog.volume - (rate * elapsed);
+                    if (est < 0) est = 0;
+                    val = parseFloat(est.toFixed(0)); // 整数丸め
+                }
+            } else if (type === 'resume') {
+                // 再開時は「直前の値（中断時の値）」を自動採用
+                // 中断中は減らない前提
+                val = lastLog.volume;
+            } else {
+                // 通常記録ボタンで空欄の場合はエラー
+                alert("残量を入力してください");
+                return;
+            }
+        }
+
+        // 記録
+        logs.push({ 
+            time: new Date(), 
+            volume: val,
+            type: type
+        });
+
+        saveData();
+        currentInput = "";
+        document.getElementById('inputDisplay').innerText = "";
+        recalculate();
+    }
+
+    function undo() {
+        if (currentInput.length > 0) {
+            currentInput = currentInput.slice(0, -1);
+            document.getElementById('inputDisplay').innerText = currentInput;
+        } else if (logs.length > 0 && confirm('直近の記録を取り消しますか？')) {
+            logs.pop();
+            saveData();
+            recalculate();
+        }
+    }
+
+    function resetData() {
+        if (confirm('全てのデータを消去しますか？')) {
+            logs = [];
+            localStorage.removeItem(STORAGE_KEY);
+            currentInput = "";
+            document.getElementById('inputDisplay').innerText = "";
+            recalculate();
+        }
+    }
+
+    // 過去のログから、最新の有効な滴下速度(ml/min)を取得する
+    function getLastValidRate() {
+        if (logs.length < 2) return 0;
+        
+        for (let i = logs.length - 1; i > 0; i--) {
+            const cur = logs[i];
+            const prev = logs[i-1];
+            
+            if (cur.type === 'resume' && prev.type === 'suspend') continue;
+            if (prev.type === 'suspend') continue;
+
+            const diffMin = (cur.time - prev.time) / 60000;
+            const diffVol = prev.volume - cur.volume;
+            
+            if (diffMin > 0 && diffVol > 0) {
+                return diffVol / diffMin;
+            }
+        }
+        return 0;
+    }
+
+    function recalculate() {
+        // グラフ更新
+        chart.data.datasets[0].data = logs.map(l => ({ x: l.time, y: l.volume }));
+        
+        if (logs.length < 1) {
+            resetDisplay("データ不足");
+            chart.data.datasets[1].data = [];
+            chart.update();
+            updateRealTimeStatus();
+            return;
+        }
+
+        const last = logs[logs.length - 1];
+
+        // --- 中断中の場合 ---
+        if (last.type === 'suspend') {
+            document.getElementById('finishTime').innerText = "中断中";
+            document.getElementById('finishSub').innerText = "再開時に再計算します";
+            document.getElementById('speedMin').innerText = "0.0";
+            document.getElementById('speedHour').innerText = "0";
+            document.getElementById('rtIndicator').style.color = "#bdc3c7"; 
+            document.getElementById('rtIndicator').style.animation = "none";
+            
+            chart.data.datasets[1].data = [];
+            chart.update();
+            updateRealTimeStatus();
+            return;
+        }
+
+        // --- 通常 or 再開時 ---
+        document.getElementById('rtIndicator').style.color = ""; 
+        document.getElementById('rtIndicator').style.animation = "blink 2s infinite";
+
+        const ratePerMin = getLastValidRate();
+
+        if (ratePerMin <= 0) {
+            resetDisplay("データ収集待ち");
+            chart.update();
+            return;
+        }
+
+        const remainingMin = last.volume / ratePerMin;
+        const finishDate = new Date(last.time.getTime() + remainingMin * 60000);
+        
+        document.getElementById('speedMin').innerText = ratePerMin.toFixed(1);
+        document.getElementById('speedHour').innerText = (ratePerMin * 60).toFixed(0);
+        document.getElementById('finishTime').innerText = finishDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        
+        if (last.type === 'resume') {
+            document.getElementById('finishSub').innerText = "前回速度で予測中";
+        } else {
+            document.getElementById('finishSub').innerText = "予測中";
+        }
+
+        chart.data.datasets[1].data = [{ x: last.time, y: last.volume }, { x: finishDate, y: 0 }];
+        chart.update();
+
+        updateRealTimeStatus();
+    }
+
+    function updateRealTimeStatus() {
+        if (logs.length === 0) {
+            document.getElementById('rtCurrent').innerText = "-- ml";
+            document.getElementById('rtRange').innerText = "--";
+            return;
+        }
+
+        const last = logs[logs.length - 1];
+        
+        if (last.type === 'suspend') {
+            document.getElementById('rtCurrent').innerText = `${last.volume} ml`;
+            document.getElementById('rtRange').innerText = "中断中";
+            return;
+        }
+
+        const ratePerMin = getLastValidRate();
+        if (ratePerMin <= 0) {
+            document.getElementById('rtCurrent').innerText = `${last.volume} ml`;
+            return;
+        }
+
+        const now = new Date();
+        const elapsedMin = (now - last.time) / 60000;
+        let est = last.volume - (ratePerMin * elapsedMin);
+        if (est < 0) est = 0;
+
+        document.getElementById('rtCurrent').innerText = `${est.toFixed(0)} ml`;
+        
+        if (last.type === 'resume') {
+            document.getElementById('rtRange').innerText = `(前回速度で推定)`;
+        } else {
+            document.getElementById('rtRange').innerText = `推定中`;
+        }
+    }
+
+    function resetDisplay(msg) {
+        document.getElementById('finishTime').innerText = "--:--";
+        document.getElementById('finishSub').innerText = msg;
+        document.getElementById('speedMin').innerText = "0.0";
+        document.getElementById('speedHour').innerText = "0";
+    }
+
+    function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(logs)); }
+    function loadData() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try {
+                logs = JSON.parse(stored).map(l => ({ 
+                    time: new Date(l.time), 
+                    volume: l.volume,
+                    type: l.type || 'normal'
+                }));
+                recalculate();
+            } catch (e) { logs = []; }
+        }
+    }
+
+    initTheme();
+</script>
+</body>
+</html>
