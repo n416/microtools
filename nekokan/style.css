@@ -820,3 +820,8 @@ body {
     background-color: #fdd44d; /* 点滅時の色 */
   }
 }
+
+.abaddon .area-title {
+  color: #5d4037;
+  background-color: #f5deb3;
+}
