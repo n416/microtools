@@ -12,7 +12,7 @@ import ChannelSettingsModal from './components/ChannelSettingsModal';
 import DefaultChannelSettingsModal from './components/DefaultChannelSettingsModal';
 import ConfirmModal from './components/ConfirmModal';
 import { useAudioAlarm } from './hooks/useAudioAlarm';
-import { useTitleNotification } from './hooks/useTitleNotification'; // 追加
+import { useTitleNotification } from './hooks/useTitleNotification';
 import './App.css';
 
 function App() {
@@ -24,7 +24,7 @@ function App() {
   const [modalData, setModalData] = useState(null);
 
   useAudioAlarm(); 
-  useTitleNotification(); // 追加: タイトル通知機能
+  useTitleNotification();
 
   // URLパラメータロード
   useEffect(() => {
@@ -89,8 +89,8 @@ function App() {
   };
 
   return (
-    <div className="container">
-      {/* Header */}
+    <>
+      {/* Header - containerの外に出すことでレイアウト干渉を防ぐ */}
       <div className="header">
         <div className="top-left-align">
             <button className="header-btn" onClick={handleResetAll} title="全リセット"><i className="fas fa-trash"></i></button>
@@ -101,8 +101,10 @@ function App() {
         <div className="title" onClick={() => setActiveModal('defaultChannel')}>NEKO-KAN 2</div>
       </div>
 
-      {/* Main Screen */}
-      <>
+      <div className="container">
+            {/* area-containerの中にすべての要素（エリア、時計、設定）をフラットに入れる。
+               これにより、style.css の flex-wrap や順序制御が正しく機能するようになる。
+            */}
             <div className="area-container">
                 {areas.map(area => (
                     <AreaTile 
@@ -119,9 +121,8 @@ function App() {
                         onLogAdded={(msg) => showToast(msg)}
                     />
                 ))}
-            </div>
 
-            <div className="bottom-section">
+                {/* 元のbottom-sectionの中身をここに移動し、並列にする */}
                 <div className="note-wrapper">
                     <div id="digitalClock"><DigitalClock /></div>
                     
@@ -144,7 +145,7 @@ function App() {
                     <label><input type="checkbox" checked={alarmSettings.muted} onChange={e => dispatch(updateAlarmSettings({muted: e.target.checked}))} /> 鳴らさない</label>
                 </div>
             </div>
-          </>
+      </div>
 
       <div className={`toast ${toastMessage ? 'show' : ''}`}>{toastMessage}</div>
 
@@ -182,7 +183,7 @@ function App() {
             noText="キャンセル"
           />
       )}
-    </div>
+    </>
   );
 }
 
