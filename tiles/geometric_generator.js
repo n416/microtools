@@ -14,11 +14,17 @@ const state = {
   favorites: [],
 
   /* 第3ペイン：コンポジション */
-  composition: null,       // { gridSize, tiles: [{shapeData, rotation, paletteColorIndex, lockedColor}] }
   undoStack: [],
   randomColorMode: false,
   noSymbolsMode: false,
+  autoGenerate: true,      // ストック変更時の自動コンポジション生成
   compositionZoom: 1.0,    // コンポジションペインのズーム倍率
+
+  /* 追加設定 */
+  canvasBgColor: '#ffffff',
+  canvasBgOpacity: 1.0,
+  canvasBgImage: null,
+  tileOpacity: 1.0,
 
   /* カラーパレット */
   currentPalette: null,     // { name, tags, colors: [5色] }
@@ -37,8 +43,21 @@ const state = {
     activationTimer: null   // タッチ時の長押し判定用タイマー
   },
 
+  /* パン（スクロール）機能用状態 */
+  panState: {
+    isSpaceDown: false,     // PCでSpaceキーが押下されているか
+    isActive: false,        // パン操作中か
+    startX: 0,
+    startY: 0,
+    scrollLeft: 0,
+    scrollTop: 0,
+    pointerId: null
+  },
+
   /* モバイルタブ管理 */
-  activeTab: 'pane-generator'  // 現在アクティブなモバイルタブのID
+  activeTab: 'pane-generator',  // 現在アクティブなモバイルタブのID
+  unreadStockCount: 0,          // 未確認のストック追加数
+  isCompositionNew: false       // 構成が未確認の状態で更新されたか
 };
 
 /* ===== 定数 ===== */
@@ -79,6 +98,30 @@ function showToast(message, icon) {
     toast.classList.add('fade-out');
     setTimeout(function () { toast.remove(); }, 300);
   }, 2000);
+}
+
+/** 通知バッジの表示を更新 */
+function updateBadgeDisplays() {
+  var favBadge = document.getElementById('badge-favorites');
+  var compBadge = document.getElementById('badge-composition');
+
+  if (favBadge) {
+    if (state.unreadStockCount > 0) {
+      favBadge.textContent = state.unreadStockCount > 99 ? '99+' : state.unreadStockCount;
+      favBadge.style.display = 'inline-flex';
+    } else {
+      favBadge.style.display = 'none';
+    }
+  }
+
+  if (compBadge) {
+    if (state.isCompositionNew) {
+      compBadge.textContent = 'NEW!';
+      compBadge.style.display = 'inline-flex';
+    } else {
+      compBadge.style.display = 'none';
+    }
+  }
 }
 
 /* ===== 図形のSVGパス生成 ===== */
@@ -407,9 +450,13 @@ function addToFavoritesFromGenerator(idx, tileElement) {
   renderFavorites();
   showToast('ストックに追加しました', '📌');
 
-  // モバイル時はストックタブへ自動遷移
-  if (window.innerWidth <= 768) {
-    switchTab('pane-favorites');
+  if (state.activeTab !== 'pane-favorites') {
+    state.unreadStockCount++;
+    updateBadgeDisplays();
+  }
+
+  if (state.autoGenerate) {
+    generateComposition();
   }
 }
 
@@ -422,6 +469,26 @@ function removeFavorite(id) {
   state.favorites = state.favorites.filter(function (f) { return f.id !== id; });
   renderFavorites();
   showToast('削除しました', '🗑');
+
+  var hasRemovedInComp = false;
+  if (state.composition && state.composition.tiles) {
+    state.composition.tiles.forEach(function (t) {
+      if (t.favId === id) {
+        t.shapeData = { layers: [{ type: 'blank', rotation: 0 }] };
+        t.rotation = 0;
+        t.favId = null;
+        t.lockedColor = null;
+        hasRemovedInComp = true;
+      }
+    });
+    if (hasRemovedInComp) {
+      renderComposition();
+    }
+  }
+
+  if (state.autoGenerate && state.favorites.length > 0) {
+    generateComposition();
+  }
 }
 
 function setFavoriteLockColor(id, color) {
@@ -608,6 +675,11 @@ function generateComposition() {
   state.composition = { gridSize: gridSize, tiles: tiles };
   renderComposition();
   showToast('コンポジション生成完了', '✨');
+
+  if (state.activeTab !== 'pane-composition') {
+    state.isCompositionNew = true;
+    updateBadgeDisplays();
+  }
 }
 
 /** コンポジション描画 */
@@ -636,11 +708,14 @@ function renderComposition() {
     svg.setAttribute('xmlns', SVG_NS);
     svg.id = 'compositionSVG';
 
-    /* 白背景 */
+    /* 背景画像と背景色（透過）の順序を変更するため、
+       ここでは背景画像を敷き、その上に透過色を被せる。
+       エクスポート時はこの背景用要素ではなく、別途Canvas側で描画順を制御する方針に変更 */
     var bg = document.createElementNS(SVG_NS, 'rect');
     bg.setAttribute('width', totalSize);
     bg.setAttribute('height', totalSize);
-    bg.setAttribute('fill', 'white');
+    bg.setAttribute('fill', 'transparent');
+    bg.id = 'compositionSvgBg';
     svg.appendChild(bg);
 
     /* グリッド作成（タイルの背面にするためここで追加） */
@@ -731,12 +806,8 @@ function renderComposition() {
     /* タイルの色を決定（内容が変わった可能性があるため常に再生成） */
     tileG.innerHTML = '';
 
-    /* タイル個別の白背景（隙間対策） */
-    var tileBg = document.createElementNS(SVG_NS, 'rect');
-    tileBg.setAttribute('width', TILE_SIZE);
-    tileBg.setAttribute('height', TILE_SIZE);
-    tileBg.setAttribute('fill', 'white');
-    tileG.appendChild(tileBg);
+    // 個別の白背景は透過を妨げるため追加しない
+    // (以前の仕様: 隙間対策で tileBg を追加していた)
 
     var tileColors;
     if (tile.lockedColor) {
@@ -760,9 +831,42 @@ function renderComposition() {
         'translate(' + (-TILE_SIZE / 2) + ',' + (-TILE_SIZE / 2) + ')'
       );
     }
+
+    /* タイル自身に透明度を反映させる（背景を透けさせるため） */
+    if (state.tileOpacity < 1.0) {
+      innerG.setAttribute('opacity', state.tileOpacity);
+    }
+
     innerG.appendChild(renderShapeToSVG(tile.shapeData, TILE_SIZE, tileColors));
     tileG.appendChild(innerG);
   });
+
+  /* Canvas要素自体の背景設定を更新（背景画像＋背景色の合成） */
+  // HTML上で背景画像を下に、色を上に重ねるためには、擬似要素や複数背景プロパティなどを使う
+  // CSSの linear-gradient で単色オーバーレイを作り、その下に url() を配置する手法をとる
+  if (state.canvasBgImage) {
+    // RGBAカラーを計算
+    var hex = state.canvasBgColor;
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    var rgba = 'rgba(' + r + ',' + g + ',' + b + ',' + state.canvasBgOpacity + ')';
+
+    canvasEl.style.backgroundImage = 'linear-gradient(' + rgba + ', ' + rgba + '), url(' + state.canvasBgImage + ')';
+    canvasEl.style.backgroundSize = 'auto, cover';
+    canvasEl.style.backgroundPosition = 'center, center';
+    canvasEl.style.backgroundColor = 'transparent'; // 背景色が透けるように
+  } else {
+    // 画像がない場合は単色のみ
+    canvasEl.style.backgroundImage = 'none';
+
+    var hex = state.canvasBgColor;
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    var rgba = 'rgba(' + r + ',' + g + ',' + b + ',' + state.canvasBgOpacity + ')';
+    canvasEl.style.backgroundColor = rgba;
+  }
 
   /* ズーム倍率を適用 */
   updateCompositionZoom();
@@ -822,7 +926,21 @@ function handlePointerDown(e, idx) {
   // ピンチズームなど、複数指でのタッチの2本目以降は開始しない
   if (e.pointerType === 'touch' && !e.isPrimary) return;
 
-  // 既存のタイマーがあればクリア
+  var compArea = document.getElementById('compositionArea');
+
+  // 【PC専用パン】Spaceが押されていれば、タイルのドラッグではなくパン操作とする
+  if (state.panState.isSpaceDown && e.pointerType === 'mouse') {
+    state.panState.isActive = true;
+    state.panState.startX = e.clientX;
+    state.panState.startY = e.clientY;
+    state.panState.scrollLeft = compArea ? compArea.scrollLeft : 0;
+    state.panState.scrollTop = compArea ? compArea.scrollTop : 0;
+    state.panState.pointerId = e.pointerId;
+    if (compArea) compArea.style.cursor = 'grabbing';
+    return; // タイルのドラッグ処理は発火させない
+  }
+
+  // タイルのドラッグ用：既存のタイマーがあればクリア
   if (state.dragState.activationTimer) {
     clearTimeout(state.dragState.activationTimer);
   }
@@ -848,11 +966,57 @@ function handlePointerDown(e, idx) {
       state.dragState.isDragging = true;
       renderComposition();
     }, 200);
+
+    // 【モバイルパン】タッチ操作の場合、タイルの遅延中であってもパンの初期位置を記録しておく
+    var compArea = document.getElementById('compositionArea');
+    state.panState.isActive = false; // まだ確定はしない
+    state.panState.startX = e.clientX;
+    state.panState.startY = e.clientY;
+    state.panState.scrollLeft = compArea ? compArea.scrollLeft : 0;
+    state.panState.scrollTop = compArea ? compArea.scrollTop : 0;
+    state.panState.pointerId = e.pointerId;
   }
 }
 
-/** ポインター移動（動的な入れ替え） */
+/** 
+ * ポインターダウン（キャンバスの余白部分を直接触った時のパン）
+ */
+function handleCanvasPointerDown(e) {
+  // すでにタイルのドラッグやパンが始まっている場合はスキップ
+  if (state.dragState.tileIdx !== null || state.panState.isActive) return;
+
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  if (e.pointerType === 'touch' && !e.isPrimary) return;
+
+  var compArea = document.getElementById('compositionArea');
+
+  state.panState.isActive = true; // 余白を触った場合は即座にパン可能
+  state.panState.startX = e.clientX;
+  state.panState.startY = e.clientY;
+  state.panState.scrollLeft = compArea ? compArea.scrollLeft : 0;
+  state.panState.scrollTop = compArea ? compArea.scrollTop : 0;
+  state.panState.pointerId = e.pointerId;
+
+  if (e.pointerType === 'mouse') {
+    if (compArea) compArea.style.cursor = 'grabbing';
+  }
+}
+
+/** ポインター移動（動的な入れ替え または パン動作） */
 function handlePointerMove(e) {
+  var compArea = document.getElementById('compositionArea');
+
+  // 【パン処理の実装】
+  if (state.panState.isActive && state.panState.pointerId === e.pointerId) {
+    if (compArea) {
+      var dxPan = e.clientX - state.panState.startX;
+      var dyPan = e.clientY - state.panState.startY;
+      compArea.scrollLeft = state.panState.scrollLeft - dxPan;
+      compArea.scrollTop = state.panState.scrollTop - dyPan;
+    }
+    return; // パン実行中はドラッグ処理を行わない
+  }
+
   // ドラッグ操作対象でなければ何もしない
   if (state.dragState.tileIdx === null) return;
 
@@ -866,18 +1030,24 @@ function handlePointerMove(e) {
     if (dist > 10) {
       if (state.dragState.activationTimer) clearTimeout(state.dragState.activationTimer);
       state.dragState.tileIdx = null;
+
+      // パンをアクティブ化
+      state.panState.isActive = true;
     }
     return;
   }
 
   if (!state.dragState.isActive) return;
 
-  state.dragState.isDragging = true;
-
   // わずかな移動（閾値5px）を検知してドラッグとみなす
   if (!state.dragState.hasMoved && Math.hypot(dx, dy) > 5) {
     state.dragState.hasMoved = true;
   }
+
+  // 5pxを超えておらず、かつ長押し等でまだドラッグ中になっていない場合は保留
+  if (!state.dragState.hasMoved && !state.dragState.isDragging) return;
+
+  state.dragState.isDragging = true;
 
   state.dragState.currentX = e.clientX;
   state.dragState.currentY = e.clientY;
@@ -921,30 +1091,49 @@ function handlePointerMove(e) {
   renderComposition();
 }
 
-/** ポインターアップ（終了） */
+/** ポインターアップ（ドラッグ または パンの終了） */
 function handlePointerUp(e) {
+  // 【パン処理の終了】
+  if (state.panState.isActive && state.panState.pointerId === e.pointerId) {
+    state.panState.isActive = false;
+    state.panState.pointerId = null;
+    var compArea = document.getElementById('compositionArea');
+    if (compArea && !state.panState.isSpaceDown) {
+      compArea.style.cursor = '';
+    } else if (compArea && state.panState.isSpaceDown) {
+      compArea.style.cursor = 'grab';
+    }
+    return;
+  }
+
+  // 以下、既存のドラッグ用のアップ処理
   // タイマーがあればクリア
   if (state.dragState.activationTimer) {
     clearTimeout(state.dragState.activationTimer);
     state.dragState.activationTimer = null;
   }
 
-  // アクティブになってすらいない（すぐ離した）場合はクリック判定
-  if (state.dragState.tileIdx !== null && !state.dragState.isActive && !state.dragState.hasMoved) {
+  // 5px未満の移動で離した場合はクリック判定（長押し後のドラッグ無しアップも含む）
+  if (state.dragState.tileIdx !== null && !state.dragState.hasMoved) {
     rotateTile(state.dragState.tileIdx);
+
+    // 状態をリセット
+    state.dragState.isActive = false;
+    state.dragState.isDragging = false;
+    state.dragState.tileIdx = null;
+    renderComposition();
+    return;
+  }
+
+  if (!state.dragState.isDragging) {
+    state.dragState.isActive = false;
+    state.dragState.isDragging = false;
     state.dragState.tileIdx = null;
     return;
   }
 
-  if (!state.dragState.isDragging) return;
-
-  if (!state.dragState.hasMoved) {
-    // わずかに動いただけで離した場合は回転（マウスの場合の救済策）
-    rotateTile(state.dragState.tileIdx);
-  } else {
-    // 入れ替え完了としてUndoを保存
-    pushUndo();
-  }
+  // 入れ替え完了としてUndoを保存
+  pushUndo();
 
   state.dragState.isActive = false;
   state.dragState.isDragging = false;
@@ -1094,8 +1283,104 @@ function exportComposition() {
     showToast('コンポジションがありません', '⚠');
     return;
   }
+
+  // 出力画像用の一時的な状態変更（背景色や画像を落として白背景のみにする処理）
+  var bgObj = document.getElementById('compositionSvgBg');
+  var prevFill = bgObj ? bgObj.getAttribute('fill') : 'transparent';
+  if (bgObj) {
+    bgObj.setAttribute('fill', 'white'); // エクスポート時は白背景を適用
+  }
+
   exportSVG(svg, 'composition_' + Date.now() + '.svg');
-  showToast('コンポジションSVGを保存しました', '⬇');
+
+  // 状態復元
+  if (bgObj) {
+    bgObj.setAttribute('fill', prevFill);
+  }
+
+  showToast('タイルSVGを保存しました', '⬇');
+}
+
+function exportCompositionAsImage() {
+  var svg = document.getElementById('compositionSVG');
+  if (!svg) {
+    showToast('コンポジションがありません', '⚠');
+    return;
+  }
+
+  var clone = svg.cloneNode(true);
+  clone.setAttribute('xmlns', SVG_NS);
+  var serializer = new XMLSerializer();
+  var source = serializer.serializeToString(clone);
+
+  var img = new Image();
+  var blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+
+  img.onload = function () {
+    var canvas = document.createElement('canvas');
+    var size = state.composition.gridSize * TILE_SIZE;
+    canvas.width = size;
+    canvas.height = size;
+    var ctx = canvas.getContext('2d');
+
+    var drawAndExport = function () {
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+
+      canvas.toBlob(function (blob) {
+        var a = document.createElement('a');
+        a.download = 'composition_' + Date.now() + '.png';
+        var pngUrl = URL.createObjectURL(blob);
+        a.href = pngUrl;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(pngUrl);
+
+        showToast('画像(PNG)を保存しました', '⬇');
+      }, 'image/png');
+    };
+
+    if (state.canvasBgImage) {
+      var bgImg = new Image();
+      bgImg.onload = function () {
+        // 1. 背景画像を一番下に描画（トリミング済み画像がセットされている前提なのでそのまま全画面描画）
+        ctx.drawImage(bgImg, 0, 0, bgImg.width, bgImg.height, 0, 0, canvas.width, canvas.height);
+
+        // 2. 背景色をその上にオーバーレイ描画
+        var hex = state.canvasBgColor;
+        var r = parseInt(hex.slice(1, 3), 16);
+        var g = parseInt(hex.slice(3, 5), 16);
+        var b = parseInt(hex.slice(5, 7), 16);
+        ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + state.canvasBgOpacity + ')';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 3. SVG結果を描画してエクスポート
+        drawAndExport();
+      };
+      bgImg.onerror = function () {
+        var hex = state.canvasBgColor;
+        var r = parseInt(hex.slice(1, 3), 16);
+        var g = parseInt(hex.slice(3, 5), 16);
+        var b = parseInt(hex.slice(5, 7), 16);
+        ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + state.canvasBgOpacity + ')';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawAndExport();
+      };
+      bgImg.src = state.canvasBgImage;
+    } else {
+      var hex = state.canvasBgColor;
+      var r = parseInt(hex.slice(1, 3), 16);
+      var g = parseInt(hex.slice(3, 5), 16);
+      var b = parseInt(hex.slice(5, 7), 16);
+      ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + state.canvasBgOpacity + ')';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawAndExport();
+    }
+  };
+
+  img.src = url;
 }
 
 /* ===== ピンチズーム（タッチ／モバイル操作） ===== */
@@ -1131,13 +1416,38 @@ function initPinchZoom(compArea) {
   }
 
   compArea.addEventListener('touchstart', function (e) {
-    // 2本指以上のタッチが検出された場合、進行中のドラッグ操作を強制キャンセルする
+    // 2本指以上のタッチが検出された場合、進行中の操作（ドラッグやパン）を強制キャンセルする
     if (e.touches.length >= 2) {
       if (state.dragState.activationTimer) clearTimeout(state.dragState.activationTimer);
+
+      var canceledIdx = state.dragState.tileIdx;
+
+      // ドラッグのキャンセル
       state.dragState.isActive = false;
       state.dragState.isDragging = false;
       state.dragState.tileIdx = null;
-      renderComposition();
+
+      // パンのキャンセル
+      state.panState.isActive = false;
+      state.panState.pointerId = null;
+
+      // DOM全体を再構築する renderComposition() を呼ぶと、タッチ対象の要素(EventTarget)が
+      // 削除されてしまい、ブラウザが「touchcancel」を発火させてピンチ操作が中断してしまいます。
+      // そのため、ドラッグ中だったタイルの変形とクラスだけを手動クリーンアップします。
+      if (canceledIdx !== null && state.composition) {
+        var tile = state.composition.tiles[canceledIdx];
+        if (tile && tile.id) {
+          var el = document.getElementById(tile.id);
+          if (el) {
+            el.classList.remove('dragging');
+            el.style.opacity = '';
+            var gs = state.composition.gridSize;
+            var col = canceledIdx % gs;
+            var row = Math.floor(canceledIdx / gs);
+            el.style.transform = 'translate(' + (col * TILE_SIZE) + 'px,' + (row * TILE_SIZE) + 'px)';
+          }
+        }
+      }
     }
 
     // 2本指のタッチ開始時のみ初期化する
@@ -1221,7 +1531,18 @@ function initEvents() {
   });
 
   /* 第3ペイン */
-  document.getElementById('btnGenComposition').addEventListener('click', generateComposition);
+  document.getElementById('btnGenComposition').addEventListener('click', function () {
+    // 手動生成クリックで、オート生成を解除
+    if (state.autoGenerate) {
+      state.autoGenerate = false;
+      var toggleBtn = document.getElementById('toggleAutoGenerate');
+      if (toggleBtn) {
+        toggleBtn.classList.remove('active');
+        toggleBtn.setAttribute('aria-pressed', 'false');
+      }
+    }
+    generateComposition();
+  });
   document.getElementById('btnUndo').addEventListener('click', undo);
   document.getElementById('gridSizeSelect').addEventListener('change', generateComposition);
   document.getElementById('blankSlider').addEventListener('input', function () {
@@ -1234,11 +1555,23 @@ function initEvents() {
     generateComposition();
   });
 
+  document.getElementById('toggleAutoGenerate').addEventListener('click', function () {
+    state.autoGenerate = !state.autoGenerate;
+    this.classList.toggle('active', state.autoGenerate);
+    this.setAttribute('aria-pressed', state.autoGenerate);
+    if (state.autoGenerate && state.favorites.length > 0) {
+      generateComposition();
+    }
+  });
+
   /* コンポジションドラッグ操作 */
   var compCanvas = document.getElementById('compositionCanvas');
   if (compCanvas) {
     // モバイル環境でのスクロール（スワイプ）によるドラッグの中断をキャンバス全体で確実に防ぐ
     compCanvas.style.touchAction = 'none';
+
+    // キャンバスの余白部分を直接触った場合のパン開始用
+    compCanvas.addEventListener('pointerdown', handleCanvasPointerDown);
 
     // 枠外へのドロップでも正しくトラッキングできるよう window にバインド
     window.addEventListener('pointermove', handlePointerMove);
@@ -1280,8 +1613,68 @@ function initEvents() {
     initPinchZoom(compArea);
   }
 
-  /* カラーパレット */
-  document.getElementById('btnPalette').addEventListener('click', openPaletteModal);
+  /* 新規：装飾メニュー */
+  var btnDecorationMenu = document.getElementById('btnDecorationMenu');
+  var decorationMenuContent = document.getElementById('decorationMenuContent');
+
+  if (btnDecorationMenu && decorationMenuContent) {
+    btnDecorationMenu.addEventListener('click', function (e) {
+      e.stopPropagation();
+      decorationMenuContent.classList.toggle('visible');
+    });
+
+    document.addEventListener('click', function (e) {
+      if (decorationMenuContent.classList.contains('visible') && e.target !== btnDecorationMenu && !decorationMenuContent.contains(e.target)) {
+        decorationMenuContent.classList.remove('visible');
+      }
+    });
+
+    /* モーダル呼び出し */
+    var btnMenuPalette = document.getElementById('btnMenuPalette');
+    var btnMenuBgColor = document.getElementById('btnMenuBgColor');
+    var btnMenuBgImage = document.getElementById('btnMenuBgImage');
+
+    if (btnMenuPalette) {
+      btnMenuPalette.addEventListener('click', function () {
+        decorationMenuContent.classList.remove('visible');
+        openPaletteModal();
+      });
+    }
+
+    if (btnMenuBgColor) {
+      btnMenuBgColor.addEventListener('click', function () {
+        decorationMenuContent.classList.remove('visible');
+        document.getElementById('bgColorModal').classList.add('visible');
+        document.getElementById('modalBgColorPicker').value = state.canvasBgColor;
+        document.getElementById('modalBgOpacitySlider').value = state.canvasBgOpacity;
+        document.getElementById('modalBgOpacityValue').textContent = state.canvasBgOpacity.toFixed(2);
+      });
+    }
+
+    if (btnMenuBgImage) {
+      btnMenuBgImage.addEventListener('click', function () {
+        decorationMenuContent.classList.remove('visible');
+        document.getElementById('bgImageModal').classList.add('visible');
+      });
+    }
+  }
+
+  /* モーダル閉じるイベント共通設定 */
+  document.getElementById('btnCloseBgColorModal').addEventListener('click', function () {
+    document.getElementById('bgColorModal').classList.remove('visible');
+  });
+  document.getElementById('bgColorModal').addEventListener('click', function (e) {
+    if (e.target === this) this.classList.remove('visible');
+  });
+
+  document.getElementById('btnCloseBgImageModal').addEventListener('click', function () {
+    document.getElementById('bgImageModal').classList.remove('visible');
+  });
+  document.getElementById('bgImageModal').addEventListener('click', function (e) {
+    if (e.target === this) this.classList.remove('visible');
+  });
+
+  /* パレットモーダル (既存保持) */
   document.getElementById('btnCloseModal').addEventListener('click', closePaletteModal);
   document.getElementById('paletteModal').addEventListener('click', function (e) {
     if (e.target === this) closePaletteModal();
@@ -1310,14 +1703,145 @@ function initEvents() {
     }
   });
 
-  /* SVGエクスポート */
-  document.getElementById('btnExportAll').addEventListener('click', exportComposition);
+  /* 背景色モーダル内の設定 */
+  var modalBgColorPicker = document.getElementById('modalBgColorPicker');
+  if (modalBgColorPicker) {
+    modalBgColorPicker.addEventListener('input', function () {
+      state.canvasBgColor = this.value;
+      if (state.composition) renderComposition();
+    });
+  }
+
+  var modalBgOpacitySlider = document.getElementById('modalBgOpacitySlider');
+  var modalBgOpacityValue = document.getElementById('modalBgOpacityValue');
+  if (modalBgOpacitySlider && modalBgOpacityValue) {
+    modalBgOpacitySlider.addEventListener('input', function () {
+      state.canvasBgOpacity = parseFloat(this.value);
+      modalBgOpacityValue.textContent = state.canvasBgOpacity.toFixed(2);
+      if (state.composition) renderComposition();
+    });
+  }
+
+  var btnModalBgColorClear = document.getElementById('btnModalBgColorClear');
+  if (btnModalBgColorClear) {
+    btnModalBgColorClear.addEventListener('click', function () {
+      state.canvasBgColor = '#ffffff';
+      state.canvasBgOpacity = 1.0;
+      if (modalBgColorPicker) modalBgColorPicker.value = state.canvasBgColor;
+      if (modalBgOpacitySlider) modalBgOpacitySlider.value = state.canvasBgOpacity;
+      if (modalBgOpacityValue) modalBgOpacityValue.textContent = state.canvasBgOpacity.toFixed(2);
+      if (state.composition) renderComposition();
+      showToast('背景色をリセットしました', '✓');
+    });
+  }
+
+  /* 背景画像モーダル内の設定（クライアントサイドトリミング） */
+  var btnModalBgImageSelect = document.getElementById('btnModalBgImageSelect');
+  var modalBgImageInput = document.getElementById('modalBgImageInput');
+  var btnModalBgImageClear = document.getElementById('btnModalBgImageClear');
+  var modalBgImagePreview = document.getElementById('modalBgImagePreview');
+
+  if (btnModalBgImageSelect && modalBgImageInput && btnModalBgImageClear && modalBgImagePreview) {
+    btnModalBgImageSelect.addEventListener('click', function () {
+      modalBgImageInput.click();
+    });
+
+    modalBgImageInput.addEventListener('change', function (e) {
+      if (e.target.files && e.target.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function (evt) {
+          var img = new Image();
+          img.onload = function () {
+            // 画像の中央から1:1の正方形にトリミングするCanvas処理
+            var minSize = Math.min(img.width, img.height);
+            var cropX = (img.width - minSize) / 2;
+            var cropY = (img.height - minSize) / 2;
+
+            var cropCanvas = document.createElement('canvas');
+            // 適度な解像度に抑える（ここでは最大を1024等にすることも可能だが元サイズを生かす）
+            cropCanvas.width = minSize;
+            cropCanvas.height = minSize;
+            var ctx = cropCanvas.getContext('2d');
+            ctx.drawImage(img, cropX, cropY, minSize, minSize, 0, 0, minSize, minSize);
+
+            var croppedUrl = cropCanvas.toDataURL('image/jpeg', 0.85);
+
+            state.canvasBgImage = croppedUrl;
+            modalBgImagePreview.src = croppedUrl;
+            modalBgImagePreview.style.display = 'block';
+            btnModalBgImageClear.disabled = false;
+
+            if (state.composition) renderComposition();
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(e.target.files[0]);
+      }
+    });
+
+    btnModalBgImageClear.addEventListener('click', function () {
+      state.canvasBgImage = null;
+      modalBgImageInput.value = '';
+      modalBgImagePreview.src = '';
+      modalBgImagePreview.style.display = 'none';
+      this.disabled = true;
+      if (state.composition) renderComposition();
+      showToast('画像をクリアしました', '✓');
+    });
+  }
+
+  var opacitySlider = document.getElementById('tileOpacitySlider');
+  var opacityValue = document.getElementById('tileOpacityValue');
+  if (opacitySlider && opacityValue) {
+    opacitySlider.addEventListener('input', function () {
+      state.tileOpacity = parseFloat(this.value);
+      opacityValue.textContent = state.tileOpacity.toFixed(2);
+      if (state.composition) renderComposition();
+    });
+  }
+
+  /* 保存メニューとエクスポート機能 */
+  var btnSaveMenu = document.getElementById('btnSaveMenu');
+  var saveMenuContent = document.getElementById('saveMenuContent');
+
+  if (btnSaveMenu && saveMenuContent) {
+    btnSaveMenu.addEventListener('click', function (e) {
+      e.stopPropagation();
+      saveMenuContent.classList.toggle('visible');
+    });
+
+    document.addEventListener('click', function (e) {
+      if (saveMenuContent.classList.contains('visible') && e.target !== btnSaveMenu && !saveMenuContent.contains(e.target)) {
+        saveMenuContent.classList.remove('visible');
+      }
+    });
+
+    var btnExportTile = document.getElementById('btnExportTile');
+    if (btnExportTile) {
+      btnExportTile.addEventListener('click', function () {
+        exportComposition();
+        saveMenuContent.classList.remove('visible');
+      });
+    }
+
+    var btnExportImage = document.getElementById('btnExportImage');
+    if (btnExportImage) {
+      btnExportImage.addEventListener('click', function () {
+        exportCompositionAsImage();
+        saveMenuContent.classList.remove('visible');
+      });
+    }
+  }
 
   /* キーボードショートカット */
   document.addEventListener('keydown', function (e) {
     if (e.key === ' ' && document.activeElement === document.body) {
       e.preventDefault();
-      generateAllTiles();
+      if (!state.panState.isSpaceDown) {
+        state.panState.isSpaceDown = true;
+        var compArea = document.getElementById('compositionArea');
+        if (compArea) compArea.style.cursor = 'grab';
+      }
     }
     if (e.ctrlKey && e.key === 'z') {
       e.preventDefault();
@@ -1326,6 +1850,14 @@ function initEvents() {
     if (e.key === 'Escape') {
       closePaletteModal();
       closeColorPicker();
+    }
+  });
+
+  document.addEventListener('keyup', function (e) {
+    if (e.key === ' ') {
+      state.panState.isSpaceDown = false;
+      var compArea = document.getElementById('compositionArea');
+      if (compArea) compArea.style.cursor = '';
     }
   });
 
@@ -1374,6 +1906,15 @@ function switchTab(targetPaneId) {
   }
 
   state.activeTab = targetPaneId;
+
+  // バッジのリセット
+  if (targetPaneId === 'pane-favorites') {
+    state.unreadStockCount = 0;
+    updateBadgeDisplays();
+  } else if (targetPaneId === 'pane-composition') {
+    state.isCompositionNew = false;
+    updateBadgeDisplays();
+  }
 
   // ペインの表示切り替え
   paneIds.forEach(function (id) {

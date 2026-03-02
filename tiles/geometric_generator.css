@@ -558,10 +558,6 @@ body {
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity var(--transition-fast);
 }
 
-.comp-tile:hover {
-  opacity: 0.85;
-}
-
 .comp-tile.dragging {
   transition: opacity var(--transition-fast); /* ドラッグ中は移動アニメーションをオフにする */
   cursor: grabbing;
@@ -582,6 +578,49 @@ body {
 .composition-empty-icon {
   font-size: 48px;
   opacity: 0.3;
+}
+
+/* ---------- ドロップダウンメニュー ---------- */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  min-width: 120px;
+  display: none;
+  flex-direction: column;
+  z-index: 200;
+  padding: 4px;
+}
+
+.dropdown-menu.visible {
+  display: flex;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 8px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background var(--transition-fast);
+}
+
+.dropdown-item:hover {
+  background: var(--bg-hover);
 }
 
 /* ---------- カラーパレットモーダル ---------- */
@@ -621,6 +660,14 @@ body {
   transition: transform var(--transition-slow);
 }
 
+.modal-sm {
+  max-width: 360px;
+}
+
+.modal-md {
+  max-width: 420px;
+}
+
 .modal-overlay.visible .modal {
   transform: translateY(0) scale(1);
 }
@@ -656,6 +703,143 @@ body {
 .modal-close:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+
+/* モーダルボディ共通 */
+.modal-body {
+  overflow-y: auto;
+}
+
+.modal-padding {
+  padding: 20px 24px;
+}
+
+/* キャンバス詳細設定エリア */
+.palette-canvas-settings {
+  display: flex;
+  gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.setting-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-group-file {
+  flex: 1;
+  min-width: 200px;
+}
+
+.setting-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.setting-color-input {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: none;
+}
+.setting-color-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+.setting-color-input::-webkit-color-swatch {
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 2px;
+}
+
+.setting-color-input.large {
+  width: 100%;
+  height: 48px;
+  border-radius: var(--radius-md);
+}
+
+.setting-group.vertical {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.label-with-value {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.mt-4 {
+  margin-top: 16px;
+}
+
+.mb-3 {
+  margin-bottom: 12px;
+}
+
+.text-sm {
+  font-size: 12px;
+}
+
+.text-tertiary {
+  color: var(--text-tertiary);
+}
+
+.file-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 背景画像プレビューエリア */
+.image-preview-area {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--bg-hover);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.image-preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.preview-icon {
+  font-size: 32px;
+  opacity: 0.5;
+}
+
+.image-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 /* タグフィルター */
@@ -1025,6 +1209,27 @@ body {
     display: none;
   }
 
+  /* パレットボタンとタイル保存ボタンを右下へ固定 (FAB) */
+  #btnPalette,
+  #btnExportAll {
+    position: absolute;
+    bottom: 24px;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  /* ボタン同士が被らないよう右位置を調整 */
+  #btnPalette {
+    right: 20px;
+  }
+  #btnExportAll {
+    right: 124px; /* パレットボタンの幅＋マージン分を確保 */
+  }
+
   /* カラーパレットモーダル：全画面オーバーレイ */
   .modal-overlay {
     position: fixed;
@@ -1121,5 +1326,27 @@ body {
 
   .mobile-nav-label {
     letter-spacing: 0.02em;
+  }
+
+  /* 通知バッジ */
+  .nav-badge {
+    position: absolute;
+    top: 6px;
+    right: calc(50% - 24px);
+    background: var(--accent-danger);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 0 4px;
+    height: 16px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px var(--bg-secondary);
+    min-width: 16px;
+    z-index: 10;
+    pointer-events: none;
   }
 }

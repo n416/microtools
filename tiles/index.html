@@ -60,8 +60,8 @@
                         <span>タイルをストック
                     </div>
                     <div class="shortcuts-hint-item">
-                        <span class="kbd">Space</span>
-                        <span>全て再生成</span>
+                        <span class="kbd">Space+Drag</span>
+                        <span>画面スクロール</span>
                     </div>
                 </div>
             </div>
@@ -95,7 +95,11 @@
             <!-- ツールバー -->
             <div class="composition-toolbar">
                 <div class="toolbar-group">
-                    <button id="btnGenComposition" class="btn btn-primary btn-sm" type="button">▶ 配置生成</button>
+                    <button id="btnGenComposition" class="btn btn-primary btn-sm" type="button">生成</button>
+                    <div class="toggle-row-inline">
+                        <span class="toolbar-label">オート生成</span>
+                        <button id="toggleAutoGenerate" class="toggle-switch active" type="button" aria-pressed="true" title="ストックの変更時に自動で構成を生成します"></button>
+                    </div>
                     <button id="btnUndo" class="btn btn-ghost btn-sm" type="button" title="元に戻す (Ctrl+Z)">↩</button>
                 </div>
                 <div class="toolbar-separator"></div>
@@ -124,8 +128,21 @@
                 </div>
                 <div class="toolbar-separator"></div>
                 <div class="toolbar-group">
-                    <button id="btnPalette" class="btn btn-secondary btn-sm" type="button">🎨 パレット</button>
-                    <button id="btnExportAll" class="btn btn-secondary btn-sm" type="button">⬇ 全体保存</button>
+                    <div class="dropdown">
+                        <button id="btnDecorationMenu" class="btn btn-secondary btn-sm dropdown-toggle" type="button">✨ 装飾...</button>
+                        <div id="decorationMenuContent" class="dropdown-menu">
+                            <button id="btnMenuPalette" class="dropdown-item" type="button">色</button>
+                            <button id="btnMenuBgColor" class="dropdown-item" type="button">背景色</button>
+                            <button id="btnMenuBgImage" class="dropdown-item" type="button">背景画像</button>
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <button id="btnSaveMenu" class="btn btn-secondary btn-sm dropdown-toggle" type="button">⬇ 保存...</button>
+                        <div id="saveMenuContent" class="dropdown-menu">
+                            <button id="btnExportTile" class="dropdown-item" type="button">タイル</button>
+                            <button id="btnExportImage" class="dropdown-item" type="button">画像</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -133,8 +150,9 @@
             <div class="composition-canvas-area" id="compositionArea">
                 <div id="compositionEmpty" class="composition-empty">
                     <div class="composition-empty-icon">🎨</div>
-                    <div>お気に入りを追加して<br>「配置生成」をクリック</div>
+                    <div>お気に入りを追加して<br>「生成」をクリック</div>
                 </div>
+                <!-- CSSで背景を適用するため、ラッパー要素を追加またはCanvas自身に適用 -->
                 <div id="compositionCanvas" class="composition-canvas">
                     <!-- ここにSVGが挿入される -->
                 </div>
@@ -156,12 +174,14 @@
                 <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
             </svg>
             <span class="mobile-nav-label">ストック</span>
+            <span class="nav-badge" id="badge-favorites" style="display: none;"></span>
         </button>
         <button class="mobile-nav-btn" id="nav-btn-composition" type="button">
             <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
             </svg>
             <span class="mobile-nav-label">構成</span>
+            <span class="nav-badge" id="badge-composition" style="display: none;"></span>
         </button>
     </nav>
 
@@ -169,9 +189,19 @@
     <div id="paletteModal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
-                <span class="modal-title">🎨 カラーパレット</span>
+                <span class="modal-title">🎨 カラーパレット設定</span>
                 <button id="btnCloseModal" class="modal-close" type="button">✕</button>
             </div>
+            
+            <!-- キャンバス詳細設定 -->
+            <div class="palette-canvas-settings">
+                <div class="setting-group">
+                    <span class="setting-label">タイル透明度</span>
+                    <input type="range" id="tileOpacitySlider" class="range-slider" min="0.1" max="1.0" step="0.05" value="1.0">
+                    <span id="tileOpacityValue" class="range-value text-mono">1.0</span>
+                </div>
+            </div>
+
             <div class="palette-tags" id="paletteTags">
                 <!-- JSで生成 -->
             </div>
@@ -181,7 +211,62 @@
         </div>
     </div>
 
-    <!-- カラーピッカーポップオーバー -->
+    <!-- 背景色モーダル -->
+    <div id="bgColorModal" class="modal-overlay">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <span class="modal-title">背景色設定</span>
+                <button id="btnCloseBgColorModal" class="modal-close" type="button">✕</button>
+            </div>
+            <div class="modal-body modal-padding">
+                <div class="setting-group vertical">
+                    <span class="setting-label">色を選択</span>
+                    <input type="color" id="modalBgColorPicker" value="#ffffff" class="setting-color-input large">
+                </div>
+                <div class="setting-group vertical mt-4">
+                    <div class="label-with-value">
+                        <span class="setting-label">透明度 (オーバーレイ)</span>
+                        <span id="modalBgOpacityValue" class="range-value text-mono">1.0</span>
+                    </div>
+                    <input type="range" id="modalBgOpacitySlider" class="range-slider full-width" min="0.0" max="1.0" step="0.05" value="1.0">
+                </div>
+                <div class="modal-actions mt-4">
+                    <button class="btn btn-danger btn-full" type="button" id="btnModalBgColorClear">背景色をクリア</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 背景画像モーダル -->
+    <div id="bgImageModal" class="modal-overlay">
+        <div class="modal modal-md">
+            <div class="modal-header">
+                <span class="modal-title">背景画像設定</span>
+                <button id="btnCloseBgImageModal" class="modal-close" type="button">✕</button>
+            </div>
+            <div class="modal-body modal-padding">
+                <p class="text-sm text-tertiary mb-3">画像は自動的に1:1の正方形（中央）にトリミングされます。</p>
+                
+                <div class="image-preview-area" id="modalBgImagePreviewArea">
+                    <div class="image-preview-placeholder">
+                        <span class="preview-icon">🖼️</span>
+                        <span>画像が選択されていません</span>
+                    </div>
+                    <img id="modalBgImagePreview" class="image-preview-img" src="" style="display: none;">
+                </div>
+                
+                <div class="modal-actions mt-4 action-buttons">
+                    <button class="btn btn-primary" type="button" id="btnModalBgImageSelect">
+                        画像を選択
+                    </button>
+                    <input type="file" id="modalBgImageInput" accept="image/*" class="sr-only">
+                    <button class="btn btn-danger" type="button" id="btnModalBgImageClear" disabled>
+                        画像をクリア
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="colorPickerPopover" class="color-picker-popover">
         <input type="color" id="colorPickerInput" value="#333333">
         <div>
