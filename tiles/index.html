@@ -32,10 +32,10 @@
                 <div class="controls-row">
                     <div class="action-buttons">
                         <button id="btnGenNormal" class="btn btn-primary" type="button">
-                            <span class="btn-icon">↺</span> 通常生成
+                            <span class="btn-prefix">↺</span> 通常生成
                         </button>
                         <button id="btnGenComposite" class="btn btn-primary" type="button" title="複数の図形を重ね合わせた複雑なパターンを生成します">
-                            <span class="btn-icon">❖</span> 複合生成
+                            <span class="btn-prefix">❖</span> 複合生成
                         </button>
                     </div>
                     <div class="generator-options">
@@ -104,20 +104,9 @@
                 </div>
                 <div class="toolbar-separator"></div>
                 <div class="toolbar-group">
-                    <span class="toolbar-label">グリッド</span>
-                    <select id="gridSizeSelect" class="grid-size-select">
-                        <option value="4">4×4</option>
-                        <option value="6">6×6</option>
-                        <option value="8" selected>8×8</option>
-                        <option value="10">10×10</option>
-                        <option value="12">12×12</option>
-                    </select>
-                </div>
-                <div class="toolbar-separator"></div>
-                <div class="toolbar-group">
                     <span class="toolbar-label">空白率</span>
-                    <input type="range" id="blankSlider" class="range-slider" min="0" max="100" value="15">
-                    <span id="blankValue" class="range-value">15%</span>
+                    <input type="range" id="blankSlider" class="range-slider" min="0" max="100" value="0">
+                    <span id="blankValue" class="range-value">0%</span>
                 </div>
                 <div class="toolbar-separator"></div>
                 <div class="toolbar-group">
@@ -143,6 +132,25 @@
                             <button id="btnExportImage" class="dropdown-item" type="button">画像</button>
                         </div>
                     </div>
+                    <div class="dropdown">
+                        <button id="btnSettingsMenu" class="btn btn-secondary btn-sm dropdown-toggle btn-icon" type="button" title="設定">⚙</button>
+                        <div id="settingsMenuContent" class="dropdown-menu dropdown-menu-right">
+                            <div class="dropdown-header">グリッドサイズ</div>
+                            <div class="dropdown-item-content" style="padding: 0.5rem;">
+                                <select id="gridSizeSelect" class="grid-size-select" style="width: 100%;">
+                                    <option value="4">4×4</option>
+                                    <option value="6">6×6</option>
+                                    <option value="8">8×8</option>
+                                    <option value="10">10×10</option>
+                                    <option value="12">12×12</option>
+                                    <option value="16x9">16×9</option>
+                                    <option value="9x16" selected>9×16</option>
+                                    <option value="32x18">32×18</option>
+                                    <option value="18x32">18×32</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -156,6 +164,18 @@
                 <div id="compositionCanvas" class="composition-canvas">
                     <!-- ここにSVGが挿入される -->
                 </div>
+            </div>
+            
+            <!-- ズームコントロール -->
+            <div class="zoom-controls">
+                <span id="zoomValue" class="zoom-value" title="現在のズーム倍率">100%</span>
+                <button id="btnZoomOut" class="btn-zoom-inline" type="button" title="縮小">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                <button id="btnZoomIn" class="btn-zoom-inline" type="button" title="拡大">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                <button id="btnResetZoom" class="btn-zoom-reset-text" type="button" title="ズームをリセットして中央に戻す">リセット</button>
             </div>
         </section>
     </main>
@@ -245,7 +265,7 @@
                 <button id="btnCloseBgImageModal" class="modal-close" type="button">✕</button>
             </div>
             <div class="modal-body modal-padding">
-                <p class="text-sm text-tertiary mb-3">画像は自動的に1:1の正方形（中央）にトリミングされます。</p>
+                <p class="text-sm text-tertiary mb-3">画像は自動的に指定されたグリッドサイズの縦横比（中央）にトリミングされます。</p>
                 
                 <div class="image-preview-area" id="modalBgImagePreviewArea">
                     <div class="image-preview-placeholder">
