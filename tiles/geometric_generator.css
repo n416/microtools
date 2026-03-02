@@ -113,7 +113,7 @@ body {
 /* ---------- メインコンテナ（3ペイン） ---------- */
 .main-container {
   display: grid;
-  grid-template-columns: 320px 260px 1fr;
+  grid-template-columns: 0.5fr 0.5fr 1fr;
   height: calc(100vh - var(--header-height));
   overflow: hidden;
 }
@@ -125,6 +125,7 @@ body {
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-subtle);
   overflow: hidden;
+  position: relative; /* 子要素の絶対配置の基準にするため追加 */
 }
 
 .pane:last-child {
@@ -233,12 +234,22 @@ body {
   background: rgba(255, 107, 107, 0.1);
 }
 
+.btn-prefix {
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
 .btn-icon {
   width: 32px;
   height: 32px;
   padding: 0;
   border-radius: var(--radius-sm);
   font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-sm {
@@ -492,6 +503,13 @@ body {
   font-size: 11px;
   color: var(--text-tertiary);
   white-space: nowrap;
+  line-height: 1;
+}
+
+.toggle-row-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* スライダー */
@@ -1209,12 +1227,26 @@ body {
     display: none;
   }
 
-  /* パレットボタンとタイル保存ボタンを右下へ固定 (FAB) */
-  #btnPalette,
-  #btnExportAll {
+  /* 装飾と保存等のドロップダウンメニューを親ごと右下へ固定 (FAB) */
+  .composition-toolbar .toolbar-group:last-child {
     position: absolute;
     bottom: 24px;
+    right: 20px;
+    display: flex;
+    gap: 8px; /* ボタン同士の隙間を自動調整 */
     z-index: 100;
+  }
+
+  /* ドロップダウン自体の絶対配置は解除し、親のFlexに従わせる */
+  .composition-toolbar .toolbar-group:last-child .dropdown {
+    position: relative;
+    bottom: auto;
+    right: auto;
+    z-index: auto;
+  }
+
+  /* ドロップダウンボタン自体のスタイル調整 */
+  .composition-toolbar .dropdown .btn {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     border-radius: 20px;
     padding: 8px 16px;
@@ -1222,12 +1254,22 @@ body {
     font-weight: 600;
   }
 
-  /* ボタン同士が被らないよう右位置を調整 */
-  #btnPalette {
-    right: 20px;
+  /* ⚙ボタンなどアイコンボタンの場合は正円に近づける */
+  .composition-toolbar .dropdown .btn.btn-icon {
+    padding: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
   }
-  #btnExportAll {
-    right: 124px; /* パレットボタンの幅＋マージン分を確保 */
+
+  /* 下部で開くメニューは画面外にはみ出すので、上方向に開くよう調整 */
+  .dropdown-menu {
+    top: auto;
+    bottom: calc(100% + 8px);
+    right: 0;
   }
 
   /* カラーパレットモーダル：全画面オーバーレイ */
@@ -1348,5 +1390,116 @@ body {
     min-width: 16px;
     z-index: 10;
     pointer-events: none;
+  }
+}
+
+/* ---------- ズームコントロール (Premium UI) ---------- */
+.zoom-controls {
+  position: absolute;
+  top: 10px; /* ツールバーの下部あたりに配置 */
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); /* 少し丸みのある四角形 */
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2);
+  z-index: 50;
+  pointer-events: auto;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.zoom-controls:hover {
+  background: rgba(42, 42, 58, 0.95);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+.zoom-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  min-width: 44px;
+  text-align: center;
+  letter-spacing: 0.05em;
+  margin-right: 4px;
+}
+
+.btn-zoom-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-zoom-inline:hover {
+  background: var(--bg-hover);
+}
+
+.btn-zoom-inline:active {
+  transform: scale(0.95);
+}
+
+.btn-zoom-inline svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+}
+
+.btn-zoom-reset-text {
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-zoom-reset-text:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-secondary);
+}
+
+.btn-zoom-reset-text:active {
+  transform: scale(0.95);
+}
+
+/* モバイル向け配置調整 */
+@media (max-width: 768px) {
+  .zoom-controls {
+    top: 12px;
+    right: 12px;
+    padding: 4px 6px;
+    gap: 4px;
+  }
+  .zoom-value {
+    font-size: 11px;
+    min-width: 38px;
+  }
+  .btn-zoom-inline {
+    width: 24px;
+    height: 24px;
+  }
+  .btn-zoom-inline svg {
+    width: 14px;
+    height: 14px;
+  }
+  .btn-zoom-reset-text {
+    font-size: 10px;
+    padding: 3px 8px;
   }
 }

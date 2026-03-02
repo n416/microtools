@@ -24,6 +24,7 @@ const state = {
   canvasBgColor: '#ffffff',
   canvasBgOpacity: 1.0,
   canvasBgImage: null,
+  originalCanvasBgImage: null,
   tileOpacity: 1.0,
 
   /* カラーパレット */
@@ -377,14 +378,50 @@ function generateAllTiles() {
   while (state.generatedTiles.length < targetCount && attempts < maxAttempts) {
     attempts++;
     var sd = generateShapeData(state.compositeMode);
-    var key = shapeDataKey(sd, ignoreRotation);
+
     /* 空白のみのタイルはスキップ */
     var allBlank = sd.layers.every(function (l) { return l.type === 'blank'; });
     if (allBlank) continue;
 
+    /* 重複判定のための正規化キー生成 */
+    var canonicalKey = "";
+    if (ignoreRotation) {
+      // 複合OFF時は、配置や回転を一切無視して純粋な図形種別・反転状態のみをキーにする
+      var l0 = sd.layers[0];
+      canonicalKey = l0.type + (l0.inverted ? "_inv" : "");
+    } else {
+      var keysRound = [];
+      for (var angle = 0; angle < 360; angle += 90) {
+        var layerKeys = sd.layers.map(function (l) {
+          var newRot = (l.rotation + angle) % 360;
+          var newIndices = l.gridIndices ? l.gridIndices.slice() : null;
+
+          if (newIndices) {
+            var steps = newRot / 90;
+            var map90 = { 0: 1, 1: 3, 3: 2, 2: 0 };
+            for (var i = 0; i < steps; i++) {
+              newIndices = newIndices.map(function (idx) { return map90[idx]; });
+            }
+            newIndices.sort(function (a, b) { return a - b; });
+            // グリッド図形の回転は全て位置移動に吸収されるため、回転角を0に固定
+            newRot = 0;
+          } else if (['square', 'blank', 'circle-center', 'circle-center-large', 'circle-corners', 'square-center', 'symbol-star', 'symbol-clover-4'].indexOf(l.type) !== -1) {
+            newRot = 0;
+          } else if (l.type === 'symbol-diamond') {
+            newRot = newRot % 180;
+          }
+
+          return l.type + '_' + newRot + (newIndices ? '_g' + newIndices.join('') : '') + (l.inverted ? '_inv' : '');
+        });
+        keysRound.push(layerKeys.join('|'));
+      }
+      keysRound.sort();
+      canonicalKey = keysRound[0];
+    }
+
     /* 重複判定 */
-    if (!seen[key]) {
-      seen[key] = true;
+    if (!seen[canonicalKey]) {
+      seen[canonicalKey] = true;
       state.generatedTiles.push(sd);
     }
   }
@@ -623,6 +660,17 @@ function closeColorPicker() {
 
 /* ===== 第3ペイン：コンポジション ===== */
 
+/** グリッド寸法のパース */
+function getGridDimensions() {
+  var val = document.getElementById('gridSizeSelect').value;
+  if (val.indexOf('x') !== -1) {
+    var parts = val.split('x');
+    return { cols: parseInt(parts[0], 10), rows: parseInt(parts[1], 10) };
+  }
+  var size = parseInt(val, 10);
+  return { cols: size, rows: size };
+}
+
 /** コンポジション生成 */
 function generateComposition() {
   if (state.favorites.length === 0) {
@@ -630,49 +678,44 @@ function generateComposition() {
     return;
   }
 
-  var gridSize = parseInt(document.getElementById('gridSizeSelect').value);
-  var blankRate = parseInt(document.getElementById('blankSlider').value) / 100;
+  var dims = getGridDimensions();
+  var cols = dims.cols;
+  var rows = dims.rows;
   var tiles = [];
 
-  for (var i = 0; i < gridSize * gridSize; i++) {
-    var cIndex = state.randomColorMode ? Math.floor(Math.random() * 5) : i % 5;
-    if (Math.random() < blankRate) {
-      tiles.push({
-        id: 'tile_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 6),
-        shapeData: { layers: [{ type: 'blank', rotation: 0 }] },
-        rotation: 0,
-        favId: null,
-        paletteColorIndex: cIndex,
-        lockedColor: null
-      });
-    } else {
-      var fav = randomFrom(state.favorites);
+  for (var i = 0; i < cols * rows; i++) {
+    var randomColorIndex = Math.floor(Math.random() * 5);
+    var baseColorIndex = i % 5;
+    var blankPriority = Math.random();
 
-      // コンポジションの初期生成時にも、垂直固定シンボルがある場合は0/180度に限定
-      var initRotation = randomFrom(ROTATIONS);
-      for (var k = 0; k < fav.shapeData.layers.length; k++) {
-        var sType = fav.shapeData.layers[k].type;
-        if (['symbol-star', 'symbol-heart', 'symbol-clover-3', 'symbol-clover-4', 'symbol-spade', 'symbol-drop'].indexOf(sType) !== -1) {
-          initRotation = randomFrom([0, 180]);
-          break;
-        }
+    var fav = randomFrom(state.favorites);
+
+    // コンポジションの初期生成時にも、垂直固定シンボルがある場合は0/180度に限定
+    var initRotation = randomFrom(ROTATIONS);
+    for (var k = 0; k < fav.shapeData.layers.length; k++) {
+      var sType = fav.shapeData.layers[k].type;
+      if (['symbol-star', 'symbol-heart', 'symbol-clover-3', 'symbol-clover-4', 'symbol-spade', 'symbol-drop'].indexOf(sType) !== -1) {
+        initRotation = randomFrom([0, 180]);
+        break;
       }
-
-      tiles.push({
-        id: 'tile_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 6),
-        shapeData: JSON.parse(JSON.stringify(fav.shapeData)),
-        rotation: initRotation,
-        favId: fav.id,
-        paletteColorIndex: cIndex,
-        lockedColor: fav.lockedColor
-      });
     }
+
+    tiles.push({
+      id: 'tile_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 6),
+      shapeData: JSON.parse(JSON.stringify(fav.shapeData)),
+      rotation: initRotation,
+      favId: fav.id,
+      randomColorIndex: randomColorIndex,
+      baseColorIndex: baseColorIndex,
+      blankPriority: blankPriority,
+      lockedColor: fav.lockedColor
+    });
   }
 
   /* Undoスタック保存 */
   pushUndo();
 
-  state.composition = { gridSize: gridSize, tiles: tiles };
+  state.composition = { cols: cols, rows: rows, gridSize: Math.max(cols, rows), tiles: tiles };
   renderComposition();
   showToast('コンポジション生成完了', '✨');
 
@@ -694,15 +737,18 @@ function renderComposition() {
   }
   emptyEl.classList.add('sr-only');
 
-  var gs = state.composition.gridSize;
-  var totalSize = gs * TILE_SIZE;
+  var gs = state.composition.gridSize || 8;
+  var cols = state.composition.cols || gs;
+  var rows = state.composition.rows || gs;
+  var totalWidth = cols * TILE_SIZE;
+  var totalHeight = rows * TILE_SIZE;
 
   var svg = document.getElementById('compositionSVG');
   // SVGが存在しない、またはグリッドサイズが変わった場合は作り直す
-  if (!svg || svg.getAttribute('viewBox') !== '0 0 ' + totalSize + ' ' + totalSize) {
+  if (!svg || svg.getAttribute('viewBox') !== '0 0 ' + totalWidth + ' ' + totalHeight) {
     canvasEl.innerHTML = '';
     svg = document.createElementNS(SVG_NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 ' + totalSize + ' ' + totalSize);
+    svg.setAttribute('viewBox', '0 0 ' + totalWidth + ' ' + totalHeight);
     svg.setAttribute('width', '100%');
     svg.setAttribute('height', '100%');
     svg.setAttribute('xmlns', SVG_NS);
@@ -712,30 +758,31 @@ function renderComposition() {
        ここでは背景画像を敷き、その上に透過色を被せる。
        エクスポート時はこの背景用要素ではなく、別途Canvas側で描画順を制御する方針に変更 */
     var bg = document.createElementNS(SVG_NS, 'rect');
-    bg.setAttribute('width', totalSize);
-    bg.setAttribute('height', totalSize);
+    bg.setAttribute('width', totalWidth);
+    bg.setAttribute('height', totalHeight);
     bg.setAttribute('fill', 'transparent');
     bg.id = 'compositionSvgBg';
     svg.appendChild(bg);
 
     /* グリッド作成（タイルの背面にするためここで追加） */
-    for (var i = 1; i < gs; i++) {
+    for (var i = 1; i < rows; i++) {
       var lineH = document.createElementNS(SVG_NS, 'line');
       lineH.className = 'grid-line';
       lineH.setAttribute('x1', 0);
       lineH.setAttribute('y1', i * TILE_SIZE);
-      lineH.setAttribute('x2', totalSize);
+      lineH.setAttribute('x2', totalWidth);
       lineH.setAttribute('y2', i * TILE_SIZE);
       lineH.setAttribute('stroke', 'rgba(0,0,0,0.03)');
       lineH.setAttribute('stroke-width', '0.3');
       svg.appendChild(lineH);
-
+    }
+    for (var j = 1; j < cols; j++) {
       var lineV = document.createElementNS(SVG_NS, 'line');
       lineV.className = 'grid-line';
-      lineV.setAttribute('x1', i * TILE_SIZE);
+      lineV.setAttribute('x1', j * TILE_SIZE);
       lineV.setAttribute('y1', 0);
-      lineV.setAttribute('x2', i * TILE_SIZE);
-      lineV.setAttribute('y2', totalSize);
+      lineV.setAttribute('x2', j * TILE_SIZE);
+      lineV.setAttribute('y2', totalHeight);
       lineV.setAttribute('stroke', 'rgba(0,0,0,0.03)');
       lineV.setAttribute('stroke-width', '0.3');
       svg.appendChild(lineV);
@@ -745,6 +792,7 @@ function renderComposition() {
   }
 
   var palette = state.currentPalette ? state.currentPalette.colors : ['#212529', '#495057', '#6c757d', '#adb5bd', '#dee2e6'];
+  var blankRate = parseInt(document.getElementById('blankSlider').value) / 100;
 
   // 現在のタイルのIDセットを取得（削除されたタイルを特定するため）
   var activeIds = new Set(state.composition.tiles.map(function (t) { return t.id; }));
@@ -763,8 +811,8 @@ function renderComposition() {
       tile.id = 'tile_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).slice(2, 6);
     }
 
-    var col = idx % gs;
-    var row = Math.floor(idx / gs);
+    var col = idx % cols;
+    var row = Math.floor(idx / cols);
     var x = col * TILE_SIZE;
     var y = row * TILE_SIZE;
 
@@ -809,19 +857,6 @@ function renderComposition() {
     // 個別の白背景は透過を妨げるため追加しない
     // (以前の仕様: 隙間対策で tileBg を追加していた)
 
-    var tileColors;
-    if (tile.lockedColor) {
-      tileColors = [tile.lockedColor];
-    } else {
-      tileColors = [palette[tile.paletteColorIndex % palette.length]];
-      /* 複合図形の場合、複数色を割り当て */
-      if (tile.shapeData.layers.length > 1) {
-        tileColors = tile.shapeData.layers.map(function (_, i) {
-          return palette[(tile.paletteColorIndex + i) % palette.length];
-        });
-      }
-    }
-
     /* 追加の回転を適用 */
     var innerG = document.createElementNS(SVG_NS, 'g');
     if (tile.rotation !== 0) {
@@ -837,7 +872,31 @@ function renderComposition() {
       innerG.setAttribute('opacity', state.tileOpacity);
     }
 
-    innerG.appendChild(renderShapeToSVG(tile.shapeData, TILE_SIZE, tileColors));
+    /* 空白判定 */
+    var isBlank = (!isNaN(tile.blankPriority) && tile.blankPriority < blankRate) || (tile.shapeData.layers.every(function (l) { return l.type === 'blank'; }));
+
+    if (isBlank) {
+      innerG.appendChild(renderShapeToSVG({ layers: [{ type: 'blank', rotation: 0 }] }, TILE_SIZE, []));
+    } else {
+      var tileColors;
+      if (tile.lockedColor) {
+        tileColors = [tile.lockedColor];
+      } else {
+        var cIndex = state.randomColorMode ? (tile.randomColorIndex || 0) : (tile.baseColorIndex || 0);
+        // 古いデータ構造からの移行のために paletteColorIndex も一応チェック
+        if (tile.randomColorIndex === undefined && tile.baseColorIndex === undefined && tile.paletteColorIndex !== undefined) {
+          cIndex = tile.paletteColorIndex;
+        }
+        tileColors = [palette[cIndex % palette.length]];
+        /* 複合図形の場合、複数色を割り当て */
+        if (tile.shapeData.layers.length > 1) {
+          tileColors = tile.shapeData.layers.map(function (_, i) {
+            return palette[(cIndex + i) % palette.length];
+          });
+        }
+      }
+      innerG.appendChild(renderShapeToSVG(tile.shapeData, TILE_SIZE, tileColors));
+    }
     tileG.appendChild(innerG);
   });
 
@@ -879,18 +938,29 @@ function updateCompositionZoom() {
   var svg = document.getElementById('compositionSVG');
   if (!canvasEl || !svg) return;
 
-  var gs = state.composition.gridSize;
-  var totalSize = gs * TILE_SIZE;
-  var scaledSize = totalSize * state.compositionZoom;
+  var gs = state.composition.gridSize || 8;
+  var cols = state.composition.cols || gs;
+  var rows = state.composition.rows || gs;
+  var totalWidth = cols * TILE_SIZE;
+  var totalHeight = rows * TILE_SIZE;
+  var scaledWidth = totalWidth * state.compositionZoom;
+  var scaledHeight = totalHeight * state.compositionZoom;
 
-  canvasEl.style.width = scaledSize + 'px';
-  canvasEl.style.height = scaledSize + 'px';
+  canvasEl.style.width = scaledWidth + 'px';
+  canvasEl.style.height = scaledHeight + 'px';
   // CSSのmax-width/max-heightを無効化して拡大できるようにする
   canvasEl.style.maxWidth = 'none';
   canvasEl.style.maxHeight = 'none';
 
-  svg.setAttribute('width', scaledSize);
-  svg.setAttribute('height', scaledSize);
+  svg.setAttribute('width', scaledWidth);
+  svg.setAttribute('height', scaledHeight);
+
+  // ズーム倍率のUI表示更新を追加
+  var zoomValueEl = document.getElementById('zoomValue');
+  if (zoomValueEl) {
+    var percent = Math.round(state.compositionZoom * 100);
+    zoomValueEl.textContent = percent + '%';
+  }
 }
 
 /** タイル回転 */
@@ -1061,18 +1131,20 @@ function handlePointerMove(e) {
     var localX = (e.clientX - rect.left) / state.compositionZoom;
     var localY = (e.clientY - rect.top) / state.compositionZoom;
 
-    var gs = state.composition.gridSize;
+    var gs = state.composition.gridSize || 8;
+    var cols = state.composition.cols || gs;
+    var rows = state.composition.rows || gs;
     // 枠外へのドラッグは無視
-    if (localX >= 0 && localX < gs * TILE_SIZE && localY >= 0 && localY < gs * TILE_SIZE) {
+    if (localX >= 0 && localX < cols * TILE_SIZE && localY >= 0 && localY < rows * TILE_SIZE) {
       var col = Math.floor(localX / TILE_SIZE);
       var row = Math.floor(localY / TILE_SIZE);
-      var targetIdx = row * gs + col;
+      var targetIdx = row * cols + col;
       var sourceIdx = state.dragState.tileIdx;
 
       // 無関係なセルとの入れ替え（特に遠く離れたセルへのジャンプ）を防ぐため、
       // 現在のインデックスから前後左右（または斜め）の隣接セルにのみ入れ替えを許可する
-      var sCol = sourceIdx % gs;
-      var sRow = Math.floor(sourceIdx / gs);
+      var sCol = sourceIdx % cols;
+      var sRow = Math.floor(sourceIdx / cols);
 
       var isAdjacent = Math.abs(col - sCol) <= 1 && Math.abs(row - sRow) <= 1;
 
@@ -1291,12 +1363,23 @@ function exportComposition() {
     bgObj.setAttribute('fill', 'white'); // エクスポート時は白背景を適用
   }
 
+  // 追加: エクスポート時は実寸サイズを明示
+  var prevWidth = svg.getAttribute('width');
+  var prevHeight = svg.getAttribute('height');
+  var gs = state.composition.gridSize || 8;
+  var cols = state.composition.cols || gs;
+  var rows = state.composition.rows || gs;
+  svg.setAttribute('width', cols * TILE_SIZE);
+  svg.setAttribute('height', rows * TILE_SIZE);
+
   exportSVG(svg, 'composition_' + Date.now() + '.svg');
 
   // 状態復元
   if (bgObj) {
     bgObj.setAttribute('fill', prevFill);
   }
+  svg.setAttribute('width', prevWidth);
+  svg.setAttribute('height', prevHeight);
 
   showToast('タイルSVGを保存しました', '⬇');
 }
@@ -1310,6 +1393,14 @@ function exportCompositionAsImage() {
 
   var clone = svg.cloneNode(true);
   clone.setAttribute('xmlns', SVG_NS);
+
+  // 追加: エクスポート時は実寸サイズを明示（ブラウザのviewport依存を避ける）
+  var gs = state.composition.gridSize || 8;
+  var cols = state.composition.cols || gs;
+  var rows = state.composition.rows || gs;
+  clone.setAttribute('width', cols * TILE_SIZE);
+  clone.setAttribute('height', rows * TILE_SIZE);
+
   var serializer = new XMLSerializer();
   var source = serializer.serializeToString(clone);
 
@@ -1319,9 +1410,11 @@ function exportCompositionAsImage() {
 
   img.onload = function () {
     var canvas = document.createElement('canvas');
-    var size = state.composition.gridSize * TILE_SIZE;
-    canvas.width = size;
-    canvas.height = size;
+    var gs = state.composition.gridSize || 8;
+    var cols = state.composition.cols || gs;
+    var rows = state.composition.rows || gs;
+    canvas.width = cols * TILE_SIZE;
+    canvas.height = rows * TILE_SIZE;
     var ctx = canvas.getContext('2d');
 
     var drawAndExport = function () {
@@ -1441,9 +1534,10 @@ function initPinchZoom(compArea) {
           if (el) {
             el.classList.remove('dragging');
             el.style.opacity = '';
-            var gs = state.composition.gridSize;
-            var col = canceledIdx % gs;
-            var row = Math.floor(canceledIdx / gs);
+            var gs = state.composition.gridSize || 8;
+            var cols = state.composition.cols || gs;
+            var col = canceledIdx % cols;
+            var row = Math.floor(canceledIdx / cols);
             el.style.transform = 'translate(' + (col * TILE_SIZE) + 'px,' + (row * TILE_SIZE) + 'px)';
           }
         }
@@ -1510,6 +1604,29 @@ function initPinchZoom(compArea) {
   });
 }
 
+/* ===== UIポジション調整 ===== */
+function adjustDropdownPosition(menuElement) {
+  if (window.innerWidth <= 768) {
+    menuElement.style.left = '';
+    menuElement.style.right = '';
+    return;
+  }
+
+  // 位置の測定のためインラインスタイルをリフレッシュ
+  menuElement.style.left = '';
+  menuElement.style.right = '';
+
+  var rect = menuElement.getBoundingClientRect();
+  var compPane = document.getElementById('pane-composition');
+  var paneRect = compPane ? compPane.getBoundingClientRect() : { left: 0, right: window.innerWidth };
+
+  // メニューの左端がペインの左端を越えて隠れてしまう場合は、基準を右から左に変更する
+  if (rect.left < paneRect.left) {
+    menuElement.style.right = 'auto';
+    menuElement.style.left = '0';
+  }
+}
+
 /* ===== イベントバインド ===== */
 function initEvents() {
   /* 第1ペイン */
@@ -1544,15 +1661,21 @@ function initEvents() {
     generateComposition();
   });
   document.getElementById('btnUndo').addEventListener('click', undo);
-  document.getElementById('gridSizeSelect').addEventListener('change', generateComposition);
+  document.getElementById('gridSizeSelect').addEventListener('change', function () {
+    generateComposition();
+    if (state.originalCanvasBgImage) {
+      applyBackgroundImageCrop();
+    }
+  });
   document.getElementById('blankSlider').addEventListener('input', function () {
     document.getElementById('blankValue').textContent = this.value + '%';
+    if (state.composition) renderComposition();
   });
   document.getElementById('toggleRandomColor').addEventListener('click', function () {
     state.randomColorMode = !state.randomColorMode;
     this.classList.toggle('active', state.randomColorMode);
     this.setAttribute('aria-pressed', state.randomColorMode);
-    generateComposition();
+    if (state.composition) renderComposition();
   });
 
   document.getElementById('toggleAutoGenerate').addEventListener('click', function () {
@@ -1613,6 +1736,71 @@ function initEvents() {
     initPinchZoom(compArea);
   }
 
+  /* ズーム用インラインボタン (+/-) */
+  var zoomStep = 0.1;
+  var minZoom = 0.1;
+  var maxZoom = 5.0;
+
+  var btnZoomOut = document.getElementById('btnZoomOut');
+  if (btnZoomOut) {
+    btnZoomOut.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!state.composition) return;
+      state.compositionZoom = Math.max(minZoom, state.compositionZoom - zoomStep);
+      updateCompositionZoom();
+    });
+  }
+
+  var btnZoomIn = document.getElementById('btnZoomIn');
+  if (btnZoomIn) {
+    btnZoomIn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!state.composition) return;
+      state.compositionZoom = Math.min(maxZoom, state.compositionZoom + zoomStep);
+      updateCompositionZoom();
+    });
+  }
+
+  /* ズームリセットボタン */
+  var btnResetZoom = document.getElementById('btnResetZoom');
+  if (btnResetZoom) {
+    btnResetZoom.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!state.composition) return;
+      state.compositionZoom = 1.0;
+      updateCompositionZoom();
+
+      // リセット時にスクロールも中央へ戻す（オプション）
+      var compArea = document.getElementById('compositionArea');
+      if (compArea) {
+        compArea.scrollLeft = 0;
+        compArea.scrollTop = 0;
+      }
+    });
+  }
+
+  /* 新規：設定（歯車）メニュー */
+  var btnSettingsMenu = document.getElementById('btnSettingsMenu');
+  var settingsMenuContent = document.getElementById('settingsMenuContent');
+
+  if (btnSettingsMenu && settingsMenuContent) {
+    btnSettingsMenu.addEventListener('click', function (e) {
+      e.stopPropagation();
+      settingsMenuContent.classList.toggle('visible');
+    });
+
+    document.addEventListener('click', function (e) {
+      if (settingsMenuContent.classList.contains('visible') && e.target !== btnSettingsMenu && !settingsMenuContent.contains(e.target)) {
+        settingsMenuContent.classList.remove('visible');
+      }
+    });
+
+    // グリッドサイズが変わったときはメニューを閉じる
+    document.getElementById('gridSizeSelect').addEventListener('change', function () {
+      settingsMenuContent.classList.remove('visible');
+    });
+  }
+
   /* 新規：装飾メニュー */
   var btnDecorationMenu = document.getElementById('btnDecorationMenu');
   var decorationMenuContent = document.getElementById('decorationMenuContent');
@@ -1621,6 +1809,9 @@ function initEvents() {
     btnDecorationMenu.addEventListener('click', function (e) {
       e.stopPropagation();
       decorationMenuContent.classList.toggle('visible');
+      if (decorationMenuContent.classList.contains('visible')) {
+        adjustDropdownPosition(decorationMenuContent);
+      }
     });
 
     document.addEventListener('click', function (e) {
@@ -1735,6 +1926,48 @@ function initEvents() {
     });
   }
 
+  /* 背景画像クロップの適用 */
+  function applyBackgroundImageCrop() {
+    if (!state.originalCanvasBgImage) return;
+
+    var img = new Image();
+    img.onload = function () {
+      var dims = getGridDimensions();
+      var targetRatio = dims.cols / dims.rows;
+      var imgRatio = img.width / img.height;
+      var cropWidth, cropHeight, cropX, cropY;
+
+      if (imgRatio > targetRatio) {
+        cropHeight = img.height;
+        cropWidth = img.height * targetRatio;
+        cropX = (img.width - cropWidth) / 2;
+        cropY = 0;
+      } else {
+        cropWidth = img.width;
+        cropHeight = img.width / targetRatio;
+        cropX = 0;
+        cropY = (img.height - cropHeight) / 2;
+      }
+
+      var cropCanvas = document.createElement('canvas');
+      cropCanvas.width = cropWidth;
+      cropCanvas.height = cropHeight;
+      var ctx = cropCanvas.getContext('2d');
+      ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+      var croppedUrl = cropCanvas.toDataURL('image/jpeg', 0.85);
+      state.canvasBgImage = croppedUrl;
+
+      var modalBgImagePreview = document.getElementById('modalBgImagePreview');
+      if (modalBgImagePreview) {
+        modalBgImagePreview.src = croppedUrl;
+      }
+
+      if (state.composition) renderComposition();
+    };
+    img.src = state.originalCanvasBgImage;
+  }
+
   /* 背景画像モーダル内の設定（クライアントサイドトリミング） */
   var btnModalBgImageSelect = document.getElementById('btnModalBgImageSelect');
   var modalBgImageInput = document.getElementById('modalBgImageInput');
@@ -1750,30 +1983,11 @@ function initEvents() {
       if (e.target.files && e.target.files[0]) {
         var reader = new FileReader();
         reader.onload = function (evt) {
-          var img = new Image();
-          img.onload = function () {
-            // 画像の中央から1:1の正方形にトリミングするCanvas処理
-            var minSize = Math.min(img.width, img.height);
-            var cropX = (img.width - minSize) / 2;
-            var cropY = (img.height - minSize) / 2;
+          state.originalCanvasBgImage = evt.target.result;
+          applyBackgroundImageCrop();
 
-            var cropCanvas = document.createElement('canvas');
-            // 適度な解像度に抑える（ここでは最大を1024等にすることも可能だが元サイズを生かす）
-            cropCanvas.width = minSize;
-            cropCanvas.height = minSize;
-            var ctx = cropCanvas.getContext('2d');
-            ctx.drawImage(img, cropX, cropY, minSize, minSize, 0, 0, minSize, minSize);
-
-            var croppedUrl = cropCanvas.toDataURL('image/jpeg', 0.85);
-
-            state.canvasBgImage = croppedUrl;
-            modalBgImagePreview.src = croppedUrl;
-            modalBgImagePreview.style.display = 'block';
-            btnModalBgImageClear.disabled = false;
-
-            if (state.composition) renderComposition();
-          };
-          img.src = evt.target.result;
+          modalBgImagePreview.style.display = 'block';
+          btnModalBgImageClear.disabled = false;
         };
         reader.readAsDataURL(e.target.files[0]);
       }
@@ -1781,6 +1995,7 @@ function initEvents() {
 
     btnModalBgImageClear.addEventListener('click', function () {
       state.canvasBgImage = null;
+      state.originalCanvasBgImage = null;
       modalBgImageInput.value = '';
       modalBgImagePreview.src = '';
       modalBgImagePreview.style.display = 'none';
@@ -1808,6 +2023,9 @@ function initEvents() {
     btnSaveMenu.addEventListener('click', function (e) {
       e.stopPropagation();
       saveMenuContent.classList.toggle('visible');
+      if (saveMenuContent.classList.contains('visible')) {
+        adjustDropdownPosition(saveMenuContent);
+      }
     });
 
     document.addEventListener('click', function (e) {
