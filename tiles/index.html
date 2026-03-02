@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometric Pattern Generator Pro</title>
+    <meta name="description" content="幾何学パターンを直感的に制作できるプロフェッショナルツール">
+    <link rel="stylesheet" href="geometric_generator.css">
+</head>
+<body>
+
+    <!-- ヘッダー -->
+    <header class="app-header">
+        <div class="app-title">
+            <div class="app-title-icon">◆</div>
+            <span>Geometric Pattern Generator Pro</span>
+        </div>
+        <div class="header-actions">
+            <!-- ボタンはツールバー側に移動済み -->
+        </div>
+    </header>
+
+    <!-- 3ペインレイアウト -->
+    <main class="main-container">
+
+        <!-- 第1ペイン：ランダム生成 -->
+        <section class="pane" id="pane-generator">
+            <div class="pane-header">
+                <div class="pane-title">ランダム生成</div>
+                <div class="pane-subtitle">クリックでストック、被りなし200個</div>
+            </div>
+                <div class="controls-row">
+                    <div class="action-buttons">
+                        <button id="btnGenNormal" class="btn btn-primary" type="button">
+                            <span class="btn-icon">↺</span> 通常生成
+                        </button>
+                        <button id="btnGenComposite" class="btn btn-primary" type="button" title="複数の図形を重ね合わせた複雑なパターンを生成します">
+                            <span class="btn-icon">❖</span> 複合生成
+                        </button>
+                    </div>
+                    <div class="generator-options">
+                        <label class="checkbox-label" title="細かい分割枠パターンを含める">
+                            <input type="checkbox" id="checkIncludeGrid">
+                            <span class="checkbox-text">分割を含める</span>
+                        </label>
+                        <label class="checkbox-label" title="星やハートなどの装飾シンボルを含める">
+                            <input type="checkbox" id="checkIncludeSymbol">
+                            <span class="checkbox-text">シンボルを含める</span>
+                        </label>
+                    </div>
+                </div>
+            <div class="pane-body">
+                <div id="generatorGrid" class="generator-grid">
+                    <!-- 100個のタイルがJSで生成される -->
+                </div>
+
+                <div class="shortcuts-hint">
+                    <div class="shortcuts-hint-item">
+                        <span class="kbd">Click</span>
+                        <span>タイルをストック
+                    </div>
+                    <div class="shortcuts-hint-item">
+                        <span class="kbd">Space</span>
+                        <span>全て再生成</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第2ペイン：お気に入り -->
+        <section class="pane" id="pane-favorites">
+            <div class="pane-header">
+                <div class="pane-title">お気に入り <span id="favCount">(0)</span></div>
+                <div class="pane-subtitle">パターン素材のストック</div>
+            </div>
+            <div class="pane-body">
+                <div id="favoritesGrid" class="favorites-grid">
+                    <!-- 空状態 -->
+                </div>
+                <div id="favoritesEmpty" class="favorites-empty">
+                    <div class="favorites-empty-icon">📦</div>
+                    <div>まだストックがありません</div>
+                    <div>左ペインの「＋ ストック」で追加</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第3ペイン：コンポジション -->
+        <section class="pane" id="pane-composition">
+            <div class="pane-header">
+                <div class="pane-title">コンポジション</div>
+                <div class="pane-subtitle">素材を配置してデザインを構成</div>
+            </div>
+
+            <!-- ツールバー -->
+            <div class="composition-toolbar">
+                <div class="toolbar-group">
+                    <button id="btnGenComposition" class="btn btn-primary btn-sm" type="button">▶ 配置生成</button>
+                    <button id="btnUndo" class="btn btn-ghost btn-sm" type="button" title="元に戻す (Ctrl+Z)">↩</button>
+                </div>
+                <div class="toolbar-separator"></div>
+                <div class="toolbar-group">
+                    <span class="toolbar-label">グリッド</span>
+                    <select id="gridSizeSelect" class="grid-size-select">
+                        <option value="4">4×4</option>
+                        <option value="6">6×6</option>
+                        <option value="8" selected>8×8</option>
+                        <option value="10">10×10</option>
+                        <option value="12">12×12</option>
+                    </select>
+                </div>
+                <div class="toolbar-separator"></div>
+                <div class="toolbar-group">
+                    <span class="toolbar-label">空白率</span>
+                    <input type="range" id="blankSlider" class="range-slider" min="0" max="100" value="15">
+                    <span id="blankValue" class="range-value">15%</span>
+                </div>
+                <div class="toolbar-separator"></div>
+                <div class="toolbar-group">
+                    <div class="toggle-row-inline">
+                        <span class="toolbar-label">ランダム配色</span>
+                        <button id="toggleRandomColor" class="toggle-switch" type="button" aria-pressed="false"></button>
+                    </div>
+                </div>
+                <div class="toolbar-separator"></div>
+                <div class="toolbar-group">
+                    <button id="btnPalette" class="btn btn-secondary btn-sm" type="button">🎨 パレット</button>
+                    <button id="btnExportAll" class="btn btn-secondary btn-sm" type="button">⬇ 全体保存</button>
+                </div>
+            </div>
+
+            <!-- キャンバスエリア -->
+            <div class="composition-canvas-area" id="compositionArea">
+                <div id="compositionEmpty" class="composition-empty">
+                    <div class="composition-empty-icon">🎨</div>
+                    <div>お気に入りを追加して<br>「配置生成」をクリック</div>
+                </div>
+                <div id="compositionCanvas" class="composition-canvas">
+                    <!-- ここにSVGが挿入される -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- カラーパレットモーダル -->
+    <div id="paletteModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">🎨 カラーパレット</span>
+                <button id="btnCloseModal" class="modal-close" type="button">✕</button>
+            </div>
+            <div class="palette-tags" id="paletteTags">
+                <!-- JSで生成 -->
+            </div>
+            <div class="palette-grid" id="paletteGrid">
+                <!-- JSで生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- カラーピッカーポップオーバー -->
+    <div id="colorPickerPopover" class="color-picker-popover">
+        <input type="color" id="colorPickerInput" value="#333333">
+        <div>
+            <button id="btnApplyColor" class="btn btn-primary btn-sm btn-full" type="button">適用</button>
+            <button id="btnClearColor" class="btn btn-danger btn-sm btn-full" type="button">解除</button>
+        </div>
+    </div>
+
+    <!-- トースト通知コンテナ -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="geometric_palettes.js"></script>
+    <script src="geometric_generator.js"></script>
+</body>
+</html>
