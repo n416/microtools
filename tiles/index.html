@@ -142,6 +142,29 @@
         </section>
     </main>
 
+    <!-- モバイル用ボトムナビゲーション -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="モバイルナビゲーション">
+        <button class="mobile-nav-btn active" id="nav-btn-generator" type="button" aria-current="page">
+            <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            <span class="mobile-nav-label">生成</span>
+        </button>
+        <button class="mobile-nav-btn" id="nav-btn-favorites" type="button">
+            <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+            </svg>
+            <span class="mobile-nav-label">ストック</span>
+        </button>
+        <button class="mobile-nav-btn" id="nav-btn-composition" type="button">
+            <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+            </svg>
+            <span class="mobile-nav-label">構成</span>
+        </button>
+    </nav>
+
     <!-- カラーパレットモーダル -->
     <div id="paletteModal" class="modal-overlay">
         <div class="modal">

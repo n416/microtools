@@ -33,7 +33,10 @@ const state = {
     currentX: 0,
     currentY: 0,
     hasMoved: false         // 移動したかどうか（クリックとドラッグの判定用）
-  }
+  },
+
+  /* モバイルタブ管理 */
+  activeTab: 'pane-generator'  // 現在アクティブなモバイルタブのID
 };
 
 /* ===== 定数 ===== */
@@ -401,6 +404,11 @@ function addToFavoritesFromGenerator(idx, tileElement) {
 
   renderFavorites();
   showToast('ストックに追加しました', '📌');
+
+  // モバイル時はストックタブへ自動遷移
+  if (window.innerWidth <= 768) {
+    switchTab('pane-favorites');
+  }
 }
 
 /* ===== 第2ペイン：お気に入り管理 ===== */
@@ -1042,6 +1050,99 @@ function exportComposition() {
   showToast('コンポジションSVGを保存しました', '⬇');
 }
 
+/* ===== ピンチズーム（タッチ／モバイル操作） ===== */
+
+/**
+ * compositionArea に対してピンチズーム操作を設定する。
+ * 2本指の中点をピボットとして、指間距離の変化量に応じてインクリメンタルにズームを行い、
+ * scrollLeft / scrollTop をリアルタイム補正することで「地図アプリ的な」操作感を実現する。
+ *
+ * @param {HTMLElement} compArea - スクロール可能なコンテナ要素
+ */
+function initPinchZoom(compArea) {
+  // ピンチ操作の状態管理
+  var lastDist = null;      // 前フレームの指間距離
+  var lastCenter = null;    // 前フレームの指の中心点（compArea基準）
+
+  /**
+   * 2本指の中心点をcompAreaの相対座標で取得する。
+   * getBoundingClientRect() でブラウザのスクロールや位置を正確に考慮する。
+   */
+  function getTouchCenter(touches, areaRect) {
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2 - areaRect.left,
+      y: (touches[0].clientY + touches[1].clientY) / 2 - areaRect.top
+    };
+  }
+
+  /** 2本指の距離を取得する */
+  function getTouchDist(touches) {
+    var dx = touches[0].clientX - touches[1].clientX;
+    var dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  }
+
+  compArea.addEventListener('touchstart', function (e) {
+    // 2本指のタッチ開始時のみ初期化する
+    if (e.touches.length !== 2) return;
+    // ブラウザ標準のズーム/スクロールを確実に防ぐ
+    e.preventDefault();
+
+    var areaRect = compArea.getBoundingClientRect();
+    lastDist = getTouchDist(e.touches);
+    lastCenter = getTouchCenter(e.touches, areaRect);
+  }, { passive: false });
+
+  compArea.addEventListener('touchmove', function (e) {
+    // 2本指でない場合、またはピンチ未開始の場合は無視する
+    if (e.touches.length !== 2 || lastDist === null) return;
+    e.preventDefault(); // ブラウザのパン・バウンスを防ぐ
+
+    if (!state.composition) return;
+
+    var areaRect = compArea.getBoundingClientRect();
+    var currentDist = getTouchDist(e.touches);
+    var currentCenter = getTouchCenter(e.touches, areaRect);
+
+    // --- インクリメンタルなズーム計算 ---
+    // 前フレームとの比率でズームを掛け合わせることで、滑らかなズームを実現する
+    var scaleFactor = currentDist / lastDist;
+    var newZoom = state.compositionZoom * scaleFactor;
+    newZoom = Math.min(Math.max(0.1, newZoom), 10.0);
+
+    // --- ピボット補正（スクロール位置を更新して中心点がズレないようにする） ---
+    // 現在の中心点が指す「コンテンツ内の絶対座標」を計算する
+    var contentX = (compArea.scrollLeft + currentCenter.x) / state.compositionZoom;
+    var contentY = (compArea.scrollTop + currentCenter.y) / state.compositionZoom;
+
+    // ズーム倍率を更新してコンテンツサイズを変更する
+    state.compositionZoom = newZoom;
+    updateCompositionZoom();
+
+    // ズーム後に同じコンテンツ座標が中心点に来るようスクロール位置を補正する
+    compArea.scrollLeft = contentX * state.compositionZoom - currentCenter.x;
+    compArea.scrollTop = contentY * state.compositionZoom - currentCenter.y;
+
+    // 次フレームのために今回の値を保存する
+    lastDist = currentDist;
+    lastCenter = currentCenter;
+  }, { passive: false });
+
+  compArea.addEventListener('touchend', function (e) {
+    // 2本指が揃っていなければリセット
+    if (e.touches.length < 2) {
+      lastDist = null;
+      lastCenter = null;
+    }
+  });
+
+  compArea.addEventListener('touchcancel', function () {
+    // キャンセル時もリセット
+    lastDist = null;
+    lastCenter = null;
+  });
+}
+
 /* ===== イベントバインド ===== */
 function initEvents() {
   /* 第1ペイン */
@@ -1091,7 +1192,7 @@ function initEvents() {
   /* コンポジションキャンバスのズーム（マウスホイール & ピンチ操作） */
   var compArea = document.getElementById('compositionArea');
   if (compArea) {
-    // マウスホイール
+    // マウスホイールズーム（ポインター位置を基準にズーム）
     compArea.addEventListener('wheel', function (e) {
       if (!state.composition) return;
       e.preventDefault();
@@ -1102,7 +1203,7 @@ function initEvents() {
       newZoom = Math.min(Math.max(0.1, newZoom), 10.0);
 
       if (newZoom !== state.compositionZoom) {
-        // マウス位置を中心にズームするためのスクロール補正計算
+        // マウス位置を基準にズームするためのスクロール位置を補正
         var rect = compArea.getBoundingClientRect();
         var pointerX = e.clientX - rect.left;
         var pointerY = e.clientY - rect.top;
@@ -1118,56 +1219,8 @@ function initEvents() {
       }
     }, { passive: false });
 
-    // タッチ操作（ピンチ）
-    var initialDist = null;
-    var initialZoom = null;
-    var initialCenter = null;
-
-    compArea.addEventListener('touchstart', function (e) {
-      if (!state.composition || e.touches.length !== 2) return;
-      var dx = e.touches[0].clientX - e.touches[1].clientX;
-      var dy = e.touches[0].clientY - e.touches[1].clientY;
-      initialDist = Math.hypot(dx, dy);
-      initialZoom = state.compositionZoom;
-
-      var rect = compArea.getBoundingClientRect();
-      initialCenter = {
-        x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
-        y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
-      };
-    }, { passive: false });
-
-    compArea.addEventListener('touchmove', function (e) {
-      if (!state.composition || e.touches.length !== 2 || initialDist === null) return;
-      e.preventDefault(); // デフォルトのパンスクロール等を防ぐ
-
-      var dx = e.touches[0].clientX - e.touches[1].clientX;
-      var dy = e.touches[0].clientY - e.touches[1].clientY;
-      var currentDist = Math.hypot(dx, dy);
-
-      var zoomFactor = currentDist / initialDist;
-      var newZoom = initialZoom * zoomFactor;
-      newZoom = Math.min(Math.max(0.1, newZoom), 10.0);
-
-      if (newZoom !== state.compositionZoom) {
-        var contentTargetX = (compArea.scrollLeft + initialCenter.x) / state.compositionZoom;
-        var contentTargetY = (compArea.scrollTop + initialCenter.y) / state.compositionZoom;
-
-        state.compositionZoom = newZoom;
-        updateCompositionZoom();
-
-        compArea.scrollLeft = contentTargetX * state.compositionZoom - initialCenter.x;
-        compArea.scrollTop = contentTargetY * state.compositionZoom - initialCenter.y;
-      }
-    }, { passive: false });
-
-    compArea.addEventListener('touchend', function (e) {
-      if (e.touches.length < 2) {
-        initialDist = null;
-        initialZoom = null;
-        initialCenter = null;
-      }
-    });
+    // ピンチズーム処理の初期化
+    initPinchZoom(compArea);
   }
 
   /* カラーパレット */
@@ -1218,6 +1271,82 @@ function initEvents() {
       closeColorPicker();
     }
   });
+
+  /* モバイル：ボトムナビのクリックイベント */
+  var navBtnGenerator = document.getElementById('nav-btn-generator');
+  var navBtnFavorites = document.getElementById('nav-btn-favorites');
+  var navBtnComposition = document.getElementById('nav-btn-composition');
+  if (navBtnGenerator) {
+    navBtnGenerator.addEventListener('click', function () { switchTab('pane-generator'); });
+    navBtnFavorites.addEventListener('click', function () { switchTab('pane-favorites'); });
+    navBtnComposition.addEventListener('click', function () { switchTab('pane-composition'); });
+  }
+}
+
+/* ===== モバイルタブ切り替え ===== */
+
+/**
+ * 指定ペインをアクティブにし、それ以外を非表示にする。
+ * デスクトップ幅（768px超）では何もしない。
+ */
+function switchTab(targetPaneId) {
+  var paneIds = ['pane-generator', 'pane-favorites', 'pane-composition'];
+  var navBtnMap = {
+    'pane-generator': 'nav-btn-generator',
+    'pane-favorites': 'nav-btn-favorites',
+    'pane-composition': 'nav-btn-composition'
+  };
+
+  // デスクトップでは全ペインを表示（クラス除去のみ行いレイアウトはCSSに任せる）
+  if (window.innerWidth > 768) {
+    paneIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('pane-hidden', 'pane-entering');
+      }
+    });
+    // ナビボタンのアクティブ状態もリセット
+    Object.values(navBtnMap).forEach(function (btnId) {
+      var btn = document.getElementById(btnId);
+      if (btn) {
+        btn.classList.remove('active');
+        btn.removeAttribute('aria-current');
+      }
+    });
+    return;
+  }
+
+  state.activeTab = targetPaneId;
+
+  // ペインの表示切り替え
+  paneIds.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (id === targetPaneId) {
+      el.classList.remove('pane-hidden');
+      // 入場アニメーションを再トリガー
+      el.classList.remove('pane-entering');
+      // reflow強制（再アニメーションのため）
+      void el.offsetWidth;
+      el.classList.add('pane-entering');
+    } else {
+      el.classList.add('pane-hidden');
+      el.classList.remove('pane-entering');
+    }
+  });
+
+  // ナビボタンのアクティブ状態更新
+  Object.keys(navBtnMap).forEach(function (paneId) {
+    var btn = document.getElementById(navBtnMap[paneId]);
+    if (!btn) return;
+    var isActive = (paneId === targetPaneId);
+    btn.classList.toggle('active', isActive);
+    if (isActive) {
+      btn.setAttribute('aria-current', 'page');
+    } else {
+      btn.removeAttribute('aria-current');
+    }
+  });
 }
 
 /* ===== 初期化 ===== */
@@ -1229,4 +1358,12 @@ document.addEventListener('DOMContentLoaded', function () {
   initPalettes();
   initEvents();
   generateAllTiles();
+
+  /* モバイル初期タブを確定 */
+  switchTab(state.activeTab);
+
+  /* ウィンドウリサイズ時：デスクトップ幅になったら全ペインを表示状態に戻す */
+  window.addEventListener('resize', function () {
+    switchTab(state.activeTab);
+  });
 });
