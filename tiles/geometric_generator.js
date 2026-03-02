@@ -26,13 +26,15 @@ const state = {
 
   /* ドラッグ＆ドロップ用状態 */
   dragState: {
+    isActive: false,        // ドラッグ操作自体の有効判定（長押し遅延後）
     isDragging: false,
     tileIdx: null,          // ドラッグ中のタイルのインデックス
     startX: 0,
     startY: 0,
     currentX: 0,
     currentY: 0,
-    hasMoved: false         // 移動したかどうか（クリックとドラッグの判定用）
+    hasMoved: false,        // 移動したかどうか（クリックとドラッグの判定用）
+    activationTimer: null   // タッチ時の長押し判定用タイマー
   },
 
   /* モバイルタブ管理 */
@@ -817,30 +819,60 @@ function handlePointerDown(e, idx) {
   if (!state.composition) return;
   // 左クリックまたはタッチ以外は無視
   if (e.pointerType === 'mouse' && e.button !== 0) return;
-  // ピンチズームなど、複数指でのタッチの2本目以降はドラッグを開始しない
+  // ピンチズームなど、複数指でのタッチの2本目以降は開始しない
   if (e.pointerType === 'touch' && !e.isPrimary) return;
 
-  state.dragState.isDragging = true;
+  // 既存のタイマーがあればクリア
+  if (state.dragState.activationTimer) {
+    clearTimeout(state.dragState.activationTimer);
+  }
+
+  // 初期情報セット
   state.dragState.tileIdx = idx;
   state.dragState.startX = e.clientX;
   state.dragState.startY = e.clientY;
   state.dragState.currentX = e.clientX;
   state.dragState.currentY = e.clientY;
   state.dragState.hasMoved = false;
+  state.dragState.isDragging = false;
 
-  // 意図しないセルのロック（バグ）を防ぐため setPointerCapture は使用しない
-  // e.currentTarget.setPointerCapture(e.pointerId);
-
-  // ドラッグ中のタイルのスタイルを変更するため再描画
-  renderComposition();
+  // マウスの場合は即座にアクティブ、タッチの場合は遅延（長押し）後にアクティブ化
+  if (e.pointerType === 'mouse') {
+    state.dragState.isActive = true;
+  } else {
+    state.dragState.isActive = false;
+    state.dragState.activationTimer = setTimeout(function () {
+      // 200ms 動かさなければドラッグ可能状態とみなす
+      state.dragState.isActive = true;
+      // 見た目だけドラッグ待機状態にするため再描画
+      state.dragState.isDragging = true;
+      renderComposition();
+    }, 200);
+  }
 }
 
 /** ポインター移動（動的な入れ替え） */
 function handlePointerMove(e) {
-  if (!state.dragState.isDragging) return;
+  // ドラッグ操作対象でなければ何もしない
+  if (state.dragState.tileIdx === null) return;
 
   var dx = e.clientX - state.dragState.startX;
   var dy = e.clientY - state.dragState.startY;
+  var dist = Math.hypot(dx, dy);
+
+  // タッチ環境でスレッショルド以上の移動（かつまだアクティブでない）場合は、
+  // ドラッグ操作ではなく「ズームまたはパン」とみなし、操作をキャンセルする
+  if (!state.dragState.isActive && e.pointerType === 'touch') {
+    if (dist > 10) {
+      if (state.dragState.activationTimer) clearTimeout(state.dragState.activationTimer);
+      state.dragState.tileIdx = null;
+    }
+    return;
+  }
+
+  if (!state.dragState.isActive) return;
+
+  state.dragState.isDragging = true;
 
   // わずかな移動（閾値5px）を検知してドラッグとみなす
   if (!state.dragState.hasMoved && Math.hypot(dx, dy) > 5) {
@@ -891,16 +923,30 @@ function handlePointerMove(e) {
 
 /** ポインターアップ（終了） */
 function handlePointerUp(e) {
+  // タイマーがあればクリア
+  if (state.dragState.activationTimer) {
+    clearTimeout(state.dragState.activationTimer);
+    state.dragState.activationTimer = null;
+  }
+
+  // アクティブになってすらいない（すぐ離した）場合はクリック判定
+  if (state.dragState.tileIdx !== null && !state.dragState.isActive && !state.dragState.hasMoved) {
+    rotateTile(state.dragState.tileIdx);
+    state.dragState.tileIdx = null;
+    return;
+  }
+
   if (!state.dragState.isDragging) return;
 
   if (!state.dragState.hasMoved) {
-    // 移動が少ない場合は「クリック」として扱い回転させる
+    // わずかに動いただけで離した場合は回転（マウスの場合の救済策）
     rotateTile(state.dragState.tileIdx);
   } else {
     // 入れ替え完了としてUndoを保存
     pushUndo();
   }
 
+  state.dragState.isActive = false;
   state.dragState.isDragging = false;
   state.dragState.tileIdx = null;
   renderComposition();
@@ -1087,11 +1133,11 @@ function initPinchZoom(compArea) {
   compArea.addEventListener('touchstart', function (e) {
     // 2本指以上のタッチが検出された場合、進行中のドラッグ操作を強制キャンセルする
     if (e.touches.length >= 2) {
-      if (state.dragState.isDragging) {
-        state.dragState.isDragging = false;
-        state.dragState.tileIdx = null;
-        renderComposition();
-      }
+      if (state.dragState.activationTimer) clearTimeout(state.dragState.activationTimer);
+      state.dragState.isActive = false;
+      state.dragState.isDragging = false;
+      state.dragState.tileIdx = null;
+      renderComposition();
     }
 
     // 2本指のタッチ開始時のみ初期化する
