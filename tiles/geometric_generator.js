@@ -817,6 +817,8 @@ function handlePointerDown(e, idx) {
   if (!state.composition) return;
   // 左クリックまたはタッチ以外は無視
   if (e.pointerType === 'mouse' && e.button !== 0) return;
+  // ピンチズームなど、複数指でのタッチの2本目以降はドラッグを開始しない
+  if (e.pointerType === 'touch' && !e.isPrimary) return;
 
   state.dragState.isDragging = true;
   state.dragState.tileIdx = idx;
@@ -1083,6 +1085,15 @@ function initPinchZoom(compArea) {
   }
 
   compArea.addEventListener('touchstart', function (e) {
+    // 2本指以上のタッチが検出された場合、進行中のドラッグ操作を強制キャンセルする
+    if (e.touches.length >= 2) {
+      if (state.dragState.isDragging) {
+        state.dragState.isDragging = false;
+        state.dragState.tileIdx = null;
+        renderComposition();
+      }
+    }
+
     // 2本指のタッチ開始時のみ初期化する
     if (e.touches.length !== 2) return;
     // ブラウザ標準のズーム/スクロールを確実に防ぐ
