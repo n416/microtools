@@ -536,6 +536,8 @@ body {
   padding: 24px;
   overflow: auto;
   background: var(--bg-primary);
+  /* ブラウザのデフォルトタッチ操作（パン・ズーム）を無効化してJS側で完全制御する */
+  touch-action: none;
 }
 
 .composition-canvas {
@@ -935,4 +937,189 @@ body {
 
 .text-mono {
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* ========================================
+   モバイル用ボトムナビゲーション
+   ======================================== */
+
+/* デフォルトはデスクトップ：非表示 */
+.mobile-bottom-nav {
+  display: none;
+}
+
+/* ペイン切り替えアニメーション（入場） */
+@keyframes paneSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ========================================
+   モバイルレスポンシブ（768px以下）
+   ======================================== */
+@media (max-width: 768px) {
+
+  /* CSS変数追加 */
+  :root {
+    --bottom-nav-height: 64px;
+  }
+
+  /* メインコンテナ：1カラム・スタック配置 */
+  .main-container {
+    grid-template-columns: 1fr;
+    height: calc(100dvh - var(--header-height) - var(--bottom-nav-height));
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* 各ペイン：絶対配置でスタック */
+  .pane {
+    border-right: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* 非表示ペイン */
+  .pane.pane-hidden {
+    opacity: 0;
+    transform: translateX(16px);
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  /* アクティブペインの入場アニメーション */
+  .pane.pane-entering {
+    animation: paneSlideIn 0.22s ease forwards;
+  }
+
+  /* グリッドのカラム数調整 */
+  .generator-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .favorites-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* コンポジションツールバー：横スクロール対応 */
+  .composition-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 10px;
+  }
+
+  .composition-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* カラーパレットモーダル：全画面オーバーレイ */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    bottom: 0;
+  }
+
+  .modal {
+    width: 95%;
+    max-width: none;
+  }
+
+  /* トースト：ボトムナビの上に表示 */
+  .toast-container {
+    bottom: calc(var(--bottom-nav-height) + 12px);
+  }
+
+  /* ヘッダー */
+  .app-header {
+    padding: 0 14px;
+  }
+
+  /* ボトムナビゲーション本体 */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--bottom-nav-height);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-default);
+    align-items: stretch;
+    z-index: 200;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .mobile-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color var(--transition-fast), background var(--transition-fast);
+    border-radius: 0;
+    padding: 0;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-nav-btn:active {
+    background: var(--bg-hover);
+  }
+
+  /* アクティブ状態 */
+  .mobile-nav-btn.active {
+    color: var(--accent-primary);
+  }
+
+  .mobile-nav-btn.active .mobile-nav-icon {
+    stroke: var(--accent-primary);
+    filter: drop-shadow(0 0 6px rgba(108, 92, 231, 0.5));
+  }
+
+  /* アクティブインジケーター（上部バー） */
+  .mobile-nav-btn.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 32px;
+    height: 2px;
+    background: var(--accent-primary);
+    border-radius: 0 0 2px 2px;
+  }
+
+  /* ナビアイコン */
+  .mobile-nav-icon {
+    width: 22px;
+    height: 22px;
+    stroke: var(--text-tertiary);
+    transition: stroke var(--transition-fast), filter var(--transition-fast);
+    flex-shrink: 0;
+  }
+
+  .mobile-nav-label {
+    letter-spacing: 0.02em;
+  }
 }
