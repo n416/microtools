@@ -726,6 +726,18 @@ body {
 /* モーダルボディ共通 */
 .modal-body {
   overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  display: flex;
+  justify-content: flex-end;
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+  flex-shrink: 0;
 }
 
 .modal-padding {
@@ -797,8 +809,37 @@ body {
   align-items: center;
 }
 
+
+
 .full-width {
   width: 100%;
+}
+
+.flex-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.flex-grow {
+  flex: 1;
+}
+
+.end-align {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.gap-sm {
+  gap: 8px;
+}
+
+.mt-2 {
+  margin-top: 8px;
+}
+
+.mt-3 {
+  margin-top: 12px;
 }
 
 .mt-4 {
@@ -823,17 +864,117 @@ body {
   gap: 8px;
 }
 
-/* 背景画像プレビューエリア */
-.image-preview-area {
-  width: 100%;
-  aspect-ratio: 1;
-  background: var(--bg-hover);
-  border: 1px dashed var(--border-strong);
+/* ---------- 背景設定モーダルのカードUI ---------- */
+.bg-setting-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  letter-spacing: 0.02em;
+}
+
+.card-content {
+  margin-bottom: 16px;
+}
+
+.card-actions {
+  border-top: 1px dashed var(--border-subtle);
+  padding-top: 16px;
+}
+
+.no-orphan-wrap {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.5;
+  display: inline-block;
+}
+
+.setting-color-input.circle {
+  border-radius: 50%;
+}
+
+.setting-color-input.circle::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.setting-color-input.circle::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.setting-color-input.circle.lg {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.setting-color-input.circle.lg:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+}
+
+/* プレビューエリアの外枠（正方形ベースで固定高の上限を設ける） */
+.preview-square-container {
+  width: 100%;
+  max-width: 250px;
+  aspect-ratio: 1; /* 正方形 */
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--bg-hover);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-strong);
+  overflow: hidden;
+  position: relative;
+}
+
+/* 背景画像プレビューエリア (クロッパー自身) */
+.image-preview-area {
+  /* CSS Aspect-Ratio Fit-Contain Trick */
+  width: 10000px;
+  max-width: 100%;
+  max-height: 100%;
+  /* aspect-ratioはJSで動的にセットされる */
+  
+  background-color: transparent;
+  /* 市松模様をオーバーレイとして使用できるようにする（JSで制御可能） */
+  background-image: 
+    linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee),
+    linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+  
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  position: relative;
+}
+
+/* JavaScriptで動的に背景色を上に被せるための疑似要素 */
+.image-preview-area::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: transparent;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* image_cropperのcanvasは上に重ねるため */
+.image-preview-area canvas {
+  z-index: 2;
   position: relative;
 }
 
