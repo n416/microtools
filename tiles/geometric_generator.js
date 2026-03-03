@@ -24,6 +24,7 @@ const state = {
   canvasBgColor: '#ffffff',
   canvasBgOpacity: 1.0,
   canvasBgImage: null,
+  canvasBgImageOpacity: 1.0,
   originalCanvasBgImage: null,
   tileOpacity: 1.0,
 
@@ -58,7 +59,14 @@ const state = {
   /* モバイルタブ管理 */
   activeTab: 'pane-generator',  // 現在アクティブなモバイルタブのID
   unreadStockCount: 0,          // 未確認のストック追加数
-  isCompositionNew: false       // 構成が未確認の状態で更新されたか
+  isCompositionNew: false,      // 構成が未確認の状態で更新されたか
+
+  // --- 背景設定モーダルのバックアップ用状態 ---
+  backupCanvasBgColor: '#ffffff',
+  backupCanvasBgOpacity: 1.0,
+  backupCanvasBgImageOpacity: 1.0,
+  backupCanvasBgImage: null,
+  backupOriginalCanvasBgImage: null
 };
 
 /* ===== 定数 ===== */
@@ -662,6 +670,7 @@ function closeColorPicker() {
 
 /** グリッド寸法のパース */
 function getGridDimensions() {
+  // 常にDOMから取得
   var val = document.getElementById('gridSizeSelect').value;
   if (val.indexOf('x') !== -1) {
     var parts = val.split('x');
@@ -901,30 +910,44 @@ function renderComposition() {
   });
 
   /* Canvas要素自体の背景設定を更新（背景画像＋背景色の合成） */
-  // HTML上で背景画像を下に、色を上に重ねるためには、擬似要素や複数背景プロパティなどを使う
-  // CSSの linear-gradient で単色オーバーレイを作り、その下に url() を配置する手法をとる
+  var hex = state.canvasBgColor;
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  var rgba = 'rgba(' + r + ',' + g + ',' + b + ',' + state.canvasBgOpacity + ')';
+
+  // 単色背景はキャンバス大元のコンテナに設定する
+  canvasEl.style.backgroundColor = rgba;
+  canvasEl.style.backgroundImage = 'none'; // 古い設定をクリア
+  canvasEl.style.position = 'relative';
+
+  // 背景画像レイヤーを分けて管理（不透明度を個別に適用するため）
+  var bgLayer = document.getElementById('compositionCssBgLayer');
+  if (!bgLayer) {
+    bgLayer = document.createElement('div');
+    bgLayer.id = 'compositionCssBgLayer';
+    bgLayer.style.position = 'absolute';
+    bgLayer.style.top = '0';
+    bgLayer.style.left = '0';
+    bgLayer.style.width = '100%';
+    bgLayer.style.height = '100%';
+    bgLayer.style.pointerEvents = 'none';
+    bgLayer.style.zIndex = '1';
+
+    if (svg) {
+      svg.style.position = 'relative';
+      svg.style.zIndex = '2';
+    }
+    canvasEl.insertBefore(bgLayer, canvasEl.firstChild);
+  }
+
   if (state.canvasBgImage) {
-    // RGBAカラーを計算
-    var hex = state.canvasBgColor;
-    var r = parseInt(hex.slice(1, 3), 16);
-    var g = parseInt(hex.slice(3, 5), 16);
-    var b = parseInt(hex.slice(5, 7), 16);
-    var rgba = 'rgba(' + r + ',' + g + ',' + b + ',' + state.canvasBgOpacity + ')';
-
-    canvasEl.style.backgroundImage = 'linear-gradient(' + rgba + ', ' + rgba + '), url(' + state.canvasBgImage + ')';
-    canvasEl.style.backgroundSize = 'auto, cover';
-    canvasEl.style.backgroundPosition = 'center, center';
-    canvasEl.style.backgroundColor = 'transparent'; // 背景色が透けるように
+    bgLayer.style.backgroundImage = 'url(' + state.canvasBgImage + ')';
+    bgLayer.style.backgroundSize = 'cover';
+    bgLayer.style.backgroundPosition = 'center';
+    bgLayer.style.opacity = state.canvasBgImageOpacity;
   } else {
-    // 画像がない場合は単色のみ
-    canvasEl.style.backgroundImage = 'none';
-
-    var hex = state.canvasBgColor;
-    var r = parseInt(hex.slice(1, 3), 16);
-    var g = parseInt(hex.slice(3, 5), 16);
-    var b = parseInt(hex.slice(5, 7), 16);
-    var rgba = 'rgba(' + r + ',' + g + ',' + b + ',' + state.canvasBgOpacity + ')';
-    canvasEl.style.backgroundColor = rgba;
+    bgLayer.style.backgroundImage = 'none';
   }
 
   /* ズーム倍率を適用 */
@@ -1438,16 +1461,18 @@ function exportCompositionAsImage() {
     if (state.canvasBgImage) {
       var bgImg = new Image();
       bgImg.onload = function () {
-        // 1. 背景画像を一番下に描画（トリミング済み画像がセットされている前提なのでそのまま全画面描画）
-        ctx.drawImage(bgImg, 0, 0, bgImg.width, bgImg.height, 0, 0, canvas.width, canvas.height);
-
-        // 2. 背景色をその上にオーバーレイ描画
+        // 1. 背景色を最背面に描画
         var hex = state.canvasBgColor;
         var r = parseInt(hex.slice(1, 3), 16);
         var g = parseInt(hex.slice(3, 5), 16);
         var b = parseInt(hex.slice(5, 7), 16);
         ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + state.canvasBgOpacity + ')';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 2. 背景画像をその上に描画（透明度も適用）
+        ctx.globalAlpha = state.canvasBgImageOpacity;
+        ctx.drawImage(bgImg, 0, 0, bgImg.width, bgImg.height, 0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1.0; // リセット
 
         // 3. SVG結果を描画してエクスポート
         drawAndExport();
@@ -1822,8 +1847,7 @@ function initEvents() {
 
     /* モーダル呼び出し */
     var btnMenuPalette = document.getElementById('btnMenuPalette');
-    var btnMenuBgColor = document.getElementById('btnMenuBgColor');
-    var btnMenuBgImage = document.getElementById('btnMenuBgImage');
+    var btnMenuBackground = document.getElementById('btnMenuBackground');
 
     if (btnMenuPalette) {
       btnMenuPalette.addEventListener('click', function () {
@@ -1832,38 +1856,97 @@ function initEvents() {
       });
     }
 
-    if (btnMenuBgColor) {
-      btnMenuBgColor.addEventListener('click', function () {
+    if (btnMenuBackground) {
+      btnMenuBackground.addEventListener('click', function () {
         decorationMenuContent.classList.remove('visible');
-        document.getElementById('bgColorModal').classList.add('visible');
+
+        // モーダルを開く前に現在の状態をバックアップ
+        state.backupCanvasBgColor = state.canvasBgColor;
+        state.backupCanvasBgOpacity = state.canvasBgOpacity;
+        state.backupCanvasBgImageOpacity = state.canvasBgImageOpacity;
+        state.backupCanvasBgImage = state.canvasBgImage;
+        state.backupOriginalCanvasBgImage = state.originalCanvasBgImage;
+
         document.getElementById('modalBgColorPicker').value = state.canvasBgColor;
         document.getElementById('modalBgOpacitySlider').value = state.canvasBgOpacity;
         document.getElementById('modalBgOpacityValue').textContent = state.canvasBgOpacity.toFixed(2);
-      });
-    }
 
-    if (btnMenuBgImage) {
-      btnMenuBgImage.addEventListener('click', function () {
-        decorationMenuContent.classList.remove('visible');
-        document.getElementById('bgImageModal').classList.add('visible');
+        var imgOpacitySlider = document.getElementById('modalBgImageOpacitySlider');
+        if (imgOpacitySlider) {
+          imgOpacitySlider.value = state.canvasBgImageOpacity;
+          document.getElementById('modalBgImageOpacityValue').textContent = state.canvasBgImageOpacity.toFixed(2);
+        }
+
+        var dims = getGridDimensions();
+        var modalBgImagePreviewArea = document.getElementById('modalBgImagePreviewArea');
+        if (modalBgImagePreviewArea) {
+          modalBgImagePreviewArea.style.aspectRatio = dims.cols + " / " + dims.rows;
+          updateImagePreviewBackground();
+        }
+
+        if (!window.imageCropperInstance && typeof ImageCropper !== 'undefined' && modalBgImagePreviewArea) {
+          window.imageCropperInstance = new ImageCropper(
+            modalBgImagePreviewArea,
+            function (croppedDataUrl) {
+              state.tempCanvasBgImage = croppedDataUrl;
+              // 即座に背景画像にも適用してリアルタイムプレビューを実現する
+              state.canvasBgImage = croppedDataUrl;
+              if (state.composition) renderComposition();
+            }
+          );
+        } else if (window.imageCropperInstance) {
+          // Trigger a resize check so the canvas re-reads the new client sizes derived from CSS aspect-ratio
+          setTimeout(function () { window.imageCropperInstance.handleResize(); }, 10);
+        }
+
+        // Ensure image cropper canvas has correct opacity
+        if (window.imageCropperInstance && window.imageCropperInstance.canvas) {
+          window.imageCropperInstance.canvas.style.opacity = state.canvasBgImageOpacity;
+        }
+
+        var applyBtn = document.getElementById('btnModalBgImageApply');
+        var clearBtn = document.getElementById('btnModalBgImageClear');
+        if (window.imageCropperInstance && state.originalCanvasBgImage) {
+          window.imageCropperInstance.setImage(state.originalCanvasBgImage, dims.cols / dims.rows);
+          var placeholder = document.getElementById('modalBgImagePlaceholder');
+          if (placeholder) placeholder.style.display = 'none';
+          if (clearBtn) clearBtn.disabled = false;
+        }
+
+        document.getElementById('backgroundModal').classList.add('visible');
       });
     }
   }
 
-  /* モーダル閉じるイベント共通設定 */
-  document.getElementById('btnCloseBgColorModal').addEventListener('click', function () {
-    document.getElementById('bgColorModal').classList.remove('visible');
-  });
-  document.getElementById('bgColorModal').addEventListener('click', function (e) {
-    if (e.target === this) this.classList.remove('visible');
-  });
+  /* モーダル閉じるイベント共通設定（キャンセル/バツボタン） */
+  function restoreBackgroundStatus() {
+    state.canvasBgColor = state.backupCanvasBgColor;
+    state.canvasBgOpacity = state.backupCanvasBgOpacity;
+    state.canvasBgImageOpacity = state.backupCanvasBgImageOpacity;
+    state.canvasBgImage = state.backupCanvasBgImage;
+    state.originalCanvasBgImage = state.backupOriginalCanvasBgImage;
+    if (state.composition) renderComposition();
+  }
 
-  document.getElementById('btnCloseBgImageModal').addEventListener('click', function () {
-    document.getElementById('bgImageModal').classList.remove('visible');
-  });
-  document.getElementById('bgImageModal').addEventListener('click', function (e) {
-    if (e.target === this) this.classList.remove('visible');
-  });
+  var btnCloseBackgroundModal = document.getElementById('btnCloseBackgroundModal');
+  if (btnCloseBackgroundModal) {
+    btnCloseBackgroundModal.addEventListener('click', function () {
+      restoreBackgroundStatus();
+      document.getElementById('backgroundModal').classList.remove('visible');
+    });
+  }
+
+  var backgroundModal = document.getElementById('backgroundModal');
+  if (backgroundModal) {
+    backgroundModal.addEventListener('click', function (e) {
+      if (e.target === this) {
+        restoreBackgroundStatus();
+        this.classList.remove('visible');
+      }
+    });
+  }
+
+
 
   /* パレットモーダル (既存保持) */
   document.getElementById('btnCloseModal').addEventListener('click', closePaletteModal);
@@ -1894,11 +1977,30 @@ function initEvents() {
     }
   });
 
+  /* 背景プレビュー動的更新 */
+  function updateImagePreviewBackground() {
+    var previewArea = document.getElementById('modalBgImagePreviewArea');
+    if (!previewArea) return;
+    var color = state.canvasBgColor;
+    var opacity = state.canvasBgOpacity;
+    var r = parseInt(color.slice(1, 3), 16),
+      g = parseInt(color.slice(3, 5), 16),
+      b = parseInt(color.slice(5, 7), 16);
+    var rgba = 'rgba(' + r + ',' + g + ',' + b + ',' + opacity + ')';
+    var beforeElementStyle = document.createElement('style');
+    beforeElementStyle.id = 'dynamicPreviewStyle';
+    var existingStyle = document.getElementById('dynamicPreviewStyle');
+    if (existingStyle) existingStyle.remove();
+    beforeElementStyle.textContent = '.image-preview-area::before { background-color: ' + rgba + ' !important; }';
+    document.head.appendChild(beforeElementStyle);
+  }
+
   /* 背景色モーダル内の設定 */
   var modalBgColorPicker = document.getElementById('modalBgColorPicker');
   if (modalBgColorPicker) {
     modalBgColorPicker.addEventListener('input', function () {
       state.canvasBgColor = this.value;
+      updateImagePreviewBackground();
       if (state.composition) renderComposition();
     });
   }
@@ -1909,6 +2011,7 @@ function initEvents() {
     modalBgOpacitySlider.addEventListener('input', function () {
       state.canvasBgOpacity = parseFloat(this.value);
       modalBgOpacityValue.textContent = state.canvasBgOpacity.toFixed(2);
+      updateImagePreviewBackground();
       if (state.composition) renderComposition();
     });
   }
@@ -1921,73 +2024,68 @@ function initEvents() {
       if (modalBgColorPicker) modalBgColorPicker.value = state.canvasBgColor;
       if (modalBgOpacitySlider) modalBgOpacitySlider.value = state.canvasBgOpacity;
       if (modalBgOpacityValue) modalBgOpacityValue.textContent = state.canvasBgOpacity.toFixed(2);
+      updateImagePreviewBackground();
       if (state.composition) renderComposition();
       showToast('背景色をリセットしました', '✓');
     });
   }
 
-  /* 背景画像クロップの適用 */
-  function applyBackgroundImageCrop() {
-    if (!state.originalCanvasBgImage) return;
-
-    var img = new Image();
-    img.onload = function () {
-      var dims = getGridDimensions();
-      var targetRatio = dims.cols / dims.rows;
-      var imgRatio = img.width / img.height;
-      var cropWidth, cropHeight, cropX, cropY;
-
-      if (imgRatio > targetRatio) {
-        cropHeight = img.height;
-        cropWidth = img.height * targetRatio;
-        cropX = (img.width - cropWidth) / 2;
-        cropY = 0;
-      } else {
-        cropWidth = img.width;
-        cropHeight = img.width / targetRatio;
-        cropX = 0;
-        cropY = (img.height - cropHeight) / 2;
+  var modalBgImageOpacitySlider = document.getElementById('modalBgImageOpacitySlider');
+  var modalBgImageOpacityValue = document.getElementById('modalBgImageOpacityValue');
+  if (modalBgImageOpacitySlider && modalBgImageOpacityValue) {
+    modalBgImageOpacitySlider.addEventListener('input', function () {
+      state.canvasBgImageOpacity = parseFloat(this.value);
+      modalBgImageOpacityValue.textContent = state.canvasBgImageOpacity.toFixed(2);
+      if (window.imageCropperInstance && window.imageCropperInstance.canvas) {
+        window.imageCropperInstance.canvas.style.opacity = state.canvasBgImageOpacity;
       }
-
-      var cropCanvas = document.createElement('canvas');
-      cropCanvas.width = cropWidth;
-      cropCanvas.height = cropHeight;
-      var ctx = cropCanvas.getContext('2d');
-      ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-
-      var croppedUrl = cropCanvas.toDataURL('image/jpeg', 0.85);
-      state.canvasBgImage = croppedUrl;
-
-      var modalBgImagePreview = document.getElementById('modalBgImagePreview');
-      if (modalBgImagePreview) {
-        modalBgImagePreview.src = croppedUrl;
-      }
-
       if (state.composition) renderComposition();
-    };
-    img.src = state.originalCanvasBgImage;
+    });
   }
 
   /* 背景画像モーダル内の設定（クライアントサイドトリミング） */
   var btnModalBgImageSelect = document.getElementById('btnModalBgImageSelect');
   var modalBgImageInput = document.getElementById('modalBgImageInput');
+  var btnModalBgImageApply = document.getElementById('btnModalBgImageApply');
   var btnModalBgImageClear = document.getElementById('btnModalBgImageClear');
-  var modalBgImagePreview = document.getElementById('modalBgImagePreview');
+  var modalBgImagePlaceholder = document.getElementById('modalBgImagePlaceholder');
 
-  if (btnModalBgImageSelect && modalBgImageInput && btnModalBgImageClear && modalBgImagePreview) {
+  // 旧スライダーのコンテナを非表示に固定（または削除）
+  var oldSliderContainer = document.getElementById('modalBgCropPositionContainer');
+  if (oldSliderContainer) oldSliderContainer.style.display = 'none';
+
+  if (btnModalBgImageSelect && modalBgImageInput && btnModalBgImageClear) {
     btnModalBgImageSelect.addEventListener('click', function () {
       modalBgImageInput.click();
     });
+
+    if (btnModalBgImageApply) {
+      btnModalBgImageApply.addEventListener('click', function () {
+        // バックアップは戻さず（＝変更を確定）、さらにトリミング結果があれば反映する
+        if (state.tempCanvasBgImage) {
+          state.canvasBgImage = state.tempCanvasBgImage;
+        }
+        if (state.composition) renderComposition();
+        document.getElementById('backgroundModal').classList.remove('visible');
+        showToast('背景設定を適用しました', '✓');
+      });
+    }
 
     modalBgImageInput.addEventListener('change', function (e) {
       if (e.target.files && e.target.files[0]) {
         var reader = new FileReader();
         reader.onload = function (evt) {
           state.originalCanvasBgImage = evt.target.result;
-          applyBackgroundImageCrop();
 
-          modalBgImagePreview.style.display = 'block';
+          if (modalBgImagePlaceholder) modalBgImagePlaceholder.style.display = 'none';
           btnModalBgImageClear.disabled = false;
+
+          var dims = getGridDimensions();
+          if (window.imageCropperInstance) {
+            window.imageCropperInstance.setImage(state.originalCanvasBgImage, dims.cols / dims.rows);
+          }
+
+          showToast('画像を読み込みました。位置を調整して「適用」を押してください', '✓');
         };
         reader.readAsDataURL(e.target.files[0]);
       }
@@ -1995,10 +2093,17 @@ function initEvents() {
 
     btnModalBgImageClear.addEventListener('click', function () {
       state.canvasBgImage = null;
+      state.tempCanvasBgImage = null;
       state.originalCanvasBgImage = null;
       modalBgImageInput.value = '';
-      modalBgImagePreview.src = '';
-      modalBgImagePreview.style.display = 'none';
+
+      if (window.imageCropperInstance) {
+        var dims = getGridDimensions();
+        window.imageCropperInstance.setImage(null, dims.cols / dims.rows);
+      }
+
+      if (modalBgImagePlaceholder) modalBgImagePlaceholder.style.display = 'flex';
+
       this.disabled = true;
       if (state.composition) renderComposition();
       showToast('画像をクリアしました', '✓');

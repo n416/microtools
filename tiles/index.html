@@ -120,9 +120,8 @@
                     <div class="dropdown">
                         <button id="btnDecorationMenu" class="btn btn-secondary btn-sm dropdown-toggle" type="button">✨ 装飾...</button>
                         <div id="decorationMenuContent" class="dropdown-menu">
-                            <button id="btnMenuPalette" class="dropdown-item" type="button">色</button>
-                            <button id="btnMenuBgColor" class="dropdown-item" type="button">背景色</button>
-                            <button id="btnMenuBgImage" class="dropdown-item" type="button">背景画像</button>
+                            <button id="btnMenuPalette" class="dropdown-item" type="button">色パレット</button>
+                            <button id="btnMenuBackground" class="dropdown-item" type="button">背景設定</button>
                         </div>
                     </div>
                     <div class="dropdown">
@@ -231,59 +230,84 @@
         </div>
     </div>
 
-    <!-- 背景色モーダル -->
-    <div id="bgColorModal" class="modal-overlay">
-        <div class="modal modal-sm">
-            <div class="modal-header">
-                <span class="modal-title">背景色設定</span>
-                <button id="btnCloseBgColorModal" class="modal-close" type="button">✕</button>
-            </div>
-            <div class="modal-body modal-padding">
-                <div class="setting-group vertical">
-                    <span class="setting-label">色を選択</span>
-                    <input type="color" id="modalBgColorPicker" value="#ffffff" class="setting-color-input large">
-                </div>
-                <div class="setting-group vertical mt-4">
-                    <div class="label-with-value">
-                        <span class="setting-label">透明度 (オーバーレイ)</span>
-                        <span id="modalBgOpacityValue" class="range-value text-mono">1.0</span>
-                    </div>
-                    <input type="range" id="modalBgOpacitySlider" class="range-slider full-width" min="0.0" max="1.0" step="0.05" value="1.0">
-                </div>
-                <div class="modal-actions mt-4">
-                    <button class="btn btn-danger btn-full" type="button" id="btnModalBgColorClear">背景色をクリア</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 背景画像モーダル -->
-    <div id="bgImageModal" class="modal-overlay">
+    <!-- 統合背景設定モーダル -->
+    <div id="backgroundModal" class="modal-overlay">
         <div class="modal modal-md">
             <div class="modal-header">
-                <span class="modal-title">背景画像設定</span>
-                <button id="btnCloseBgImageModal" class="modal-close" type="button">✕</button>
+                <span class="modal-title">背景設定</span>
+                <button id="btnCloseBackgroundModal" class="modal-close" type="button">✕</button>
             </div>
+            
             <div class="modal-body modal-padding">
-                <p class="text-sm text-tertiary mb-3">画像は自動的に指定されたグリッドサイズの縦横比（中央）にトリミングされます。</p>
-                
-                <div class="image-preview-area" id="modalBgImagePreviewArea">
-                    <div class="image-preview-placeholder">
-                        <span class="preview-icon">🖼️</span>
-                        <span>画像が選択されていません</span>
+                <div class="bg-settings-layout">
+                    <!-- 背景色設定 -->
+                    <div class="bg-setting-card">
+                        <h4 class="card-title">背景色の設定</h4>
+                        <div class="card-content flex-row">
+                            <div class="color-picker-wrapper">
+                                <input type="color" id="modalBgColorPicker" value="#ffffff" class="setting-color-input circle lg" title="色を選択">
+                            </div>
+                            <div class="slider-wrapper flex-grow">
+                                <div class="slider-header">
+                                    <span class="slider-label">透明度</span>
+                                    <span id="modalBgOpacityValue" class="slider-val range-value">1.0</span>
+                                </div>
+                                <input type="range" id="modalBgOpacitySlider" class="range-slider full-width" min="0.0" max="1.0" step="0.05" value="1.0">
+                            </div>
+                        </div>
+                        <div class="card-actions end-align mt-2">
+                            <button class="btn btn-ghost btn-sm text-danger" type="button" id="btnModalBgColorClear">
+                                <span class="btn-prefix">↺</span>色をリセット
+                            </button>
+                        </div>
                     </div>
-                    <img id="modalBgImagePreview" class="image-preview-img" src="" style="display: none;">
+
+                    <!-- 背景画像設定 -->
+                    <div class="bg-setting-card mt-3">
+                        <div class="card-header flex-row" style="justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <h4 class="card-title mb-0">背景画像の設定</h4>
+                            <div class="card-header-actions">
+                                <button class="btn btn-secondary btn-sm" type="button" id="btnModalBgImageSelect">画像を選択</button>
+                                <input type="file" id="modalBgImageInput" accept="image/*" class="sr-only">
+                            </div>
+                        </div>
+
+                        <!-- プレビューとトリミング -->
+                        <div class="bg-preview-section">
+                            <div class="preview-header">
+                                <span class="text-xs text-tertiary fw-normal no-orphan-wrap">画像のズーム(ホイール/ピンチ)やパン(ドラッグ)で切り抜き位置が調整できます。</span>
+                            </div>
+                            <div class="preview-square-container mt-2">
+                                <div class="image-preview-area compact-preview" id="modalBgImagePreviewArea">
+                                    <div class="image-preview-placeholder" id="modalBgImagePlaceholder">
+                                        <span class="preview-icon">🖼️</span>
+                                        <span class="text-sm">画像なし</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-content mt-3">
+                            <div class="slider-wrapper full-width">
+                                <div class="slider-header">
+                                    <span class="slider-label">画像の透明度</span>
+                                    <span id="modalBgImageOpacityValue" class="slider-val range-value">1.0</span>
+                                </div>
+                                <input type="range" id="modalBgImageOpacitySlider" class="range-slider full-width" min="0.0" max="1.0" step="0.05" value="1.0">
+                            </div>
+                        </div>
+                        <div class="card-actions end-align mt-2">
+                            <button class="btn btn-ghost btn-sm text-danger" type="button" id="btnModalBgImageClear" disabled>
+                                <span class="btn-prefix">↺</span>画像をクリア
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="modal-actions mt-4 action-buttons">
-                    <button class="btn btn-primary" type="button" id="btnModalBgImageSelect">
-                        画像を選択
-                    </button>
-                    <input type="file" id="modalBgImageInput" accept="image/*" class="sr-only">
-                    <button class="btn btn-danger" type="button" id="btnModalBgImageClear" disabled>
-                        画像をクリア
-                    </button>
-                </div>
+            </div>
+            
+            <!-- 常に下部に固定されるフッター -->
+            <div class="modal-footer">
+                <button class="btn btn-primary" type="button" id="btnModalBgImageApply">適用して閉じる</button>
             </div>
         </div>
     </div>
@@ -299,6 +323,7 @@
     <div id="toastContainer" class="toast-container"></div>
 
     <script src="geometric_palettes.js"></script>
+    <script src="image_cropper.js"></script>
     <script src="geometric_generator.js"></script>
 </body>
 </html>
