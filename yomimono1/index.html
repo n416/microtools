@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>仕様書にないバグですが、たぶん俺のことです</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body class="fake-mode">
+    <div id="app">
+      <button id="mobile-menu-btn" class="glass-btn" aria-label="メニューを開く">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <div id="mobile-overlay"></div>
+      <nav id="sidebar" class="glass-panel">
+        <div class="sidebar-header">
+          <h1 id="site-title">業務マニュアル</h1>
+          <p id="site-subtitle" class="subtitle">社内業務引き継ぎ資料<br>作成者：小林悠太</p>
+          <button id="btn-reset-state" class="btn-normal-prev" style="width:100%; font-size: 0.9rem; padding: 8px; margin-bottom: 20px;">初めから読み直す</button>
+        </div>
+        <div id="nav-container">
+          <details class="nav-group item-list" open>
+            <summary>マニュアル項目</summary>
+            <ul id="nav-links">
+              <li><a href="#" data-target="character">登場人物</a></li>
+              <li><a href="#" data-target="ep1">第1話：システム障害の現状と課題</a></li>
+              <li><a href="#" data-target="ep2">第2話：人的リソースの枯渇と影響</a></li>
+              <li><a href="#" data-target="ep3">第3話：クリティカルエラー発生報告</a></li>
+            </ul>
+          </details>
+        </div>
+      </nav>
+      <main id="content-area" class="glass-panel">
+        <div id="markdown-container">
+          <!-- Markdown content will be loaded here -->
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
