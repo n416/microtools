@@ -1,5 +1,30 @@
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { CharacterNames } from './src/character_dictionary.js';
+
+function resolveCharacters(text) {
+  return text.replace(/<Char\s+role="([^"]+)"(?:\s+callrole="([^"]+)")?\s+var="([^"]+)"\s*\/>/g, (match, role, callrole, variant) => {
+    const charData = CharacterNames[role];
+    if (!charData) return `[Unknown Char: ${role}]`;
+
+    if (variant === 'hiragana' || variant === 'age') {
+      return charData[variant] || `[Unknown Prop: ${variant}]`;
+    }
+
+    if (callrole) {
+      if (charData.callers?.[callrole]?.[variant]) {
+        return charData.callers[callrole][variant];
+      }
+      // フォールバック: 指定されたcallroleが無い場合、'system'の該当バリエーションを探す
+      if (charData.callers?.system?.[variant]) {
+        return charData.callers.system[variant];
+      }
+      return `[Unknown Var: ${role}/${callrole} or system/${variant}]`;
+    }
+
+    return `[Missing CallRole: ${role}]`;
+  });
+}
 
 const markdownContainer = document.getElementById('markdown-container');
 const navLinks = document.querySelectorAll('#nav-links a');
@@ -34,12 +59,13 @@ async function loadMarkdown(target) {
     // 現在のページをLocalStorageに保存
     localStorage.setItem('yomimono_last_page', target);
 
-    const response = await fetch(`./settings/${target}.md`);
+    const response = await fetch(`./settings/${target}.mdx`);
     if (!response.ok) {
       throw new Error('Network response was not ok');
     }
     const markdownText = await response.text();
-    const html = marked(markdownText);
+    const resolvedText = resolveCharacters(markdownText);
+    const html = marked(resolvedText);
     const cleanHtml = DOMPurify.sanitize(html);
     markdownContainer.innerHTML = cleanHtml;
 
