@@ -61,7 +61,7 @@ async function fetchData() {
   try {
     // 1. Viteのimport.meta.globを使用して元のMDXファイルを取得
     // ?raw をつけることで文字列として取得可能
-    const rawModules = import.meta.glob('/public/settings/*.mdx', { query: '?raw', import: 'default' });
+    const rawModules = import.meta.glob('./public/settings/*.mdx', { query: '?raw', import: 'default' });
 
     // 取得したモジュール群を配列化
     const fetchPromises = Object.entries(rawModules).map(async ([path, resolver]) => {
