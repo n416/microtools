@@ -13,7 +13,7 @@ function resolveCharacters(text) {
     const charData = CharacterNames[role];
     if (!charData) return `[Unknown Char: ${role}]`;
 
-    if (variant === 'hiragana' || variant === 'age') {
+    if (variant === 'furigana' || variant === 'age') {
       return charData[variant] || `[Unknown Prop: ${variant}]`;
     }
 

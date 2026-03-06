@@ -1,0 +1,247 @@
+/* admin.css */
+
+:root {
+  --admin-bg: #f9fafb;
+  --admin-text: #1f2937;
+  --admin-card-bg: #ffffff;
+  --admin-border: #e5e7eb;
+  --admin-primary: #3b82f6;
+  --admin-primary-hover: #2563eb;
+  --admin-danger: #ef4444;
+  --admin-success: #10b981;
+  --admin-bar-default: #60a5fa;
+  --admin-bar-warning: #fbbf24;
+  --admin-bar-danger: #f87171;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+.admin-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.admin-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.admin-subtitle {
+  margin: 0;
+  color: #6b7280;
+}
+
+.controls-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.action-btn {
+  padding: 0.5rem 1rem;
+  background-color: var(--admin-primary);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.action-btn:hover {
+  background-color: var(--admin-primary-hover);
+}
+
+.status-message {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.status-message.hidden {
+  display: none;
+}
+
+.status-message.error {
+  background-color: #fef2f2;
+  color: var(--admin-danger);
+  border: 1px solid #fecaca;
+}
+
+.status-message.success {
+  background-color: #ecfdf5;
+  color: var(--admin-success);
+  border: 1px solid #a7f3d0;
+}
+
+.status-message.loading {
+  background-color: #eff6ff;
+  color: var(--admin-primary);
+  border: 1px solid #bfdbfe;
+}
+
+.analysis-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.chart-container, .table-container {
+  background-color: var(--admin-card-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--admin-border);
+  padding-bottom: 0.5rem;
+}
+
+/* Bar Chart Styles */
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  height: 300px;
+  gap: 2px;
+  padding-top: 2rem;
+  overflow-x: auto;
+  border-bottom: 2px solid var(--admin-text);
+}
+
+.bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 20px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.bar-value {
+  font-size: 0.75rem;
+  margin-bottom: 4px;
+  color: #4b5563;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.bar-element {
+  width: 100%;
+  background-color: var(--admin-bar-default);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.5s ease-out;
+  /* 高さはJSから動的に生成されたクラス(CSSルールの追加等)で指定します */
+}
+
+/* 著しく文字数が少ない場合のスタイル。JSでクラスを付与 */
+.bar-element.warning {
+  background-color: var(--admin-bar-warning);
+}
+
+.bar-element.danger {
+  background-color: var(--admin-bar-danger);
+}
+
+.bar-label {
+  font-size: 0.75rem;
+  margin-top: 8px;
+  text-align: center;
+  word-break: break-all;
+  height: 40px; /* 固定高さなど */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* Table Styles */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.data-table th, .data-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.data-table th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.data-table tr:hover {
+  background-color: #f9fafb;
+}
+
+.diff-positive {
+  color: var(--admin-success);
+}
+
+.diff-negative {
+  color: var(--admin-danger);
+}
+
+/* Summary Section Styles */
+.summary-section {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.summary-card {
+  background-color: var(--admin-card-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: 0.5rem;
+  padding: 1rem 1.5rem;
+  flex: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.summary-card h3 {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.summary-card p {
+  margin: 0.5rem 0 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--admin-primary);
+}
+
+/* Link Styles */
+.link-open {
+  font-size: 0.8em;
+  margin-left: 0.5rem;
+  color: var(--admin-primary);
+  text-decoration: none;
+}
+
+.link-open:hover {
+  text-decoration: underline;
+}
