@@ -50,7 +50,6 @@ Please report this to https://github.com/markedjs/marked.`,e){const i="<p>An err
         <ul>
           <li><a href="#" data-target="true_character">キャラクター（本編）</a></li>
           <li><a href="#" data-target="world">世界観・ルール</a></li>
-          <li><a href="#" data-target="lore_kurosu_hidden">隠し設定：黒須の経歴と歌について</a></li>
         </ul>
       </details>
       <details class="nav-group">
@@ -103,7 +102,6 @@ Please report this to https://github.com/markedjs/marked.`,e){const i="<p>An err
         <ul>
           <li><a href="#" data-target="true_character">キャラクター（本編）</a></li>
           <li><a href="#" data-target="world">世界観・ルール</a></li>
-          <li><a href="#" data-target="lore_kurosu_hidden">隠し設定：黒須の経歴と歌について</a></li>
         </ul>
       </details>
       <details class="nav-group" open>
