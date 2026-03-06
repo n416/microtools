@@ -50,6 +50,7 @@ Please report this to https://github.com/markedjs/marked.`,e){const i="<p>An err
         <ul>
           <li><a href="#" data-target="true_character">キャラクター（本編）</a></li>
           <li><a href="#" data-target="world">世界観・ルール</a></li>
+          <li><a href="#" data-target="lore_kurosu_hidden">隠し設定：黒須の経歴と歌について</a></li>
         </ul>
       </details>
       <details class="nav-group">
@@ -102,6 +103,7 @@ Please report this to https://github.com/markedjs/marked.`,e){const i="<p>An err
         <ul>
           <li><a href="#" data-target="true_character">キャラクター（本編）</a></li>
           <li><a href="#" data-target="world">世界観・ルール</a></li>
+          <li><a href="#" data-target="lore_kurosu_hidden">隠し設定：黒須の経歴と歌について</a></li>
         </ul>
       </details>
       <details class="nav-group" open>
@@ -122,4 +124,4 @@ Please report this to https://github.com/markedjs/marked.`,e){const i="<p>An err
           <li><a href="#" data-target="ep3">第3話：クリティカルエラー発生報告</a></li>
         </ul>
       </details>
-    `),lr(),document.querySelectorAll("a[data-target]").forEach(r=>r.classList.remove("active"));const i=document.querySelector(`a[data-target="${o}"]`);i&&i.classList.add("active")}window.addEventListener("popstate",o=>{if(o.state)ne(o.state.p,o.state.ph,!1);else{const e=new URLSearchParams(window.location.search),t=e.get("p")||localStorage.getItem("yomimono_last_page")||"character",n=parseInt(e.get("ph"),10)||parseInt(localStorage.getItem("yomimono_phase"),10)||1;ne(t,n,!1)}});const gn=document.getElementById("btn-reset-state");gn&&gn.addEventListener("click",()=>{localStorage.removeItem("yomimono_last_page"),localStorage.removeItem("yomimono_phase");const o=new URL(window.location);o.searchParams.delete("p"),o.searchParams.delete("ph"),window.location.href=o.pathname});function cr(){const o=new URLSearchParams(window.location.search),e=o.get("p"),t=parseInt(o.get("ph"),10),n=e||localStorage.getItem("yomimono_last_page")||"character";let i=t||parseInt(localStorage.getItem("yomimono_phase"),10);if(!i){const r=["ep4","ep5","ep6","true_character","world"];["ep7","ep8","ep9","ep10_1","ep10_2","ep10_3","ep11","ep12_0","ep12_1","ep12_2","ep13_0","ep13_1","ep13_2","ep13_3","ep13_4","ep13_5","ep13_6","ep13_7","ep14","ep15","ep16_0","ep16_1","ep17","ep17_5","ep18","ep19","ep20","ep21"].includes(n)?i=3:r.includes(n)?i=2:i=1}if(!e||!t){const r=new URL(window.location);r.searchParams.set("p",n),r.searchParams.set("ph",i),window.history.replaceState({p:n,ph:i},"",r)}else window.history.state||window.history.replaceState({p:n,ph:i},"",window.location.href);V=i,Nn(n,V),vn(n)}cr();
+    `),lr(),document.querySelectorAll("a[data-target]").forEach(r=>r.classList.remove("active"));const i=document.querySelector(`a[data-target="${o}"]`);i&&i.classList.add("active")}window.addEventListener("popstate",o=>{if(o.state)ne(o.state.p,o.state.ph,!1);else{const e=new URLSearchParams(window.location.search),t=e.get("p")||localStorage.getItem("yomimono_last_page")||"character",n=parseInt(e.get("ph"),10)||parseInt(localStorage.getItem("yomimono_phase"),10)||1;ne(t,n,!1)}});const gn=document.getElementById("btn-reset-state");gn&&gn.addEventListener("click",()=>{localStorage.removeItem("yomimono_last_page"),localStorage.removeItem("yomimono_phase");const o=new URL(window.location);o.searchParams.delete("p"),o.searchParams.delete("ph"),window.location.href=o.pathname});function cr(){const o=new URLSearchParams(window.location.search),e=o.get("p"),t=parseInt(o.get("ph"),10),n=e||localStorage.getItem("yomimono_last_page")||"character";let i=t||parseInt(localStorage.getItem("yomimono_phase"),10);if(!i){const r=["ep4","ep5","ep6","true_character","world","lore_kurosu_hidden"];["ep7","ep8","ep9","ep10_1","ep10_2","ep10_3","ep11","ep12_0","ep12_1","ep12_2","ep13_0","ep13_1","ep13_2","ep13_3","ep13_4","ep13_5","ep13_6","ep13_7","ep14","ep15","ep16_0","ep16_1","ep17","ep17_5","ep18","ep19","ep20","ep21","lore_kurosu_hidden"].includes(n)?i=3:r.includes(n)?i=2:i=1}if(!e||!t){const r=new URL(window.location);r.searchParams.set("p",n),r.searchParams.set("ph",i),window.history.replaceState({p:n,ph:i},"",r)}else window.history.state||window.history.replaceState({p:n,ph:i},"",window.location.href);V=i,Nn(n,V),vn(n)}cr();
