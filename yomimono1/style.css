@@ -38,6 +38,7 @@ body {
   background-attachment: fixed;
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   transition: background-color 0.5s ease, color 0.5s ease;
 }
@@ -355,6 +356,7 @@ body.true-mode .btn-normal-prev {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background-color: #000;
   color: #fff;
   display: flex;
