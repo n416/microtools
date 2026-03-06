@@ -17,7 +17,8 @@ export const CharacterNames = {
       },
       ceo: { // 土屋から
         normal: "小林",
-        full_nospace: "小林悠太"
+        full_nospace: "小林悠太",
+        normal_san: "小林さん"
       },
       client_pm: { // 天宮から
         normal: "小林さん",
@@ -56,6 +57,12 @@ export const CharacterNames = {
       },
       senior_eng: { // 相馬から
         normal: "土屋"
+      },
+      client_pmo: { // 黒須から
+        normal: "土屋"
+      },
+      underground_fixer: { // テツから
+        normal: "土屋"
       }
     }
   },
@@ -80,17 +87,20 @@ export const CharacterNames = {
       junior_dir: { // 佐々木から
         title: "先輩",
         normal: "もねさん" // 文脈によってどちらか
+      },
+      client_pmo: { // 黒須から
+        normal_san: "天宮さん"
       }
     }
   },
   senior_eng: {
-    furigana: "そうま けんいち",
+    furigana: "そうま けん",
     age: 32,
     callers: {
       system: { // 地の文や誰とも特定できない場合
         normal: "相馬",
         normal_san: "相馬さん",
-        full: "相馬 健一"
+        full: "相馬 健"
       },
       main_prog: { // 小林から
         normal_san: "相馬さん"
@@ -135,10 +145,12 @@ export const CharacterNames = {
       },
       ceo: { // 土屋から
         normal: "黒須さん", // 表向き
-        enemy: "黒須"      // 裏の顔
+        enemy: "黒須",      // 裏の顔
+        normal_san: "黒須さん"
       },
       client_pm: { // 天宮から
-        normal: "黒須さん"
+        normal: "黒須さん",
+        normal_san: "黒須さん"
       }
     }
   },
