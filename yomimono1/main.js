@@ -208,6 +208,7 @@ function restoreState(target, phase) {
         <ul>
           <li><a href="#" data-target="true_character">キャラクター（本編）</a></li>
           <li><a href="#" data-target="world">世界観・ルール</a></li>
+          <li><a href="#" data-target="lore_kurosu_hidden">隠し設定：黒須の経歴と歌について</a></li>
         </ul>
       </details>
       <details class="nav-group">
@@ -267,6 +268,7 @@ function restoreState(target, phase) {
         <ul>
           <li><a href="#" data-target="true_character">キャラクター（本編）</a></li>
           <li><a href="#" data-target="world">世界観・ルール</a></li>
+          <li><a href="#" data-target="lore_kurosu_hidden">隠し設定：黒須の経歴と歌について</a></li>
         </ul>
       </details>
       <details class="nav-group" open>
@@ -342,11 +344,12 @@ function init() {
 
   if (!initialPhase) {
     // 既存ユーザー向けのマイグレーションフォールバック
-    const trueModeTargets = ['ep4', 'ep5', 'ep6', 'true_character', 'world'];
+    const trueModeTargets = ['ep4', 'ep5', 'ep6', 'true_character', 'world', 'lore_kurosu_hidden'];
     const part2Targets = [
       'ep7', 'ep8', 'ep9', 'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2', 'ep13_0',
       'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-      'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21'
+      'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21',
+      'lore_kurosu_hidden'
     ];
     if (part2Targets.includes(lastPage)) {
       initialPhase = 3;
