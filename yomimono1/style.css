@@ -486,3 +486,58 @@ body.true-mode .btn-normal-prev {
     margin-top: 10px;
   }
 }
+
+/* Character Sheet Grid Layout */
+.character-sheet-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  padding: 1.5rem;
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+.character-sheet-header {
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+.character-sheet-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+}
+.character-sheet-details {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+.character-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.character-sheet-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.character-sheet-item img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background-color: #fff; /* Ensure transparent parts have a background */
+}
+.character-sheet-item span {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--text-secondary);
+  background-color: var(--bg-primary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
