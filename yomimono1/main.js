@@ -165,7 +165,9 @@ async function loadMarkdown(target) {
                 <li><a href="#" data-target="ep10_2">第10.2話：職人のプライドとポンコツ・ガジェット</a></li>
                 <li><a href="#" data-target="ep10_3">第10.3話：赤い日の真実と、反逆の兆し</a></li>
                 <li><a href="#" data-target="ep11">第11話：納品へのカウントダウン</a></li>
-                <li><a href="#" data-target="ep12">第12話：デートとスマートウォッチ</a></li>
+                <li><a href="#" data-target="ep12_0">第12話：デートとスマートウォッチ</a></li>
+                <li><a href="#" data-target="ep12_1">第12.1話：赤い日</a></li>
+                <li><a href="#" data-target="ep12_2">第12.2話：ノイズとアンカー</a></li>
                 <li><a href="#" data-target="ep13_0">第13話：赤い日の真実と罠</a></li>
                 <li><a href="#" data-target="ep13_1">第13.1話：完璧すぎる視界</a></li>
                 <li><a href="#" data-target="ep13_2">第13.2話：見えないものを直す手</a></li>
@@ -173,9 +175,11 @@ async function loadMarkdown(target) {
                 <li><a href="#" data-target="ep13_4">第13.4話：黒須の監視と、ノイズの体温</a></li>
                 <li><a href="#" data-target="ep13_5">第13.5話：隔絶される世界線</a></li>
                 <li><a href="#" data-target="ep13_6">第13.6話：アンカーの決断</a></li>
+                <li><a href="#" data-target="ep13_7">第13.7話：休日のバグとコーヒーブレイク</a></li>
                 <li><a href="#" data-target="ep14">第14話：雪の日の決断とフェーズアウト</a></li>
                 <li><a href="#" data-target="ep15">第15話：鬼之河アンダーグラウンド</a></li>
-                <li><a href="#" data-target="ep16">第16話：再会と覚醒のアプリ</a></li>
+                <li><a href="#" data-target="ep16_0">第16話：再会と覚醒のアプリ</a></li>
+                <li><a href="#" data-target="ep16_1">第16話：再会と覚醒のアプリ（続き）</a></li>
                 <li><a href="#" data-target="ep17">第17話：記憶の抵抗</a></li>
                 <li><a href="#" data-target="ep18">第18話：ふたつの和音（コード）</a></li>
                 <li><a href="#" data-target="ep19">第19話：反逆のシステム・デプロイ</a></li>
@@ -265,7 +269,9 @@ function triggerChapterEnd() {
           <li><a href="#" data-target="ep10_2">第10.2話：職人のプライドとポンコツ・ガジェット</a></li>
           <li><a href="#" data-target="ep10_3">第10.3話：赤い日の真実と、反逆の兆し</a></li>
           <li><a href="#" data-target="ep11">第11話：納品へのカウントダウン</a></li>
-          <li><a href="#" data-target="ep12">第12話：デートとスマートウォッチ</a></li>
+          <li><a href="#" data-target="ep12_0">第12話：デートとスマートウォッチ</a></li>
+          <li><a href="#" data-target="ep12_1">第12.1話：赤い日</a></li>
+          <li><a href="#" data-target="ep12_2">第12.2話：ノイズとアンカー</a></li>
           <li><a href="#" data-target="ep13_0">第13話：赤い日の真実と罠</a></li>
           <li><a href="#" data-target="ep13_1">第13.1話：完璧すぎる視界</a></li>
           <li><a href="#" data-target="ep13_2">第13.2話：見えないものを直す手</a></li>
@@ -273,9 +279,11 @@ function triggerChapterEnd() {
           <li><a href="#" data-target="ep13_4">第13.4話：黒須の監視と、ノイズの体温</a></li>
           <li><a href="#" data-target="ep13_5">第13.5話：隔絶される世界線</a></li>
           <li><a href="#" data-target="ep13_6">第13.6話：アンカーの決断</a></li>
+          <li><a href="#" data-target="ep13_7">第13.7話：休日のバグとコーヒーブレイク</a></li>
           <li><a href="#" data-target="ep14">第14話：雪の日の決断とフェーズアウト</a></li>
           <li><a href="#" data-target="ep15">第15話：鬼之河アンダーグラウンド</a></li>
-          <li><a href="#" data-target="ep16">第16話：再会と覚醒のアプリ</a></li>
+          <li><a href="#" data-target="ep16_0">第16話：再会と覚醒のアプリ</a></li>
+          <li><a href="#" data-target="ep16_1">第16話：再会と覚醒のアプリ（続き）</a></li>
           <li><a href="#" data-target="ep17">第17話：記憶の抵抗</a></li>
           <li><a href="#" data-target="ep18">第18話：ふたつの和音（コード）</a></li>
           <li><a href="#" data-target="ep19">第19話：反逆のシステム・デプロイ</a></li>
@@ -361,9 +369,9 @@ function bindNavEvents() {
 function restoreState(target) {
   const trueModeTargets = ['ep4', 'ep5', 'ep6', 'true_character', 'world'];
   const part2Targets = [
-    'ep7', 'ep8', 'ep9', 'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12', 'ep13_0',
-    'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6',
-    'ep14', 'ep15', 'ep16', 'ep17', 'ep18', 'ep19', 'ep20', 'ep21'
+    'ep7', 'ep8', 'ep9', 'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2', 'ep13_0',
+    'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
+    'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep18', 'ep19', 'ep20', 'ep21'
   ];
 
   if (part2Targets.includes(target)) {
@@ -403,7 +411,9 @@ function restoreState(target) {
           <li><a href="#" data-target="ep10_2">第10.2話：職人のプライドとポンコツ・ガジェット</a></li>
           <li><a href="#" data-target="ep10_3">第10.3話：赤い日の真実と、反逆の兆し</a></li>
           <li><a href="#" data-target="ep11">第11話：納品へのカウントダウン</a></li>
-          <li><a href="#" data-target="ep12">第12話：デートとスマートウォッチ</a></li>
+          <li><a href="#" data-target="ep12_0">第12話：デートとスマートウォッチ</a></li>
+          <li><a href="#" data-target="ep12_1">第12.1話：赤い日</a></li>
+          <li><a href="#" data-target="ep12_2">第12.2話：ノイズとアンカー</a></li>
           <li><a href="#" data-target="ep13_0">第13話：赤い日の真実と罠</a></li>
           <li><a href="#" data-target="ep13_1">第13.1話：完璧すぎる視界</a></li>
           <li><a href="#" data-target="ep13_2">第13.2話：見えないものを直す手</a></li>
@@ -411,9 +421,11 @@ function restoreState(target) {
           <li><a href="#" data-target="ep13_4">第13.4話：黒須の監視と、ノイズの体温</a></li>
           <li><a href="#" data-target="ep13_5">第13.5話：隔絶される世界線</a></li>
           <li><a href="#" data-target="ep13_6">第13.6話：アンカーの決断</a></li>
+          <li><a href="#" data-target="ep13_7">第13.7話：休日のバグとコーヒーブレイク</a></li>
           <li><a href="#" data-target="ep14">第14話：雪の日の決断とフェーズアウト</a></li>
           <li><a href="#" data-target="ep15">第15話：鬼之河アンダーグラウンド</a></li>
-          <li><a href="#" data-target="ep16">第16話：再会と覚醒のアプリ</a></li>
+          <li><a href="#" data-target="ep16_0">第16話：再会と覚醒のアプリ</a></li>
+          <li><a href="#" data-target="ep16_1">第16話：再会と覚醒のアプリ（続き）</a></li>
           <li><a href="#" data-target="ep17">第17話：記憶の抵抗</a></li>
           <li><a href="#" data-target="ep18">第18話：ふたつの和音（コード）</a></li>
           <li><a href="#" data-target="ep19">第19話：反逆のシステム・デプロイ</a></li>
