@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>仕様書にないバグですが、たぶん俺のことです</title>
-    <script type="module" crossorigin src="./assets/main-DeEkwf5q.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/main-DyQtZe6F.css">
+    <script type="module" crossorigin src="./assets/main-CcM1YJ5b.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/main-CKANTc-v.css">
   </head>
   <body class="fake-mode">
     <div id="app">
@@ -40,6 +40,20 @@
           <!-- Markdown content will be loaded here -->
         </div>
       </main>
+
+      <!-- 用語解説モーダル -->
+      <div id="term-modal-overlay" class="modal-overlay"></div>
+      <div id="term-modal" class="glass-panel modal-panel">
+        <div class="modal-header">
+          <h2>この話の用語解説</h2>
+          <button id="close-term-modal" aria-label="閉じる">×</button>
+        </div>
+        <div class="modal-content">
+          <div id="term-modal-content-term" class="term-section"></div>
+          <div id="term-modal-content-it" class="term-section"></div>
+        </div>
+      </div>
+
     </div>
   </body>
 </html>

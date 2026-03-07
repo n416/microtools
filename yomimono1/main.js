@@ -1,7 +1,8 @@
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { CharacterNames } from './src/character_dictionary.js';
-
+import { ItTermDictionary } from './src/it_term_dictionary.js';
+import { TermDictionary } from './src/term_dictionary.js';
 function resolveCharacters(text) {
   return text.replace(/<Char\s+role="([^"]+)"(?:\s+callrole="([^"]+)")?\s+var="([^"]+)"\s*\/>/g, (match, role, callrole, variant) => {
     const charData = CharacterNames[role];
@@ -91,6 +92,43 @@ async function loadMarkdown(target) {
     const html = marked(resolvedText);
     const cleanHtml = DOMPurify.sanitize(html);
     markdownContainer.innerHTML = cleanHtml;
+
+    // --- 用語の抽出と解説ボタンの生成 ---
+    if (target !== 'world' && target !== 'character' && target !== 'true_character') {
+      const { matchedIT, matchedNovel } = extractTermsFromText(resolvedText);
+      
+      if (matchedIT.length > 0 || matchedNovel.length > 0) {
+        // ボタンを生成
+        const btnContainer = document.createElement('div');
+        btnContainer.className = 'term-modal-btn-wrap';
+        
+        const termBtn = document.createElement('button');
+        termBtn.className = 'btn-term-modal';
+        termBtn.innerHTML = `
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          この話の用語解説
+        `;
+        btnContainer.appendChild(termBtn);
+        
+        // H1タイトルの直後、またはコンテナの先頭に挿入
+        const firstH1 = markdownContainer.querySelector('h1');
+        if (firstH1) {
+          firstH1.parentNode.insertBefore(btnContainer, firstH1.nextSibling);
+        } else {
+          markdownContainer.prepend(btnContainer);
+        }
+
+        // クリックイベントでモーダルを開く
+        termBtn.addEventListener('click', () => {
+          openTermModal(matchedIT, matchedNovel);
+        });
+      }
+    }
+    // ---------------------------------
 
     // --- 前に戻るボタンの動的生成 ---
     const navLinksArray = Array.from(document.querySelectorAll('a[data-target]'));
@@ -374,6 +412,121 @@ function init() {
 
   restoreState(lastPage, currentPhase);
   loadMarkdown(lastPage);
+}
+
+// ==========================================
+// 用語抽出・モーダル表示ロジック
+// ==========================================
+
+const termModal = document.getElementById('term-modal');
+const termModalOverlay = document.getElementById('term-modal-overlay');
+const termModalCloseBtn = document.getElementById('close-term-modal');
+const termModalContentNovel = document.getElementById('term-modal-content-term');
+const termModalContentIT = document.getElementById('term-modal-content-it');
+
+function closeTermModal() {
+  if (termModal) termModal.classList.remove('active');
+  if (termModalOverlay) termModalOverlay.classList.remove('active');
+}
+
+if (termModalCloseBtn) termModalCloseBtn.addEventListener('click', closeTermModal);
+if (termModalOverlay) termModalOverlay.addEventListener('click', closeTermModal);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && termModal && termModal.classList.contains('active')) {
+    closeTermModal();
+  }
+});
+
+/**
+ * 生テキストから、各辞書の用語が含まれているか判定してリストを返す
+ */
+function extractTermsFromText(text) {
+  const matchedIT = [];
+  const matchedNovel = [];
+
+  // IT用語の抽出
+  for (const key in ItTermDictionary) {
+    const item = ItTermDictionary[key];
+    // "プロセス / バックグラウンド（通信）" のような表記を考慮し、/や（）で分割・クリーニング
+    const searchWords = item.term.split(/[\/／（(]/).map(w => w.replace(/[）)]/g, '').trim()).filter(w => w.length > 0);
+    
+    // searchWords のいずれかがテキストに含まれていればヒット
+    const isHit = searchWords.some(word => text.includes(word));
+    if (isHit) {
+      matchedIT.push(item);
+    }
+  }
+
+  // 小説用語の抽出
+  for (const key in TermDictionary) {
+    const item = TermDictionary[key];
+    const searchWords = item.term.split(/[\/／（(]/).map(w => w.replace(/[）)]/g, '').trim()).filter(w => w.length > 0);
+    const isHit = searchWords.some(word => text.includes(word));
+    if (isHit) {
+      matchedNovel.push(item);
+    }
+  }
+
+  return { matchedIT, matchedNovel };
+}
+
+/**
+ * モーダルに内容を描画して開く
+ */
+function openTermModal(matchedIT, matchedNovel) {
+  // 小説用語エリアの描画
+  if (matchedNovel.length > 0) {
+    let html = '<h3 class="term-category-title">世界観・システム用語</h3>';
+    matchedNovel.forEach(item => {
+      html += `
+        <div class="term-item">
+          <h4 class="term-item-title">${escapeHTML(item.term)}</h4>
+          <span class="term-item-furigana">${escapeHTML(item.furigana)}</span>
+          <p class="term-item-desc">${escapeHTML(item.description)}</p>
+        </div>
+      `;
+    });
+    termModalContentNovel.innerHTML = html;
+    termModalContentNovel.style.display = 'block';
+  } else {
+    termModalContentNovel.innerHTML = '';
+    termModalContentNovel.style.display = 'none';
+  }
+
+  // IT用語エリアの描画
+  if (matchedIT.length > 0) {
+    let html = '<h3 class="term-category-title">IT・開発専門用語</h3>';
+    matchedIT.forEach(item => {
+      html += `
+        <div class="term-item">
+          <h4 class="term-item-title">${escapeHTML(item.term)}</h4>
+          <span class="term-item-furigana">${escapeHTML(item.furigana)}</span>
+          <p class="term-item-desc">${escapeHTML(item.description)}</p>
+        </div>
+      `;
+    });
+    termModalContentIT.innerHTML = html;
+    termModalContentIT.style.display = 'block';
+  } else {
+    termModalContentIT.innerHTML = '';
+    termModalContentIT.style.display = 'none';
+  }
+
+  // モーダルを開く
+  if (termModalOverlay) termModalOverlay.classList.add('active');
+  if (termModal) termModal.classList.add('active');
+}
+
+function escapeHTML(str) {
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
 }
 
 init();
