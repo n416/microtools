@@ -355,7 +355,7 @@ function restoreState(target, phase) {
           <li><a href="#" data-target="ep1">第1話：システム障害の現状と課題</a></li>
           <li><a href="#" data-target="ep2">第2話：人的リソースの枯渇と影響</a></li>
           <li><a href="#" data-target="ep3">第3話：クリティカルエラー発生報告</a></li>
-          <li><a href="#" data-target="ep4">第4話：観測者とメトロノーム</a></li>
+          <li><a href="#" data-target="ep4">第4話：偶然のハックとメトロノーム</a></li>
           <li><a href="#" data-target="ep5">第5話：浸食の予兆</a></li>
           <li><a href="#" data-target="ep6">第6話：ロスト・シーケンス</a></li>
         </ul>
@@ -364,13 +364,13 @@ function restoreState(target, phase) {
         <summary>第2部（第7話〜）</summary>
         <ul>
           <li><a href="#" data-target="ep7">第7話：システムからの招待状</a></li>
-          <li><a href="#" data-target="ep8">第8話：六本木の休日</a></li>
+          <li><a href="#" data-target="ep8">第8話（第2章）：六本木の休日</a></li>
           <li><a href="#" data-target="ep9">第9話：デスマーチの足音と限界</a></li>
           <li><a href="#" data-target="ep10_1">第10.1話：ファミレスと「電子ドラッグ」の真実</a></li>
           <li><a href="#" data-target="ep10_2">第10.2話：職人のプライドとポンコツ・ガジェット</a></li>
           <li><a href="#" data-target="ep10_3">第10.3話：赤い日の真実と、反逆の兆し</a></li>
           <li><a href="#" data-target="ep11">第11話：納品へのカウントダウン</a></li>
-          <li><a href="#" data-target="ep12_0">第12話：デートとスマートウォッチ</a></li>
+          <li><a href="#" data-target="ep12_0">第12話：面白星人</a></li>
           <li><a href="#" data-target="ep12_1">第12.1話：赤い日</a></li>
           <li><a href="#" data-target="ep12_2">第12.2話：ノイズとアンカー</a></li>
           <li><a href="#" data-target="ep13_0">第13話：赤い日の真実と罠</a></li>
@@ -388,9 +388,10 @@ function restoreState(target, phase) {
           <li><a href="#" data-target="ep17">第17話：記憶の抵抗</a></li>
           <li><a href="#" data-target="ep17_5">第17.5話：インカムのノイズ</a></li>
           <li><a href="#" data-target="ep18">第18話：ふたつの和音（コード）</a></li>
-          <li><a href="#" data-target="ep19">第19話：反逆のシステム・デプロイ</a></li>
+          <li><a href="#" data-target="ep19">第19話：反逆のカウンター・ノイズ</a></li>
           <li><a href="#" data-target="ep20">第20話：新しい世界の仕様書</a></li>
-          <li><a href="#" data-target="ep21">最終話：日常のアップデート</a></li>
+          <li><a href="#" data-target="ep21">第21話・最終話：終わらない運用保守（メンテナンス）</a></li>
+          <li><a href="#" data-target="ep22">第22話 断章：侵食</a></li>
         </ul>
       </details>
     `;
@@ -411,7 +412,7 @@ function restoreState(target, phase) {
       <details class="nav-group" open>
         <summary>第1部（〜第6話）</summary>
         <ul>
-          <li><a href="#" data-target="ep4">第4話：観測者とメトロノーム</a></li>
+          <li><a href="#" data-target="ep4">第4話：偶然のハックとメトロノーム</a></li>
           <li><a href="#" data-target="ep5">第5話：浸食の予兆</a></li>
           <li><a href="#" data-target="ep6">第6話：ロスト・シーケンス</a></li>
         </ul>
@@ -485,7 +486,7 @@ function init() {
     const part2Targets = [
       'ep7', 'ep8', 'ep9', 'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2', 'ep13_0',
       'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-      'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21',
+      'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21', 'ep22',
       'lore_kurosu_hidden'
     ];
     if (part2Targets.includes(lastPage)) {
@@ -562,7 +563,7 @@ function extractTermsFromText(text, target) {
     'ep1', 'ep2', 'ep3', 'ep4', 'ep5', 'ep6', 'ep7', 'ep8', 'ep9',
     'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2',
     'ep13_0', 'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-    'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21'
+    'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21', 'ep22'
   ];
   const epIndex = episodeSequence.indexOf(target);
   const ep11Index = episodeSequence.indexOf('ep11');
