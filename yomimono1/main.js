@@ -365,6 +365,7 @@ function restoreState(target, phase) {
         <ul>
           <li><a href="#" data-target="ep7">第7話：システムからの招待状</a></li>
           <li><a href="#" data-target="ep8">第8話（第2章）：六本木の休日</a></li>
+          <li><a href="#" data-target="ep8_5">第8.5話：幕間・裏路地のオアシス</a></li>
           <li><a href="#" data-target="ep9">第9話：デスマーチの足音と限界</a></li>
           <li><a href="#" data-target="ep10_1">第10.1話：ファミレスと「電子ドラッグ」の真実</a></li>
           <li><a href="#" data-target="ep10_2">第10.2話：職人のプライドとポンコツ・ガジェット</a></li>
@@ -384,6 +385,8 @@ function restoreState(target, phase) {
           <li><a href="#" data-target="ep14">第14話：雪の日の決断とフェーズアウト</a></li>
           <li><a href="#" data-target="ep15">第15話：鬼之河アンダーグラウンド</a></li>
           <li><a href="#" data-target="ep16_0">第16話：再会と覚醒のアプリ</a></li>
+          <li><a href="#" data-target="ep16_0_5">第16.0.5話：幕間・黄色いトラックの少女</a></li>
+          <li><a href="#" data-target="ep16_0_6">第16.0.6話：幕間・休日のカフェ</a></li>
           <li><a href="#" data-target="ep16_1">第16話：再会と覚醒のアプリ（続き）</a></li>
           <li><a href="#" data-target="ep17">第17話：記憶の抵抗</a></li>
           <li><a href="#" data-target="ep17_5">第17.5話：インカムのノイズ</a></li>
@@ -484,10 +487,10 @@ function init() {
     // 既存ユーザー向けのマイグレーションフォールバック
     const trueModeTargets = ['ep4', 'ep5', 'ep6', 'true_character', 'world', 'lore_kurosu_hidden'];
     const part2Targets = [
-      'ep7', 'ep8', 'ep9', 'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2', 'ep13_0',
+      'ep7', 'ep8', 'ep8_5', 'ep9', 'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2', 'ep13_0',
       'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-      'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21', 'ep22',
-      'lore_kurosu_hidden'
+      'ep14', 'ep15', 'ep16_0', 'ep16_0_5', 'ep16_0_6', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21', 'ep22',
+      'lore_kurosu_hidden', 'lore_lin_hidden'
     ];
     if (part2Targets.includes(lastPage)) {
       initialPhase = 3;
@@ -560,10 +563,10 @@ function extractTermsFromText(text, target) {
   }
 
   const episodeSequence = [
-    'ep1', 'ep2', 'ep3', 'ep4', 'ep5', 'ep6', 'ep7', 'ep8', 'ep9',
+    'ep1', 'ep2', 'ep3', 'ep4', 'ep5', 'ep6', 'ep7', 'ep8', 'ep8_5', 'ep9',
     'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2',
     'ep13_0', 'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-    'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21', 'ep22'
+    'ep14', 'ep15', 'ep16_0', 'ep16_0_5', 'ep16_0_6', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21', 'ep22'
   ];
   const epIndex = episodeSequence.indexOf(target);
   const ep11Index = episodeSequence.indexOf('ep11');
