@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { CharacterNames } from '../src/character_dictionary.js';
+import { ItTermDictionary } from '../src/it_term_dictionary.js';
+import { TermDictionary } from '../src/term_dictionary.js';
+import { TermFirstAppearanceMap } from '../src/term_map.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +38,47 @@ function resolveCharacters(text) {
   });
 }
 
+function resolveTerms(text, currentEpisode) {
+  const combinedDictionary = { ...ItTermDictionary, ...TermDictionary };
+  const localSeen = new Set(); // ページ内で同一用語が複数回出た場合の重複防止
+  const footnotes = [];
+  let footnoteCounter = 1;
+
+  let newText = text.replace(/<Term\s+id="([^"]+)"(?:\s*>([\s\S]*?)<\/Term>|\s*\/>)/g, (match, id, innerText) => {
+    const termData = combinedDictionary[id];
+    if (!termData) return `[Unknown Term: ${id}]`;
+
+    const displayStr = (innerText && innerText.trim().length > 0) ? innerText : termData.term;
+
+    if (TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
+      localSeen.add(id);
+      const mark = `※${footnoteCounter}`;
+      footnotes.push(`${mark} ${termData.term}： ${termData.description}`);
+      footnoteCounter++;
+      return `${displayStr}（${mark}）`;
+    } else {
+      return displayStr;
+    }
+  });
+
+  if (footnotes.length > 0) {
+    let footnoteMarkdown = '\n\n<div class="term-footnotes">\n\n**【用語解説】**\n\n';
+    footnotes.forEach(note => {
+      footnoteMarkdown += `${note}  \n`;
+    });
+    footnoteMarkdown += '</div>\n\n';
+    
+    const nextActionIndex = newText.indexOf('<div class="next-action">');
+    if (nextActionIndex !== -1) {
+      newText = newText.slice(0, nextActionIndex) + footnoteMarkdown + newText.slice(nextActionIndex);
+    } else {
+      newText += footnoteMarkdown;
+    }
+  }
+
+  return newText;
+}
+
 function processMdxFilesInDist() {
   if (!fs.existsSync(distSettingsDir)) {
     console.error(`Error: Directory not found: ${distSettingsDir}`);
@@ -46,14 +90,18 @@ function processMdxFilesInDist() {
   let processedCount = 0;
 
   files.forEach(file => {
-    if (file.endsWith('.mdx')) {
-      const filePath = path.join(distSettingsDir, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
-
-      const resolvedContent = resolveCharacters(content);
-
-      if (content !== resolvedContent) {
-        fs.writeFileSync(filePath, resolvedContent, 'utf-8');
+      if (file.endsWith('.mdx')) {
+        const filePath = path.join(distSettingsDir, file);
+        const content = fs.readFileSync(filePath, 'utf-8');
+        
+        // ファイル名からエピソードIDを取得（連番付きなどもそのまま扱う）
+        const currentEpisode = file.replace('.mdx', '');
+  
+        const charResolved = resolveCharacters(content);
+        const fullyResolved = resolveTerms(charResolved, currentEpisode);
+  
+        if (content !== fullyResolved) {
+          fs.writeFileSync(filePath, fullyResolved, 'utf-8');
         console.log(`[postbuild] Tags resolved in: ${file}`);
         processedCount++;
       }
@@ -63,5 +111,5 @@ function processMdxFilesInDist() {
   console.log(`[postbuild] Finished processing ${files.length} files. Modified ${processedCount} files.`);
 }
 
-console.log('[postbuild] Start resolving <Char> tags in dist/settings/*.mdx...');
+console.log('[postbuild] Start resolving <Char> and <Term> tags in dist/settings/*.mdx...');
 processMdxFilesInDist();

@@ -200,6 +200,11 @@ export const ItTermDictionary = {
     furigana: "れいてんし",
     description: "ボタンを押してから、ゲームのキャラが実際に動くまでの「遅れ」や「タイムラグ」のこと。ネトゲで「ラグい」と言う時のアレ。レイテンシが大きい（遅い）とイライラする。"
   },
+  phase_it: {
+    term: "フェイズ",
+    furigana: "ふぇいず",
+    description: "プロジェクトや開発作業の「段階」や「区切り」のこと。「設計フェイズ」「テストフェイズ」のように分けて進める。"
+  },
   device_gadget: {
     term: "デバイス / ガジェット",
     furigana: "でばいす / がじぇっと",

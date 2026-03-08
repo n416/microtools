@@ -4,8 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "prepare-terms": "node scripts/prepare_terms.js",
+    "predev": "npm run prepare-terms",
     "dev": "vite",
-    "build": "vite build && node scripts/postbuild_mdx.js",
+    "prebuild": "npm run prepare-terms",
+    "build": "vite build",
+    "postbuild": "node scripts/postbuild_mdx.js",
     "preview": "vite preview"
   },
   "devDependencies": {
