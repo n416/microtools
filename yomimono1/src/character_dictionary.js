@@ -190,5 +190,26 @@ export const CharacterNames = {
         normal_san: "佐々木さん"
       }
     }
+  },
+  truck_driver: {
+    furigana: "りん",
+    age: 18,
+    callers: {
+      system: {
+        normal: "鈴",
+        normal_san: "鈴ちゃん",
+        full: "鈴（リン）"
+      },
+      ceo: {
+        normal: "鈴ちゃん",
+        title: "運転手の子"
+      },
+      underground_fixer: {
+        normal: "鈴"
+      },
+      main_prog: {
+        normal: "鈴ちゃん"
+      }
+    }
   }
 };
