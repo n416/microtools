@@ -506,6 +506,54 @@ body.true-mode .btn-normal-prev {
   margin-bottom: 20px;
 }
 
+/* ----------------------------------
+ * テキストコピペボタンのスタイル
+ * ---------------------------------- */
+.copy-text-btn-wrap {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-end; /* 右寄せにして区別する */
+}
+
+.btn-copy-text {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-color);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: none;
+}
+
+body.true-mode .btn-copy-text {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-copy-text:hover {
+  background: var(--active-bg);
+  color: var(--active-text);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.btn-copy-text.copied {
+  background: rgba(0, 200, 100, 0.1);
+  color: #00cc66;
+  border-color: #00cc66;
+}
+
+body.true-mode .btn-copy-text.copied {
+  background: rgba(0, 255, 128, 0.1);
+  color: #00ff88;
+  border-color: #00ff88;
+}
+
 .btn-term-modal {
   padding: 8px 16px;
   font-size: 0.9rem;

@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import { CharacterNames } from './src/character_dictionary.js';
 import { ItTermDictionary } from './src/it_term_dictionary.js';
 import { TermDictionary } from './src/term_dictionary.js';
+import { TermFirstAppearanceMap } from './src/term_map.js';
 function resolveCharacters(text) {
   return text.replace(/<Char\s+role="([^"]+)"(?:\s+callrole="([^"]+)")?\s+var="([^"]+)"\s*\/>/g, (match, role, callrole, variant) => {
     const charData = CharacterNames[role];
@@ -25,6 +26,47 @@ function resolveCharacters(text) {
 
     return `[Missing CallRole: ${role}]`;
   });
+}
+
+function resolveTerms(text, currentEpisode) {
+  const combinedDictionary = { ...ItTermDictionary, ...TermDictionary };
+  const localSeen = new Set(); // ページ内で同一用語が複数回出た場合の重複防止
+  const footnotes = [];
+  let footnoteCounter = 1;
+
+  let newText = text.replace(/<Term\s+id="([^"]+)"(?:\s*>([\s\S]*?)<\/Term>|\s*\/>)/g, (match, id, innerText) => {
+    const termData = combinedDictionary[id];
+    if (!termData) return `[Unknown Term: ${id}]`;
+
+    const displayStr = (innerText && innerText.trim().length > 0) ? innerText : termData.term;
+
+    if (TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
+      localSeen.add(id);
+      const mark = `※${footnoteCounter}`;
+      footnotes.push(`${mark} ${termData.term}： ${termData.description}`);
+      footnoteCounter++;
+      return `${displayStr}（${mark}）`;
+    } else {
+      return displayStr;
+    }
+  });
+
+  if (footnotes.length > 0) {
+    let footnoteMarkdown = '\n\n<div class="term-footnotes">\n\n**【用語解説】**\n\n';
+    footnotes.forEach(note => {
+      footnoteMarkdown += `${note}  \n`;
+    });
+    footnoteMarkdown += '</div>\n\n';
+    
+    const nextActionIndex = newText.indexOf('<div class="next-action">');
+    if (nextActionIndex !== -1) {
+      newText = newText.slice(0, nextActionIndex) + footnoteMarkdown + newText.slice(nextActionIndex);
+    } else {
+      newText += footnoteMarkdown;
+    }
+  }
+
+  return newText;
 }
 
 const markdownContainer = document.getElementById('markdown-container');
@@ -88,14 +130,73 @@ async function loadMarkdown(target) {
       throw new Error('Network response was not ok');
     }
     const markdownText = await response.text();
-    const resolvedText = resolveCharacters(markdownText);
-    const html = marked(resolvedText);
+    const charResolved = resolveCharacters(markdownText);
+    const fullyResolved = resolveTerms(charResolved, target);
+    const html = marked(fullyResolved);
     const cleanHtml = DOMPurify.sanitize(html);
     markdownContainer.innerHTML = cleanHtml;
 
+    // --- テキストコピペボタンの生成 ---
+    const copyBtnContainer = document.createElement('div');
+    copyBtnContainer.className = 'copy-text-btn-wrap';
+    
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn-copy-text';
+    copyBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      <span class="copy-btn-text">テキストをコピー</span>
+    `;
+    copyBtn.addEventListener('click', () => {
+      const clone = markdownContainer.cloneNode(true);
+      // 「.term-footnotes」を削除対象から外す
+      const elementsToRemove = clone.querySelectorAll('.term-modal-btn-wrap, .copy-text-btn-wrap, .next-action, .btn-normal-prev');
+      elementsToRemove.forEach(el => el.remove());
+
+      const offscreen = document.createElement('div');
+      offscreen.style.position = 'absolute';
+      offscreen.style.left = '-9999px';
+      offscreen.style.whiteSpace = 'pre-wrap';
+      offscreen.appendChild(clone);
+      document.body.appendChild(offscreen);
+      let plainText = offscreen.innerText;
+      
+      plainText = plainText
+        .split('\n')
+        .map(line => line.trim()) // 各行の前後の空白を削除
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n') // 3連続以上の改行を2つに圧縮
+        .trim();
+
+      document.body.removeChild(offscreen);
+
+      navigator.clipboard.writeText(plainText).then(() => {
+        const textSpan = copyBtn.querySelector('.copy-btn-text');
+        const originalText = textSpan.textContent;
+        textSpan.textContent = 'コピーしました';
+        copyBtn.classList.add('copied');
+        setTimeout(() => {
+          textSpan.textContent = originalText;
+          copyBtn.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        console.error('Copy failed', err);
+      });
+    });
+    copyBtnContainer.appendChild(copyBtn);
+
+    const firstH1ForCopy = markdownContainer.querySelector('h1');
+    if (firstH1ForCopy) {
+      firstH1ForCopy.parentNode.insertBefore(copyBtnContainer, firstH1ForCopy.nextSibling);
+    } else {
+      markdownContainer.prepend(copyBtnContainer);
+    }
+
     // --- 用語の抽出と解説ボタンの生成 ---
     if (target !== 'world' && target !== 'character' && target !== 'true_character') {
-      const { matchedIT, matchedNovel } = extractTermsFromText(resolvedText);
+      const { matchedIT, matchedNovel } = extractTermsFromText(fullyResolved, target);
       
       if (matchedIT.length > 0 || matchedNovel.length > 0) {
         // ボタンを生成
@@ -440,7 +541,7 @@ document.addEventListener('keydown', (e) => {
 /**
  * 生テキストから、各辞書の用語が含まれているか判定してリストを返す
  */
-function extractTermsFromText(text) {
+function extractTermsFromText(text, target) {
   const matchedIT = [];
   const matchedNovel = [];
 
@@ -457,13 +558,25 @@ function extractTermsFromText(text) {
     }
   }
 
-  // 小説用語の抽出
-  for (const key in TermDictionary) {
-    const item = TermDictionary[key];
-    const searchWords = item.term.split(/[\/／（(]/).map(w => w.replace(/[）)]/g, '').trim()).filter(w => w.length > 0);
-    const isHit = searchWords.some(word => text.includes(word));
-    if (isHit) {
-      matchedNovel.push(item);
+  const episodeSequence = [
+    'ep1', 'ep2', 'ep3', 'ep4', 'ep5', 'ep6', 'ep7', 'ep8', 'ep9',
+    'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2',
+    'ep13_0', 'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
+    'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21'
+  ];
+  const epIndex = episodeSequence.indexOf(target);
+  const ep11Index = episodeSequence.indexOf('ep11');
+  const allowNovelTerms = (epIndex === -1 || epIndex >= ep11Index);
+
+  // 小説用語の抽出（第11話以降のみ）
+  if (allowNovelTerms) {
+    for (const key in TermDictionary) {
+      const item = TermDictionary[key];
+      const searchWords = item.term.split(/[\/／（(]/).map(w => w.replace(/[）)]/g, '').trim()).filter(w => w.length > 0);
+      const isHit = searchWords.some(word => text.includes(word));
+      if (isHit) {
+        matchedNovel.push(item);
+      }
     }
   }
 
