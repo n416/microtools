@@ -383,7 +383,10 @@ function restoreState(target, phase) {
           <li><a href="#" data-target="ep13_6">第13.6話：アンカーの決断</a></li>
           <li><a href="#" data-target="ep13_7">第13.7話：休日のバグとコーヒーブレイク</a></li>
           <li><a href="#" data-target="ep14">第14話：雪の日の決断とフェーズアウト</a></li>
+          <li><a href="#" data-target="ep14_1">第14.1話：雪の日の翌朝 - 喪失の輪郭</a></li>
+          <li><a href="#" data-target="ep14_2">第14.2話：落下するノイズへの追跡劇 - 虚無のカーチェイス</a></li>
           <li><a href="#" data-target="ep15">第15話：鬼之河アンダーグラウンド</a></li>
+          <li><a href="#" data-target="ep15_5">第15.5話：泥水と蒸気タービン - あるプログラマの覚醒</a></li>
           <li><a href="#" data-target="ep16_0">第16話：再会と覚醒のアプリ</a></li>
           <li><a href="#" data-target="ep16_0_5">第16.0.5話：幕間・黄色いトラックの少女</a></li>
           <li><a href="#" data-target="ep16_0_6">第16.0.6話：幕間・休日のカフェ</a></li>
@@ -391,7 +394,10 @@ function restoreState(target, phase) {
           <li><a href="#" data-target="ep17">第17話：記憶の抵抗</a></li>
           <li><a href="#" data-target="ep17_5">第17.5話：インカムのノイズ</a></li>
           <li><a href="#" data-target="ep18">第18話：ふたつの和音（コード）</a></li>
-          <li><a href="#" data-target="ep19">第19話：反逆のカウンター・ノイズ</a></li>
+          <li><a href="#" data-target="ep19_1">第19話：反逆のカウンター・ノイズ I - 崩壊の足音</a></li>
+          <li><a href="#" data-target="ep19_2">第19話：反逆のカウンター・ノイズ II - 重なり合う波長</a></li>
+          <li><a href="#" data-target="ep19_3">第19話：反逆のカウンター・ノイズ III - 泥臭い一撃</a></li>
+          <li><a href="#" data-target="ep19_4">第19話：反逆のカウンター・ノイズ IV - 完璧なる自滅</a></li>
           <li><a href="#" data-target="ep20">第20話：新しい世界の仕様書</a></li>
           <li><a href="#" data-target="ep21">第21話・最終話：終わらない運用保守（メンテナンス）</a></li>
           <li><a href="#" data-target="ep22">第22話 断章：侵食</a></li>
@@ -489,7 +495,7 @@ function init() {
     const part2Targets = [
       'ep7', 'ep8', 'ep8_5', 'ep9', 'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2', 'ep13_0',
       'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-      'ep14', 'ep15', 'ep16_0', 'ep16_0_5', 'ep16_0_6', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21', 'ep22',
+      'ep14', 'ep14_1', 'ep14_2', 'ep15', 'ep15_5', 'ep16_0', 'ep16_0_5', 'ep16_0_6', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19_1', 'ep19_2', 'ep19_3', 'ep19_4', 'ep20', 'ep21', 'ep22',
       'lore_kurosu_hidden', 'lore_lin_hidden'
     ];
     if (part2Targets.includes(lastPage)) {
@@ -566,7 +572,7 @@ function extractTermsFromText(text, target) {
     'ep1', 'ep2', 'ep3', 'ep4', 'ep5', 'ep6', 'ep7', 'ep8', 'ep8_5', 'ep9',
     'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2',
     'ep13_0', 'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-    'ep14', 'ep15', 'ep16_0', 'ep16_0_5', 'ep16_0_6', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21', 'ep22'
+    'ep14', 'ep14_1', 'ep14_2', 'ep15', 'ep15_5', 'ep16_0', 'ep16_0_5', 'ep16_0_6', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19_1', 'ep19_2', 'ep19_3', 'ep19_4', 'ep20', 'ep21', 'ep22'
   ];
   const epIndex = episodeSequence.indexOf(target);
   const ep11Index = episodeSequence.indexOf('ep11');

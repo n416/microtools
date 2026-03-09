@@ -9,14 +9,21 @@
     "dev": "vite",
     "prebuild": "npm run prepare-terms",
     "build": "vite build",
-    "postbuild": "node scripts/postbuild_mdx.js",
+    "postbuild": "node scripts/postbuild_mdx.js && node scripts/export_novel.js && node scripts/export_docx.js",
+    "export": "npm run build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "playwright": "^1.58.2",
     "vite": "^5.0.0"
   },
   "dependencies": {
-    "dompurify": "^3.0.0",
-    "marked": "^12.0.0"
+    "@xmldom/xmldom": "^0.8.11",
+    "diff": "^8.0.3",
+    "dompurify": "^3.3.2",
+    "jsdom": "^28.1.0",
+    "marked": "^12.0.0",
+    "pizzip": "^3.2.0"
   }
 }

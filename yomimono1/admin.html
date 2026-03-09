@@ -44,6 +44,7 @@
               <th>ファイル名</th>
               <th>元MDX文字数</th>
               <th>ビルド後文字数</th>
+              <th>同期（投稿）</th>
             </tr>
           </thead>
           <tbody id="data-tbody">
@@ -52,6 +53,26 @@
         </table>
       </div>
     </section>
+  </div>
+
+  <!-- Diff プレビュー用モーダル -->
+  <div id="diff-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>投稿前 差分プレビュー</h2>
+        <button id="btn-close-modal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="diff-modal-message" class="diff-message">サイト上のテキストと手元のテキストを比較しています...</p>
+        <div id="diff-container" class="diff-container">
+          <!-- 差分結果がここに挿入されます -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-publish" class="btn-cancel">キャンセル</button>
+        <button id="btn-confirm-publish" class="btn-confirm">この内容で投稿（上書き）する</button>
+      </div>
+    </div>
   </div>
 
   <!-- Viteの開発サーバー特有の機能を使うため type="module" が必須 -->

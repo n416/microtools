@@ -1,11 +1,15 @@
 import { defineConfig } from 'vite';
 import path from 'path';
+import publishPlugin from './scripts/vite_publish_plugin.js';
 
 export default defineConfig({
   base: './',
   server: {
     port: 5173
   },
+  plugins: [
+    publishPlugin()
+  ],
   build: {
     rollupOptions: {
       input: {

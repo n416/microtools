@@ -1,0 +1,2629 @@
+
+
+<script async="" src="https://scripts.clarity.ms/0.8.57/clarity.js"></script><script type="text/javascript" async="" src="https://s.yimg.jp/images/listing/tool/cv/ytag.js"></script><script type="text/javascript" async="" src="https://www.google-analytics.com/analytics.js"></script><script type="text/javascript" async="" src="https://s.yimg.jp/images/listing/tool/cv/ytag.js"></script><script type="text/javascript" async="" src="https://www.googletagmanager.com/gtag/js?id=AW-16693368288&amp;cx=c&amp;gtm=4e6341"></script><script type="text/javascript" async="" src="https://www.googletagmanager.com/gtag/js?id=G-R8G9341WV8&amp;cx=c&amp;gtm=4e6341"></script><script async="" src="https://www.clarity.ms/tag/iil0gxvc0f?ref=gtm2"></script><script type="text/javascript" async="" src="https://static.ads-twitter.com/uwt.js"></script><script type="text/javascript" async="" src="https://www.googletagmanager.com/gtag/js?id=AW-16697139232&amp;cx=c&amp;gtm=4e6341"></script><script async="" src="//www.googletagmanager.com/gtm.js?id=GTM-5CGN6D"></script><script>
+  dataLayer = [{"accessedFrom":"Web","deviceType":"isPC","hasNextOption":false,"hasPassport":false,"jsDataRoute":"public:my:works_detail","supportersPassportPlan":"none","userId":"822139846515500081","visitorHash":"aefc1c6a4bf30a918d2e371541f70701e86e20750ca14776156c9ee21e210564","visitorType":"user"}];
+</script>
+
+<!-- Google Tag Manager -->
+<noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-5CGN6D"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-5CGN6D');</script>
+<!-- End Google Tag Manager -->
+
+
+
+
+<div id="container">
+    <div id="sidebar">
+      <p id="sidebar-logo"><a href="/my"><img src="https://cdn-static.kakuyomu.jp/images/brand/kakuyomu-mark-rounded.png?uLgfRuz9oGo2" alt="カクヨム"></a></p>
+      <nav id="sidebarNavigation">
+        <ul>
+          <li><a href="/my">ダッシュボード</a></li>
+          <li class="isActive"><a href="/my/works">小説</a></li>
+          <li><a href="/my/collections">コレクション</a></li>
+          <li><a href="/my/news">近況ノート</a></li>
+          <li><a href="/my/events">イベント情報</a></li>
+          <li><a href="/my/reactions">読者からの反応</a></li>
+          <li><a href="/my/rewards">カクヨムリワード</a></li>
+          <li><a href="/my/supporters">サポーター</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <div id="content">
+      <div id="globalHeaderMyPC" class="isSignedInUser js-viewer-writing-side-header">
+          <p id="globalHeaderMyPC-title" class="isHidden js-viewer-writing-side-header-title"><a href="#" title="仕様書にないバグですが、 たぶん俺のことです">仕様書にないバグですが、 たぶん俺のことです</a></p>
+        <div id="globalHeaderMyPC-right">
+            <div id="globalHeaderMyPC-createNew" class="ui-contextMenu" tabindex="0" onclick="">
+              <span id="globalHeaderMyPC-createNew-handle"><span>新規作成</span> <i class="icon-bottom"></i></span>
+              <div class="ui-contextMenu-content ui-contextMenu-content-left">
+                <ul>
+                  <li><a href="/my/works/new">新しい小説を作成</a></li>
+                  <li><a href="/my/news/new">新しい近況ノートを書く</a></li>
+                </ul>
+              </div>
+            </div>
+
+<ul id="globalHeaderPC-subNav">
+    <li id="globalHeaderPC-notification">
+      <button type="button" class="ui-button-silent-wrapper js-notification-notices-button" aria-controls="globalHeaderPC-notificationPanel"><span class="ui-button-silent">
+        <img id="globalHeaderPC-notification-default" class="js-notification-notices-button-normal-icon isShown" src="https://cdn-static.kakuyomu.jp/images/common/notification.svg?tNkQBzkMNAZq" alt="通知">
+        <img id="globalHeaderPC-notification-notified" class="js-notification-notices-button-unread-icon isHidden" src="https://cdn-static.kakuyomu.jp/images/common/notified.svg?OFe0FYt6OjBt" alt="通知">
+      </span></button>
+      <div id="globalHeaderPC-notificationPanel" class="isHidden">
+        <div id="globalHeaderPC-notificationPanel-header">
+          <p id="globalHeaderPC-notificationPanel-header-title">通知</p>
+          <p><a href="/settings/notifications">設定</a></p>
+        </div>
+        <div id="globalHeaderPC-notificationPanel-body" class="js-notification-notices-panel-main-content">
+          <p id="globalHeaderPC-notificationPanel-loading"><span class="ui-loading" aria-label="読込中…"><span class="ui-loading-half ui-loading-left"><span></span></span><span class="ui-loading-half ui-loading-right"><span></span></span></span></p>
+        </div>
+      </div>
+    </li><li><a href="/"><span>トップ</span></a></li><li><a href="/my/antenna"><span>マイページ</span></a></li><li id="globalHeaderPC-profile" class="ui-contextMenu" tabindex="0" onclick="">
+      <a id="globalHeaderPC-profileLabel" href="/users/n416"><span><b>@n416</b> <i class="icon-bottom"></i></span></a>
+      <div class="ui-contextMenu-content ui-contextMenu-content-right">
+        <ul>
+          <li class="contextMenu-border">
+              <div id="globalHeaderPC-profile-userName">
+                <a href="/users/n416">
+                  <div class="names">
+                    <div itemprop="author">ちょこふれーく</div>
+                    <div class="hasPenName">@n416</div>
+                  </div>
+                  <div class="iconNext"><svg xmlns="http://www.w3.org/2000/svg" width="615" height="1000" viewBox="0 0 615 1000"><polygon points="117.69 1000 7.03 888.66 393.35 503.02 0.32 110.66 111.66 0 614.68 503.02 117.69 1000"></polygon></svg>
+
+                  </div>
+                </a>
+              </div>
+          </li>
+          <li class="works"><a href="/users/n416/works">小説</a></li>
+          <li><a href="/users/n416/collections">コレクション</a></li>
+          <li><a href="/users/n416/news">近況ノート</a></li>
+          <li><a href="/users/n416/following_works">フォローしている小説</a></li>
+          <li><a href="/users/n416/following_users">フォローしているユーザー</a></li>
+          <li class="contextMenu-border"><a href="/users/n416/followers">フォロワー</a></li>
+          <li><a href="/my/reviews">おすすめレビュー</a></li>
+          <li class="contextMenu-border"><a href="/my/episode_comments">応援コメント</a></li>
+          <li><a href="/settings/profile">アカウント設定</a></li>
+          <li><a href="/site_feedback?location=%2Fmy%2Fworks%2F822139846518699844">要望を送る</a></li>
+          <li><form action="/logout" method="POST" id="globalHeaderPC-subNav-logoutForm">
+            <input type="hidden" name="csrf_token" value="eT7Pk8Prp3EUCUA6nP5nSf9G57o7obRSpfrkHBWCZSipHNWkJl">
+            <button type="submit" class="ui-button-silent"><i class="icon-logout"></i> ログアウト</button>
+          </form></li>
+        </ul>
+      </div>
+    </li><li id="globalHeaderPC-info" class="ui-contextMenu" tabindex="0" onclick="">
+    <span id="globalHeaderPC-infoLabel"><i class="icon-ellipsis"></i></span>
+    <div class="ui-contextMenu-content ui-contextMenu-content-right">
+      <ul>
+        <li><a href="/guide">カクヨムガイド</a></li>
+        <li><a href="https://kakuyomu.jp/help/">ヘルプ</a></li>
+        <li class="contextMenu-border"><a href="https://kakuyomu.jp/info/">お知らせ</a></li>
+        <li><a href="/legal/tos">利用規約</a></li>
+        <li><a href="/legal/loyalty_program">ロイヤルティ規約</a></li>
+        <li><a href="/legal/subscription">カクヨム有料サービス規約</a></li>
+        <li><a href="/legal/tokuteisho_torihikiho">特定商取引法に基づく表示</a></li>
+        <li><a href="/legal/guideline">ガイドライン</a></li>
+        <li class="contextMenu-border"><a href="https://group.kadokawa.co.jp/privacy_policy/main.html" target="_blank">プライバシーポリシー</a></li>
+        <li><a href="/violation_report?url=https%3A%2F%2Fkakuyomu.jp%2Fmy%2Fworks%2F822139846518699844">このページを通報</a></li>
+      </ul>
+    </div>
+  </li></ul>
+
+        </div>
+      </div>
+
+      <main id="main">
+        
+
+<header id="mainHeader">
+  <ul id="mainHeader-breadcrumbs">
+    <li><a href="/my/works">小説</a></li>
+    <li id="mainHeader-breadcrumbs-title"><h1>仕様書にないバグですが、 たぶん俺のことです</h1></li>
+  </ul>
+  <ul id="mainHeader-actions">
+      <li><a href="/works/822139846518699844" class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="小説を表示"><svg xmlns="http://www.w3.org/2000/svg" width="975" height="1000" viewBox="0 0 975 1000"><polygon points="945 272 945 30 703.89 30 945 272" stroke="#000" stroke-miterlimit="10" stroke-width="60"></polygon><line x1="901.07" y1="74.07" x2="463.07" y2="512.07" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="60"></line><polyline points="412 30 30 30 30 970 945 970 945 550" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="60"></polyline></svg>
+</a></li>
+    <li><a href="/my/works/822139846518699844/edit" class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="小説設定"><svg xmlns="http://www.w3.org/2000/svg" width="975" height="1000" viewBox="0 0 975 1000"><path d="M836.49,546.06A366.27,366.27,0,0,0,839.78,500a366.27,366.27,0,0,0-3.29-46.06l99.17-77.55c8.93-7.05,11.28-19.74,5.64-30.08l-94-162.62c-5.64-10.34-18.33-14.1-28.67-10.34l-117,47a343.39,343.39,0,0,0-79.43-46.06L604.31,49.74C602.9,38.46,593,30,581.28,30h-188c-11.75,0-21.62,8.46-23,19.74L352.39,174.29C323.72,186,297.4,202,273,220.35l-117-47a22.93,22.93,0,0,0-28.67,10.34l-94,162.62a23.17,23.17,0,0,0,5.64,30.08l99.17,77.55A372.74,372.74,0,0,0,134.78,500a372.74,372.74,0,0,0,3.29,46.06L38.9,623.61c-8.93,7-11.28,19.74-5.64,30.08l94,162.62c5.64,10.34,18.33,14.1,28.67,10.34l117-47a343.39,343.39,0,0,0,79.43,46.06l17.86,124.55c1.41,11.28,11.28,19.74,23,19.74h188c11.75,0,21.62-8.46,23-19.74l17.86-124.55c28.67-11.75,55-27.73,79.43-46.06l117,47a22.93,22.93,0,0,0,28.67-10.34l94-162.62c5.64-10.34,3.29-23-5.64-30.08ZM487.28,664.5c-90.71,0-164.5-73.79-164.5-164.5s73.79-164.5,164.5-164.5,164.5,73.79,164.5,164.5S578,664.5,487.28,664.5Z" fill="none" stroke="#222" stroke-miterlimit="10" stroke-width="60"></path></svg>
+</a></li>
+    <li class="ui-contextMenu">
+      <span><i class="icon-ellipsis"></i></span>
+      <div class="ui-contextMenu-content ui-contextMenu-content-right">
+        <ul>
+            <li>
+              <form id="work-backupForm" class="work-disabled-buttom-text js-onetime-form" method="post" action="/my/works/822139846518699844/archive">
+                <input type="hidden" name="csrf_token" value="eT7Pk8Prp3EUCUA6nP5nSf9G57o7obRSpfrkHBWCZSipHNWkJl">
+                <button type="submit">小説をバックアップ</button>
+              </form>
+            </li>
+          <li>
+            <form id="work-unpublishForm" class="work-disabled-buttom-text js-work-unpublish-form" method="post" action="/my/works/822139846518699844/unpublish" data-confirm-message="この作品の全エピソードを下書きに変更してもよろしいですか？">
+              <input type="hidden" name="csrf_token" value="eT7Pk8Prp3EUCUA6nP5nSf9G57o7obRSpfrkHBWCZSipHNWkJl">
+              <button type="submit">小説を一括非公開…</button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </li>
+  </ul>
+</header>
+
+<div id="summary">
+  <section id="summary-feedback" class="isPanelShown">
+    <div class="summary-sectionInner">
+      <header>
+        <h2><button type="button" class="ui-button-silent js-parsisent-toggle-panel-button isPanelShown" aria-label="読者からの反応を閉じる" data-label-to-open="読者からの反応を開く" data-label-to-close="読者からの反応を閉じる" data-panel-state-target="summary-feedback" data-loading-target="summary-feedback-loading" aria-controls="summary-feedback-content" data-storage-segment="dcv.my.works.detail.feedback_content"><svg xmlns="http://www.w3.org/2000/svg" width="975" height="1000" viewBox="0 0 975 1000"><polyline points="29.61 397.55 484.54 852.46 945.61 391.39" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="60"></polyline></svg>
+ <span>読者からの反応</span></button></h2>
+          <p class="summary-header-action ui-tooltip ui-tooltip-right" data-ui-tooltip-label="公開済エピソードの分だけが表示されてます"><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000"><path d="M500,1000A500.13,500.13,0,0,1,305.19,39.36,497,497,0,0,1,500,0c275.7,0,500,224.3,500,500S775.7,1000,500,1000Zm0-940A440.14,440.14,0,0,0,328.58,905.39,437.28,437.28,0,0,0,500,940c242.62,0,440-197.38,440-440S742.62,60,500,60Z" fill="#040000"></path><path d="M370.47,257.3q48.84-52.08,134.14-52.08,78.85,0,126.32,44.57t47.45,113.89q0,42-17.23,68.13T591,508.69q-38.47,36.88-50,62.44t-11.54,75.5h-70.3q0-56.67,13.43-91.36t59.44-79.48l32-31.31a134.32,134.32,0,0,0,23.3-28.12q16.18-25.71,16.19-53.4,0-38.79-23.63-67.27T501.77,267.2q-67.45,0-93.3,49-14.54,27.3-16.56,78.7H321.62Q321.62,309.4,370.47,257.3Zm86.45,455.09h78.6v82.39h-78.6Z" fill="#040000"></path></svg>
+</p>
+      </header>
+      
+      <div id="summary-feedback-content" class="summary-content isShown">
+        <ul id="summary-feedbackLine1">
+          <li id="feedback-followers" class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="フォロワー数 ">
+              <span><svg xmlns="http://www.w3.org/2000/svg" width="625.24" height="1000" viewBox="0 0 625.24 1000"><polygon points="0 1000 312.62 703.56 625.24 1000 625.24 0 0 0 0 1000" fill="#000"></polygon></svg> <span class="feedbackCount-zero">–</span></span>
+          </li>
+          <li id="feedback-pv" class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="PV数 10">
+              <a href="/works/822139846518699844/accesses"><svg xmlns="http://www.w3.org/2000/svg" width="975" height="1000" viewBox="0 0 975 1000"><rect x="30" y="30" width="915" height="940" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="60"></rect><path d="M326.19,137.63q38.46,0,64.7,18.69t42.31,49q16.08,30.32,23.08,69.21a447.7,447.7,0,0,1,7,79.31q0,55.57-11.54,97t-32.18,67.69a130.57,130.57,0,0,1-50,39.41q-29.38,13.14-65.05,13.13H250.66V859H149.94V137.63ZM295.42,464q30.06,0,48.61-26.27t18.53-81.84q0-54.56-16.08-82.85t-53.86-28.28h-42V464Z"></path><path d="M658.41,671.08h2.1l74.14-533.45H838.86L724.16,859H594.77L480.06,137.63H587.77Z"></path></svg>
+<span>10</span></a>
+          </li>
+        </ul>
+        <ul id="summary-feedbackLine2">
+          <li id="feedback-reviews">
+              <span>
+                <span class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="★数"><span id="feedback-reviews-star">★</span><span class="feedbackCount-zero">–</span></span>
+                <span class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="レビュー人数"><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="866" viewBox="0 0 1000 866"><line x1="155.52" y1="229.14" x2="844.48" y2="229.14" fill="none" stroke="#4baae0" stroke-miterlimit="10" stroke-width="57.32"></line><line x1="155.52" y1="401.38" x2="607.52" y2="401.38" fill="none" stroke="#4baae0" stroke-miterlimit="10" stroke-width="57.32"></line><path d="M942.68,57.32V576.55H803.85V734l-152-142-16.53-15.43h-578V57.32H942.68M1000,0H0V633.86H612.73L861.16,866V633.86H1000V0Z" fill="#4baae0"></path></svg>
+<span class="feedbackCount-zero">–</span></span>
+              </span>
+          </li>
+          <li id="feedback-cheers">
+              <span>
+                <span class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="応援数"><svg xmlns="http://www.w3.org/2000/svg" width="1219" height="1000" viewBox="0 0 1219 1000"><path d="M609.32,1000,589,988.73c-6-3-147.26-75.88-290.76-196.84C213.37,719.76,145,646.13,96.17,572.5,32.31,477.08,0,380.92,0,287.75a252.85,252.85,0,0,1,27.05-114.2C43.58,139,67.62,108.19,98.42,81.89,160,29.3,241.17,0,327.57,0c42.83,0,86.4,11.27,130,33.81q50.71,25.92,99.17,69.87c21,18.78,38.32,37.57,52.6,53.34,14.27-15.77,31.55-34.56,52.59-53.34,32.3-29.3,66.11-52.59,99.17-69.87C804.66,11.27,849,0,891.06,0c86.4,0,167.54,29.3,229.15,82.64,30.8,26.3,54.85,57.1,71.38,90.91a252.84,252.84,0,0,1,27,114.2c0,92.42-32.3,187.83-96.17,282.5-48.83,73.63-116.45,147.26-202.1,219.38-142.75,121.71-284,196.1-290,199.1Z"></path></svg>
+<span class="feedbackCount-zero">–</span></span>
+                <span class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="コメント数"><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="866" viewBox="0 0 1000 866"><line x1="155.52" y1="229.14" x2="844.48" y2="229.14" fill="none" stroke="#fa6f6f" stroke-miterlimit="10" stroke-width="57.32"></line><line x1="155.52" y1="401.38" x2="607.52" y2="401.38" fill="none" stroke="#fa6f6f" stroke-miterlimit="10" stroke-width="57.32"></line><path d="M942.68,57.32V576.55H803.85V734l-152-142-16.53-15.43h-578V57.32H942.68M1000,0H0V633.86H612.73L861.16,866V633.86H1000V0Z" fill="#fa6f6f"></path></svg>
+<span class="feedbackCount-zero">–</span></span>
+              </span>
+          </li>
+        </ul>
+        <div id="summary-feedbackGraph">
+            <ul id="summary-feedbackGraph-summary">
+              <li class="isActive"><div class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="今日 0 PV">
+                <span class="feedbackGraph-period">今日</span>
+                <span class="feedbackGraph-countSummary">
+                  <span class="feedbackGraph-countSummary-count">0</span>
+                  <span class="feedbackGraph-countSummary-label">PV</span>
+                </span>
+              </div></li>
+              <li><div class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="今週 0 PV">
+                <span class="feedbackGraph-period">今週</span>
+                <span class="feedbackGraph-countSummary">
+                  <span class="feedbackGraph-countSummary-count">0</span>
+                  <span class="feedbackGraph-countSummary-label">PV</span>
+                </span>
+              </div></li>
+              <li><div class="ui-tooltip ui-tooltip-top" data-ui-tooltip-label="今月 10 PV">
+                <span class="feedbackGraph-period">今月</span>
+                <span class="feedbackGraph-countSummary">
+                  <span class="feedbackGraph-countSummary-count">10</span>
+                  <span class="feedbackGraph-countSummary-label">PV</span>
+                </span>
+              </div></li>
+            </ul>
+            <ul id="summary-feedbackGraph-graphContainer">
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月8日：0PV" aria-label="2026年2月8日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月9日：0PV" aria-label="2026年2月9日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月10日：0PV" aria-label="2026年2月10日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月11日：0PV" aria-label="2026年2月11日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月12日：0PV" aria-label="2026年2月12日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月13日：0PV" aria-label="2026年2月13日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月14日：0PV" aria-label="2026年2月14日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月15日：0PV" aria-label="2026年2月15日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月16日：0PV" aria-label="2026年2月16日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月17日：0PV" aria-label="2026年2月17日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月18日：0PV" aria-label="2026年2月18日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月19日：0PV" aria-label="2026年2月19日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月20日：0PV" aria-label="2026年2月20日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月21日：0PV" aria-label="2026年2月21日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月22日：0PV" aria-label="2026年2月22日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月23日：0PV" aria-label="2026年2月23日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月24日：0PV" aria-label="2026年2月24日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月25日：0PV" aria-label="2026年2月25日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月26日：0PV" aria-label="2026年2月26日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月27日：0PV" aria-label="2026年2月27日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年2月28日：0PV" aria-label="2026年2月28日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年3月1日：0PV" aria-label="2026年3月1日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年3月2日：0PV" aria-label="2026年3月2日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年3月3日：0PV" aria-label="2026年3月3日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年3月4日：0PV" aria-label="2026年3月4日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年3月5日：0PV" aria-label="2026年3月5日：0PV"><span style="height: 0%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年3月6日：4PV" aria-label="2026年3月6日：4PV"><span style="height: 100%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年3月7日：2PV" aria-label="2026年3月7日：2PV"><span style="height: 50%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年3月8日：4PV" aria-label="2026年3月8日：4PV"><span style="height: 100%;"></span></li>
+                <li class="feedbackGraph-graph ui-tooltip ui-tooltip-top" data-ui-tooltip-label="2026年3月9日：0PV" aria-label="2026年3月9日：0PV"><span style="height: 0%;"></span></li>
+            </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="summary-workInfo" class="isPanelShown">
+    <div class="summary-sectionInner">
+      <header>
+        <h2><button type="button" class="ui-button-silent js-parsisent-toggle-panel-button isPanelShown" aria-label="小説情報を閉じる" data-label-to-open="小説情報を開く" data-label-to-close="小説情報を閉じる" data-panel-state-target="summary-workInfo" data-loading-target="summary-workInfo-loading" aria-controls="summary-workInfo-content" data-storage-segment="dcv.my.works.detail.workinfo_content"><svg xmlns="http://www.w3.org/2000/svg" width="975" height="1000" viewBox="0 0 975 1000"><polyline points="29.61 397.55 484.54 852.46 945.61 391.39" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="60"></polyline></svg>
+ <span>小説情報</span></button></h2>
+      </header>
+      
+      <div id="summary-workInfo-content" class="summary-content isShown">
+        <p id="summary-workInfo-workStatus" class="summary-workInfo-row">
+
+  <span class="widget-workStatusLabel-running">連載中</span>
+<span class="work-episodeCount" title="公開済のエピソード数：7">7話</span>
+
+        </p>
+        <div id="summary-workInfo-characterCount" class="summary-workInfo-row">
+          <p>
+            <span id="summary-workInfo-characterCount-published-count">11,421</span>
+            <span id="summary-workInfo-characterCount-published-label">文字</span>
+          </p>
+          <p id="summary-workInfo-characterCount-all">下書き含む 72,255文字</p>
+        </div>
+        <dl id="summary-workInfo-date" class="summary-workInfo-row">
+          <div>
+            <dt>最終更新日</dt>
+            <dd><time datetime="2026-03-09T04:01:36Z">2026年3月9日 13:01</time></dd>
+          </div>
+          <div>
+            <dt>公開日</dt>
+            <dd>
+                <time datetime="2026-03-06T09:36:07Z">2026年3月6日 18:36</time>
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+  <section id="summary-workSetting" class="isPanelShown">
+    <div class="summary-sectionInner">
+      <header>
+        <h2><button type="button" class="ui-button-silent js-parsisent-toggle-panel-button isPanelShown" aria-label="小説設定を閉じる" data-label-to-open="小説設定を開く" data-label-to-close="小説設定を閉じる" data-panel-state-target="summary-workSetting" data-loading-target="summary-workSetting-loading" aria-controls="summary-workSetting-content" data-storage-segment="dcv.my.works.detail.worksetting_content"><svg xmlns="http://www.w3.org/2000/svg" width="975" height="1000" viewBox="0 0 975 1000"><polyline points="29.61 397.55 484.54 852.46 945.61 391.39" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="60"></polyline></svg>
+ <span>小説設定</span></button></h2>
+        <p class="summary-header-action"><a href="/my/works/822139846518699844/edit">編集</a></p>
+      </header>
+      
+      <div id="summary-workSetting-content" class="summary-content isShown">
+          <div id="summary-workSetting-events" class="summary-workSetting-row">
+
+              <dl>
+                <div>
+                  <dt><i class="icon-userEvent" title="自主企画"></i> <span>参加中</span></dt>
+                  <dd>
+                      <a href="/user_events/822139846538280036" title="とにかく、SF。１１">とにかく、SF。１１</a>
+                      <a href="/user_events/822139843795918360" title="読み合い企画">読み合い企画</a>
+                      <a href="/user_events/822139843567404524" title="なんでもOK！置く場所に困ったらここに！">なんでもOK！置く場所に困ったらここに！</a>
+                  </dd>
+                </div>
+              </dl>
+          </div>
+        <div class="summary-workSetting-row">
+          <dl>
+            <div>
+              <dt>キャッチコピー</dt>
+              <dd>
+                  <span id="summary-workSetting-catchphrase" style="color: #509600;">どうか一緒にいられますように。ノイズの俺が、君に消されるその日まで…</span>
+              </dd>
+            </div>
+            <div>
+              <dt>紹介文</dt>
+              <dd>
+                  <span id="summary-workSetting-introduction">エラーを吐いてでも、君の隣にいたいんだ。
+世界は日々アップデートを繰り返し、仕様に合わない異常値（ノイズ）は静かに削除されていく。それがこの現実のルール
+
+気がつけば、俺のアカウント（存在）は削除待ちのキューに入っていたらしい。 
+体温も、存在感も、誰かの記憶からも消えかけてい…</span>
+              </dd>
+            </div>
+          </dl>
+        </div>
+        <div class="summary-workSetting-row">
+          <dl>
+            <div>
+              <dt>オリジナル小説</dt>
+              <dd>
+                
+                  <a href="/genres/action/recent_works">現代ファンタジー</a>
+              </dd>
+            </div>
+          </dl>
+        </div>
+        <div class="summary-workSetting-row">
+          <dl>
+            <div>
+              <dt>タグ</dt>
+              <dd>
+                      <a href="/tags/%E7%BE%A4%E5%83%8F%E5%8A%87">群像劇</a>
+                      <a href="/tags/IT%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2">ITエンジニア</a>
+                      <a href="/tags/%E3%81%A9%E3%82%93%E3%81%A7%E3%82%93%E8%BF%94%E3%81%97">どんでん返し</a>
+                      <a href="/tags/%E3%81%8A%E4%BB%95%E4%BA%8B">お仕事</a>
+                      <a href="/tags/%E3%82%AA%E3%83%95%E3%82%A3%E3%82%B9%E3%83%A9%E3%83%96">オフィスラブ</a>
+                      <a href="/tags/%E3%81%96%E3%81%BE%E3%81%81">ざまぁ</a>
+                      <a href="/tags/%E3%83%87%E3%82%A3%E3%82%B9%E3%83%88%E3%83%94%E3%82%A2">ディストピア</a>
+                      <a href="/tags/%E3%83%8F%E3%83%83%E3%82%AB%E3%83%BC">ハッカー</a>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="startOfToc"></div>
+<div class="tableOfContents isShown js-toc">
+  <form id="toc-bulkEditForm" class="js-toc-editor-form" method="post" action="/my/works/822139846518699844/edit_toc_bulk">
+    <input type="hidden" name="csrf_token" value="eT7Pk8Prp3EUCUA6nP5nSf9G57o7obRSpfrkHBWCZSipHNWkJl">
+    <div class="episodeAction isRunning js-mark-select-toc-state">
+      <div class="episodeAction-bulkActions">
+        <p class="episodeAction-checkAll js-show-if-select-toc">
+          <span class="ui-checkbox ui-checkbox-small">
+            <input type="checkbox" name="toc_all_select">
+            <span class="ui-checkbox-alternate"></span>
+          </span>
+        </p>
+        <h2 class="isShown js-hide-if-select-toc">章とエピソード</h2>
+        <div class="episodeAction-operation isHidden js-show-if-select-toc">
+          <p class="episodeAction-selectedCount js-toc-selected-count">0項目</p>
+          <p class="ui-select ui-select-small">
+            <select name="bulk_action_name" tabindex="1">
+              <option value="">操作を選択</option>
+              <option value="change_title">タイトルを変更…</option>
+              <option value="unpublish">下書きに戻す…</option>
+              <option value="publish">今すぐ公開…</option>
+              <option value="delete">削除…</option>
+            </select>
+          </p>
+        </div>
+      </div>
+        <p class="episodeAction-scrollTocButton"><button type="button" class="ui-button-silent tocEditButtons-scrollTocButton scrollTocButton js-scroll-button" data-target="endOfToc" data-duration="200"><svg height="1000" viewBox="0 0 1000 1000" width="1000" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#222" stroke-miterlimit="10" stroke-width="80"><path d="m29.86 468.86 470.14 470.14 470.14-470.14"></path><path d="m500 8v931"></path></g></svg>
+ <span>最新話へ移動</span></button></p>
+      <p class="tocEditButtons">
+          <a href="/my/works/822139846518699844/episodes/new" class="ui-button-blue">次のエピソードを執筆</a>
+          <button type="button" class="ui-button-default js-toc-edit-button">章と並び順を編集</button>
+      </p>
+    </div>
+    <div class="episodeList">
+      <table class="episodes">
+            <tbody><tr class="episode" id="toc-default-episode-822139846519598487">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846519598487" data-target="toc-default-episode-822139846519598487" data-title="001 登場人物（社内・関係者）" data-is-published="1">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-published">公開済</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846519598487" title="001 登場人物（社内・関係者）">001 登場人物（社内・関係者）</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846519598487">編集</a>
+                  <a href="/works/822139846518699844/episodes/822139846519598487">表示</a>
+              </td>
+              <td class="episode-characterCount">918文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+                  <div class="episode-feedback-inner">
+                      <a href="/works/822139846518699844/accesses" class="episode-pv" title="PV数">1 PV</a>
+                    <div class="episode-feedback-graph" style="width: 16.67%;"></div>
+                  </div>
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">6</span>日<span class="time">18:47</span></span>
+ 最終更新
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846518736178">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846518736178" data-target="toc-default-episode-822139846518736178" data-title="第1話：システム障害の現状と課題" data-is-published="1">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-published">公開済</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846518736178" title="第1話：システム障害の現状と課題">第1話：システム障害の現状と課題</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846518736178">編集</a>
+                  <a href="/works/822139846518699844/episodes/822139846518736178">表示</a>
+              </td>
+              <td class="episode-characterCount">3,583文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+                  <div class="episode-feedback-inner">
+                      <a href="/works/822139846518699844/accesses" class="episode-pv" title="PV数">6 PV</a>
+                    <div class="episode-feedback-graph" style="width: 100.00%;"></div>
+                  </div>
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">9</span>日<span class="time">12:37</span></span>
+ 最終更新
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846518779812">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846518779812" data-target="toc-default-episode-822139846518779812" data-title="第2話：人的リソースの枯渇と影響" data-is-published="1">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-published">公開済</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846518779812" title="第2話：人的リソースの枯渇と影響">第2話：人的リソースの枯渇と影響</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846518779812">編集</a>
+                  <a href="/works/822139846518699844/episodes/822139846518779812">表示</a>
+              </td>
+              <td class="episode-characterCount">1,446文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+                  <div class="episode-feedback-inner">
+                      <a href="/works/822139846518699844/accesses" class="episode-pv" title="PV数">1 PV</a>
+                    <div class="episode-feedback-graph" style="width: 16.67%;"></div>
+                  </div>
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">9</span>日<span class="time">01:54</span></span>
+ 最終更新
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846518850234">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846518850234" data-target="toc-default-episode-822139846518850234" data-title="第3話：クリティカルエラー発生報告" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-draft">下書き</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846518850234" title="第3話：クリティカルエラー発生報告">第3話：クリティカルエラー発生報告</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846518850234">編集</a>
+              </td>
+              <td class="episode-characterCount">1,809文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+                  <div class="episode-feedback-inner">
+                      <span class="episode-pv" title="PV数">2 PV</span>
+                    <div class="episode-feedback-graph" style="width: 33.33%;"></div>
+                  </div>
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">9</span>日<span class="time">13:01</span></span>
+ 最終更新
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846685825428">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846685825428" data-target="toc-default-episode-822139846685825428" data-title="002 キャラクター（登場人物）" data-is-published="1">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-published">公開済</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846685825428" title="002 キャラクター（登場人物）">002 キャラクター（登場人物）</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846685825428">編集</a>
+                  <a href="/works/822139846518699844/episodes/822139846685825428">表示</a>
+              </td>
+              <td class="episode-characterCount">1,731文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">9</span>日<span class="time">02:26</span></span>
+ 最終更新
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846518873444">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846518873444" data-target="toc-default-episode-822139846518873444" data-title="第4話：偶然のハックとメトロノーム" data-is-published="1">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-published">公開済</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846518873444" title="第4話：偶然のハックとメトロノーム">第4話：偶然のハックとメトロノーム</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846518873444">編集</a>
+                  <a href="/works/822139846518699844/episodes/822139846518873444">表示</a>
+              </td>
+              <td class="episode-characterCount">1,115文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">8</span>日<span class="time">02:00</span></span>
+ 最終更新
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846518894262">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846518894262" data-target="toc-default-episode-822139846518894262" data-title="第5話：浸食の予兆" data-is-published="1">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-published">公開済</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846518894262" title="第5話：浸食の予兆">第5話：浸食の予兆</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846518894262">編集</a>
+                  <a href="/works/822139846518699844/episodes/822139846518894262">表示</a>
+              </td>
+              <td class="episode-characterCount">710文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">8</span>日<span class="time">02:00</span></span>
+ 最終更新
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846518909014">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846518909014" data-target="toc-default-episode-822139846518909014" data-title="第6話：ロスト・シーケンス" data-is-published="1">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-published">公開済</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846518909014" title="第6話：ロスト・シーケンス">第6話：ロスト・シーケンス</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846518909014">編集</a>
+                  <a href="/works/822139846518699844/episodes/822139846518909014">表示</a>
+              </td>
+              <td class="episode-characterCount">1,918文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">9</span>日<span class="time">01:56</span></span>
+ 最終更新
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702823546">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702823546" data-target="toc-default-episode-822139846702823546" data-title="第7話：システムからの招待状" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702823546" title="第7話：システムからの招待状">第7話：システムからの招待状</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702823546">編集</a>
+              </td>
+              <td class="episode-characterCount">1,019文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">9</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702420224">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702420224" data-target="toc-default-episode-822139846702420224" data-title="第8話（第2章）：六本木の休日" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702420224" title="第8話（第2章）：六本木の休日">第8話（第2章）：六本木の休日</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702420224">編集</a>
+              </td>
+              <td class="episode-characterCount">2,414文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">10</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702413084">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702413084" data-target="toc-default-episode-822139846702413084" data-title="第8.5話：陽だまりのテラスとバグに無縁な猫たち" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702413084" title="第8.5話：陽だまりのテラスとバグに無縁な猫たち">第8.5話：陽だまりのテラスとバグに無…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702413084">編集</a>
+              </td>
+              <td class="episode-characterCount">2,865文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">11</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702425992">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702425992" data-target="toc-default-episode-822139846702425992" data-title="第9話：デスマーチの足音と限界" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702425992" title="第9話：デスマーチの足音と限界">第9話：デスマーチの足音と限界</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702425992">編集</a>
+              </td>
+              <td class="episode-characterCount">2,577文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">12</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702431996">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702431996" data-target="toc-default-episode-822139846702431996" data-title="第10.1話：ファミレスと「電子ドラッグ」の真実" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702431996" title="第10.1話：ファミレスと「電子ドラッグ」の真実">第10.1話：ファミレスと「電子ドラッ…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702431996">編集</a>
+              </td>
+              <td class="episode-characterCount">2,104文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">13</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702437419">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702437419" data-target="toc-default-episode-822139846702437419" data-title="第10.2話：職人のプライドとポンコツ・ガジェット" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702437419" title="第10.2話：職人のプライドとポンコツ・ガジェット">第10.2話：職人のプライドとポンコツ…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702437419">編集</a>
+              </td>
+              <td class="episode-characterCount">2,153文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">14</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702443062">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702443062" data-target="toc-default-episode-822139846702443062" data-title="第10.3話：赤い日の真実と、反逆の兆し" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702443062" title="第10.3話：赤い日の真実と、反逆の兆し">第10.3話：赤い日の真実と、反逆の兆し</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702443062">編集</a>
+              </td>
+              <td class="episode-characterCount">1,403文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">15</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702449088">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702449088" data-target="toc-default-episode-822139846702449088" data-title="第11話：納品へのカウントダウン" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702449088" title="第11話：納品へのカウントダウン">第11話：納品へのカウントダウン</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702449088">編集</a>
+              </td>
+              <td class="episode-characterCount">1,533文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">16</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702454925">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702454925" data-target="toc-default-episode-822139846702454925" data-title="第12話：面白星人" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702454925" title="第12話：面白星人">第12話：面白星人</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702454925">編集</a>
+              </td>
+              <td class="episode-characterCount">1,638文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">17</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702460678">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702460678" data-target="toc-default-episode-822139846702460678" data-title="第12.1話：赤い日" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702460678" title="第12.1話：赤い日">第12.1話：赤い日</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702460678">編集</a>
+              </td>
+              <td class="episode-characterCount">1,427文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">18</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702466955">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702466955" data-target="toc-default-episode-822139846702466955" data-title="第12.2話：ノイズとアンカー" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702466955" title="第12.2話：ノイズとアンカー">第12.2話：ノイズとアンカー</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702466955">編集</a>
+              </td>
+              <td class="episode-characterCount">1,032文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">19</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702472856">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702472856" data-target="toc-default-episode-822139846702472856" data-title="第13話：赤い日の真実と罠" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702472856" title="第13話：赤い日の真実と罠">第13話：赤い日の真実と罠</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702472856">編集</a>
+              </td>
+              <td class="episode-characterCount">2,168文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">20</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702478275">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702478275" data-target="toc-default-episode-822139846702478275" data-title="第13.1話：完璧すぎる視界" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702478275" title="第13.1話：完璧すぎる視界">第13.1話：完璧すぎる視界</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702478275">編集</a>
+              </td>
+              <td class="episode-characterCount">1,077文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">21</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702486707">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702486707" data-target="toc-default-episode-822139846702486707" data-title="第13.2話：見えないものを直す手" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702486707" title="第13.2話：見えないものを直す手">第13.2話：見えないものを直す手</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702486707">編集</a>
+              </td>
+              <td class="episode-characterCount">931文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">22</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702492314">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702492314" data-target="toc-default-episode-822139846702492314" data-title="第13.3話：優しさと最適化の矛盾" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702492314" title="第13.3話：優しさと最適化の矛盾">第13.3話：優しさと最適化の矛盾</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702492314">編集</a>
+              </td>
+              <td class="episode-characterCount">1,226文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">23</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702498498">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702498498" data-target="toc-default-episode-822139846702498498" data-title="第13.4話：黒須の監視と、ノイズの体温" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702498498" title="第13.4話：黒須の監視と、ノイズの体温">第13.4話：黒須の監視と、ノイズの体温</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702498498">編集</a>
+              </td>
+              <td class="episode-characterCount">1,405文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">24</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702504367">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702504367" data-target="toc-default-episode-822139846702504367" data-title="第13.5話：隔絶される世界線" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702504367" title="第13.5話：隔絶される世界線">第13.5話：隔絶される世界線</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702504367">編集</a>
+              </td>
+              <td class="episode-characterCount">1,482文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">25</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702509909">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702509909" data-target="toc-default-episode-822139846702509909" data-title="第13.6話：アンカーの決断" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702509909" title="第13.6話：アンカーの決断">第13.6話：アンカーの決断</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702509909">編集</a>
+              </td>
+              <td class="episode-characterCount">905文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">26</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702516203">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702516203" data-target="toc-default-episode-822139846702516203" data-title="第13.7話：休日のバグとコーヒーブレイク" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702516203" title="第13.7話：休日のバグとコーヒーブレイク">第13.7話：休日のバグとコーヒーブレ…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702516203">編集</a>
+              </td>
+              <td class="episode-characterCount">2,160文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">27</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702533059">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702533059" data-target="toc-default-episode-822139846702533059" data-title="第14話：雪の日の決断とフェーズアウト" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702533059" title="第14話：雪の日の決断とフェーズアウト">第14話：雪の日の決断とフェーズアウト</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702533059">編集</a>
+              </td>
+              <td class="episode-characterCount">1,593文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">28</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702521437">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702521437" data-target="toc-default-episode-822139846702521437" data-title="第14.1話：雪の日の翌朝 - 喪失の輪郭" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702521437" title="第14.1話：雪の日の翌朝 - 喪失の輪郭">第14.1話：雪の日の翌朝 - 喪失の…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702521437">編集</a>
+              </td>
+              <td class="episode-characterCount">959文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">28</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702527360">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702527360" data-target="toc-default-episode-822139846702527360" data-title="第14.2話：落下するノイズへの追跡劇 - 虚無のカーチェイス" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702527360" title="第14.2話：落下するノイズへの追跡劇 - 虚無のカーチェイス">第14.2話：落下するノイズへの追跡劇…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702527360">編集</a>
+              </td>
+              <td class="episode-characterCount">1,652文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">28</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702544834">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702544834" data-target="toc-default-episode-822139846702544834" data-title="第15話：鬼之河アンダーグラウンド" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702544834" title="第15話：鬼之河アンダーグラウンド">第15話：鬼之河アンダーグラウンド</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702544834">編集</a>
+              </td>
+              <td class="episode-characterCount">1,827文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">28</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702539114">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702539114" data-target="toc-default-episode-822139846702539114" data-title="第15.5話：泥水と蒸気タービン - あるプログラマの覚醒" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702539114" title="第15.5話：泥水と蒸気タービン - あるプログラマの覚醒">第15.5話：泥水と蒸気タービン - …</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702539114">編集</a>
+              </td>
+              <td class="episode-characterCount">2,273文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">28</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702562644">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702562644" data-target="toc-default-episode-822139846702562644" data-title="第16話：再会と覚醒のアプリ" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702562644" title="第16話：再会と覚醒のアプリ">第16話：再会と覚醒のアプリ</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702562644">編集</a>
+              </td>
+              <td class="episode-characterCount">1,101文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">29</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702550751">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702550751" data-target="toc-default-episode-822139846702550751" data-title="第16.0.5話：爆走の黄色いトラックと、ノイズの血統" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702550751" title="第16.0.5話：爆走の黄色いトラックと、ノイズの血統">第16.0.5話：爆走の黄色いトラック…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702550751">編集</a>
+              </td>
+              <td class="episode-characterCount">2,104文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">29</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702556412">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702556412" data-target="toc-default-episode-822139846702556412" data-title="第16.0.6話：池袋のジャンク探しと、休日のカフェ" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702556412" title="第16.0.6話：池袋のジャンク探しと、休日のカフェ">第16.0.6話：池袋のジャンク探しと…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702556412">編集</a>
+              </td>
+              <td class="episode-characterCount">2,313文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">29</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702568549">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702568549" data-target="toc-default-episode-822139846702568549" data-title="第16話：再会と覚醒のアプリ（続き）" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702568549" title="第16話：再会と覚醒のアプリ（続き）">第16話：再会と覚醒のアプリ（続き）</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702568549">編集</a>
+              </td>
+              <td class="episode-characterCount">1,949文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">29</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702581096">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702581096" data-target="toc-default-episode-822139846702581096" data-title="第17話：記憶の抵抗" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702581096" title="第17話：記憶の抵抗">第17話：記憶の抵抗</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702581096">編集</a>
+              </td>
+              <td class="episode-characterCount">1,201文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">30</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702575512">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702575512" data-target="toc-default-episode-822139846702575512" data-title="第17.5話：インカムのノイズ" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702575512" title="第17.5話：インカムのノイズ">第17.5話：インカムのノイズ</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702575512">編集</a>
+              </td>
+              <td class="episode-characterCount">1,121文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">30</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702587223">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702587223" data-target="toc-default-episode-822139846702587223" data-title="第18話：ふたつの和音（コード）" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702587223" title="第18話：ふたつの和音（コード）">第18話：ふたつの和音（コード）</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702587223">編集</a>
+              </td>
+              <td class="episode-characterCount">1,795文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">30</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702592422">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702592422" data-target="toc-default-episode-822139846702592422" data-title="第19話：反逆のカウンター・ノイズ I - 崩壊の足音" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702592422" title="第19話：反逆のカウンター・ノイズ I - 崩壊の足音">第19話：反逆のカウンター・ノイズ I…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702592422">編集</a>
+              </td>
+              <td class="episode-characterCount">933文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">31</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702598290">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702598290" data-target="toc-default-episode-822139846702598290" data-title="第19話：反逆のカウンター・ノイズ II - 重なり合う波長" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702598290" title="第19話：反逆のカウンター・ノイズ II - 重なり合う波長">第19話：反逆のカウンター・ノイズ I…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702598290">編集</a>
+              </td>
+              <td class="episode-characterCount">713文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">31</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702604303">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702604303" data-target="toc-default-episode-822139846702604303" data-title="第19話：反逆のカウンター・ノイズ III - 泥臭い一撃" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702604303" title="第19話：反逆のカウンター・ノイズ III - 泥臭い一撃">第19話：反逆のカウンター・ノイズ I…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702604303">編集</a>
+              </td>
+              <td class="episode-characterCount">1,077文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">31</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702612819">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702612819" data-target="toc-default-episode-822139846702612819" data-title="第19話：反逆のカウンター・ノイズ IV - 完璧なる自滅" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702612819" title="第19話：反逆のカウンター・ノイズ IV - 完璧なる自滅">第19話：反逆のカウンター・ノイズ I…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702612819">編集</a>
+              </td>
+              <td class="episode-characterCount">759文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">31</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702791940">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702791940" data-target="toc-default-episode-822139846702791940" data-title="第20話：新しい世界の仕様書" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702791940" title="第20話：新しい世界の仕様書">第20話：新しい世界の仕様書</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702791940">編集</a>
+              </td>
+              <td class="episode-characterCount">1,433文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">31</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702799739">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702799739" data-target="toc-default-episode-822139846702799739" data-title="第21話・最終話：終わらない運用保守（メンテナンス）" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702799739" title="第21話・最終話：終わらない運用保守（メンテナンス）">第21話・最終話：終わらない運用保守（…</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702799739">編集</a>
+              </td>
+              <td class="episode-characterCount">1,775文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">3</span>月<span class="day">31</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+            <tr class="episode" id="toc-default-episode-822139846702806783">
+              <td class="episode-checkbox js-show-if-select-toc">
+                <span class="ui-checkbox ui-checkbox-small">
+                  <input type="checkbox" name="target_toc_item_id" value="episode:822139846702806783" data-target="toc-default-episode-822139846702806783" data-title="２２話 断章：侵食" data-is-published="0">
+                  <span class="ui-checkbox-alternate"></span>
+                </span>
+              </td>
+              <td class="episode-statusLabel">
+                  <span class="widget-episodeStatusLabel-reserved">予約中</span>
+              </td>
+              <td class="episode-title"><a href="/my/works/822139846518699844/episodes/822139846702806783" title="２２話 断章：侵食">２２話 断章：侵食</a></td>
+              <td class="episode-edit">
+                <a href="/my/works/822139846518699844/episodes/822139846702806783">編集</a>
+              </td>
+              <td class="episode-characterCount">928文字</td>
+              <td class="episode-feedback episode-feedback-cheerCount">
+              </td>
+              <td class="episode-feedback episode-feedback-cheerComment">
+              </td>
+              <td class="episode-feedback episode-feedback-pv">
+              </td>
+              <td class="episode-date">
+                  
+<span class="widget-datetimeYmdhm"><span class="year">2026</span>年<span class="month">4</span>月<span class="day">1</span>日<span class="time">19:00</span></span>
+ 公開予定
+              </td>
+            </tr>
+      </tbody></table>
+    </div>
+  </form>
+  <div id="changeTitleDialog" class="ui-modal-container isHidden js-change-title-dialog" role="dialog" aria-modal="true">
+    <div class="ui-modal-window js-modal-window">
+      <form id="toc-changeTitleForm" class="js-change-title-form" method="post" action="/my/works/822139846518699844/edit_toc_title">
+        <header class="ui-modal-header">
+          <h3>タイトルを変更</h3>
+        </header>
+        <div class="ui-modal-body"><p><input type="text" name="title" placeholder="タイトル"></p></div>
+        <p class="ui-modal-footer">
+          <button type="button" class="ui-button-default js-modal-window-close-button">キャンセル</button>
+          <button type="submit" class="ui-button-blue">変更</button>
+        </p>
+        <input type="hidden" name="csrf_token" value="eT7Pk8Prp3EUCUA6nP5nSf9G57o7obRSpfrkHBWCZSipHNWkJl">
+        <input type="hidden" name="toc_item_id">
+      </form>
+    </div>
+  </div>
+  <div class="ui-modal-container isHidden js-bulk-unpublish-dialog" role="dialog" aria-modal="true">
+    <div class="ui-modal-window js-modal-window">
+      <header class="ui-modal-header">
+        <h3>下書きに戻す</h3>
+      </header>
+      <div class="ui-modal-body"><p>選択したエピソードを下書きに戻してもよろしいですか？　公開済のエピソードが含まれない章は自動的に非公開になります。</p></div>
+      <p class="ui-modal-footer-twoButtons">
+        <button type="button" class="ui-button-default js-modal-window-close-button">キャンセル</button>
+        <button type="button" class="ui-button-blue js-submit-button">下書きに戻す</button>
+      </p>
+    </div>
+  </div>
+  <div class="ui-modal-container isHidden js-bulk-publish-dialog" role="dialog" aria-modal="true">
+    <div class="ui-modal-window js-modal-window">
+      <header class="ui-modal-header">
+        <h3>今すぐ公開</h3>
+      </header>
+      <div class="ui-modal-body"><p>選択したエピソードを今すぐ公開してもよろしいですか？　公開済のエピソードが含まれる章は自動的に公開になります。</p></div>
+      <p class="ui-modal-footer-twoButtons">
+        <button type="button" class="ui-button-default js-modal-window-close-button">キャンセル</button>
+        <button type="button" class="ui-button-blue js-submit-button">今すぐ公開</button>
+      </p>
+    </div>
+  </div>
+  <div class="ui-modal-container isHidden js-bulk-delete-dialog" role="dialog" aria-modal="true">
+    <div class="ui-modal-window js-modal-window">
+      <header class="ui-modal-header">
+        <h3>削除</h3>
+      </header>
+      <div class="ui-modal-body"><p>選択した章やエピソードを削除してもよろしいですか？　この操作は元に戻せません。</p></div>
+      <p class="ui-modal-footer-twoButtons">
+        <button type="button" class="ui-button-default js-modal-window-close-button">キャンセル</button>
+        <button type="button" class="ui-button-red js-submit-button">今すぐ削除</button>
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="tableOfContents-edit isHidden js-toc-edit" data-work-id="822139846518699844">
+  <form id="toc-editForm" class="js-toc-editor-form" method="post" action="/my/works/822139846518699844/edit_toc">
+    <input type="hidden" name="csrf_token" value="eT7Pk8Prp3EUCUA6nP5nSf9G57o7obRSpfrkHBWCZSipHNWkJl">
+    <div class="episodeAction js-mark-select-toc-state">
+      <div class="episodeAction-bulkActions">
+        <p class="episodeAction-checkAll js-show-if-select-toc">
+          <span class="ui-checkbox ui-checkbox-small">
+            <input type="checkbox" name="toc_all_select">
+            <span class="ui-checkbox-alternate"></span>
+          </span>
+        </p>
+        <p class="createChapterButton isShown js-hide-if-select-toc"><button type="button" class="ui-button-default js-chapter-modal-open-button" aria-controls="chapterModal">新しい章を追加</button></p>
+        <div class="episodeAction-operation isHidden js-show-if-select-toc">
+          <p class="episodeAction-selectedCount js-toc-selected-count">0項目</p>
+          <p class="ui-select ui-select-small isShown js-hide-if-all-select-toc">
+            <select name="bulk_action_name" tabindex="1">
+              
+              
+              
+              
+              
+            <option value="">操作を選択</option><option value=":head">小説の先頭に移動</option><option value="episode:822139846702806783">小説の末尾に移動</option></select>
+          </p>
+          <p class="isShown js-hide-if-all-select-toc"><button type="button" class="ui-button-black js-toc-apply-button">適用</button></p>
+          <p id="noPossibleOperationMessage" class="isHidden js-show-if-all-select-toc">可能な操作がありません</p>
+        </div>
+      </div>
+        <p class="episodeAction-scrollTocButton"><button type="button" class="ui-button-silent tocEditButtons-scrollTocButton scrollTocButton js-scroll-button" data-target="endOfToc" data-duration="200"><svg height="1000" viewBox="0 0 1000 1000" width="1000" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#222" stroke-miterlimit="10" stroke-width="80"><path d="m29.86 468.86 470.14 470.14 470.14-470.14"></path><path d="m500 8v931"></path></g></svg>
+ <span>最新話へ移動</span></button></p>
+      <p class="tocEditButtons">
+        <a href="https://kakuyomu.jp/help/entry/changeorder_episodes" aria-label="ヘルプを見る" class="tocEditButtons-help ui-tooltip ui-tooltip-top" data-ui-tooltip-label="ヘルプを見る" target="_blank" rel="noopener"><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000"><path d="M500,1000A500.13,500.13,0,0,1,305.19,39.36,497,497,0,0,1,500,0c275.7,0,500,224.3,500,500S775.7,1000,500,1000Zm0-940A440.14,440.14,0,0,0,328.58,905.39,437.28,437.28,0,0,0,500,940c242.62,0,440-197.38,440-440S742.62,60,500,60Z" fill="#040000"></path><path d="M370.47,257.3q48.84-52.08,134.14-52.08,78.85,0,126.32,44.57t47.45,113.89q0,42-17.23,68.13T591,508.69q-38.47,36.88-50,62.44t-11.54,75.5h-70.3q0-56.67,13.43-91.36t59.44-79.48l32-31.31a134.32,134.32,0,0,0,23.3-28.12q16.18-25.71,16.19-53.4,0-38.79-23.63-67.27T501.77,267.2q-67.45,0-93.3,49-14.54,27.3-16.56,78.7H321.62Q321.62,309.4,370.47,257.3Zm86.45,455.09h78.6v82.39h-78.6Z" fill="#040000"></path></svg>
+</a>
+        <a href="/my/works/822139846518699844" class="ui-button-default">キャンセル</a>
+        <button type="submit" class="ui-button-blue js-toc-editing-submit-button">完了</button>
+      </p>
+    </div>
+    <div class="episodeList">
+      <table class="episodes">
+        <tbody class="js-toc-editor-list" data-work-id="822139846518699844">
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846519598487" data-item-id="episode:822139846519598487" data-level="1" data-is-published="1" data-episode-number="1" data-character-count="918">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846519598487" data-target="episode-822139846519598487">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-published">公開済</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="001 登場人物（社内・関係者）" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2" disabled=""><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846519598487">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846518736178" data-item-id="episode:822139846518736178" data-level="1" data-is-published="1" data-episode-number="2" data-character-count="3583">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846518736178" data-target="episode-822139846518736178">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-published">公開済</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第1話：システム障害の現状と課題" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846518736178">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846518779812" data-item-id="episode:822139846518779812" data-level="1" data-is-published="1" data-episode-number="3" data-character-count="1446">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846518779812" data-target="episode-822139846518779812">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-published">公開済</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第2話：人的リソースの枯渇と影響" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846518779812">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846518850234" data-item-id="episode:822139846518850234" data-level="1" data-is-published="0" data-episode-number="4" data-character-count="1809">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846518850234" data-target="episode-822139846518850234">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-draft">下書き</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第3話：クリティカルエラー発生報告" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846518850234">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846685825428" data-item-id="episode:822139846685825428" data-level="1" data-is-published="1" data-episode-number="5" data-character-count="1731">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846685825428" data-target="episode-822139846685825428">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-published">公開済</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="002 キャラクター（登場人物）" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846685825428">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846518873444" data-item-id="episode:822139846518873444" data-level="1" data-is-published="1" data-episode-number="6" data-character-count="1115">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846518873444" data-target="episode-822139846518873444">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-published">公開済</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第4話：偶然のハックとメトロノーム" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846518873444">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846518894262" data-item-id="episode:822139846518894262" data-level="1" data-is-published="1" data-episode-number="7" data-character-count="710">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846518894262" data-target="episode-822139846518894262">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-published">公開済</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第5話：浸食の予兆" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846518894262">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846518909014" data-item-id="episode:822139846518909014" data-level="1" data-is-published="1" data-episode-number="8" data-character-count="1918">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846518909014" data-target="episode-822139846518909014">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-published">公開済</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第6話：ロスト・シーケンス" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846518909014">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702823546" data-item-id="episode:822139846702823546" data-level="1" data-is-published="0" data-episode-number="9" data-character-count="1019">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702823546" data-target="episode-822139846702823546">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第7話：システムからの招待状" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702823546">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702420224" data-item-id="episode:822139846702420224" data-level="1" data-is-published="0" data-episode-number="10" data-character-count="2414">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702420224" data-target="episode-822139846702420224">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第8話（第2章）：六本木の休日" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702420224">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702413084" data-item-id="episode:822139846702413084" data-level="1" data-is-published="0" data-episode-number="11" data-character-count="2865">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702413084" data-target="episode-822139846702413084">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第8.5話：陽だまりのテラスとバグに無縁な猫たち" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702413084">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702425992" data-item-id="episode:822139846702425992" data-level="1" data-is-published="0" data-episode-number="12" data-character-count="2577">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702425992" data-target="episode-822139846702425992">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第9話：デスマーチの足音と限界" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702425992">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702431996" data-item-id="episode:822139846702431996" data-level="1" data-is-published="0" data-episode-number="13" data-character-count="2104">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702431996" data-target="episode-822139846702431996">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第10.1話：ファミレスと「電子ドラッグ」の真実" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702431996">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702437419" data-item-id="episode:822139846702437419" data-level="1" data-is-published="0" data-episode-number="14" data-character-count="2153">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702437419" data-target="episode-822139846702437419">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第10.2話：職人のプライドとポンコツ・ガジェット" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702437419">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702443062" data-item-id="episode:822139846702443062" data-level="1" data-is-published="0" data-episode-number="15" data-character-count="1403">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702443062" data-target="episode-822139846702443062">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第10.3話：赤い日の真実と、反逆の兆し" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702443062">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702449088" data-item-id="episode:822139846702449088" data-level="1" data-is-published="0" data-episode-number="16" data-character-count="1533">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702449088" data-target="episode-822139846702449088">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第11話：納品へのカウントダウン" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702449088">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702454925" data-item-id="episode:822139846702454925" data-level="1" data-is-published="0" data-episode-number="17" data-character-count="1638">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702454925" data-target="episode-822139846702454925">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第12話：面白星人" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702454925">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702460678" data-item-id="episode:822139846702460678" data-level="1" data-is-published="0" data-episode-number="18" data-character-count="1427">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702460678" data-target="episode-822139846702460678">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第12.1話：赤い日" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702460678">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702466955" data-item-id="episode:822139846702466955" data-level="1" data-is-published="0" data-episode-number="19" data-character-count="1032">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702466955" data-target="episode-822139846702466955">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第12.2話：ノイズとアンカー" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702466955">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702472856" data-item-id="episode:822139846702472856" data-level="1" data-is-published="0" data-episode-number="20" data-character-count="2168">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702472856" data-target="episode-822139846702472856">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第13話：赤い日の真実と罠" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702472856">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702478275" data-item-id="episode:822139846702478275" data-level="1" data-is-published="0" data-episode-number="21" data-character-count="1077">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702478275" data-target="episode-822139846702478275">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第13.1話：完璧すぎる視界" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702478275">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702486707" data-item-id="episode:822139846702486707" data-level="1" data-is-published="0" data-episode-number="22" data-character-count="931">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702486707" data-target="episode-822139846702486707">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第13.2話：見えないものを直す手" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702486707">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702492314" data-item-id="episode:822139846702492314" data-level="1" data-is-published="0" data-episode-number="23" data-character-count="1226">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702492314" data-target="episode-822139846702492314">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第13.3話：優しさと最適化の矛盾" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702492314">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702498498" data-item-id="episode:822139846702498498" data-level="1" data-is-published="0" data-episode-number="24" data-character-count="1405">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702498498" data-target="episode-822139846702498498">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第13.4話：黒須の監視と、ノイズの体温" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702498498">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702504367" data-item-id="episode:822139846702504367" data-level="1" data-is-published="0" data-episode-number="25" data-character-count="1482">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702504367" data-target="episode-822139846702504367">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第13.5話：隔絶される世界線" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702504367">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702509909" data-item-id="episode:822139846702509909" data-level="1" data-is-published="0" data-episode-number="26" data-character-count="905">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702509909" data-target="episode-822139846702509909">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第13.6話：アンカーの決断" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702509909">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702516203" data-item-id="episode:822139846702516203" data-level="1" data-is-published="0" data-episode-number="27" data-character-count="2160">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702516203" data-target="episode-822139846702516203">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第13.7話：休日のバグとコーヒーブレイク" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702516203">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702533059" data-item-id="episode:822139846702533059" data-level="1" data-is-published="0" data-episode-number="28" data-character-count="1593">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702533059" data-target="episode-822139846702533059">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第14話：雪の日の決断とフェーズアウト" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702533059">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702521437" data-item-id="episode:822139846702521437" data-level="1" data-is-published="0" data-episode-number="29" data-character-count="959">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702521437" data-target="episode-822139846702521437">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第14.1話：雪の日の翌朝 - 喪失の輪郭" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702521437">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702527360" data-item-id="episode:822139846702527360" data-level="1" data-is-published="0" data-episode-number="30" data-character-count="1652">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702527360" data-target="episode-822139846702527360">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第14.2話：落下するノイズへの追跡劇 - 虚無のカーチェイス" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702527360">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702544834" data-item-id="episode:822139846702544834" data-level="1" data-is-published="0" data-episode-number="31" data-character-count="1827">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702544834" data-target="episode-822139846702544834">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第15話：鬼之河アンダーグラウンド" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702544834">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702539114" data-item-id="episode:822139846702539114" data-level="1" data-is-published="0" data-episode-number="32" data-character-count="2273">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702539114" data-target="episode-822139846702539114">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第15.5話：泥水と蒸気タービン - あるプログラマの覚醒" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702539114">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702562644" data-item-id="episode:822139846702562644" data-level="1" data-is-published="0" data-episode-number="33" data-character-count="1101">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702562644" data-target="episode-822139846702562644">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第16話：再会と覚醒のアプリ" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702562644">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702550751" data-item-id="episode:822139846702550751" data-level="1" data-is-published="0" data-episode-number="34" data-character-count="2104">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702550751" data-target="episode-822139846702550751">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第16.0.5話：爆走の黄色いトラックと、ノイズの血統" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702550751">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702556412" data-item-id="episode:822139846702556412" data-level="1" data-is-published="0" data-episode-number="35" data-character-count="2313">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702556412" data-target="episode-822139846702556412">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第16.0.6話：池袋のジャンク探しと、休日のカフェ" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702556412">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702568549" data-item-id="episode:822139846702568549" data-level="1" data-is-published="0" data-episode-number="36" data-character-count="1949">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702568549" data-target="episode-822139846702568549">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第16話：再会と覚醒のアプリ（続き）" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702568549">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702581096" data-item-id="episode:822139846702581096" data-level="1" data-is-published="0" data-episode-number="37" data-character-count="1201">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702581096" data-target="episode-822139846702581096">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第17話：記憶の抵抗" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702581096">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702575512" data-item-id="episode:822139846702575512" data-level="1" data-is-published="0" data-episode-number="38" data-character-count="1121">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702575512" data-target="episode-822139846702575512">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第17.5話：インカムのノイズ" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702575512">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702587223" data-item-id="episode:822139846702587223" data-level="1" data-is-published="0" data-episode-number="39" data-character-count="1795">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702587223" data-target="episode-822139846702587223">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第18話：ふたつの和音（コード）" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702587223">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702592422" data-item-id="episode:822139846702592422" data-level="1" data-is-published="0" data-episode-number="40" data-character-count="933">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702592422" data-target="episode-822139846702592422">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第19話：反逆のカウンター・ノイズ I - 崩壊の足音" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702592422">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702598290" data-item-id="episode:822139846702598290" data-level="1" data-is-published="0" data-episode-number="41" data-character-count="713">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702598290" data-target="episode-822139846702598290">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第19話：反逆のカウンター・ノイズ II - 重なり合う波長" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702598290">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702604303" data-item-id="episode:822139846702604303" data-level="1" data-is-published="0" data-episode-number="42" data-character-count="1077">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702604303" data-target="episode-822139846702604303">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第19話：反逆のカウンター・ノイズ III - 泥臭い一撃" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702604303">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702612819" data-item-id="episode:822139846702612819" data-level="1" data-is-published="0" data-episode-number="43" data-character-count="759">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702612819" data-target="episode-822139846702612819">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第19話：反逆のカウンター・ノイズ IV - 完璧なる自滅" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702612819">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702791940" data-item-id="episode:822139846702791940" data-level="1" data-is-published="0" data-episode-number="44" data-character-count="1433">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702791940" data-target="episode-822139846702791940">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第20話：新しい世界の仕様書" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702791940">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702799739" data-item-id="episode:822139846702799739" data-level="1" data-is-published="0" data-episode-number="45" data-character-count="1775">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702799739" data-target="episode-822139846702799739">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="第21話・最終話：終わらない運用保守（メンテナンス）" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2"><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702799739">
+              </tr>
+              <tr class="episode js-toc-editor-list-item" id="episode-822139846702806783" data-item-id="episode:822139846702806783" data-level="1" data-is-published="0" data-episode-number="46" data-character-count="928">
+                <td class="episode-checkbox js-show-if-select-toc">
+                  <span class="ui-checkbox ui-checkbox-small">
+                    <input type="checkbox" name="target_toc_item_id" value="episode:822139846702806783" data-target="episode-822139846702806783">
+                    <span class="ui-checkbox-alternate"></span>
+                  </span>
+                </td>
+                <td class="episode-statusLabel">
+                    <span class="widget-episodeStatusLabel-reserved">予約中</span>
+                </td>
+                <td class="episode-title">
+                  <input type="text" name="episode_title" value="２２話 断章：侵食" s="" placeholder="エピソードタイトルを入力…" tabindex="2">
+                </td>
+                <td class="episode-changeOrderButtons">
+                  <button type="button" class="changeOrderButton js-toc-editor-move-backward-button" aria-label="ひとつ前に移動" tabindex="2"><i class="icon-up"></i></button><button type="button" class="changeOrderButton js-toc-editor-move-forward-button" aria-label="ひとつ後に移動" tabindex="2" disabled=""><i class="icon-bottom"></i></button>
+                </td>
+                <input type="hidden" name="toc_item_id" value="episode:822139846702806783">
+              </tr>
+
+            
+        </tbody>
+      </table>
+    </div>
+  </form>
+</div>
+
+<div id="chapterModal" class="ui-modal-container isHidden js-chapter-modal-container">
+  <section class="ui-modal-window js-modal-window">
+    <header class="ui-modal-header">
+      <h3>新しい章を次の位置に追加</h3>
+    </header>
+    <div class="ui-modal-body">
+      <p><span class="ui-select">
+        <select id="chapterInsertionPointField" class="js-toc-editor-insertion-point-field">
+          <option selected="">「001 登場人物（社内・関係者）」の前に</option>
+        <option>「第1話：システム障害の現状と課題」の前に</option><option>「第2話：人的リソースの枯渇と影響」の前に</option><option>「第3話：クリティカルエラー発生報告」の前に</option><option>「002 キャラクター（登場人物）」の前に</option><option>「第4話：偶然のハックとメトロノーム」の前に</option><option>「第5話：浸食の予兆」の前に</option><option>「第6話：ロスト・シーケンス」の前に</option><option>「第7話：システムからの招待状」の前に</option><option>「第8話（第2章）：六本木の休日」の前に</option><option>「第8.5話：陽だまりのテラスとバグに無縁な猫たち」の前に</option><option>「第9話：デスマーチの足音と限界」の前に</option><option>「第10.1話：ファミレスと「電子ドラッグ」の真実」の前に</option><option>「第10.2話：職人のプライドとポンコツ・ガジェット」の前に</option><option>「第10.3話：赤い日の真実と、反逆の兆し」の前に</option><option>「第11話：納品へのカウントダウン」の前に</option><option>「第12話：面白星人」の前に</option><option>「第12.1話：赤い日」の前に</option><option>「第12.2話：ノイズとアンカー」の前に</option><option>「第13話：赤い日の真実と罠」の前に</option><option>「第13.1話：完璧すぎる視界」の前に</option><option>「第13.2話：見えないものを直す手」の前に</option><option>「第13.3話：優しさと最適化の矛盾」の前に</option><option>「第13.4話：黒須の監視と、ノイズの体温」の前に</option><option>「第13.5話：隔絶される世界線」の前に</option><option>「第13.6話：アンカーの決断」の前に</option><option>「第13.7話：休日のバグとコーヒーブレイク」の前に</option><option>「第14話：雪の日の決断とフェーズアウト」の前に</option><option>「第14.1話：雪の日の翌朝 - 喪失の輪郭」の前に</option><option>「第14.2話：落下するノイズへの追跡劇 - 虚無のカーチェイス」の前に</option><option>「第15話：鬼之河アンダーグラウンド」の前に</option><option>「第15.5話：泥水と蒸気タービン - あるプログラマの覚醒」の前に</option><option>「第16話：再会と覚醒のアプリ」の前に</option><option>「第16.0.5話：爆走の黄色いトラックと、ノイズの血統」の前に</option><option>「第16.0.6話：池袋のジャンク探しと、休日のカフェ」の前に</option><option>「第16話：再会と覚醒のアプリ（続き）」の前に</option><option>「第17話：記憶の抵抗」の前に</option><option>「第17.5話：インカムのノイズ」の前に</option><option>「第18話：ふたつの和音（コード）」の前に</option><option>「第19話：反逆のカウンター・ノイズ I - 崩壊の足音」の前に</option><option>「第19話：反逆のカウンター・ノイズ II - 重なり合う波長」の前に</option><option>「第19話：反逆のカウンター・ノイズ III - 泥臭い一撃」の前に</option><option>「第19話：反逆のカウンター・ノイズ IV - 完璧なる自滅」の前に</option><option>「第20話：新しい世界の仕様書」の前に</option><option>「第21話・最終話：終わらない運用保守（メンテナンス）」の前に</option><option>「２２話 断章：侵食」の前に</option><option>小説の末尾に</option></select>
+      </span></p>
+    </div>
+    <p class="ui-modal-footer">
+      <button type="button" class="ui-button-default js-modal-window-close-button">キャンセル</button>
+      <button type="button" class="ui-button-blue js-toc-editor-insert-chapter-button js-modal-window-close-button">追加</button>
+    </p>
+  </section>
+</div>
+
+    <div id="endOfToc">
+      <p><button type="button" class="ui-button-silent scrollTocButton js-scroll-button" data-target="startOfToc" data-duration="200"><svg height="1000" viewBox="0 0 1000 1000" width="1000" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#222" stroke-miterlimit="10" stroke-width="80"><path d="m29.86 468.86 470.14 470.14 470.14-470.14"></path><path d="m500 8v931"></path></g></svg>
+ <span>第一話へ移動</span></button></p>
+    </div>
+
+      </main>
+    </div>
+</div>
+
+
+<script src="https://cdn-static.kakuyomu.jp/js/kakuyomu.js?DvR3zyrS7F3n"></script>
+
+
+
+
+<script type="text/javascript" id="" charset="">(function(a,e,b,f,g,c,d){a[b]=a[b]||function(){(a[b].q=a[b].q||[]).push(arguments)};c=e.createElement(f);c.async=1;c.src="https://www.clarity.ms/tag/"+g+"?ref\x3dgtm2";d=e.getElementsByTagName(f)[0];d.parentNode.insertBefore(c,d)})(window,document,"clarity","script","iil0gxvc0f");</script><script type="text/javascript" async="" src="https://googleads.g.doubleclick.net/pagead/viewthroughconversion/16697139232/?random=1773028926194&amp;cv=11&amp;fst=1773028926194&amp;bg=ffffff&amp;guid=ON&amp;async=1&amp;en=gtag.config&amp;gtm=45be6341v9214806217z871762098za20gzb71762098zd71762098xec&amp;gcd=13l3l3l3l1l1&amp;dma=0&amp;tag_exp=103116026~103200004~115616986~115938465~115938469~116024733~117477894~117484252~117625640&amp;u_w=1280&amp;u_h=720&amp;url=https%3A%2F%2Fkakuyomu.jp%2Fmy%2Fworks%2F822139846518699844&amp;frm=0&amp;tiba=%E4%BB%95%E6%A7%98%E6%9B%B8%E3%81%AB%E3%81%AA%E3%81%84%E3%83%90%E3%82%B0%E3%81%A7%E3%81%99%E3%81%8C%E3%80%81%20%E3%81%9F%E3%81%B6%E3%82%93%E4%BF%BA%E3%81%AE%E3%81%93%E3%81%A8%E3%81%A7%E3%81%99%20-%20%E3%82%AB%E3%82%AF%E3%83%A8%E3%83%A0&amp;hn=www.googleadservices.com&amp;npa=0&amp;pscdl=noapi&amp;auid=1568585943.1772994930&amp;uaa=x86&amp;uab=64&amp;uafvl=Chromium%3B145.0.7632.6%7CNot%253AA-Brand%3B99.0.0.0&amp;uamb=0&amp;uam=&amp;uap=Windows&amp;uapv=10.0.0&amp;uaw=0&amp;data=event%3Dgtag.config&amp;rfmt=3&amp;fmt=4"></script><script type="text/javascript" async="" src="https://googleads.g.doubleclick.net/pagead/viewthroughconversion/880249307/?random=1773028926204&amp;cv=11&amp;fst=1773028926204&amp;bg=ffffff&amp;guid=ON&amp;async=1&amp;en=gtag.config&amp;gtm=45be6341v9214806217z871762098za20gzb71762098zd71762098xec&amp;gcd=13l3l3l3l1l1&amp;dma=0&amp;tag_exp=103116026~103200004~115616986~115938465~115938469~116024733~117477894~117484252~117625640&amp;u_w=1280&amp;u_h=720&amp;url=https%3A%2F%2Fkakuyomu.jp%2Fmy%2Fworks%2F822139846518699844&amp;frm=0&amp;tiba=%E4%BB%95%E6%A7%98%E6%9B%B8%E3%81%AB%E3%81%AA%E3%81%84%E3%83%90%E3%82%B0%E3%81%A7%E3%81%99%E3%81%8C%E3%80%81%20%E3%81%9F%E3%81%B6%E3%82%93%E4%BF%BA%E3%81%AE%E3%81%93%E3%81%A8%E3%81%A7%E3%81%99%20-%20%E3%82%AB%E3%82%AF%E3%83%A8%E3%83%A0&amp;hn=www.googleadservices.com&amp;npa=0&amp;pscdl=noapi&amp;auid=1568585943.1772994930&amp;uaa=x86&amp;uab=64&amp;uafvl=Chromium%3B145.0.7632.6%7CNot%253AA-Brand%3B99.0.0.0&amp;uamb=0&amp;uam=&amp;uap=Windows&amp;uapv=10.0.0&amp;uaw=0&amp;data=event%3Dgtag.config&amp;rfmt=3&amp;fmt=4"></script><script type="text/javascript" async="" src="https://googleads.g.doubleclick.net/pagead/viewthroughconversion/16693368288/?random=1773028926231&amp;cv=11&amp;fst=1773028926231&amp;bg=ffffff&amp;guid=ON&amp;async=1&amp;en=gtag.config&amp;gtm=45be6341v9233140403z871762098za20gzb71762098zd71762098xec&amp;gcd=13l3l3l3l1l1&amp;dma=0&amp;tag_exp=103116026~103200004~115938465~115938468~116024733~117484252~117835692&amp;u_w=1280&amp;u_h=720&amp;url=https%3A%2F%2Fkakuyomu.jp%2Fmy%2Fworks%2F822139846518699844&amp;frm=0&amp;tiba=%E4%BB%95%E6%A7%98%E6%9B%B8%E3%81%AB%E3%81%AA%E3%81%84%E3%83%90%E3%82%B0%E3%81%A7%E3%81%99%E3%81%8C%E3%80%81%20%E3%81%9F%E3%81%B6%E3%82%93%E4%BF%BA%E3%81%AE%E3%81%93%E3%81%A8%E3%81%A7%E3%81%99%20-%20%E3%82%AB%E3%82%AF%E3%83%A8%E3%83%A0&amp;ga_uid=G-R8G9341WV8.822139846515500081_&amp;hn=www.googleadservices.com&amp;npa=0&amp;pscdl=noapi&amp;auid=1568585943.1772994930&amp;uaa=x86&amp;uab=64&amp;uafvl=Chromium%3B145.0.7632.6%7CNot%253AA-Brand%3B99.0.0.0&amp;uamb=0&amp;uam=&amp;uap=Windows&amp;uapv=10.0.0&amp;uaw=0&amp;data=event%3Dgtag.config&amp;rfmt=3&amp;fmt=4"></script><img src="https://t.co/1/i/adsct?bci=4&amp;dv=Asia%2FTokyo%26ja%2Cen-US%2Cen%26Google%20Inc.%26Win32%26255%261280%26720%2620%2632%261280%26720%260%26na&amp;eci=3&amp;event=%7B%7D&amp;event_id=cb5ceb5a-c372-49c7-911a-06b6f2b3084a&amp;integration=gtm&amp;p_id=Twitter&amp;p_user_id=0&amp;pl_id=cbd43fb4-4639-458c-9e8c-c408a21ddfb9&amp;pt=%E4%BB%95%E6%A7%98%E6%9B%B8%E3%81%AB%E3%81%AA%E3%81%84%E3%83%90%E3%82%B0%E3%81%A7%E3%81%99%E3%81%8C%E3%80%81%20%E3%81%9F%E3%81%B6%E3%82%93%E4%BF%BA%E3%81%AE%E3%81%93%E3%81%A8%E3%81%A7%E3%81%99%20-%20%E3%82%AB%E3%82%AF%E3%83%A8%E3%83%A0&amp;tw_document_href=https%3A%2F%2Fkakuyomu.jp%2Fmy%2Fworks%2F822139846518699844&amp;tw_iframe_status=0&amp;tw_pid_src=2&amp;twpid=tw.1772994929793.305684226328805445&amp;txn_id=olecf&amp;type=javascript&amp;version=2.3.41" height="1" width="1" fetchpriority="high" style="display: none;"><img src="https://analytics.twitter.com/1/i/adsct?bci=4&amp;dv=Asia%2FTokyo%26ja%2Cen-US%2Cen%26Google%20Inc.%26Win32%26255%261280%26720%2620%2632%261280%26720%260%26na&amp;eci=3&amp;event=%7B%7D&amp;event_id=cb5ceb5a-c372-49c7-911a-06b6f2b3084a&amp;integration=gtm&amp;p_id=Twitter&amp;p_user_id=0&amp;pl_id=cbd43fb4-4639-458c-9e8c-c408a21ddfb9&amp;pt=%E4%BB%95%E6%A7%98%E6%9B%B8%E3%81%AB%E3%81%AA%E3%81%84%E3%83%90%E3%82%B0%E3%81%A7%E3%81%99%E3%81%8C%E3%80%81%20%E3%81%9F%E3%81%B6%E3%82%93%E4%BF%BA%E3%81%AE%E3%81%93%E3%81%A8%E3%81%A7%E3%81%99%20-%20%E3%82%AB%E3%82%AF%E3%83%A8%E3%83%A0&amp;tw_document_href=https%3A%2F%2Fkakuyomu.jp%2Fmy%2Fworks%2F822139846518699844&amp;tw_iframe_status=0&amp;tw_pid_src=2&amp;twpid=tw.1772994929793.305684226328805445&amp;txn_id=olecf&amp;type=javascript&amp;version=2.3.41" height="1" width="1" fetchpriority="high" style="display: none;"><img src="https://t.co/1/i/adsct?bci=4&amp;dv=Asia%2FTokyo%26ja%2Cen-US%2Cen%26Google%20Inc.%26Win32%26255%261280%26720%2620%2632%261280%26720%260%26na&amp;eci=3&amp;event=%7B%7D&amp;event_id=a1d2b55a-29fe-467d-93e8-3c0c81679288&amp;integration=gtm&amp;p_id=Twitter&amp;p_user_id=0&amp;pl_id=cbd43fb4-4639-458c-9e8c-c408a21ddfb9&amp;pt=%E4%BB%95%E6%A7%98%E6%9B%B8%E3%81%AB%E3%81%AA%E3%81%84%E3%83%90%E3%82%B0%E3%81%A7%E3%81%99%E3%81%8C%E3%80%81%20%E3%81%9F%E3%81%B6%E3%82%93%E4%BF%BA%E3%81%AE%E3%81%93%E3%81%A8%E3%81%A7%E3%81%99%20-%20%E3%82%AB%E3%82%AF%E3%83%A8%E3%83%A0&amp;tw_document_href=https%3A%2F%2Fkakuyomu.jp%2Fmy%2Fworks%2F822139846518699844&amp;tw_iframe_status=0&amp;tw_pid_src=2&amp;twpid=tw.1772994929793.305684226328805445&amp;txn_id=olech&amp;type=javascript&amp;version=2.3.41" height="1" width="1" fetchpriority="high" style="display: none;"><img src="https://analytics.twitter.com/1/i/adsct?bci=4&amp;dv=Asia%2FTokyo%26ja%2Cen-US%2Cen%26Google%20Inc.%26Win32%26255%261280%26720%2620%2632%261280%26720%260%26na&amp;eci=3&amp;event=%7B%7D&amp;event_id=a1d2b55a-29fe-467d-93e8-3c0c81679288&amp;integration=gtm&amp;p_id=Twitter&amp;p_user_id=0&amp;pl_id=cbd43fb4-4639-458c-9e8c-c408a21ddfb9&amp;pt=%E4%BB%95%E6%A7%98%E6%9B%B8%E3%81%AB%E3%81%AA%E3%81%84%E3%83%90%E3%82%B0%E3%81%A7%E3%81%99%E3%81%8C%E3%80%81%20%E3%81%9F%E3%81%B6%E3%82%93%E4%BF%BA%E3%81%AE%E3%81%93%E3%81%A8%E3%81%A7%E3%81%99%20-%20%E3%82%AB%E3%82%AF%E3%83%A8%E3%83%A0&amp;tw_document_href=https%3A%2F%2Fkakuyomu.jp%2Fmy%2Fworks%2F822139846518699844&amp;tw_iframe_status=0&amp;tw_pid_src=2&amp;twpid=tw.1772994929793.305684226328805445&amp;txn_id=olech&amp;type=javascript&amp;version=2.3.41" height="1" width="1" fetchpriority="high" style="display: none;">
