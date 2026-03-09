@@ -1,0 +1,85 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+import { cleanMarkdown, stripMarkdown } from './utils_novel.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// DOM環境のモック（DOMPurify用）
+const window = new JSDOM('').window;
+const purify = DOMPurify(window);
+
+// ディレクトリ設定
+const distSettingsDir = path.resolve(__dirname, '../dist/settings');
+const outputTxtPath = path.resolve(__dirname, '../output_novel.txt');
+const outputHtmlPath = path.resolve(__dirname, '../output_novel.html');
+
+
+function buildExports() {
+  if (!fs.existsSync(distSettingsDir)) {
+    console.error(`[Error] Directory not found: ${distSettingsDir}`);
+    console.error('※ 先に npm run build を実行し、postbuild_mdx.js によるタグ置換を終わらせてください。');
+    process.exit(1);
+  }
+
+  const files = fs.readdirSync(distSettingsDir).filter(f => f.startsWith('ep') && f.endsWith('.mdx'));
+
+  // エピソード番号順にソート (ep1, ep2, ... ep10_1, ep10_2 ...)
+  files.sort((a, b) => {
+    const numA = parseFloat(a.replace('ep', '').replace('_', '.').replace('.mdx', ''));
+    const numB = parseFloat(b.replace('ep', '').replace('_', '.').replace('.mdx', ''));
+    return numA - numB;
+  });
+
+  let fullMarkdown = '';
+  let chapterCounter = 1;
+
+  files.forEach(file => {
+    const filePath = path.join(distSettingsDir, file);
+    let content = fs.readFileSync(filePath, 'utf-8');
+    
+    // エピソードタイトルの話数を連番に変換
+    content = content.replace(/#\s*第[\d\.]+話/g, `# 第${chapterCounter}話`);
+    chapterCounter++;
+
+    // UIコンポーネント用HTMLタグなどを抽出除去
+    const cleanedContent = cleanMarkdown(content);
+    
+    fullMarkdown += cleanedContent + '\n\n----------------------------------------\n\n';
+  });
+
+  // ========== txt出力 (Markdownテキスト → プレーンテキスト) ==========
+  const plainTextNovel = stripMarkdown(fullMarkdown);
+  fs.writeFileSync(outputTxtPath, plainTextNovel, 'utf-8');
+  console.log(`[Success] Crated Text Novel: ${outputTxtPath}`);
+
+  // ========== HTML出力 ==========
+  const rawHtml = marked.parse(fullMarkdown);
+  const cleanHtml = purify.sanitize(rawHtml);
+  
+  const htmlTemplate = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>投稿用データ</title>
+  <style>
+    body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
+    hr { margin: 40px 0; border: none; border-top: 2px dashed #ccc; }
+    h1 { margin-top: 2em; }
+  </style>
+</head>
+<body>
+${cleanHtml.replace(/----------------------------------------/g, '<hr>')}
+</body>
+</html>`;
+
+  fs.writeFileSync(outputHtmlPath, htmlTemplate, 'utf-8');
+  console.log(`[Success] Created HTML Novel: ${outputHtmlPath}`);
+}
+
+console.log('[Export Novel] Starting compilation of resolved episodes...');
+buildExports();
