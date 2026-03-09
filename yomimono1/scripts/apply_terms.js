@@ -8,10 +8,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const episodeSequence = [
-  'ep1', 'ep2', 'ep3', 'ep4', 'ep5', 'ep6', 'ep7', 'ep8', 'ep9',
+  'ep1', 'ep2', 'ep3', 'ep4', 'ep5', 'ep6', 'ep7', 'ep8', 'ep8_5', 'ep9',
   'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2',
   'ep13_0', 'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-  'ep14', 'ep15', 'ep16_0', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19', 'ep20', 'ep21'
+  'ep14', 'ep14_1', 'ep14_2', 'ep15', 'ep15_5', 'ep16_0', 'ep16_0_5', 'ep16_0_6', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19_1', 'ep19_2', 'ep19_3', 'ep19_4', 'ep20', 'ep21', 'ep22'
 ];
 
 const combinedDictionary = { ...ItTermDictionary, ...TermDictionary };

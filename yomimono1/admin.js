@@ -1,4 +1,5 @@
 // admin.js
+import * as Diff from 'https://cdn.jsdelivr.net/npm/diff@5.2.0/+esm';
 
 const state = {
   mdxData: [],    // { name: string, rawContent: string, builtContent: string | null }
@@ -182,6 +183,45 @@ function renderData() {
     }
     tr.appendChild(tdBuilt);
 
+    // 同期（投稿）ボタン群
+    const tdSync = document.createElement('td');
+    
+    // なろう同期ボタン
+    const syncNarouBtn = document.createElement('button');
+    syncNarouBtn.className = 'action-btn sync-btn';
+    syncNarouBtn.dataset.originalText = 'なろう同期';
+    syncNarouBtn.style.padding = '4px 8px';
+    syncNarouBtn.style.fontSize = '0.9em';
+    syncNarouBtn.style.marginRight = '4px';
+    syncNarouBtn.style.backgroundColor = '#2c7c7f'; // なろう用カラー
+    syncNarouBtn.textContent = 'なろう同期';
+    
+    // カクヨム同期ボタン
+    const syncKakuyomuBtn = document.createElement('button');
+    syncKakuyomuBtn.className = 'action-btn sync-btn';
+    syncKakuyomuBtn.dataset.originalText = 'カクヨム同期';
+    syncKakuyomuBtn.style.padding = '4px 8px';
+    syncKakuyomuBtn.style.fontSize = '0.9em';
+    syncKakuyomuBtn.style.backgroundColor = '#0083eb'; // カクヨム用カラー
+    syncKakuyomuBtn.textContent = 'カクヨム同期';
+
+    if (!isBuiltAvailable) {
+      syncNarouBtn.disabled = true;
+      syncNarouBtn.style.cursor = 'not-allowed';
+      syncNarouBtn.style.opacity = '0.5';
+      
+      syncKakuyomuBtn.disabled = true;
+      syncKakuyomuBtn.style.cursor = 'not-allowed';
+      syncKakuyomuBtn.style.opacity = '0.5';
+    } else {
+      syncNarouBtn.onclick = () => syncEpisode(item.name, syncNarouBtn, 'narou');
+      syncKakuyomuBtn.onclick = () => syncEpisode(item.name, syncKakuyomuBtn, 'kakuyomu');
+    }
+    
+    tdSync.appendChild(syncNarouBtn);
+    tdSync.appendChild(syncKakuyomuBtn);
+    tr.appendChild(tdSync);
+
     dataTbody.appendChild(tr);
 
     // -- 棒グラフの生成 --
@@ -230,6 +270,181 @@ function renderData() {
 
 // イベントリスナー
 btnFetch.addEventListener('click', fetchData);
+
+// 同期（投稿）処理実行
+async function syncEpisode(fileName, btnElement, platform) {
+  const originalText = btnElement.textContent;
+  btnElement.textContent = '差分取得中...';
+  btnElement.disabled = true;
+  showMessage('loading', `「${fileName}」の現在の状態を${platform === 'narou' ? 'なろう' : 'カクヨム'}から取得しています...`);
+
+  try {
+    // 1. Dry Run リクエスト送信
+    const resDry = await fetch('/api/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: fileName, filename: fileName, platform: platform, dryRun: true })
+    });
+
+    const dataDry = await resDry.json();
+    if (!resDry.ok) {
+        throw new Error(dataDry.error || 'Dry Run リクエストに失敗しました');
+    }
+    
+    // JSON_RESULT のパース
+    let jsonResult = null;
+    if (dataDry.output) {
+      const match = dataDry.output.match(/JSON_RESULT:({.*})/s);
+      if (match) {
+        try {
+          jsonResult = JSON.parse(match[1]);
+        } catch(e) { console.error("JSON Parse Error:", e); }
+      }
+    }
+
+    if (!jsonResult) {
+      throw new Error('バックエンドから正しい結果が返されませんでした。');
+    }
+
+    const platformResult = jsonResult[platform]; // narou or kakuyomu
+    
+    // 新規作成時（既存エピソードがない場合）
+    if (!platformResult || !platformResult.id) {
+        showDiffModal(fileName, platform, '【新規追加】既存のエピソードが見つかりませんでした。\nこのまま新規に投稿しますか？', '', jsonResult.localBody, async () => {
+            await executePublish(fileName, btnElement, platform, originalText);
+        });
+        return;
+    }
+
+    // 変更がない場合
+    if (platformResult.skipped) {
+        showMessage('success', `「${fileName}」は既に最新のため保存処理をスキップしました。`);
+        btnElement.textContent = 'スキップ（変更なし）';
+        setTimeout(() => resetBtn(btnElement, originalText), 3000);
+        return;
+    }
+
+    // 差分がある場合はハイライト表示する
+    const currentBodyFromSite = platformResult.currentBody || '';
+    const localBodyToPublish = jsonResult.localBody || '';
+    
+    showDiffModal(fileName, platform, 'サイト上のテキストと手元のテキストに差異があります。\n以下の内容で上書きしますか？', currentBodyFromSite, localBodyToPublish, async () => {
+        await executePublish(fileName, btnElement, platform, originalText);
+    });
+
+  } catch (err) {
+    console.error(err);
+    showMessage('error', `同期処理の呼び出しに失敗しました: ${err.message}`);
+    btnElement.textContent = 'エラー';
+    setTimeout(() => resetBtn(btnElement, originalText), 5000);
+  }
+}
+
+// 実際の保存リクエストを投げる関数
+async function executePublish(fileName, btnElement, platform, originalText) {
+  hideDiffModal();
+  btnElement.textContent = '投稿処理中...';
+  btnElement.disabled = true;
+  showMessage('loading', `「${fileName}」を${platform === 'narou' ? 'なろう' : 'カクヨム'}へ投稿（上書き）しています...`);
+
+  try {
+    const res = await fetch('/api/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: fileName, filename: fileName, platform: platform, dryRun: false })
+    });
+    
+    const data = await res.json();
+    if (res.ok) {
+       showMessage('success', `「${fileName}」の同期が完了しました。`);
+       btnElement.textContent = '完了';
+       setTimeout(() => resetBtn(btnElement, originalText), 3000);
+    } else {
+       showMessage('error', `同期失敗: ${data.error}`);
+       btnElement.textContent = '失敗';
+       setTimeout(() => resetBtn(btnElement, originalText), 5000);
+    }
+  } catch (err) {
+    console.error(err);
+    showMessage('error', `投稿処理の呼び出しに失敗しました: ${err.message}`);
+    btnElement.textContent = 'エラー';
+    setTimeout(() => resetBtn(btnElement, originalText), 5000);
+  }
+}
+
+function resetBtn(btn, originalText) {
+    btn.textContent = originalText;
+    btn.disabled = false;
+}
+
+// Modal UI Logic
+const modal = document.getElementById('diff-modal');
+const btnCloseModal = document.getElementById('btn-close-modal');
+const btnCancelModal = document.getElementById('btn-cancel-publish');
+const btnConfirmModal = document.getElementById('btn-confirm-publish');
+const diffContainer = document.getElementById('diff-container');
+const diffMessage = document.getElementById('diff-modal-message');
+
+let currentConfirmCallback = null;
+
+function showDiffModal(fileName, platform, msg, oldText, newText, onConfirm) {
+  const platformName = platform === 'narou' ? '小説家になろう' : 'カクヨム';
+  diffMessage.textContent = `[${fileName} - ${platformName}] ${msg}`;
+  
+  // jsdiff を使って文字レベル/行レベルの差分を算出
+  const diffResult = Diff.diffLines(oldText, newText);
+  
+  const fragment = document.createDocumentFragment();
+  diffResult.forEach((part) => {
+      const span = document.createElement('span');
+      // colorize
+      if (part.added) {
+          span.className = 'diff-added';
+          // 視認性向上のためのプレフィックス
+          span.textContent = part.value.split('\n').map(l => l ? '+ ' + l : '').join('\n');
+      } else if (part.removed) {
+          span.className = 'diff-removed';
+          span.textContent = part.value.split('\n').map(l => l ? '- ' + l : '').join('\n');
+      } else {
+          span.textContent = part.value;
+      }
+      fragment.appendChild(span);
+  });
+  
+  diffContainer.innerHTML = '';
+  diffContainer.appendChild(fragment);
+  
+  currentConfirmCallback = onConfirm;
+  modal.classList.remove('hidden');
+}
+
+function hideDiffModal() {
+  modal.classList.add('hidden');
+  currentConfirmCallback = null;
+  // 閉じた時点で該当ボタンのロード状態を解除したいが、
+  // キャンセル時は同期ボタンのリストアが必要。
+  // それは呼び出し元に戻すかここで状態管理する。今回はシンプル化のため放置（ボタンはdisabledのままになり得るため改善余地あり）
+}
+
+btnCloseModal.addEventListener('click', () => { hideDiffModal(); resetAllLoadingButtons(); });
+btnCancelModal.addEventListener('click', () => { hideDiffModal(); resetAllLoadingButtons(); });
+
+btnConfirmModal.addEventListener('click', () => {
+   if (currentConfirmCallback) {
+       currentConfirmCallback();
+   }
+});
+
+function resetAllLoadingButtons() {
+   // 全ての[処理中...]ボタンを元に戻す簡易ロジック
+   document.querySelectorAll('.sync-btn:disabled').forEach(btn => {
+      if (btn.textContent.includes('取得中') || btn.textContent.includes('処理中')) {
+          btn.textContent = btn.dataset.originalText || '同期';
+          btn.disabled = false;
+      }
+   });
+   hideMessage();
+}
 
 // 初期読み込み
 fetchData();
