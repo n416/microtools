@@ -11,7 +11,8 @@
     "build": "vite build",
     "postbuild": "node scripts/postbuild_mdx.js && node scripts/export_novel.js && node scripts/export_docx.js",
     "export": "npm run build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "login": "node scripts/open_playwright_profile.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
