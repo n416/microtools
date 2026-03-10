@@ -5,6 +5,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 import { cleanMarkdown, stripMarkdown } from './utils_novel.js';
+import { sortEpisodes } from '../episode_sequence.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,12 +29,8 @@ function buildExports() {
 
   const files = fs.readdirSync(distSettingsDir).filter(f => f.startsWith('ep') && f.endsWith('.mdx'));
 
-  // エピソード番号順にソート (ep1, ep2, ... ep10_1, ep10_2 ...)
-  files.sort((a, b) => {
-    const numA = parseFloat(a.replace('ep', '').replace('_', '.').replace('.mdx', ''));
-    const numB = parseFloat(b.replace('ep', '').replace('_', '.').replace('.mdx', ''));
-    return numA - numB;
-  });
+  // エピソード番号順にソート
+  files.sort(sortEpisodes);
 
   let fullMarkdown = '';
   let chapterCounter = 1;

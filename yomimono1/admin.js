@@ -1,5 +1,6 @@
 // admin.js
 import * as Diff from 'https://cdn.jsdelivr.net/npm/diff@5.2.0/+esm';
+import { sortEpisodes } from './episode_sequence.js';
 
 const state = {
   mdxData: [],    // { name: string, rawContent: string, builtContent: string | null }
@@ -104,8 +105,7 @@ async function fetchData() {
 
     state.mdxData = await Promise.all(fetchPromises);
 
-    // 名前でソート (ep1, ep2... のような命名であれば、数値比較を入れると良いが、簡略化のため文字列ソート)
-    state.mdxData.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    state.mdxData.sort((a, b) => sortEpisodes(a.name, b.name));
 
     renderData();
     showMessage('success', `${state.mdxData.length} 件のファイルを分析しました。`);
@@ -161,10 +161,10 @@ function renderData() {
     const tdRaw = document.createElement('td');
     tdRaw.textContent = rawCount.toLocaleString() + ' ';
     const aRaw = document.createElement('a');
-    aRaw.href = `/settings/${item.name}?raw`;
+    aRaw.href = `/admin-editor.html?file=${encodeURIComponent(item.name)}`;
     aRaw.target = '_blank';
     aRaw.className = 'link-open';
-    aRaw.textContent = '[開く]';
+    aRaw.textContent = '[編集]';
     tdRaw.appendChild(aRaw);
     tr.appendChild(tdRaw);
 
@@ -448,3 +448,58 @@ function resetAllLoadingButtons() {
 
 // 初期読み込み
 fetchData();
+
+// --- あらすじ管理 ---
+const btnSaveSynopsis = document.getElementById('btn-save-synopsis');
+const synopsisTextarea = document.getElementById('synopsis-textarea');
+
+async function fetchSynopsis() {
+  try {
+    const res = await fetch('/api/synopsis');
+    if (res.ok) {
+      const data = await res.json();
+      synopsisTextarea.value = data.text || '';
+    }
+  } catch(e) {
+    console.warn('[admin] Error fetching synopsis:', e);
+  }
+}
+
+async function saveSynopsis() {
+  const originalText = btnSaveSynopsis.textContent;
+  btnSaveSynopsis.textContent = '保存中...';
+  btnSaveSynopsis.disabled = true;
+  showMessage('loading', 'あらすじを保存しています...');
+
+  try {
+    const res = await fetch('/api/synopsis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: synopsisTextarea.value })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showMessage('success', 'あらすじを保存しました。');
+      btnSaveSynopsis.textContent = '保存完了';
+    } else {
+      showMessage('error', `保存失敗: ${data.error || '不明なエラー'}`);
+      btnSaveSynopsis.textContent = 'エラー';
+    }
+  } catch(e) {
+    console.error(e);
+    showMessage('error', `保存処理に失敗しました: ${e.message}`);
+    btnSaveSynopsis.textContent = 'エラー';
+  }
+
+  setTimeout(() => {
+    btnSaveSynopsis.textContent = originalText;
+    btnSaveSynopsis.disabled = false;
+    hideMessage(); // 成功後メッセージを消す
+  }, 3000);
+}
+
+if (btnSaveSynopsis) {
+  btnSaveSynopsis.addEventListener('click', saveSynopsis);
+}
+
+fetchSynopsis();

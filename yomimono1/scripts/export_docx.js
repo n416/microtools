@@ -1,6 +1,11 @@
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import PizZip from 'pizzip';
 import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const templatePath = 'sample_format.docx';
 const inputPath = 'output_novel.txt';
@@ -49,6 +54,40 @@ try {
 
   let hasGlossary = false;
   let inGlossaryTail = false;
+
+  // --- あらすじの挿入 ---
+  const synopsisPath = path.resolve(__dirname, '../public/settings/synopsis.txt');
+  if (fs.existsSync(synopsisPath)) {
+      const synopsisText = fs.readFileSync(synopsisPath, 'utf8');
+      if (synopsisText.trim() !== '') {
+          const synopsisLines = synopsisText.split('\n');
+          for (const sLine of synopsisLines) {
+              const cleanedLine = sLine.replace(/\r$/, '');
+              const sP = doc.createElement('w:p');
+              if (defaultPPr) sP.appendChild(defaultPPr.cloneNode(true));
+              const sR = doc.createElement('w:r');
+              const sT = doc.createElement('w:t');
+              if (cleanedLine === '') {
+                  sT.setAttribute('xml:space', 'preserve');
+                  sT.appendChild(doc.createTextNode(''));
+              } else {
+                  sT.appendChild(doc.createTextNode(cleanedLine));
+              }
+              sR.appendChild(sT);
+              sP.appendChild(sR);
+              body.appendChild(sP);
+          }
+          
+          // あらすじの後に改ページを挿入
+          const pbP = doc.createElement('w:p');
+          const pbR = doc.createElement('w:r');
+          const pb = doc.createElement('w:br');
+          pb.setAttribute('w:type', 'page');
+          pbR.appendChild(pb);
+          pbP.appendChild(pbR);
+          body.appendChild(pbP);
+      }
+  }
 
   for (let i = 0; i < lines.length; i++) {
       let line = lines[i].replace(/\r$/, '');
