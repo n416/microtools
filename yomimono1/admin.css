@@ -380,3 +380,55 @@ body {
 .btn-confirm:hover {
   background-color: #059669;
 }
+
+/* Synopsis Section Styles */
+.synopsis-section {
+  background-color: var(--admin-card-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+.synopsis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.synopsis-header .section-title {
+  margin: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.synopsis-textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 1rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 0.375rem;
+  background-color: #f9fafb;
+  color: var(--admin-text);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.synopsis-textarea:focus {
+  outline: none;
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.save-btn {
+  background-color: #10b981;
+}
+
+.save-btn:hover {
+  background-color: #059669;
+}

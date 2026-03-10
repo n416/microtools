@@ -24,3 +24,18 @@ dist-ssr
 # Playwright
 .playwright_profile/
 playwright_context/
+
+mitemin_data/
+
+__pycache__/
+
+venv/
+playwright_profile/
+.venv/
+.env
+*.env
+
+temp.txt
+out_*.txt
+output_novel.*
+*.docx
