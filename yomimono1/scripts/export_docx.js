@@ -110,8 +110,8 @@ try {
       }
       
       // Page break logic: when we hit a new chapter, check if previous chapter had a glossary
-      // 「第X話」
-      if (/^第\d+話/.test(line)) {
+      // 「第X話」または「プロローグ」
+      if (/^(第\d+話|プロローグ)/.test(line)) {
           if (hasGlossary) {
               // insert page break
               const pbP = doc.createElement('w:p');

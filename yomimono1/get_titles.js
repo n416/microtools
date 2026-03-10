@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const targetDir = path.join(__dirname, 'public', 'settings');
-const files = fs.readdirSync(targetDir).filter(f => f.startsWith('ep') && f.endsWith('.mdx'));
+const files = fs.readdirSync(targetDir).filter(f => (f.startsWith('ep') || f.startsWith('prologue') || f.startsWith('lore')) && f.endsWith('.mdx'));
 
 files.sort(sortEpisodes);
 

@@ -117,16 +117,19 @@ export const CharacterNames = {
       system: { // 地の文や誰とも特定できない場合
         normal: "結衣",
         normal_san: "結衣ちゃん",
+        normal_chan: "結衣ちゃん",
         last_san: "伊藤さん",
         full: "伊藤 結衣"
       },
       main_prog: { // 小林から
         normal: "結衣", // 心の中や基本
+        normal_chan: "結衣ちゃん",
         last_san: "伊藤さん" // 仕事中や序盤
       },
       ceo: { // 土屋から
         normal: "結衣ちゃん",
         normal_san: "結衣ちゃん",
+        normal_chan: "結衣ちゃん",
         short: "結衣"
       }
     }
