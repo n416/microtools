@@ -14,8 +14,13 @@ const __dirname = path.dirname(__filename);
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
 
+// コマンドライン引数からフラグを取得
+const isNoTerms = process.argv.includes('--no-terms');
+
 // ディレクトリ設定
-const distSettingsDir = path.resolve(__dirname, '../dist/settings');
+const distSettingsDir = isNoTerms 
+  ? path.resolve(__dirname, '../dist/export_resolved_noterms')
+  : path.resolve(__dirname, '../dist/export_resolved');
 const outputTxtPath = path.resolve(__dirname, '../output_novel.txt');
 const outputHtmlPath = path.resolve(__dirname, '../output_novel.html');
 
@@ -27,7 +32,7 @@ function buildExports() {
     process.exit(1);
   }
 
-  const files = fs.readdirSync(distSettingsDir).filter(f => f.startsWith('ep') && f.endsWith('.mdx'));
+  const files = fs.readdirSync(distSettingsDir).filter(f => (f.startsWith('ep') || f.startsWith('prologue') || f.startsWith('lore')) && f.endsWith('.mdx'));
 
   // エピソード番号順にソート
   files.sort(sortEpisodes);
@@ -39,9 +44,11 @@ function buildExports() {
     const filePath = path.join(distSettingsDir, file);
     let content = fs.readFileSync(filePath, 'utf-8');
     
-    // エピソードタイトルの話数を連番に変換
-    content = content.replace(/#\s*第[\d\.]+話/g, `# 第${chapterCounter}話`);
-    chapterCounter++;
+    // エピソードタイトルの話数を連番に変換（"第X話"が含まれる見出しのみ対象）
+    if (/#\s*第[\d\.]+話/.test(content)) {
+      content = content.replace(/#\s*第[\d\.]+話/g, `# 第${chapterCounter}話`);
+      chapterCounter++;
+    }
 
     // UIコンポーネント用HTMLタグなどを抽出除去
     const cleanedContent = cleanMarkdown(content);

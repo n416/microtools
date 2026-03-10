@@ -28,7 +28,7 @@ function resolveCharacters(text) {
   });
 }
 
-function resolveTerms(text, currentEpisode) {
+function resolveTerms(text, currentEpisode, showTerms) {
   const combinedDictionary = { ...ItTermDictionary, ...TermDictionary };
   const localSeen = new Set(); // ページ内で同一用語が複数回出た場合の重複防止
   const footnotes = [];
@@ -39,6 +39,10 @@ function resolveTerms(text, currentEpisode) {
     if (!termData) return `[Unknown Term: ${id}]`;
 
     const displayStr = (innerText && innerText.trim().length > 0) ? innerText : termData.term;
+
+    if (!showTerms) {
+      return displayStr;
+    }
 
     if (TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
       localSeen.add(id);
@@ -51,7 +55,7 @@ function resolveTerms(text, currentEpisode) {
     }
   });
 
-  if (footnotes.length > 0) {
+  if (showTerms && footnotes.length > 0) {
     let footnoteMarkdown = '\n\n<div class="term-footnotes">\n\n**【用語解説】**\n\n';
     footnotes.forEach(note => {
       footnoteMarkdown += `${note}  \n`;
@@ -131,7 +135,8 @@ async function loadMarkdown(target) {
     }
     const markdownText = await response.text();
     const charResolved = resolveCharacters(markdownText);
-    const fullyResolved = resolveTerms(charResolved, target);
+    const showTerms = localStorage.getItem('yomimono_show_terms') !== 'false';
+    const fullyResolved = resolveTerms(charResolved, target, showTerms);
     const html = marked(fullyResolved);
     const cleanHtml = DOMPurify.sanitize(html);
     markdownContainer.innerHTML = cleanHtml;
@@ -195,7 +200,7 @@ async function loadMarkdown(target) {
     }
 
     // --- 用語の抽出と解説ボタンの生成 ---
-    if (target !== 'world' && target !== 'character' && target !== 'true_character') {
+    if (showTerms && target !== 'world' && target !== 'character' && target !== 'true_character') {
       const { matchedIT, matchedNovel } = extractTermsFromText(fullyResolved, target);
       
       if (matchedIT.length > 0 || matchedNovel.length > 0) {
@@ -236,7 +241,7 @@ async function loadMarkdown(target) {
     const currentIndex = navLinksArray.findIndex(link => link.dataset.target === target);
 
     // 現在のページが一覧にあり、かつ最初のページ(0番目)ではない場合のみ
-    if (currentIndex > 0 && target !== 'ep1' && target !== 'ep4') {
+    if (currentIndex > 0 && target !== 'prologue1' && target !== 'ep1') {
       const prevTarget = navLinksArray[currentIndex - 1].dataset.target;
       const nextActionContainer = markdownContainer.querySelector('.next-action');
 
@@ -261,64 +266,14 @@ async function loadMarkdown(target) {
     normalNextBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         const nextTarget = e.target.dataset.next;
-        let nextPhase = currentPhase;
-        if (nextTarget === 'ep4' && currentPhase < 2) nextPhase = 2;
-        if (nextTarget === 'ep7' && currentPhase < 3) nextPhase = 3;
-        navigateTo(nextTarget, nextPhase);
+        navigateTo(nextTarget, 3);
       });
     });
-
-    // 次へボタン（グリッチ・反転用）のイベントリスナーを登録
-    const glitchBtn = document.getElementById('btn-glitch-next');
-    if (glitchBtn) {
-      glitchBtn.addEventListener('click', triggerGlitch);
-    }
-
-    // 第1章完結ボタンのイベントリスナーを登録
-    const chapterEndBtn = document.getElementById('btn-chapter-end');
-    if (chapterEndBtn) {
-      chapterEndBtn.addEventListener('click', triggerChapterEnd);
-    }
   } catch (error) {
     markdownContainer.innerHTML = `<p class="error">コンテンツの読み込みに失敗しました。Error: ${error.message}</p>`;
   }
 }
 
-function triggerChapterEnd() {
-  let overlay = document.getElementById('chapter-end-overlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'chapter-end-overlay';
-    overlay.innerHTML = '<div class="text-glitch">第1部 完</div>';
-    document.body.appendChild(overlay);
-  }
-
-  // 少し遅れて表示アニメーションを開始
-  setTimeout(() => {
-    overlay.classList.add('visible');
-  }, 100);
-
-  // 3.5秒後にフェードアウトし、第7話へ遷移・全メニュー表示
-  setTimeout(() => {
-    overlay.classList.remove('visible');
-    navigateTo('ep7', 3);
-  }, 3500);
-}
-
-function triggerGlitch() {
-  // ハッキングトランジション開始
-  document.body.classList.add('glitching');
-
-  // アニメーションが一番深く沈み込むタイミング（約1.2秒後）でテーマとコンテンツを反転
-  setTimeout(() => {
-    navigateTo('ep4', 2);
-  }, 1200); // 1.2秒後（アニメのくぼみ）で反転
-
-  // 完全にアニメーションが終わる2秒後にクラスをリセット
-  setTimeout(() => {
-    document.body.classList.remove('glitching');
-  }, 2200);
-}
 
 function bindNavEvents() {
   const currentNavLinks = document.querySelectorAll('a[data-target]');
@@ -335,82 +290,12 @@ function bindNavEvents() {
 function restoreState(target, phase) {
   const navContainer = document.getElementById('nav-container');
 
-  if (phase === 3) {
-    // 第2部（フェーズ3）のメニュー構成とテーマ設定
-    document.body.classList.remove('fake-mode');
-    document.body.classList.add('true-mode');
-    siteTitle.textContent = '[BUG_REPORT]';
-    siteSubtitle.innerHTML = '仕様書にないバグですが、<br>たぶん俺のことです';
-    navContainer.innerHTML = `
-      <details class="nav-group">
-        <summary>設定資料</summary>
-        <ul>
-          <li><a href="#" data-target="true_character">キャラクター（本編）</a></li>
-          <li><a href="#" data-target="world">世界観・ルール</a></li>
-        </ul>
-      </details>
-      <details class="nav-group">
-        <summary>第1部（第1話〜第6話）</summary>
-        <ul>
-          <li><a href="#" data-target="ep1">第1話：システム障害の現状と課題</a></li>
-          <li><a href="#" data-target="ep2">第2話：人的リソースの枯渇と影響</a></li>
-          <li><a href="#" data-target="ep3">第3話：クリティカルエラー発生報告</a></li>
-          <li><a href="#" data-target="ep4">第4話：偶然のハックとメトロノーム</a></li>
-          <li><a href="#" data-target="ep5">第5話：浸食の予兆</a></li>
-          <li><a href="#" data-target="ep6">第6話：ロスト・シーケンス</a></li>
-        </ul>
-      </details>
-      <details class="nav-group" open>
-        <summary>第2部（第7話〜）</summary>
-        <ul>
-          <li><a href="#" data-target="ep7">第7話：システムからの招待状</a></li>
-          <li><a href="#" data-target="ep8">第8話（第2章）：六本木の休日</a></li>
-          <li><a href="#" data-target="ep8_5">第8.5話：幕間・裏路地のオアシス</a></li>
-          <li><a href="#" data-target="ep9">第9話：デスマーチの足音と限界</a></li>
-          <li><a href="#" data-target="ep10_1">第10.1話：ファミレスと「電子ドラッグ」の真実</a></li>
-          <li><a href="#" data-target="ep10_2">第10.2話：職人のプライドとポンコツ・ガジェット</a></li>
-          <li><a href="#" data-target="ep10_3">第10.3話：赤い日の真実と、反逆の兆し</a></li>
-          <li><a href="#" data-target="ep11">第11話：納品へのカウントダウン</a></li>
-          <li><a href="#" data-target="ep12_0">第12話：面白星人</a></li>
-          <li><a href="#" data-target="ep12_1">第12.1話：赤い日</a></li>
-          <li><a href="#" data-target="ep12_2">第12.2話：ノイズとアンカー</a></li>
-          <li><a href="#" data-target="ep13_0">第13話：赤い日の真実と罠</a></li>
-          <li><a href="#" data-target="ep13_1">第13.1話：完璧すぎる視界</a></li>
-          <li><a href="#" data-target="ep13_2">第13.2話：見えないものを直す手</a></li>
-          <li><a href="#" data-target="ep13_3">第13.3話：優しさと最適化の矛盾</a></li>
-          <li><a href="#" data-target="ep13_4">第13.4話：黒須の監視と、ノイズの体温</a></li>
-          <li><a href="#" data-target="ep13_5">第13.5話：隔絶される世界線</a></li>
-          <li><a href="#" data-target="ep13_6">第13.6話：アンカーの決断</a></li>
-          <li><a href="#" data-target="ep13_7">第13.7話：休日のバグとコーヒーブレイク</a></li>
-          <li><a href="#" data-target="ep14">第14話：雪の日の決断とフェーズアウト</a></li>
-          <li><a href="#" data-target="ep14_1">第14.1話：雪の日の翌朝 - 喪失の輪郭</a></li>
-          <li><a href="#" data-target="ep14_2">第14.2話：落下するノイズへの追跡劇 - 虚無のカーチェイス</a></li>
-          <li><a href="#" data-target="ep15">第15話：鬼之河アンダーグラウンド</a></li>
-          <li><a href="#" data-target="ep15_5">第15.5話：泥水と蒸気タービン - あるプログラマの覚醒</a></li>
-          <li><a href="#" data-target="ep16_0">第16話：再会と覚醒のアプリ</a></li>
-          <li><a href="#" data-target="ep16_0_5">第16.0.5話：幕間・黄色いトラックの少女</a></li>
-          <li><a href="#" data-target="ep16_0_6">第16.0.6話：幕間・休日のカフェ</a></li>
-          <li><a href="#" data-target="ep16_1">第16話：再会と覚醒のアプリ（続き）</a></li>
-          <li><a href="#" data-target="ep17">第17話：記憶の抵抗</a></li>
-          <li><a href="#" data-target="ep17_5">第17.5話：インカムのノイズ</a></li>
-          <li><a href="#" data-target="ep18">第18話：ふたつの和音（コード）</a></li>
-          <li><a href="#" data-target="ep19_1">第19話：反逆のカウンター・ノイズ I - 崩壊の足音</a></li>
-          <li><a href="#" data-target="ep19_2">第19話：反逆のカウンター・ノイズ II - 重なり合う波長</a></li>
-          <li><a href="#" data-target="ep19_3">第19話：反逆のカウンター・ノイズ III - 泥臭い一撃</a></li>
-          <li><a href="#" data-target="ep19_4">第19話：反逆のカウンター・ノイズ IV - 完璧なる自滅</a></li>
-          <li><a href="#" data-target="ep20">第20話：新しい世界の仕様書</a></li>
-          <li><a href="#" data-target="ep21">第21話・最終話：終わらない運用保守（メンテナンス）</a></li>
-          <li><a href="#" data-target="ep22">第22話 断章：侵食</a></li>
-        </ul>
-      </details>
-    `;
-  } else if (phase === 2) {
-    // 1部完了前のOverRide（フェーズ2）のメニュー構成
-    document.body.classList.remove('fake-mode');
-    document.body.classList.add('true-mode');
-    siteTitle.textContent = '[BUG_REPORT]';
-    siteSubtitle.innerHTML = '仕様書にないバグですが、<br>たぶん俺のことです';
-    navContainer.innerHTML = `
+  // メニュー構成とテーマ設定（常にTrue Mode）
+  document.body.classList.remove('fake-mode');
+  document.body.classList.add('true-mode');
+  siteTitle.textContent = '[BUG_REPORT]';
+  siteSubtitle.innerHTML = '仕様書にないバグですが、<br>たぶん俺のことです';
+  navContainer.innerHTML = `
       <details class="nav-group">
         <summary>設定資料</summary>
         <ul>
@@ -419,32 +304,59 @@ function restoreState(target, phase) {
         </ul>
       </details>
       <details class="nav-group" open>
-        <summary>第1部（〜第6話）</summary>
+        <summary>第1部（第1話〜第3話）</summary>
         <ul>
-          <li><a href="#" data-target="ep4">第4話：偶然のハックとメトロノーム</a></li>
-          <li><a href="#" data-target="ep5">第5話：浸食の予兆</a></li>
-          <li><a href="#" data-target="ep6">第6話：ロスト・シーケンス</a></li>
+          <li><a href="#" data-target="prologue1">プロローグ１：システム障害の現状と課題</a></li>
+          <li><a href="#" data-target="prologue2">プロローグ２：人的リソースの枯渇と影響</a></li>
+          <li><a href="#" data-target="prologue3">プロローグ３：クリティカルエラー発生報告</a></li>
+          <li><a href="#" data-target="ep1">第1話：偶然のハックとメトロノーム</a></li>
+          <li><a href="#" data-target="ep2">第2話：浸食の予兆</a></li>
+          <li><a href="#" data-target="ep3">第3話：ロスト・シーケンス</a></li>
         </ul>
       </details>
-    `;
-  } else {
-    // 初期のフェイクモード（フェーズ1）
-    document.body.classList.remove('true-mode');
-    document.body.classList.add('fake-mode');
-    siteTitle.textContent = '業務マニュアル';
-    siteSubtitle.innerHTML = '社内業務引き継ぎ資料<br>作成者：小林悠太';
-    navContainer.innerHTML = `
-      <details class="nav-group item-list" open>
-        <summary>マニュアル項目</summary>
+      <details class="nav-group" open>
+        <summary>第2部（第4話〜）</summary>
         <ul>
-          <li><a href="#" data-target="character">登場人物</a></li>
-          <li><a href="#" data-target="ep1">第1話：システム障害の現状と課題</a></li>
-          <li><a href="#" data-target="ep2">第2話：人的リソースの枯渇と影響</a></li>
-          <li><a href="#" data-target="ep3">第3話：クリティカルエラー発生報告</a></li>
+          <li><a href="#" data-target="ep4">第4話：システムからの招待状</a></li>
+          <li><a href="#" data-target="ep5">第5話（第2章）：六本木の休日</a></li>
+          <li><a href="#" data-target="ep5_5">第5.5話：幕間・裏路地のオアシス</a></li>
+          <li><a href="#" data-target="ep6">第6話：デスマーチの足音と限界</a></li>
+          <li><a href="#" data-target="ep7_1">第7.1話：ファミレスと「電子ドラッグ」の真実</a></li>
+          <li><a href="#" data-target="ep7_2">第7.2話：職人のプライドとポンコツ・ガジェット</a></li>
+          <li><a href="#" data-target="ep7_3">第7.3話：赤い日の真実と、反逆の兆し</a></li>
+          <li><a href="#" data-target="ep8">第8話：納品へのカウントダウン</a></li>
+          <li><a href="#" data-target="ep9_0">第9話：面白星人</a></li>
+          <li><a href="#" data-target="ep9_1">第9.1話：赤い日</a></li>
+          <li><a href="#" data-target="ep9_2">第9.2話：ノイズとアンカー</a></li>
+          <li><a href="#" data-target="ep10_0">第10話：赤い日の真実と罠</a></li>
+          <li><a href="#" data-target="ep10_1">第10.1話：完璧すぎる視界</a></li>
+          <li><a href="#" data-target="ep10_2">第10.2話：見えないものを直す手</a></li>
+          <li><a href="#" data-target="ep10_3">第10.3話：優しさと最適化の矛盾</a></li>
+          <li><a href="#" data-target="ep10_4">第10.4話：黒須の監視と、ノイズの体温</a></li>
+          <li><a href="#" data-target="ep10_5">第10.5話：隔絶される世界線</a></li>
+          <li><a href="#" data-target="ep10_6">第10.6話：アンカーの決断</a></li>
+          <li><a href="#" data-target="ep10_7">第10.7話：休日のバグとコーヒーブレイク</a></li>
+          <li><a href="#" data-target="ep11">第11話：雪の日の決断とフェーズアウト</a></li>
+          <li><a href="#" data-target="ep11_1">第11.1話：雪の日の翌朝 - 喪失の輪郭</a></li>
+          <li><a href="#" data-target="ep11_2">第11.2話：落下するノイズへの追跡劇 - 虚無のカーチェイス</a></li>
+          <li><a href="#" data-target="ep12">第12話：鬼之河アンダーグラウンド</a></li>
+          <li><a href="#" data-target="ep13">第13話：再会と覚醒のアプリ</a></li>
+          <li><a href="#" data-target="ep13_2">第13.2話：爆走の黄色いトラックと、ノイズの血統</a></li>
+          <li><a href="#" data-target="ep13_3">第13.3話：池袋のジャンク探しと、休日のカフェ</a></li>
+          <li><a href="#" data-target="ep13_4">第13.4話：再会と覚醒のアプリ（続き）</a></li>
+          <li><a href="#" data-target="ep14">第14話：記憶の抵抗</a></li>
+          <li><a href="#" data-target="ep14_5">第14.5話：インカムのノイズ</a></li>
+          <li><a href="#" data-target="ep15">第15話：ふたつの和音（コード）</a></li>
+          <li><a href="#" data-target="ep16_1">第16.1話：反逆のカウンター・ノイズ I - 崩壊の足音</a></li>
+          <li><a href="#" data-target="ep16_2">第16.2話：反逆のカウンター・ノイズ II - 重なり合う波長</a></li>
+          <li><a href="#" data-target="ep16_3">第16.3話：反逆のカウンター・ノイズ III - 泥臭い一撃</a></li>
+          <li><a href="#" data-target="ep16_4">第16.4話：反逆のカウンター・ノイズ IV - 完璧なる自滅</a></li>
+          <li><a href="#" data-target="ep17">第17話：新しい世界の仕様書</a></li>
+          <li><a href="#" data-target="ep18">第18話・最終話：終わらない運用保守（メンテナンス）</a></li>
+          <li><a href="#" data-target="ep19">第19話 断章：侵食</a></li>
         </ul>
       </details>
-    `;
-  }
+  `;
 
   bindNavEvents();
 
@@ -461,9 +373,9 @@ window.addEventListener('popstate', (e) => {
     navigateTo(e.state.p, e.state.ph, false);
   } else {
     const params = new URLSearchParams(window.location.search);
-    const p = params.get('p') || localStorage.getItem('yomimono_last_page') || 'character';
-    const ph = parseInt(params.get('ph'), 10) || parseInt(localStorage.getItem('yomimono_phase'), 10) || 1;
-    navigateTo(p, ph, false);
+    const p = params.get('p') || localStorage.getItem('yomimono_last_page') || 'prologue1';
+    // const ph = parseInt(params.get('ph'), 10) || parseInt(localStorage.getItem('yomimono_phase'), 10) || 3;
+    navigateTo(p, 3, false);
   }
 });
 
@@ -480,6 +392,18 @@ if (btnResetState) {
   });
 }
 
+// 用語解説トグルのイベント登録
+const toggleTermsCheckbox = document.getElementById('toggle-terms');
+if (toggleTermsCheckbox) {
+  toggleTermsCheckbox.checked = localStorage.getItem('yomimono_show_terms') !== 'false';
+  toggleTermsCheckbox.addEventListener('change', (e) => {
+    localStorage.setItem('yomimono_show_terms', e.target.checked);
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get('p') || localStorage.getItem('yomimono_last_page') || 'character';
+    loadMarkdown(p);
+  });
+}
+
 // 初期化処理
 function init() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -491,11 +415,11 @@ function init() {
 
   if (!initialPhase) {
     // 既存ユーザー向けのマイグレーションフォールバック
-    const trueModeTargets = ['ep4', 'ep5', 'ep6', 'true_character', 'world', 'lore_kurosu_hidden'];
+    const trueModeTargets = ['ep1', 'ep2', 'ep3', 'true_character', 'world', 'lore_kurosu_hidden'];
     const part2Targets = [
-      'ep7', 'ep8', 'ep8_5', 'ep9', 'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2', 'ep13_0',
-      'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-      'ep14', 'ep14_1', 'ep14_2', 'ep15', 'ep15_5', 'ep16_0', 'ep16_0_5', 'ep16_0_6', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19_1', 'ep19_2', 'ep19_3', 'ep19_4', 'ep20', 'ep21', 'ep22',
+      'ep1', 'ep2', 'ep2_5', 'ep3', 'ep4_1', 'ep4_2', 'ep4_3', 'ep2', 'ep6_0', 'ep6_1', 'ep6_2', 'ep10_0',
+      'ep4.1', 'ep4.2', 'ep4.3', 'ep10_4', 'ep10_5', 'ep10_6', 'ep10_7',
+      'ep5', 'ep5_1', 'ep5_2', 'ep12', 'ep10.0', 'ep10.0_5', 'ep10.0_6', 'ep10.1', 'ep11', 'ep11_5', 'ep13', 'ep13_2', 'ep13_3', 'ep13_4', 'ep16_2', 'ep16_3', 'ep16_4', 'ep14', 'ep15', 'ep19',
       'lore_kurosu_hidden', 'lore_lin_hidden'
     ];
     if (part2Targets.includes(lastPage)) {
@@ -569,16 +493,16 @@ function extractTermsFromText(text, target) {
   }
 
   const episodeSequence = [
-    'ep1', 'ep2', 'ep3', 'ep4', 'ep5', 'ep6', 'ep7', 'ep8', 'ep8_5', 'ep9',
-    'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2',
-    'ep13_0', 'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-    'ep14', 'ep14_1', 'ep14_2', 'ep15', 'ep15_5', 'ep16_0', 'ep16_0_5', 'lore_lin_hidden', 'ep16_0_6', 'ep16_1', 'ep17', 'ep17_5', 'lore_kurosu_hidden', 'ep18', 'ep19_1', 'ep19_2', 'ep19_3', 'ep19_4', 'ep20', 'ep21', 'ep22'
+    'prologue1', 'prologue2', 'prologue3', 'ep1', 'ep2', 'ep3', 'ep1', 'ep2', 'ep2_5', 'ep3',
+    'ep4_1', 'ep4_2', 'ep4_3', 'ep2', 'ep6_0', 'ep6_1', 'ep6_2',
+    'ep10_0', 'ep4.1', 'ep4.2', 'ep4.3', 'ep10_4', 'ep10_5', 'ep10_6', 'ep10_7',
+    'ep5', 'ep5_1', 'ep5_2', 'ep12', 'ep10.0', 'ep10.0_5', 'lore_lin_hidden', 'ep10.0_6', 'ep10.1', 'ep11', 'ep11_5', 'lore_kurosu_hidden', 'ep13', 'ep13_2', 'ep13_3', 'ep13_4', 'ep16_2', 'ep16_3', 'ep16_4', 'ep14', 'ep15', 'ep19'
   ];
   const epIndex = episodeSequence.indexOf(target);
-  const ep11Index = episodeSequence.indexOf('ep11');
-  const allowNovelTerms = (epIndex === -1 || epIndex >= ep11Index);
+  const ep5Index = episodeSequence.indexOf('ep2');
+  const allowNovelTerms = (epIndex === -1 || epIndex >= ep5Index);
 
-  // 小説用語の抽出（第11話以降のみ）
+  // 小説用語の抽出（第5話以降のみ）
   if (allowNovelTerms) {
     for (const key in TermDictionary) {
       const item = TermDictionary[key];

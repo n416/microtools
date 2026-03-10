@@ -8,10 +8,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const episodeSequence = [
-  'ep1', 'ep2', 'ep3', 'ep4', 'ep5', 'ep6', 'ep7', 'ep8', 'ep8_5', 'ep9',
-  'ep10_1', 'ep10_2', 'ep10_3', 'ep11', 'ep12_0', 'ep12_1', 'ep12_2',
-  'ep13_0', 'ep13_1', 'ep13_2', 'ep13_3', 'ep13_4', 'ep13_5', 'ep13_6', 'ep13_7',
-  'ep14', 'ep14_1', 'ep14_2', 'ep15', 'ep15_5', 'ep16_0', 'ep16_0_5', 'ep16_0_6', 'ep16_1', 'ep17', 'ep17_5', 'ep18', 'ep19_1', 'ep19_2', 'ep19_3', 'ep19_4', 'ep20', 'ep21', 'ep22'
+  'prologue1', 'prologue2', 'prologue3', 'ep1', 'ep2', 'ep3', 'ep1', 'ep2', 'ep2_5', 'ep3',
+  'ep4_1', 'ep4_2', 'ep4_3', 'ep2', 'ep6_0', 'ep6_1', 'ep6_2',
+  'ep10_0', 'ep4.1', 'ep4.2', 'ep4.3', 'ep10_4', 'ep10_5', 'ep10_6', 'ep10_7',
+  'ep5', 'ep5_1', 'ep5_2', 'ep12', 'ep12_5', 'ep10.0', 'ep10.0_5', 'ep10.0_6', 'ep10.1', 'ep11', 'ep11_5', 'ep12', 'ep13.1', 'ep16_2', 'ep16_3', 'ep16_4', 'ep14', 'ep15', 'ep19'
 ];
 
 const combinedDictionary = { ...ItTermDictionary, ...TermDictionary };
@@ -119,8 +119,8 @@ for (const ep of episodeSequence) {
 
       // 1〜10話では世界観（NOVEL）の辞書は展開しない（ネタバレ防止）
       const epIndex = episodeSequence.indexOf(ep);
-      const ep11Index = episodeSequence.indexOf('ep11');
-      if (target.type === 'NOVEL' && epIndex < ep11Index) {
+      const ep5Index = episodeSequence.indexOf('ep2');
+      if (target.type === 'NOVEL' && epIndex < ep5Index) {
         return match;
       }
 

@@ -11,8 +11,12 @@ const __dirname = path.dirname(__filename);
 
 // プロジェクトのルートディレクトリ
 const projectRoot = path.join(__dirname, '..');
-// ビルド後のファイル出力先 (Viteのデフォルトのdistフォルダ)
+// 入力元 (Viteのデフォルトのdistフォルダの下のsettings)
 const distSettingsDir = path.join(projectRoot, 'dist', 'settings');
+// 出力先 (エクスポート用：用語解説あり)
+const exportSettingsDir = path.join(projectRoot, 'dist', 'export_resolved');
+// 出力先 (エクスポート用：用語解説なし)
+const exportSettingsNoTermsDir = path.join(projectRoot, 'dist', 'export_resolved_noterms');
 
 function resolveCharacters(text) {
   return text.replace(/<Char\s+role="([^"]+)"(?:\s+callrole="([^"]+)")?\s+var="([^"]+)"\s*\/>/g, (match, role, callrole, variant) => {
@@ -38,7 +42,7 @@ function resolveCharacters(text) {
   });
 }
 
-function resolveTerms(text, currentEpisode) {
+function resolveTerms(text, currentEpisode, showTerms = true) {
   const combinedDictionary = { ...ItTermDictionary, ...TermDictionary };
   const localSeen = new Set(); // ページ内で同一用語が複数回出た場合の重複防止
   const footnotes = [];
@@ -49,6 +53,10 @@ function resolveTerms(text, currentEpisode) {
     if (!termData) return `[Unknown Term: ${id}]`;
 
     const displayStr = (innerText && innerText.trim().length > 0) ? innerText : termData.term;
+
+    if (!showTerms) {
+      return displayStr;
+    }
 
     if (TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
       localSeen.add(id);
@@ -61,7 +69,7 @@ function resolveTerms(text, currentEpisode) {
     }
   });
 
-  if (footnotes.length > 0) {
+  if (showTerms && footnotes.length > 0) {
     let footnoteMarkdown = '\n\n<div class="term-footnotes">\n\n**【用語解説】**\n\n';
     footnotes.forEach(note => {
       footnoteMarkdown += `${note}  \n`;
@@ -86,6 +94,13 @@ function processMdxFilesInDist() {
     process.exit(1);
   }
 
+  if (!fs.existsSync(exportSettingsDir)) {
+    fs.mkdirSync(exportSettingsDir, { recursive: true });
+  }
+  if (!fs.existsSync(exportSettingsNoTermsDir)) {
+    fs.mkdirSync(exportSettingsNoTermsDir, { recursive: true });
+  }
+
   const files = fs.readdirSync(distSettingsDir);
   let processedCount = 0;
 
@@ -98,14 +113,20 @@ function processMdxFilesInDist() {
         const currentEpisode = file.replace('.mdx', '');
   
         const charResolved = resolveCharacters(content);
-        const fullyResolved = resolveTerms(charResolved, currentEpisode);
+        const fullyResolved = resolveTerms(charResolved, currentEpisode, true);
+        const noTermsResolved = resolveTerms(charResolved, currentEpisode, false);
   
-        if (content !== fullyResolved) {
-          fs.writeFileSync(filePath, fullyResolved, 'utf-8');
-        console.log(`[postbuild] Tags resolved in: ${file}`);
+        // エクスポート用ディレクトリに書き出す（dist/settingsの元ファイルは維持する）
+        const outPath = path.join(exportSettingsDir, file);
+        fs.writeFileSync(outPath, fullyResolved, 'utf-8');
+        
+        // 用語解説なしのプレーンテキスト用ディレクトリにも書き出す
+        const outPathNoTerms = path.join(exportSettingsNoTermsDir, file);
+        fs.writeFileSync(outPathNoTerms, noTermsResolved, 'utf-8');
+
+        console.log(`[postbuild] Tags resolved in: ${file} (with/without terms)`);
         processedCount++;
       }
-    }
   });
 
   console.log(`[postbuild] Finished processing ${files.length} files. Modified ${processedCount} files.`);
