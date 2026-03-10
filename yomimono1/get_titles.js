@@ -1,15 +1,15 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { sortEpisodes } from './episode_sequence.js';
 
-const targetDir = 'c:\\Users\\shingo\\Desktop\\microtools\\yomimono1\\public\\settings';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const targetDir = path.join(__dirname, 'public', 'settings');
 const files = fs.readdirSync(targetDir).filter(f => f.startsWith('ep') && f.endsWith('.mdx'));
 
-// number_sort => ep1, ep2, ... ep10_1 ...
-files.sort((a, b) => {
-    const numA = parseFloat(a.replace('ep', '').replace('_', '.').replace('.mdx', ''));
-    const numB = parseFloat(b.replace('ep', '').replace('_', '.').replace('.mdx', ''));
-    return numA - numB;
-});
+files.sort(sortEpisodes);
 
 files.forEach(file => {
     const content = fs.readFileSync(path.join(targetDir, file), 'utf8');
