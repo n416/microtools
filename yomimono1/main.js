@@ -81,8 +81,7 @@ const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 const mobileOverlay = document.getElementById('mobile-overlay');
 const sidebar = document.getElementById('sidebar');
 
-let currentPhase = 1;
-
+// currentPhase 削除済
 function toggleSidebar() {
   if (sidebar) sidebar.classList.toggle('sidebar-open');
   if (mobileOverlay) mobileOverlay.classList.toggle('active');
@@ -101,20 +100,18 @@ if (mobileOverlay) {
   mobileOverlay.addEventListener('click', closeSidebar);
 }
 
-function navigateTo(target, phase, push = true) {
-  currentPhase = phase;
-
+function navigateTo(target, push = true) {
   if (push) {
     const url = new URL(window.location);
     url.searchParams.set('p', target);
-    url.searchParams.set('ph', phase);
-    window.history.pushState({ p: target, ph: phase }, '', url);
+    url.searchParams.delete('ph'); // 古いパラメータがある場合は消去
+    window.history.pushState({ p: target }, '', url);
   }
 
   localStorage.setItem('yomimono_last_page', target);
-  localStorage.setItem('yomimono_phase', phase);
 
-  restoreState(target, phase);
+  restoreState(target);
+  updateSidebarAccordion(target);
   loadMarkdown(target);
 
   // ページ上部へスクロール
@@ -255,7 +252,7 @@ async function loadMarkdown(target) {
 
         prevBtn.addEventListener('click', (e) => {
           const targetToLoad = e.target.dataset.prev;
-          navigateTo(targetToLoad, currentPhase);
+          navigateTo(targetToLoad);
         });
       }
     }
@@ -266,7 +263,7 @@ async function loadMarkdown(target) {
     normalNextBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         const nextTarget = e.target.dataset.next;
-        navigateTo(nextTarget, 3);
+        navigateTo(nextTarget);
       });
     });
   } catch (error) {
@@ -275,19 +272,47 @@ async function loadMarkdown(target) {
 }
 
 
+function updateSidebarAccordion(target) {
+  const links = document.querySelectorAll('#sidebar .nav-group a');
+  let activeLink = null;
+
+  links.forEach(link => {
+    link.classList.remove('active');
+    if (link.dataset.target === target) {
+      link.classList.add('active');
+      activeLink = link;
+    }
+  });
+
+  if (activeLink) {
+    const activeDetails = activeLink.closest('details.nav-group');
+    const allDetails = document.querySelectorAll('#sidebar details.nav-group');
+
+    allDetails.forEach(details => {
+      // 設定資料（true_character, world）は手動開閉に任せる場合は除外する等の調整が可能ですが、
+      // 今回は「現在いるエピソードのグループだけを開き、他は閉じる」という仕様に基づき全制御します。
+      if (details === activeDetails) {
+        details.setAttribute('open', '');
+      } else {
+        details.removeAttribute('open');
+      }
+    });
+  }
+}
+
 function bindNavEvents() {
   const currentNavLinks = document.querySelectorAll('a[data-target]');
   currentNavLinks.forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const target = e.target.dataset.target;
-      navigateTo(target, currentPhase);
+      navigateTo(target);
     });
   });
 }
 
 // --- ページ状態復元機能 ---
-function restoreState(target, phase) {
+function restoreState(target) {
   const navContainer = document.getElementById('nav-container');
 
   // メニュー構成とテーマ設定（常にTrue Mode）
@@ -303,22 +328,22 @@ function restoreState(target, phase) {
           <li><a href="#" data-target="world">世界観・ルール</a></li>
         </ul>
       </details>
-      <details class="nav-group" open>
-        <summary>第1部（第1話〜第3話）</summary>
+      <details class="nav-group">
+        <summary>プロローグ</summary>
         <ul>
           <li><a href="#" data-target="prologue1">プロローグ１：システム障害の現状と課題</a></li>
           <li><a href="#" data-target="prologue2">プロローグ２：人的リソースの枯渇と影響</a></li>
           <li><a href="#" data-target="prologue3">プロローグ３：クリティカルエラー発生報告</a></li>
+        </ul>
+      </details>
+      <details class="nav-group">
+        <summary>本編</summary>
+        <ul>
           <li><a href="#" data-target="ep1">第1話：偶然のハックとメトロノーム</a></li>
           <li><a href="#" data-target="ep2">第2話：浸食の予兆</a></li>
           <li><a href="#" data-target="ep3">第3話：ロスト・シーケンス</a></li>
-        </ul>
-      </details>
-      <details class="nav-group" open>
-        <summary>第2部（第4話〜）</summary>
-        <ul>
           <li><a href="#" data-target="ep4">第4話：システムからの招待状</a></li>
-          <li><a href="#" data-target="ep5">第5話（第2章）：六本木の休日</a></li>
+          <li><a href="#" data-target="ep5">第5話：六本木の休日</a></li>
           <li><a href="#" data-target="ep5_5">第5.5話：幕間・裏路地のオアシス</a></li>
           <li><a href="#" data-target="ep6">第6話：デスマーチの足音と限界</a></li>
           <li><a href="#" data-target="ep7_1">第7.1話：ファミレスと「電子ドラッグ」の真実</a></li>
@@ -370,12 +395,11 @@ function restoreState(target, phase) {
 // ブラウザの戻る・進む（popstate）対応
 window.addEventListener('popstate', (e) => {
   if (e.state) {
-    navigateTo(e.state.p, e.state.ph, false);
+    navigateTo(e.state.p, false);
   } else {
     const params = new URLSearchParams(window.location.search);
     const p = params.get('p') || localStorage.getItem('yomimono_last_page') || 'prologue1';
-    // const ph = parseInt(params.get('ph'), 10) || parseInt(localStorage.getItem('yomimono_phase'), 10) || 3;
-    navigateTo(p, 3, false);
+    navigateTo(p, false);
   }
 });
 
@@ -408,44 +432,21 @@ if (toggleTermsCheckbox) {
 function init() {
   const urlParams = new URLSearchParams(window.location.search);
   const urlTarget = urlParams.get('p');
-  const urlPhase = parseInt(urlParams.get('ph'), 10);
-
   const lastPage = urlTarget || localStorage.getItem('yomimono_last_page') || 'character';
-  let initialPhase = urlPhase || parseInt(localStorage.getItem('yomimono_phase'), 10);
-
-  if (!initialPhase) {
-    // 既存ユーザー向けのマイグレーションフォールバック
-    const trueModeTargets = ['ep1', 'ep2', 'ep3', 'true_character', 'world', 'lore_kurosu_hidden'];
-    const part2Targets = [
-      'ep1', 'ep2', 'ep2_5', 'ep3', 'ep4_1', 'ep4_2', 'ep4_3', 'ep2', 'ep6_0', 'ep6_1', 'ep6_2', 'ep10_0',
-      'ep4.1', 'ep4.2', 'ep4.3', 'ep10_4', 'ep10_5', 'ep10_6', 'ep10_7',
-      'ep5', 'ep5_1', 'ep5_2', 'ep12', 'ep10.0', 'ep10.0_5', 'ep10.0_6', 'ep10.1', 'ep11', 'ep11_5', 'ep13', 'ep13_2', 'ep13_3', 'ep13_4', 'ep16_2', 'ep16_3', 'ep16_4', 'ep14', 'ep15', 'ep19',
-      'lore_kurosu_hidden', 'lore_lin_hidden'
-    ];
-    if (part2Targets.includes(lastPage)) {
-      initialPhase = 3;
-    } else if (trueModeTargets.includes(lastPage)) {
-      initialPhase = 2;
-    } else {
-      initialPhase = 1;
-    }
-  }
 
   // URLにパラメーターがない場合は localStorage の値を付与して replaceState
-  if (!urlTarget || !urlPhase) {
+  if (!urlTarget) {
     const url = new URL(window.location);
     url.searchParams.set('p', lastPage);
-    url.searchParams.set('ph', initialPhase);
-    window.history.replaceState({ p: lastPage, ph: initialPhase }, '', url);
+    url.searchParams.delete('ph'); // 古いパラメータ対策で念の為消去
+    window.history.replaceState({ p: lastPage }, '', url);
   } else if (!window.history.state) {
     // パラメーターはあるが history.state が空の場合（直リンク等）
-    window.history.replaceState({ p: lastPage, ph: initialPhase }, '', window.location.href);
+    window.history.replaceState({ p: lastPage }, '', window.location.href);
   }
 
-  // currentPhase を初期化
-  currentPhase = initialPhase;
-
-  restoreState(lastPage, currentPhase);
+  restoreState(lastPage);
+  updateSidebarAccordion(lastPage);
   loadMarkdown(lastPage);
 }
 
