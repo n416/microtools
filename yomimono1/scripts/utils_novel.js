@@ -24,8 +24,13 @@ export function cleanMarkdown(content) {
 export function stripMarkdown(text) {
   let plain = text.replace(/\r\n/g, '\n'); // 正規表現の処理のために改行コードを統一
 
-  // ヘッダー (#) を除去 (行頭の#とスペースを消す)
-  plain = plain.replace(/^#+\s+/gm, '');
+  // ヘッダー処理:
+  // 大見出し (# 第X話など) は、# を消して前後に空行（出力時の見栄え調整）
+  plain = plain.replace(/^\s*#\s+(.*)$/gm, '\n\n$1\n\n');
+  // 副見出し (## 1. 〇〇、## 幕間など) は、## を消して前後に空行
+  plain = plain.replace(/^\s*##\s+(.*)$/gm, '\n\n$1\n\n');
+  // それ以下の見出し (###など) は単純に記号を消す
+  plain = plain.replace(/^\s*#{3,}\s+/gm, '');
   // 太字 (**) やイタリック (*) を除去
   plain = plain.replace(/(\*\*|__)(.*?)\1/g, '$2');
   plain = plain.replace(/(\*|_)(.*?)\1/g, '$2');
@@ -37,14 +42,14 @@ export function stripMarkdown(text) {
   plain = plain.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '[画像: $1]');
   // 引用符 (>) を除去
   plain = plain.replace(/^>\s+/gm, '');
-  // リスト記号 (-, *, +, 1.) を除去
+  // リスト記号 (-, *, +) を除去 (ただし、見出し行で既に見出し記号が除去された後の数値などには影響させない方針)
   plain = plain.replace(/^[\-\*\+]\s+/gm, '');
-  plain = plain.replace(/^\d+\.\s+/gm, '');
-  // 水平線 (---, ***) を除去
+  // ここで `^\d+\.\s+` を消すと、「1. 〇〇」のような副見出しの箇条書きまで消えてしまうので削除処理を無効化、ないしは限定的にする。
+  // plain = plain.replace(/^\d+\.\s+/gm, '');
   plain = plain.replace(/^[-*_]{3,}\s*$/gm, '');
 
-  // 3つ以上連続する改行があれば2つにまとめる
-  plain = plain.replace(/\n{3,}/g, '\n\n');
+  // 4つ以上連続する改行があれば3つにまとめる（見出し前後の空白行装飾を保護するため）
+  plain = plain.replace(/\n{4,}/g, '\n\n\n');
 
   // 【用語解説】セクション全体を削除する
   // 「【用語解説】」以降、次のエピソード「第X話」または「プロローグ」が始まるまでのテキストを消す
