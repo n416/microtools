@@ -17,14 +17,13 @@ export const TermFirstAppearanceMap = {
   "format": "prologue3",
   "vacuum_tube": "prologue3",
   "resource": "ep10_0",
-  "cache_clear": "ep10_0",
-  "noise": "ep10_0",
   "auditor": "ep10_0",
+  "alert": "ep10_0",
   "server_room": "ep10_0",
   "pmo": "ep10_0",
+  "noise": "ep10_0",
   "server": "ep10_0",
   "hardware_bug": "ep10_0",
-  "alert": "ep10_0",
   "red_day": "ep10_0",
   "manual_tune": "ep10_0",
   "device_gadget": "ep10_0",
@@ -37,7 +36,5 @@ export const TermFirstAppearanceMap = {
   "ticket": "ep5",
   "latency": "ep16_2",
   "error_code": "ep14",
-  "terminal": "ep14",
-  "over_standard_plan": "ep14",
-  "algorithm": "ep19"
+  "over_standard_plan": "ep14"
 };
