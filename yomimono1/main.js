@@ -28,7 +28,7 @@ function resolveCharacters(text) {
   });
 }
 
-function resolveTerms(text, currentEpisode, showTerms) {
+function resolveTerms(text, currentEpisode) {
   const combinedDictionary = { ...ItTermDictionary, ...TermDictionary };
   const localSeen = new Set(); // ページ内で同一用語が複数回出た場合の重複防止
   const footnotes = [];
@@ -40,22 +40,18 @@ function resolveTerms(text, currentEpisode, showTerms) {
 
     const displayStr = (innerText && innerText.trim().length > 0) ? innerText : termData.term;
 
-    if (!showTerms) {
-      return displayStr;
-    }
-
     if (TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
       localSeen.add(id);
       const mark = `※${footnoteCounter}`;
       footnotes.push(`${mark} ${termData.term}： ${termData.description}`);
       footnoteCounter++;
-      return `${displayStr}（${mark}）`;
+      return `${displayStr}<span class="term-mark">（${mark}）</span>`;
     } else {
       return displayStr;
     }
   });
 
-  if (showTerms && footnotes.length > 0) {
+  if (footnotes.length > 0) {
     let footnoteMarkdown = '\n\n<div class="term-footnotes">\n\n**【用語解説】**\n\n';
     footnotes.forEach(note => {
       footnoteMarkdown += `${note}  \n`;
@@ -132,8 +128,7 @@ async function loadMarkdown(target) {
     }
     const markdownText = await response.text();
     const charResolved = resolveCharacters(markdownText);
-    const showTerms = localStorage.getItem('yomimono_show_terms') !== 'false';
-    const fullyResolved = resolveTerms(charResolved, target, showTerms);
+    const fullyResolved = resolveTerms(charResolved, target);
     const html = marked(fullyResolved);
     const cleanHtml = DOMPurify.sanitize(html);
     markdownContainer.innerHTML = cleanHtml;
@@ -197,7 +192,7 @@ async function loadMarkdown(target) {
     }
 
     // --- 用語の抽出と解説ボタンの生成 ---
-    if (showTerms && target !== 'world' && target !== 'character' && target !== 'true_character') {
+    if (target !== 'world' && target !== 'character' && target !== 'true_character') {
       const { matchedIT, matchedNovel } = extractTermsFromText(fullyResolved, target);
       
       if (matchedIT.length > 0 || matchedNovel.length > 0) {
@@ -238,7 +233,7 @@ async function loadMarkdown(target) {
     const currentIndex = navLinksArray.findIndex(link => link.dataset.target === target);
 
     // 現在のページが一覧にあり、かつ最初のページ(0番目)ではない場合のみ
-    if (currentIndex > 0 && target !== 'prologue1' && target !== 'ep1') {
+    if (currentIndex > 0 && target !== 'ep0000') {
       const prevTarget = navLinksArray[currentIndex - 1].dataset.target;
       const nextActionContainer = markdownContainer.querySelector('.next-action');
 
@@ -329,56 +324,18 @@ function restoreState(target) {
         </ul>
       </details>
       <details class="nav-group">
-        <summary>プロローグ</summary>
-        <ul>
-          <li><a href="#" data-target="prologue1">プロローグ１：システム障害の現状と課題</a></li>
-          <li><a href="#" data-target="prologue2">プロローグ２：人的リソースの枯渇と影響</a></li>
-          <li><a href="#" data-target="prologue3">プロローグ３：クリティカルエラー発生報告</a></li>
-        </ul>
-      </details>
-      <details class="nav-group">
         <summary>本編</summary>
         <ul>
-          <li><a href="#" data-target="ep1">第1話：偶然のハックとメトロノーム</a></li>
-          <li><a href="#" data-target="ep2">第2話：浸食の予兆</a></li>
-          <li><a href="#" data-target="ep3">第3話：ロスト・シーケンス</a></li>
-          <li><a href="#" data-target="ep4">第4話：システムからの招待状</a></li>
-          <li><a href="#" data-target="ep5">第5話：六本木の休日</a></li>
-          <li><a href="#" data-target="ep5_5">第5.5話：幕間・裏路地のオアシス</a></li>
-          <li><a href="#" data-target="ep6">第6話：デスマーチの足音と限界</a></li>
-          <li><a href="#" data-target="ep7_1">第7.1話：ファミレスと「電子ドラッグ」の真実</a></li>
-          <li><a href="#" data-target="ep7_2">第7.2話：職人のプライドとポンコツ・ガジェット</a></li>
-          <li><a href="#" data-target="ep7_3">第7.3話：赤い日の真実と、反逆の兆し</a></li>
-          <li><a href="#" data-target="ep8">第8話：納品へのカウントダウン</a></li>
-          <li><a href="#" data-target="ep9_0">第9話：面白星人</a></li>
-          <li><a href="#" data-target="ep9_1">第9.1話：赤い日</a></li>
-          <li><a href="#" data-target="ep9_2">第9.2話：ノイズとアンカー</a></li>
-          <li><a href="#" data-target="ep10_0">第10話：赤い日の真実と罠</a></li>
-          <li><a href="#" data-target="ep10_1">第10.1話：完璧すぎる視界</a></li>
-          <li><a href="#" data-target="ep10_2">第10.2話：見えないものを直す手</a></li>
-          <li><a href="#" data-target="ep10_3">第10.3話：優しさと最適化の矛盾</a></li>
-          <li><a href="#" data-target="ep10_4">第10.4話：黒須の監視と、ノイズの体温</a></li>
-          <li><a href="#" data-target="ep10_5">第10.5話：隔絶される世界線</a></li>
-          <li><a href="#" data-target="ep10_6">第10.6話：アンカーの決断</a></li>
-          <li><a href="#" data-target="ep10_7">第10.7話：休日のバグとコーヒーブレイク</a></li>
-          <li><a href="#" data-target="ep11">第11話：雪の日の決断とフェーズアウト</a></li>
-          <li><a href="#" data-target="ep11_1">第11.1話：雪の日の翌朝 - 喪失の輪郭</a></li>
-          <li><a href="#" data-target="ep11_2">第11.2話：落下するノイズへの追跡劇 - 虚無のカーチェイス</a></li>
-          <li><a href="#" data-target="ep12">第12話：鬼之河アンダーグラウンド</a></li>
-          <li><a href="#" data-target="ep13">第13話：再会と覚醒のアプリ</a></li>
-          <li><a href="#" data-target="ep13_2">第13.2話：爆走の黄色いトラックと、ノイズの血統</a></li>
-          <li><a href="#" data-target="ep13_3">第13.3話：池袋のジャンク探しと、休日のカフェ</a></li>
-          <li><a href="#" data-target="ep13_4">第13.4話：再会と覚醒のアプリ（続き）</a></li>
-          <li><a href="#" data-target="ep14">第14話：記憶の抵抗</a></li>
-          <li><a href="#" data-target="ep14_5">第14.5話：インカムのノイズ</a></li>
-          <li><a href="#" data-target="ep15">第15話：ふたつの和音（コード）</a></li>
-          <li><a href="#" data-target="ep16_1">第16.1話：反逆のカウンター・ノイズ I - 崩壊の足音</a></li>
-          <li><a href="#" data-target="ep16_2">第16.2話：反逆のカウンター・ノイズ II - 重なり合う波長</a></li>
-          <li><a href="#" data-target="ep16_3">第16.3話：反逆のカウンター・ノイズ III - 泥臭い一撃</a></li>
-          <li><a href="#" data-target="ep16_4">第16.4話：反逆のカウンター・ノイズ IV - 完璧なる自滅</a></li>
-          <li><a href="#" data-target="ep17">第17話：新しい世界の仕様書</a></li>
-          <li><a href="#" data-target="ep18">第18話・最終話：終わらない運用保守（メンテナンス）</a></li>
-          <li><a href="#" data-target="ep19">第19話 断章：侵食</a></li>
+          <li><a href="#" data-target="ep0000">プロローグ</a></li>
+          <li><a href="#" data-target="ep0100">第一章：ロスト・シーケンス</a></li>
+          <li><a href="#" data-target="ep0200">第二章：浸食される日常</a></li>
+          <li><a href="#" data-target="ep0300">第三章：裏の住人たち</a></li>
+          <li><a href="#" data-target="ep0400">第四章：ノイズとアンカー</a></li>
+          <li><a href="#" data-target="ep0500">第五章：最適化される心</a></li>
+          <li><a href="#" data-target="ep0600">第六章：雪の日の決断</a></li>
+          <li><a href="#" data-target="ep0700">第七章：鬼之河アンダーグラウンド</a></li>
+          <li><a href="#" data-target="ep0800">第八章：カウンター・ノイズ</a></li>
+          <li><a href="#" data-target="ep0900">終章：終わらない運用保守</a></li>
         </ul>
       </details>
   `;
@@ -417,15 +374,28 @@ if (btnResetState) {
 }
 
 // 用語解説トグルのイベント登録
+function updateTermsVisibility(show) {
+  if (show) {
+    document.body.classList.remove('hide-terms');
+  } else {
+    document.body.classList.add('hide-terms');
+  }
+}
+
 const toggleTermsCheckbox = document.getElementById('toggle-terms');
 if (toggleTermsCheckbox) {
-  toggleTermsCheckbox.checked = localStorage.getItem('yomimono_show_terms') !== 'false';
+  const showTerms = localStorage.getItem('yomimono_show_terms') !== 'false';
+  toggleTermsCheckbox.checked = showTerms;
+  updateTermsVisibility(showTerms);
+
   toggleTermsCheckbox.addEventListener('change', (e) => {
     localStorage.setItem('yomimono_show_terms', e.target.checked);
-    const params = new URLSearchParams(window.location.search);
-    const p = params.get('p') || localStorage.getItem('yomimono_last_page') || 'character';
-    loadMarkdown(p);
+    updateTermsVisibility(e.target.checked);
   });
+} else {
+  // 初期化時のチェックボックスがない場合でも反映
+  const showTerms = localStorage.getItem('yomimono_show_terms') !== 'false';
+  updateTermsVisibility(showTerms);
 }
 
 // 初期化処理
@@ -494,13 +464,11 @@ function extractTermsFromText(text, target) {
   }
 
   const episodeSequence = [
-    'prologue1', 'prologue2', 'prologue3', 'ep1', 'ep2', 'ep3', 'ep1', 'ep2', 'ep2_5', 'ep3',
-    'ep4_1', 'ep4_2', 'ep4_3', 'ep2', 'ep6_0', 'ep6_1', 'ep6_2',
-    'ep10_0', 'ep4.1', 'ep4.2', 'ep4.3', 'ep10_4', 'ep10_5', 'ep10_6', 'ep10_7',
-    'ep5', 'ep5_1', 'ep5_2', 'ep12', 'ep10.0', 'ep10.0_5', 'lore_lin_hidden', 'ep10.0_6', 'ep10.1', 'ep11', 'ep11_5', 'lore_kurosu_hidden', 'ep13', 'ep13_2', 'ep13_3', 'ep13_4', 'ep16_2', 'ep16_3', 'ep16_4', 'ep14', 'ep15', 'ep19'
+    'ep0000', 'ep0100', 'ep0200', 'ep0300', 'ep0400', 
+    'ep0500', 'ep0600', 'ep0700', 'ep0800', 'ep0900'
   ];
   const epIndex = episodeSequence.indexOf(target);
-  const ep5Index = episodeSequence.indexOf('ep2');
+  const ep5Index = episodeSequence.indexOf('ep0400'); // 旧ep0500（第5章: 第4話）
   const allowNovelTerms = (epIndex === -1 || epIndex >= ep5Index);
 
   // 小説用語の抽出（第5話以降のみ）

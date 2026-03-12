@@ -6,10 +6,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const episodeSequence = [
-  'prologue1', 'prologue2', 'prologue3', 'ep1', 'ep2', 'ep3', 'ep1', 'ep2', 'ep2_5', 'ep3',
-  'ep4_1', 'ep4_2', 'ep4_3', 'ep2', 'ep6_0', 'ep6_1', 'ep6_2',
-  'ep10_0', 'ep4.1', 'ep4.2', 'ep4.3', 'ep10_4', 'ep10_5', 'ep10_6', 'ep10_7',
-  'ep5', 'ep5_1', 'ep5_2', 'ep12', 'ep12_5', 'ep10.0', 'ep10.0_5', 'ep10.0_6', 'ep10.1', 'ep11', 'ep11_5', 'ep12', 'ep13.1', 'ep16_2', 'ep16_3', 'ep16_4', 'ep14', 'ep15', 'ep19'
+  'ep0000', 'ep0100', 'ep0200', 'ep0300', 'ep0400', 
+  'ep0500', 'ep0600', 'ep0700', 'ep0800', 'ep0900'
 ];
 const settingsPath = path.join(__dirname, '..', 'public', 'settings');
 

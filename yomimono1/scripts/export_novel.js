@@ -5,7 +5,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 import { cleanMarkdown, stripMarkdown } from './utils_novel.js';
-import { sortEpisodes } from '../episode_sequence.js';
+import { sortEpisodes, episodeSequence } from '../episode_sequence.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,10 +32,10 @@ function buildExports() {
     process.exit(1);
   }
 
-  const files = fs.readdirSync(distSettingsDir).filter(f => (f.startsWith('ep') || f.startsWith('prologue') || f.startsWith('lore')) && f.endsWith('.mdx'));
-
-  // エピソード番号順にソート
-  files.sort(sortEpisodes);
+  // 指定された順番に沿って存在するファイルのみを抽出
+  const files = episodeSequence
+    .map(basename => `${basename}.mdx`)
+    .filter(f => fs.existsSync(path.join(distSettingsDir, f)));
 
   let fullMarkdown = '';
   let chapterCounter = 1;
