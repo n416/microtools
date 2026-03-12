@@ -754,3 +754,12 @@ body.true-mode .term-item {
   border-radius: 12px;
   border: 1px solid var(--border-color);
 }
+
+/* ----------------------------------
+ * 用語解説トグル（hide-terms）の表示制御
+ * ---------------------------------- */
+body.hide-terms .term-mark,
+body.hide-terms .term-footnotes,
+body.hide-terms .term-modal-btn-wrap {
+  display: none !important;
+}
