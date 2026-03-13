@@ -1,7 +1,6 @@
 // 自動生成ファイル: npm run dev または npm run build 時に自動で更新されます
 // ここを手動で編集しても上書きされるため注意してください
 export const TermFirstAppearanceMap = {
-  "source_code": "ep0000",
   "death_march": "ep0000",
   "code_review": "ep0000",
   "client": "ep0000",
@@ -17,6 +16,7 @@ export const TermFirstAppearanceMap = {
   "format": "ep0000",
   "vacuum_tube": "ep0000",
   "commit_log": "ep0100",
+  "source_code": "ep0100",
   "phase_it": "ep0100",
   "optimization": "ep0100",
   "specification": "ep0200",
@@ -57,6 +57,5 @@ export const TermFirstAppearanceMap = {
   "auditor": "ep0700",
   "standard_tuner": "ep0700",
   "noisy_tuner": "ep0800",
-  "error_code": "ep0800",
   "over_standard_plan": "ep0800"
 };

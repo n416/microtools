@@ -9,9 +9,7 @@
     "dev": "vite",
     "prebuild": "npm run prepare-terms",
     "build": "vite build",
-    "postbuild": "node scripts/postbuild_mdx.js && node scripts/export_novel.js && node scripts/export_docx.js",
-    "export": "npm run build",
-    "export:noterms": "node scripts/export_novel.js --no-terms && node scripts/export_docx.js",
+    "postbuild": "node scripts/postbuild_mdx.js && node scripts/export_novel.js && node scripts/export_docx.js && node scripts/export_novel.js --no-terms && node scripts/export_docx.js --no-terms",
     "preview": "vite preview",
     "login": "node scripts/open_playwright_profile.js"
   },

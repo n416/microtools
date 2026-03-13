@@ -7,11 +7,13 @@ import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const templatePath = 'sample_format.docx';
-const inputPath = 'output_novel.txt';
-const outputPath = 'output_novel.docx';
+const isNoTerms = process.argv.includes('--no-terms');
 
-console.log('Generating docx...');
+const templatePath = 'sample_format.docx';
+const inputPath = isNoTerms ? 'output_novel_noterms.txt' : 'output_novel.txt';
+const outputPath = isNoTerms ? 'output_novel_noterms.docx' : 'output_novel.docx';
+
+console.log(`Generating docx... (no-terms: ${isNoTerms})`);
 
 try {
   // Read docx zip

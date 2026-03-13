@@ -21,8 +21,12 @@ const isNoTerms = process.argv.includes('--no-terms');
 const distSettingsDir = isNoTerms 
   ? path.resolve(__dirname, '../dist/export_resolved_noterms')
   : path.resolve(__dirname, '../dist/export_resolved');
-const outputTxtPath = path.resolve(__dirname, '../output_novel.txt');
-const outputHtmlPath = path.resolve(__dirname, '../output_novel.html');
+const outputTxtPath = isNoTerms
+  ? path.resolve(__dirname, '../output_novel_noterms.txt')
+  : path.resolve(__dirname, '../output_novel.txt');
+const outputHtmlPath = isNoTerms
+  ? path.resolve(__dirname, '../output_novel_noterms.html')
+  : path.resolve(__dirname, '../output_novel.html');
 
 
 function buildExports() {
