@@ -4,6 +4,7 @@ import { CharacterNames } from './src/character_dictionary.js';
 import { ItTermDictionary } from './src/it_term_dictionary.js';
 import { TermDictionary } from './src/term_dictionary.js';
 import { TermFirstAppearanceMap } from './src/term_map.js';
+import { addSpaceAfterPunctuation } from './src/text_formatter.js';
 function resolveCharacters(text) {
   return text.replace(/<Char\s+role="([^"]+)"(?:\s+callrole="([^"]+)")?\s+var="([^"]+)"\s*\/>/g, (match, role, callrole, variant) => {
     const charData = CharacterNames[role];
@@ -129,7 +130,8 @@ async function loadMarkdown(target) {
     const markdownText = await response.text();
     const charResolved = resolveCharacters(markdownText);
     const fullyResolved = resolveTerms(charResolved, target);
-    const html = marked(fullyResolved);
+    const formatted = addSpaceAfterPunctuation(fullyResolved);
+    const html = marked(formatted);
     const cleanHtml = DOMPurify.sanitize(html);
     markdownContainer.innerHTML = cleanHtml;
 
@@ -366,10 +368,7 @@ if (btnResetState) {
   btnResetState.addEventListener('click', () => {
     localStorage.removeItem('yomimono_last_page');
     localStorage.removeItem('yomimono_phase');
-    const url = new URL(window.location);
-    url.searchParams.delete('p');
-    url.searchParams.delete('ph');
-    window.location.href = url.pathname;
+    navigateTo('ep0000');
   });
 }
 
