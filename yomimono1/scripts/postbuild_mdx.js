@@ -5,6 +5,7 @@ import { CharacterNames } from '../src/character_dictionary.js';
 import { ItTermDictionary } from '../src/it_term_dictionary.js';
 import { TermDictionary } from '../src/term_dictionary.js';
 import { TermFirstAppearanceMap } from '../src/term_map.js';
+import { addSpaceAfterPunctuation } from '../src/text_formatter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -115,14 +116,17 @@ function processMdxFilesInDist() {
         const charResolved = resolveCharacters(content);
         const fullyResolved = resolveTerms(charResolved, currentEpisode, true);
         const noTermsResolved = resolveTerms(charResolved, currentEpisode, false);
+
+        const formattedFullyResolved = addSpaceAfterPunctuation(fullyResolved);
+        const formattedNoTermsResolved = addSpaceAfterPunctuation(noTermsResolved);
   
         // エクスポート用ディレクトリに書き出す（dist/settingsの元ファイルは維持する）
         const outPath = path.join(exportSettingsDir, file);
-        fs.writeFileSync(outPath, fullyResolved, 'utf-8');
+        fs.writeFileSync(outPath, formattedFullyResolved, 'utf-8');
         
         // 用語解説なしのプレーンテキスト用ディレクトリにも書き出す
         const outPathNoTerms = path.join(exportSettingsNoTermsDir, file);
-        fs.writeFileSync(outPathNoTerms, noTermsResolved, 'utf-8');
+        fs.writeFileSync(outPathNoTerms, formattedNoTermsResolved, 'utf-8');
 
         console.log(`[postbuild] Tags resolved in: ${file} (with/without terms)`);
         processedCount++;
