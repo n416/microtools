@@ -4,6 +4,7 @@ import { CharacterNames } from './src/character_dictionary.js';
 import { ItTermDictionary } from './src/it_term_dictionary.js';
 import { TermDictionary } from './src/term_dictionary.js';
 import { TermFirstAppearanceMap } from './src/term_map.js';
+import { SidebarNavItems } from './src/sidebar_nav.js';
 import { addSpaceAfterPunctuation } from './src/text_formatter.js';
 function resolveCharacters(text) {
   return text.replace(/<Char\s+role="([^"]+)"(?:\s+callrole="([^"]+)")?\s+var="([^"]+)"\s*\/>/g, (match, role, callrole, variant) => {
@@ -317,6 +318,11 @@ function restoreState(target) {
   document.body.classList.add('true-mode');
   siteTitle.textContent = '[BUG_REPORT]';
   siteSubtitle.innerHTML = '仕様書にないバグですが、<br>たぶん俺のことです';
+  
+  const mainNavLinks = SidebarNavItems.map(item => 
+    `<li><a href="#" data-target="${item.target}">${item.title}</a></li>`
+  ).join('\n          ');
+
   navContainer.innerHTML = `
       <details class="nav-group">
         <summary>設定資料</summary>
@@ -325,19 +331,10 @@ function restoreState(target) {
           <li><a href="#" data-target="world">世界観・ルール</a></li>
         </ul>
       </details>
-      <details class="nav-group">
+      <details class="nav-group" open>
         <summary>本編</summary>
         <ul>
-          <li><a href="#" data-target="ep0000">プロローグ</a></li>
-          <li><a href="#" data-target="ep0100">第一章：ロスト・シーケンス</a></li>
-          <li><a href="#" data-target="ep0200">第二章：浸食される日常</a></li>
-          <li><a href="#" data-target="ep0300">第三章：裏の住人たち</a></li>
-          <li><a href="#" data-target="ep0400">第四章：ノイズとアンカー</a></li>
-          <li><a href="#" data-target="ep0500">第五章：最適化される心</a></li>
-          <li><a href="#" data-target="ep0600">第六章：雪の日の決断</a></li>
-          <li><a href="#" data-target="ep0700">第七章：鬼之河アンダーグラウンド</a></li>
-          <li><a href="#" data-target="ep0800">第八章：カウンター・ノイズ</a></li>
-          <li><a href="#" data-target="ep0900">終章：終わらない運用保守</a></li>
+          ${mainNavLinks}
         </ul>
       </details>
   `;

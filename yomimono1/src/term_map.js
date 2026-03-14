@@ -54,7 +54,7 @@ export const TermFirstAppearanceMap = {
   "manual_tune": "ep0600",
   "backend": "ep0600",
   "auditor": "ep0600",
-  "kinokawa": "ep0700",
+  "kinokawa": "ep0660",
   "standard_tuner": "ep0700",
   "noisy_tuner": "ep0800",
   "over_standard_plan": "ep0800"

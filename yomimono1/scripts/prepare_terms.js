@@ -17,6 +17,12 @@ try {
     stdio: 'inherit',
     cwd: path.join(__dirname, '..')
   });
+
+  console.log('[prepare_terms] Running generate_sidebar.js...');
+  execSync('node scripts/generate_sidebar.js', { 
+    stdio: 'inherit',
+    cwd: path.join(__dirname, '..')
+  });
 } catch (error) {
   console.error('[prepare_terms] Script execution failed.', error.message);
   process.exit(1);
