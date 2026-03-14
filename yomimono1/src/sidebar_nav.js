@@ -22,6 +22,10 @@ export const SidebarNavItems = [
     "title": "第四章：ノイズとアンカー"
   },
   {
+    "target": "ep0420",
+    "title": "閑話：波打ち際のノイズと温泉の熱"
+  },
+  {
     "target": "ep0450",
     "title": "幕間：ノイズだけの年越し"
   },
