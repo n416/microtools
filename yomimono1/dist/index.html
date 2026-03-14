@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>仕様書にないバグですが、たぶん俺のことです</title>
-    <script type="module" crossorigin src="./assets/main-DBYoBLHg.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/main-Cy1sWqZx.css">
+    <script type="module" crossorigin src="./assets/main-CUQ4z8nU.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/main-CmThgZ0_.css">
   </head>
   <body class="fake-mode">
     <div id="app">
@@ -40,7 +40,7 @@
           <label class="settings-label">用語解説の表示設定</label>
           <button id="btn-open-settings" class="glass-btn btn-open-settings" style="width: 100%; text-align: left; padding: 10px;">設定を変更する</button>
           <div id="settings-tooltip" class="settings-tooltip">
-            設定は後からここでも変更できます
+            設定を変更したい時は、ここから再度選べます
           </div>
         </div>
       </nav>
@@ -70,13 +70,14 @@
           <button id="close-initial-modal" aria-label="閉じる" style="background: none; border: none; color: var(--text-color); font-size: 2rem; cursor: pointer;">×</button>
         </div>
         <div class="modal-content" style="padding: 0px 20px 30px;">
-          <p style="font-size: 1.1rem; line-height: 1.6; margin-bottom: 30px;">
-            この小説は大量のIT用語が出てきます。<br><br>
-            説明を読みたくない人は<strong>１</strong><br>
-            読みたいレアな人は<strong>２</strong><br>
-            置き換えて中学3年生で読みたい人は<strong>３</strong><br>
-            初回だけ中３ルビを振ってほしい人は<strong>４</strong><br>
-            を押してください。
+          <p style="font-size: 1.1rem; line-height: 1.8; margin-bottom: 30px; text-align: left; display: inline-block;">
+            専門用語の表示モードを選択してください。<br><br>
+            <strong>[1] 隠蔽</strong>（解説非表示）<br>
+            <strong>[2] 通常</strong>（詳細な注釈）<br>
+            <strong>[3] 翻訳</strong>（平易な言葉）<br>
+            <strong>[4] ルビ</strong>（初回ルビ＋注釈）<br><br>
+            希望の番号をキーパッドから入力して下さい。<br>
+            <span style="font-size:0.9rem; color:#88b;">※未定義キーの押下もお試し下さい。</span>
           </p>
           <div class="phone-keypad">
             <button class="keypad-btn" data-key="1">1</button>
@@ -99,7 +100,7 @@
       <div id="not-implemented-overlay" class="modal-overlay" style="z-index: 3000;"></div>
       <div id="not-implemented-modal" class="glass-panel modal-panel" style="z-index: 3001; max-width: 300px; text-align: center;">
         <div class="modal-content" style="padding: 20px;">
-          <p style="font-size: 1.1rem; margin: 0; color: #ff5555; font-weight: bold;">（現在実装中です！）</p>
+          <p style="font-size: 1.1rem; margin: 0; color: var(--text-color); font-weight: bold;">（現在実装中です！）</p>
         </div>
       </div>
 
