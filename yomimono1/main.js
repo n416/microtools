@@ -36,24 +36,38 @@ function resolveTerms(text, currentEpisode) {
   const footnotes = [];
   let footnoteCounter = 1;
 
+  // 現在の設定モードを取得 "ignore", "expert", "simple" のいずれか（デフォルトは expert）
+  const termsMode = localStorage.getItem('yomimono_terms_mode') || 'expert';
+
   let newText = text.replace(/<Term\s+id="([^"]+)"(?:\s*>([\s\S]*?)<\/Term>|\s*\/>)/g, (match, id, innerText) => {
     const termData = combinedDictionary[id];
     if (!termData) return `[Unknown Term: ${id}]`;
 
     const displayStr = (innerText && innerText.trim().length > 0) ? innerText : termData.term;
 
-    if (TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
-      localSeen.add(id);
-      const mark = `※${footnoteCounter}`;
-      footnotes.push(`${mark} ${termData.term}： ${termData.description}`);
-      footnoteCounter++;
-      return `${displayStr}<span class="term-mark">（${mark}）</span>`;
+    // モードごとの分岐
+    if (termsMode === 'simple' && termData.simple_term) {
+      // 中学3年生モード（IT用語などを簡単な言葉に置き換える。ルビや注釈はつけない）
+      return termData.simple_term;
+    } else if (termsMode === 'expert') {
+      // 通常モード（本文にそのまま表示＋初回登場時に注釈マーク）
+      if (TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
+        localSeen.add(id);
+        const mark = `※${footnoteCounter}`;
+        footnotes.push(`${mark} ${termData.term}： ${termData.description}`);
+        footnoteCounter++;
+        return `${displayStr}<span class="term-mark">（${mark}）</span>`;
+      } else {
+        return displayStr;
+      }
     } else {
+      // 'ignore' モードを含む、その他（単に表示のみ、注釈なし）
       return displayStr;
     }
   });
 
-  if (footnotes.length > 0) {
+  // モードがエキスパートであり、かつ注釈がある場合のみフッターに一覧を追加
+  if (termsMode === 'expert' && footnotes.length > 0) {
     let footnoteMarkdown = '\n\n<div class="term-footnotes">\n\n**【用語解説】**\n\n';
     footnotes.forEach(note => {
       footnoteMarkdown += `${note}  \n`;
@@ -107,6 +121,11 @@ function navigateTo(target, push = true) {
   }
 
   localStorage.setItem('yomimono_last_page', target);
+
+  // 初回アクセスから別のページへ移動した場合、トゥルーモードを解禁する
+  if (target !== 'ep0000') {
+    localStorage.setItem('yomimono_unlocked', 'true');
+  }
 
   restoreState(target);
   updateSidebarAccordion(target);
@@ -264,6 +283,30 @@ async function loadMarkdown(target) {
         navigateTo(nextTarget);
       });
     });
+
+    // 暗転・グリッチ遷移のエフェクトボタン
+    const glitchNextBtns = document.querySelectorAll('.btn-glitch-next');
+    glitchNextBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const nextTarget = e.target.dataset.next;
+        const overlay = document.getElementById('chapter-end-overlay');
+        const isUnlocked = localStorage.getItem('yomimono_unlocked') === 'true';
+        
+        if (overlay && !isUnlocked) {
+          overlay.classList.add('visible');
+          
+          // 2.5秒後に画面遷移し、オーバーレイを消す
+          setTimeout(() => {
+            navigateTo(nextTarget);
+            // 遷移後にオーバーレイのフェードアウトを開始
+            overlay.classList.remove('visible');
+          }, 2500);
+        } else {
+          // すでに反転モードの場合はエフェクトなしで遷移
+          navigateTo(nextTarget);
+        }
+      });
+    });
   } catch (error) {
     markdownContainer.innerHTML = `<p class="error">コンテンツの読み込みに失敗しました。Error: ${error.message}</p>`;
   }
@@ -313,31 +356,56 @@ function bindNavEvents() {
 function restoreState(target) {
   const navContainer = document.getElementById('nav-container');
 
-  // メニュー構成とテーマ設定（常にTrue Mode）
-  document.body.classList.remove('fake-mode');
-  document.body.classList.add('true-mode');
-  siteTitle.textContent = '[BUG_REPORT]';
-  siteSubtitle.innerHTML = '仕様書にないバグですが、<br>たぶん俺のことです';
-  
-  const mainNavLinks = SidebarNavItems.map(item => 
-    `<li><a href="#" data-target="${item.target}">${item.title}</a></li>`
-  ).join('\n          ');
+  const isUnlocked = localStorage.getItem('yomimono_unlocked') === 'true';
 
-  navContainer.innerHTML = `
-      <details class="nav-group">
-        <summary>設定資料</summary>
-        <ul>
-          <li><a href="#" data-target="true_character">キャラクター（本編）</a></li>
-          <li><a href="#" data-target="world">世界観・ルール</a></li>
+  if (!isUnlocked) {
+    // -------------------------
+    // フェイクモード（初期状態）
+    // -------------------------
+    document.body.classList.remove('true-mode');
+    document.body.classList.add('fake-mode');
+    siteTitle.textContent = '業務マニュアル';
+    siteSubtitle.innerHTML = '社内業務引き継ぎ資料<br>作成者：小林悠太';
+    
+    // サイドバーメニュー構成（プロローグのみ見せる）
+    navContainer.innerHTML = `
+      <details class="nav-group item-list" open>
+        <summary>マニュアル項目</summary>
+        <ul id="nav-links">
+          <li><a href="#" data-target="ep0000">プロローグ</a></li>
         </ul>
       </details>
-      <details class="nav-group" open>
-        <summary>本編</summary>
-        <ul>
-          ${mainNavLinks}
-        </ul>
-      </details>
-  `;
+    `;
+  } else {
+    // -------------------------
+    // トゥルーモード（解禁後）
+    // -------------------------
+    document.body.classList.remove('fake-mode');
+    document.body.classList.add('true-mode');
+    siteTitle.textContent = '[BUG_REPORT]';
+    siteSubtitle.innerHTML = '仕様書にないバグですが、<br>たぶん俺のことです';
+    
+    const mainNavLinks = SidebarNavItems.map(item => 
+      `<li><a href="#" data-target="${item.target}">${item.title}</a></li>`
+    ).join('\n          ');
+
+    // サイドバーメニュー構成（通常通り全開）
+    navContainer.innerHTML = `
+        <details class="nav-group">
+          <summary>設定資料</summary>
+          <ul>
+            <li><a href="#" data-target="true_character">キャラクター（本編）</a></li>
+            <li><a href="#" data-target="world">世界観・ルール</a></li>
+          </ul>
+        </details>
+        <details class="nav-group" open>
+          <summary>本編</summary>
+          <ul>
+            ${mainNavLinks}
+          </ul>
+        </details>
+    `;
+  }
 
   bindNavEvents();
 
@@ -365,40 +433,47 @@ if (btnResetState) {
   btnResetState.addEventListener('click', () => {
     localStorage.removeItem('yomimono_last_page');
     localStorage.removeItem('yomimono_phase');
+    localStorage.removeItem('yomimono_unlocked'); // フェイクモード状態のフラグも消す
+    localStorage.removeItem('yomimono_initial_setup_done');
     navigateTo('ep0000');
+    checkInitialModal();
   });
 }
 
-// 用語解説トグルのイベント登録
-function updateTermsVisibility(show) {
-  if (show) {
-    document.body.classList.remove('hide-terms');
+// 古いフラグ形式からのマイグレーションも兼ねて設定を初期化
+const settingTermsModeSelect = document.getElementById('setting-terms-mode');
+let currentTermsMode = localStorage.getItem('yomimono_terms_mode');
+
+if (!currentTermsMode) {
+  // 古い yomimono_show_terms フラグがあればそれを見る
+  const oldFlag = localStorage.getItem('yomimono_show_terms');
+  if (oldFlag === 'false') {
+    currentTermsMode = 'ignore';
   } else {
-    document.body.classList.add('hide-terms');
+    currentTermsMode = 'expert'; // デフォルト
   }
+  localStorage.setItem('yomimono_terms_mode', currentTermsMode);
 }
 
-const toggleTermsCheckbox = document.getElementById('toggle-terms');
-if (toggleTermsCheckbox) {
-  const showTerms = localStorage.getItem('yomimono_show_terms') !== 'false';
-  toggleTermsCheckbox.checked = showTerms;
-  updateTermsVisibility(showTerms);
+if (settingTermsModeSelect) {
+  settingTermsModeSelect.value = currentTermsMode;
 
-  toggleTermsCheckbox.addEventListener('change', (e) => {
-    localStorage.setItem('yomimono_show_terms', e.target.checked);
-    updateTermsVisibility(e.target.checked);
+  settingTermsModeSelect.addEventListener('change', (e) => {
+    const newMode = e.target.value;
+    localStorage.setItem('yomimono_terms_mode', newMode);
+    
+    // 即時反映のために本文を再描画する
+    const urlParams = new URLSearchParams(window.location.search);
+    const target = urlParams.get('p') || localStorage.getItem('yomimono_last_page') || 'ep0000';
+    loadMarkdown(target);
   });
-} else {
-  // 初期化時のチェックボックスがない場合でも反映
-  const showTerms = localStorage.getItem('yomimono_show_terms') !== 'false';
-  updateTermsVisibility(showTerms);
 }
 
 // 初期化処理
 function init() {
   const urlParams = new URLSearchParams(window.location.search);
   const urlTarget = urlParams.get('p');
-  const lastPage = urlTarget || localStorage.getItem('yomimono_last_page') || 'character';
+  const lastPage = urlTarget || localStorage.getItem('yomimono_last_page') || 'ep0000'; // 初期ページはプロローグ
 
   // URLにパラメーターがない場合は localStorage の値を付与して replaceState
   if (!urlTarget) {
@@ -414,7 +489,125 @@ function init() {
   restoreState(lastPage);
   updateSidebarAccordion(lastPage);
   loadMarkdown(lastPage);
+
+  checkInitialModal();
 }
+
+function checkInitialModal() {
+  const isUnlocked = localStorage.getItem('yomimono_unlocked') === 'true';
+  const isSetupDone = localStorage.getItem('yomimono_initial_setup_done') === 'true';
+  const initialModal = document.getElementById('initial-settings-modal');
+  const initialOverlay = document.getElementById('initial-settings-overlay');
+  
+  if (!isUnlocked && !isSetupDone && initialModal && initialOverlay) {
+    initialModal.classList.add('active');
+    initialOverlay.classList.add('active');
+  }
+}
+
+function closeInitialModal() {
+  localStorage.setItem('yomimono_initial_setup_done', 'true');
+  const initialModal = document.getElementById('initial-settings-modal');
+  const initialOverlay = document.getElementById('initial-settings-overlay');
+  if (initialModal) initialModal.classList.remove('active');
+  if (initialOverlay) initialOverlay.classList.remove('active');
+}
+
+function showSettingsTooltip() {
+  const originalToggle = document.querySelector('.settings-toggle');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('mobile-overlay');
+
+  if (!originalToggle) return;
+
+  if (window.innerWidth <= 768 && sidebar && !sidebar.classList.contains('sidebar-open')) {
+    // モバイルでサイドバーが閉じていたら開く
+    sidebar.classList.add('sidebar-open');
+    if (overlay) overlay.classList.add('active');
+    
+    // 開くアニメーションを待ってからクローンを出す
+    setTimeout(createHighlightClone, 400); 
+  } else {
+    // 既に開いている（PCなど）場合はすぐに処理
+    setTimeout(createHighlightClone, 300);
+  }
+
+  function createHighlightClone() {
+    // 現在の座標を取得
+    const rect = originalToggle.getBoundingClientRect();
+    
+    // 背景を暗くする専用のオーバーレイを生成
+    const dimOverlay = document.createElement('div');
+    dimOverlay.className = 'clone-highlight-overlay';
+    document.body.appendChild(dimOverlay);
+
+    // 要素のクローン
+    const clone = originalToggle.cloneNode(true);
+    // 元のクラスは維持したまま、クローン専用のハイライトクラスを追加
+    clone.classList.add('clone-highlight-target');
+    
+    // クローンのスタイルを絶対座標で配置
+    clone.style.position = 'fixed';
+    clone.style.top = rect.top + 'px';
+    clone.style.left = rect.left + 'px';
+    clone.style.width = rect.width + 'px';
+    clone.style.height = rect.height + 'px';
+    clone.style.margin = '0'; // 元のmarginが影響しないようリセット
+    clone.style.pointerEvents = 'none'; // 操作阻害防止
+    
+    // ツールチップ部分を強制表示させる
+    const cloneTooltip = clone.querySelector('.settings-tooltip');
+    if (cloneTooltip) {
+      cloneTooltip.classList.add('show');
+    }
+
+    document.body.appendChild(clone);
+
+    // アニメーション表示（1フレームあけてtransitionを発火させる）
+    requestAnimationFrame(() => {
+      dimOverlay.classList.add('active');
+    });
+
+    // 5秒後に消す
+    setTimeout(() => {
+      dimOverlay.classList.remove('active');
+      if (cloneTooltip) cloneTooltip.classList.remove('show');
+      
+      setTimeout(() => {
+        clone.remove();
+        dimOverlay.remove();
+      }, 500); // 0.5s fade
+    }, 5000);
+  }
+}
+
+// 電話キーパッドボタンのイベント
+const keypadBtns = document.querySelectorAll('.keypad-btn');
+keypadBtns.forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const key = e.target.dataset.key;
+    
+    if (key === '1') {
+      localStorage.setItem('yomimono_terms_mode', 'ignore');
+      if (settingTermsModeSelect) settingTermsModeSelect.value = 'ignore';
+    } else if (key === '2') {
+      localStorage.setItem('yomimono_terms_mode', 'expert');
+      if (settingTermsModeSelect) settingTermsModeSelect.value = 'expert';
+    } else if (key === '3') {
+      localStorage.setItem('yomimono_terms_mode', 'simple');
+      if (settingTermsModeSelect) settingTermsModeSelect.value = 'simple';
+    } else {
+      // 0, 4~9は何もしない
+      return;
+    }
+
+    // 1, 2, 3のいずれかが押されたら初期設定完了とし、本文を再描画してツールチップを出す
+    closeInitialModal();
+    const target = new URLSearchParams(window.location.search).get('p') || localStorage.getItem('yomimono_last_page') || 'ep0000';
+    loadMarkdown(target);
+    showSettingsTooltip();
+  });
+});
 
 // ==========================================
 // 用語抽出・モーダル表示ロジック

@@ -11,6 +11,8 @@
   --h1-color: #333;
   --active-text: #0066cc;
   --active-bg: rgba(0, 102, 204, 0.1);
+  --highlight-glow: rgba(255, 255, 255, 0.4);
+  --highlight-glow-strong: rgba(255, 255, 255, 0.8);
 }
 
 body.true-mode {
@@ -26,6 +28,8 @@ body.true-mode {
   --h1-color: var(--accent-color);
   --active-text: #fff;
   --active-bg: rgba(0, 255, 204, 0.1);
+  --highlight-glow: var(--accent-glow);
+  --highlight-glow-strong: var(--accent-glow);
 }
 
 body {
@@ -47,7 +51,7 @@ body {
   display: flex;
   width: 100%;
   height: 100%;
-  transition: filter 0.1s;
+  /* transition: filter 0.1s; がスタッキングコンテキストを生成している可能性があるので一旦外すか、必要時のみ付与する */
 }
 
 /* クールなハッキング＆反転エフェクト */
@@ -347,6 +351,22 @@ body.true-mode .btn-normal-prev {
   background: #ff003c;
   box-shadow: 0 0 15px rgba(255, 0, 60, 0.6);
   letter-spacing: 2px;
+}
+
+/* トゥルーモード時は、通常ボタンと同じ見た目・挙動にする */
+body.true-mode .btn-glitch-next {
+  background: var(--glass-bg);
+  color: var(--text-color);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+}
+
+body.true-mode .btn-glitch-next:hover {
+  background: var(--active-bg);
+  color: var(--active-text);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 15px var(--accent-glow);
+  letter-spacing: normal;
 }
 
 /* Chapter End Overlay */
@@ -666,6 +686,56 @@ body.true-mode .modal-overlay {
   flex-grow: 1;
 }
 
+/* ----------------------------------
+ * 初期設定モーダル用 電話キーパッド
+ * ---------------------------------- */
+.phone-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  max-width: 260px;
+  margin: 0 auto;
+}
+
+.keypad-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-color);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto;
+}
+
+body.true-mode .keypad-btn {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.keypad-btn:hover {
+  background: var(--active-bg);
+  color: var(--active-text);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 15px var(--accent-glow);
+  transform: scale(1.05);
+}
+
+.keypad-btn:active {
+  transform: scale(0.95);
+}
+
+.keypad-spacer {
+  width: 60px;
+  height: 60px;
+}
+
 .term-section {
   display: none; /* 中身があればJSでblockにする */
   margin-bottom: 30px;
@@ -769,7 +839,7 @@ body.hide-terms .term-modal-btn-wrap {
  * ---------------------------------- */
 .settings-toggle {
   margin-top: 15px;
-  padding: 10px 5px 0 5px;
+  padding: 10px 10px 0 10px; /* 左右に少し余白を開ける */
   border-top: 1px solid var(--glass-border);
 }
 
@@ -778,6 +848,8 @@ body.hide-terms .term-modal-btn-wrap {
   align-items: center;
   gap: 8px;
   font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 8px;
   cursor: pointer;
   color: #8b949e;
   transition: color 0.3s ease;
@@ -794,4 +866,156 @@ body.true-mode .settings-label {
 
 body.true-mode .settings-label:hover {
   color: var(--active-text);
+}
+
+/* ----------------------------------
+ * カスタムセレクトボックス (.glass-select)
+ * ---------------------------------- */
+.glass-select {
+  width: 100%;
+  padding: 10px 35px 10px 15px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--text-color);
+  background-color: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+
+  /* カスタム矢印SVG (Dark string) */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+.glass-select:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-color: var(--accent-color);
+}
+
+.glass-select:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* トゥルーモード用スタイル */
+body.true-mode .glass-select {
+  background-color: rgba(0, 0, 0, 0.4);
+  color: var(--text-color);
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
+  /* カスタム矢印SVG (Light string) */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c9d1d9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+body.true-mode .glass-select:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.true-mode .glass-select option {
+  background-color: #1a1e29;
+  color: var(--text-color);
+}
+
+/* フェイクモード時は設定トグル（用語切替など）を完全に隠す -> 非表示を解除しフェイクモードでも表示
+body.fake-mode .settings-toggle {
+  display: none !important;
+}
+*/
+
+/* ----------------------------------
+ * サイドバー下部の設定ツールチップ
+ * ---------------------------------- */
+.settings-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 10px;
+  background: var(--accent-color);
+  color: #fff; /* フェイクモード用（青背景に白文字） */
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 2502; /* ハイライト(2501)より上に表示させる */
+  margin-bottom: 10px;
+}
+
+body.true-mode .settings-tooltip {
+  background: var(--accent-color);
+  color: #000; /* トゥルーモード用（シアン背景に黒文字） */
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.settings-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 20px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--accent-color) transparent transparent transparent;
+}
+
+.settings-tooltip.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* チュートリアルハイライト時のクローン要素強調 */
+.clone-highlight-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  height: 100dvh;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+body.true-mode .clone-highlight-overlay {
+  background: rgba(0, 10, 20, 0.85); /* トゥルーモード用によりディープな暗転 */
+}
+.clone-highlight-overlay.active {
+  opacity: 1;
+}
+
+.clone-highlight-target {
+  background: var(--bg-color); /* 透明なガラス背景ではなく、不透明な背景色にする */
+  border-radius: 8px;
+  box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.5); /* 全体が暗くなった中で目立たせるための発光 */
+  animation: pulse-highlight 1.5s infinite;
+  z-index: 9999 !important; /* 最前面へ追加されるので重要 */
+}
+
+/* フェイクモード時に文字色が背景と同化しないようにする */
+body.fake-mode .clone-highlight-target {
+  background: #ffffff;
+  color: #333333;
+}
+
+body.fake-mode .clone-highlight-target .settings-label {
+  color: #000000;
+  font-weight: bold;
+}
+
+body.true-mode .clone-highlight-target {
+  background: var(--glass-bg);
+  box-shadow: 0 0 20px 5px var(--accent-glow);
+}
+
+@keyframes pulse-highlight {
+  0% { box-shadow: 0 0 10px 2px var(--highlight-glow, rgba(255, 255, 255, 0.4)); transform: scale(1); }
+  50% { box-shadow: 0 0 25px 8px var(--highlight-glow-strong, rgba(255, 255, 255, 0.8)); transform: scale(1.02); }
+  100% { box-shadow: 0 0 10px 2px var(--highlight-glow, rgba(255, 255, 255, 0.4)); transform: scale(1); }
 }
