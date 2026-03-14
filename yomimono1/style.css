@@ -1058,3 +1058,21 @@ body.true-mode .toast-notification {
   border: 1px solid var(--accent-color);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 10px var(--accent-glow);
 }
+
+/* ----------------------------------
+ * 特殊イベントスチル用の共通クラス
+ * ---------------------------------- */
+.event-image-wrapper {
+  text-align: center;
+  padding: 1rem;
+}
+
+.event-image-wrapper img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.event-image-wrapper p {
+  margin-top: 1rem;
+  color: var(--text-color);
+}
