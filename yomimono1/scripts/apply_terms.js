@@ -8,8 +8,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const episodeSequence = [
-  'ep0100', 'ep0200', 'ep0300', 'ep0400', 'ep0500', 
-  'ep0600', 'ep0700', 'ep0800', 'ep0900', 'ep1000'
+  'ep0100', 'ep0200', 'ep0300', 'ep0400', 'ep0450', 'ep0500', 
+  'ep0600', 'ep0650', 'ep0660', 'ep0700', 'ep0800', 'ep0900', 'ep1000'
 ];
 
 const combinedDictionary = { ...ItTermDictionary, ...TermDictionary };
