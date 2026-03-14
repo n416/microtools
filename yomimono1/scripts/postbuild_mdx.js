@@ -20,6 +20,8 @@ const exportSettingsDir = path.join(projectRoot, 'dist', 'export_resolved');
 const exportSettingsNoTermsDir = path.join(projectRoot, 'dist', 'export_resolved_noterms');
 // 出力先 (エクスポート用：中学生モード)
 const exportSettingsSimpleDir = path.join(projectRoot, 'dist', 'export_resolved_simple');
+// 出力先 (エクスポート用：ルビモード)
+const exportSettingsRubyDir = path.join(projectRoot, 'dist', 'export_resolved_ruby');
 
 function resolveCharacters(text) {
   return text.replace(/<Char\s+role="([^"]+)"(?:\s+callrole="([^"]+)")?\s+var="([^"]+)"\s*\/>/g, (match, role, callrole, variant) => {
@@ -60,6 +62,15 @@ function resolveTerms(text, currentEpisode, mode = 'expert') {
     }
 
     const displayStr = (innerText && innerText.trim().length > 0) ? innerText : termData.term;
+
+    if (mode === 'ruby') {
+      if (termData.simple_term && TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
+        localSeen.add(id);
+        return `｜${displayStr}《${termData.simple_term}》`;
+      }
+      localSeen.add(id);
+      return displayStr;
+    }
 
     if (mode !== 'expert') {
       return displayStr;
@@ -110,6 +121,9 @@ function processMdxFilesInDist() {
   if (!fs.existsSync(exportSettingsSimpleDir)) {
     fs.mkdirSync(exportSettingsSimpleDir, { recursive: true });
   }
+  if (!fs.existsSync(exportSettingsRubyDir)) {
+    fs.mkdirSync(exportSettingsRubyDir, { recursive: true });
+  }
 
   const files = fs.readdirSync(distSettingsDir);
   let processedCount = 0;
@@ -126,10 +140,12 @@ function processMdxFilesInDist() {
         const fullyResolved = resolveTerms(charResolved, currentEpisode, 'expert');
         const noTermsResolved = resolveTerms(charResolved, currentEpisode, 'ignore');
         const simpleTermsResolved = resolveTerms(charResolved, currentEpisode, 'simple');
+        const rubyTermsResolved = resolveTerms(charResolved, currentEpisode, 'ruby');
 
         const formattedFullyResolved = addSpaceAfterPunctuation(fullyResolved);
         const formattedNoTermsResolved = addSpaceAfterPunctuation(noTermsResolved);
         const formattedSimpleResolved = addSpaceAfterPunctuation(simpleTermsResolved);
+        const formattedRubyResolved = addSpaceAfterPunctuation(rubyTermsResolved);
   
         // エクスポート用ディレクトリに書き出す（dist/settingsの元ファイルは維持する）
         const outPath = path.join(exportSettingsDir, file);
@@ -143,7 +159,11 @@ function processMdxFilesInDist() {
         const outPathSimple = path.join(exportSettingsSimpleDir, file);
         fs.writeFileSync(outPathSimple, formattedSimpleResolved, 'utf-8');
 
-        console.log(`[postbuild] Tags resolved in: ${file} (expert/ignore/simple)`);
+        // ルビモード用のディレクトリにも書き出す
+        const outPathRuby = path.join(exportSettingsRubyDir, file);
+        fs.writeFileSync(outPathRuby, formattedRubyResolved, 'utf-8');
+
+        console.log(`[postbuild] Tags resolved in: ${file} (expert/ignore/simple/ruby)`);
         processedCount++;
       }
   });

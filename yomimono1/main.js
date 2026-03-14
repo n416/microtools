@@ -49,6 +49,17 @@ function resolveTerms(text, currentEpisode) {
     if (termsMode === 'simple' && termData.simple_term) {
       // 中学3年生モード（IT用語などを簡単な言葉に置き換える。ルビや注釈はつけない）
       return termData.simple_term;
+    } else if (termsMode === 'ruby') {
+      // ルビモード（初回登場時のみルビ表示、その他は通常表示＋注釈一覧あり）
+      if (TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
+        localSeen.add(id);
+        const mark = `※${footnoteCounter}`;
+        footnotes.push(`${mark} ${termData.term}： ${termData.description}`);
+        footnoteCounter++;
+        return (termData.simple_term) ? `<ruby>${displayStr}<rt>${termData.simple_term}</rt></ruby>` : displayStr;
+      } else {
+        return displayStr;
+      }
     } else if (termsMode === 'expert') {
       // 通常モード（本文にそのまま表示＋初回登場時に注釈マーク）
       if (TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
@@ -66,8 +77,8 @@ function resolveTerms(text, currentEpisode) {
     }
   });
 
-  // モードがエキスパートであり、かつ注釈がある場合のみフッターに一覧を追加
-  if (termsMode === 'expert' && footnotes.length > 0) {
+  // モードがエキスパートの場合のみフッターに一覧を追加
+  if ((termsMode === 'expert') && footnotes.length > 0) {
     let footnoteMarkdown = '\n\n<div class="term-footnotes">\n\n**【用語解説】**\n\n';
     footnotes.forEach(note => {
       footnoteMarkdown += `${note}  \n`;
@@ -435,13 +446,15 @@ if (btnResetState) {
     localStorage.removeItem('yomimono_phase');
     localStorage.removeItem('yomimono_unlocked'); // フェイクモード状態のフラグも消す
     localStorage.removeItem('yomimono_initial_setup_done');
+    localStorage.removeItem('yomimono_settings_tooltip_shown_v2'); // ツールチップ表示フラグもリセット
+    localStorage.removeItem('yomimono_typewriter_done'); // タイプライターフラグもリセット
     navigateTo('ep0000');
     checkInitialModal();
   });
 }
 
 // 古いフラグ形式からのマイグレーションも兼ねて設定を初期化
-const settingTermsModeSelect = document.getElementById('setting-terms-mode');
+const btnOpenSettings = document.getElementById('btn-open-settings');
 let currentTermsMode = localStorage.getItem('yomimono_terms_mode');
 
 if (!currentTermsMode) {
@@ -455,17 +468,32 @@ if (!currentTermsMode) {
   localStorage.setItem('yomimono_terms_mode', currentTermsMode);
 }
 
-if (settingTermsModeSelect) {
-  settingTermsModeSelect.value = currentTermsMode;
+function updateSettingsButtonText(mode) {
+  if (!btnOpenSettings) return;
+  const labels = {
+    'ignore': '用語解説を表示しない',
+    'expert': '用語解説（注釈）を表示',
+    'simple': 'IT用語を簡単な言葉に置換',
+    'ruby': 'IT用語に簡単なルビを振る'
+  };
+  btnOpenSettings.textContent = labels[mode] || '設定を変更する';
+}
 
-  settingTermsModeSelect.addEventListener('change', (e) => {
-    const newMode = e.target.value;
-    localStorage.setItem('yomimono_terms_mode', newMode);
+if (btnOpenSettings) {
+  updateSettingsButtonText(currentTermsMode);
+
+  btnOpenSettings.addEventListener('click', () => {
+    const initialModal = document.getElementById('initial-settings-modal');
+    const initialOverlay = document.getElementById('initial-settings-overlay');
+    if (initialModal && initialOverlay) {
+      initialModal.classList.add('active');
+      initialOverlay.classList.add('active');
+    }
     
-    // 即時反映のために本文を再描画する
-    const urlParams = new URLSearchParams(window.location.search);
-    const target = urlParams.get('p') || localStorage.getItem('yomimono_last_page') || 'ep0000';
-    loadMarkdown(target);
+    // モバイルモードでサイドバーが開いていれば閉じる
+    if (window.innerWidth <= 768) {
+      closeSidebar();
+    }
   });
 }
 
@@ -502,6 +530,61 @@ function checkInitialModal() {
   if (!isUnlocked && !isSetupDone && initialModal && initialOverlay) {
     initialModal.classList.add('active');
     initialOverlay.classList.add('active');
+
+    // タイプライター演出（初回のみ）
+    const typewriterDone = localStorage.getItem('yomimono_typewriter_done') === 'true';
+    if (!typewriterDone) {
+      const p = initialModal.querySelector('.modal-content p');
+      if (p) {
+        // 元のHTMLを保持
+        const originalHTML = p.innerHTML;
+        // 一旦空にする
+        p.innerHTML = '';
+        
+        // 意図的な遅延を入れてからタイピング開始
+        setTimeout(() => {
+          let i = 0;
+          let inTag = false;
+          let tagBuffer = '';
+          const maxLen = originalHTML.length;
+
+          function type() {
+            if (i >= maxLen) {
+              localStorage.setItem('yomimono_typewriter_done', 'true');
+              return;
+            }
+
+            const char = originalHTML[i];
+            i++;
+
+            if (char === '<') {
+              inTag = true;
+              tagBuffer = char;
+              type(); // タグ内は即時処理
+              return;
+            }
+
+            if (inTag) {
+              tagBuffer += char;
+              if (char === '>') {
+                inTag = false;
+                p.innerHTML += tagBuffer;
+              }
+              type(); // タグ内はウェイトなしで一気に処理
+              return;
+            }
+
+            // 通常の文字の場合
+            p.innerHTML += char;
+
+            // ランダムな遅延でシステム感を出す（10ms〜40ms）
+            setTimeout(type, Math.random() * 30 + 10);
+          }
+
+          type();
+        }, 500); // モーダルが開いてから0.5秒後に開始
+      }
+    }
   }
 }
 
@@ -513,72 +596,137 @@ function closeInitialModal() {
   if (initialOverlay) initialOverlay.classList.remove('active');
 }
 
+// ユーザーが意図的に閉じた場合はそのまま閉じる（ただし設定は変更・初期化されない）
+const closeInitialModalBtn = document.getElementById('close-initial-modal');
+if (closeInitialModalBtn) {
+  closeInitialModalBtn.addEventListener('click', closeInitialModal);
+}
+const initialSettingsOverlay = document.getElementById('initial-settings-overlay');
+if (initialSettingsOverlay) {
+  initialSettingsOverlay.addEventListener('click', closeInitialModal);
+}
+
 function showSettingsTooltip() {
+  if (localStorage.getItem('yomimono_settings_tooltip_shown_v2') === 'true') {
+    return;
+  }
+  
   const originalToggle = document.querySelector('.settings-toggle');
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('mobile-overlay');
 
   if (!originalToggle) return;
+  
+  // フラグをセットして次回以降は出さないようにする
+  localStorage.setItem('yomimono_settings_tooltip_shown_v2', 'true');
 
   if (window.innerWidth <= 768 && sidebar && !sidebar.classList.contains('sidebar-open')) {
     // モバイルでサイドバーが閉じていたら開く
     sidebar.classList.add('sidebar-open');
     if (overlay) overlay.classList.add('active');
     
-    // 開くアニメーションを待ってからクローンを出す
     setTimeout(createHighlightClone, 400); 
   } else {
-    // 既に開いている（PCなど）場合はすぐに処理
     setTimeout(createHighlightClone, 300);
   }
 
   function createHighlightClone() {
-    // 現在の座標を取得
     const rect = originalToggle.getBoundingClientRect();
     
-    // 背景を暗くする専用のオーバーレイを生成
     const dimOverlay = document.createElement('div');
     dimOverlay.className = 'clone-highlight-overlay';
+    // オーバーレイ自体にポインターイベントを有効にする（背景クリックで閉じられるようにする）
+    dimOverlay.style.pointerEvents = 'auto';
     document.body.appendChild(dimOverlay);
 
-    // 要素のクローン
     const clone = originalToggle.cloneNode(true);
-    // 元のクラスは維持したまま、クローン専用のハイライトクラスを追加
     clone.classList.add('clone-highlight-target');
     
-    // クローンのスタイルを絶対座標で配置
     clone.style.position = 'fixed';
     clone.style.top = rect.top + 'px';
     clone.style.left = rect.left + 'px';
     clone.style.width = rect.width + 'px';
     clone.style.height = rect.height + 'px';
-    clone.style.margin = '0'; // 元のmarginが影響しないようリセット
-    clone.style.pointerEvents = 'none'; // 操作阻害防止
+    clone.style.margin = '0'; 
+    // 操作阻害防止を解除して内部の閉じるボタンをクリック可能にする
+    clone.style.pointerEvents = 'auto'; 
     
-    // ツールチップ部分を強制表示させる
     const cloneTooltip = clone.querySelector('.settings-tooltip');
-    if (cloneTooltip) {
-      cloneTooltip.classList.add('show');
-    }
+    
+    let closeTimeout;
 
-    document.body.appendChild(clone);
-
-    // アニメーション表示（1フレームあけてtransitionを発火させる）
-    requestAnimationFrame(() => {
-      dimOverlay.classList.add('active');
-    });
-
-    // 5秒後に消す
-    setTimeout(() => {
+    // ハイライトを閉じる処理
+    const closeHighlight = () => {
+      clearTimeout(closeTimeout);
       dimOverlay.classList.remove('active');
       if (cloneTooltip) cloneTooltip.classList.remove('show');
       
       setTimeout(() => {
         clone.remove();
         dimOverlay.remove();
-      }, 500); // 0.5s fade
+      }, 500);
+    };
+
+    if (cloneTooltip) {
+      cloneTooltip.classList.add('show');
+      
+      // Xボタンを追加
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '×';
+      closeBtn.style.position = 'absolute';
+      closeBtn.style.right = '4px';
+      closeBtn.style.top = '2px';
+      closeBtn.style.background = 'none';
+      closeBtn.style.border = 'none';
+      closeBtn.style.color = 'inherit';
+      closeBtn.style.fontSize = '1.2rem';
+      closeBtn.style.cursor = 'pointer';
+      closeBtn.style.padding = '2px 6px';
+      closeBtn.style.lineHeight = '1';
+      closeBtn.style.pointerEvents = 'auto';
+      
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // 伝播を防ぐ
+        closeHighlight();
+      });
+      
+      // ボタンが重ならないように余白を確保
+      cloneTooltip.style.paddingRight = '30px';
+      cloneTooltip.appendChild(closeBtn);
+    }
+
+    document.body.appendChild(clone);
+
+    // 背景（dimOverlay）クリックでも閉じるようにする
+    dimOverlay.addEventListener('click', closeHighlight);
+
+    requestAnimationFrame(() => {
+      dimOverlay.classList.add('active');
+    });
+
+    // 5秒経過で自動的にも閉じる
+    closeTimeout = setTimeout(() => {
+      closeHighlight();
     }, 5000);
   }
+}
+
+function showToast(message) {
+  let toast = document.getElementById('setting-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'setting-toast';
+    toast.className = 'toast-notification';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('show');
+  
+  if (toast.hideTimeout) clearTimeout(toast.hideTimeout);
+  
+  toast.hideTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
 }
 
 // 電話キーパッドボタンのイベント
@@ -586,26 +734,163 @@ const keypadBtns = document.querySelectorAll('.keypad-btn');
 keypadBtns.forEach(btn => {
   btn.addEventListener('click', (e) => {
     const key = e.target.dataset.key;
+    let newMode = null;
+    let toastMessage = '';
     
     if (key === '1') {
-      localStorage.setItem('yomimono_terms_mode', 'ignore');
-      if (settingTermsModeSelect) settingTermsModeSelect.value = 'ignore';
+      newMode = 'ignore';
+      toastMessage = '隠蔽モードが選択されました！';
     } else if (key === '2') {
-      localStorage.setItem('yomimono_terms_mode', 'expert');
-      if (settingTermsModeSelect) settingTermsModeSelect.value = 'expert';
+      newMode = 'expert';
+      toastMessage = 'エキスパートモードが選択されました！';
     } else if (key === '3') {
-      localStorage.setItem('yomimono_terms_mode', 'simple');
-      if (settingTermsModeSelect) settingTermsModeSelect.value = 'simple';
+      newMode = 'simple';
+      toastMessage = '翻訳モードが選択されました！';
+    } else if (key === '4') {
+      newMode = 'ruby';
+      toastMessage = 'ルビモードが選択されました！';
     } else {
-      // 0, 4~9は何もしない
+      const messages = [
+        // 小林 (10)
+        "小林「すみませーん！その機能、まだ実装されてませーん…！」",
+        "小林「あ、そこ押しても何も起きない仕様です！」",
+        "小林「デバッグ中なんで触らないでもらえますか！？」",
+        "小林「（……やばい、未実装メソッド呼ばれた）」",
+        "小林「えっと、その機能のリリースは来期以降の予定です」",
+        "小林「待って、そこにボタンがあるの仕様書に書いてないんだけど」",
+        "小林「現在エラーログを吐き続けているので押さないでください…」",
+        "小林「あーっ！そこはダミーのUIです！」",
+        "小林「実装漏れじゃないです、仕様です。たぶん」",
+        "小林「（誰だ今の機能のモック置いたの……俺か）」",
+        
+        // 土屋 (10)
+        "土屋「小林、そのボタンは追加要件だ。見積もり出しとけ」",
+        "土屋「意味のない操作に会社の稼働を使うな」",
+        "土屋「そこはまだ予算が確保できてないんだ。押すなよ」",
+        "土屋「未実装機能のテストなら、自分のローカル環境でやってくれ」",
+        "土屋「そんなボタンを押す暇があるなら仕様書を読め」",
+        "土屋「おい小林、この無効ボタンはいつリリース予定だ？」",
+        "土屋「そこを実装しても利益にならないから後回しだ」",
+        "土屋「押しても無駄だぞ。物理的に配線が繋がってない」",
+        "土屋「なるほど、ユーザーはこういう想定外の操作をするのか……」",
+        "土屋「（また小林が変な機能を仕込んだか……？）」",
+
+        // 天宮 (10)
+        "天宮「……仕様書にないシステムコールはやめていただけますか」",
+        "天宮「その機能はフェーズ２での対応予定です」",
+        "天宮「無効な操作です。マニュアルを読み直してください」",
+        "天宮「（……本当にこの人たちに任せて大丈夫かしら）」",
+        "天宮「不具合ですか？いえ、未実装の機能ですね」",
+        "天宮「お客様からの要件には含まれていないボタンです」",
+        "天宮「その遷移先は定義されていませんよ」",
+        "天宮「……小林さん、このボタン何のためにあるんですか？」",
+        "天宮「意味不明な操作ログが残るのでご遠慮ください」",
+        "天宮「ここはエラーハンドリングが必要ですね。起票しておきます」",
+
+        // 相馬 (10)
+        "相馬「んー、そこは権限足りてないねえ。どんまい」",
+        "相馬「あー、そこは俺もまだソース組んでないんだわ」",
+        "相馬「はいはい、未実装未実装。次いこう次」",
+        "相馬「そこ押してもコーヒーは出てこないよー」",
+        "相馬「おっ、そこ見つけちゃった？まだ空っぽだけどね」",
+        "相馬「一応ボタンの形はしてるけど、中身はVoidだよ」",
+        "相馬「まあ、気長に待っててよ。いつか動くかもね」",
+        "相馬「（……小林の奴、またTODOコメント放置してるな）」",
+        "相馬「その機能は俺の裁量じゃないから、社長に聞いてよ」",
+        "相馬「エラーは出てないでしょ？なら仕様ってことで」",
+
+        // 結衣 (10)
+        "結衣「お客さま〜、そちらのコマンドは現在品切れ中でして……」",
+        "結衣「あ、そこはスタッフ専用の画面なので入れません！」",
+        "結衣「ごめんなさい、その機能は準備中なんです」",
+        "結衣「えっと、押しても何も出ないボタン、ですか？」",
+        "結衣「それ、店長がまだ設定してないやつかもしれません」",
+        "結衣「……（不思議そうに首を傾げている）」",
+        "結衣「小林さーん！エラーが出たって言われてますけどー！」",
+        "結衣「その操作、メニューには載ってない隠しコマンドですか？」",
+        "結衣「押しても何も起きないボタン……なんだか哲学的ですね」",
+        "結衣「申し訳ありません、担当のプログラマーが現在不在で……」",
+
+        // テツ (10)
+        "テツ「おっと、そこから先は『裏』の領域だぜ」",
+        "テツ「そんなもん押しても、ただのノイズだ」",
+        "テツ「あんま深入りすんな。そこは空っぽだ」",
+        "テツ「（……素人が無闇に触るもんじゃねえな）」",
+        "テツ「悪いが、そのシステムはすでに死んでる」",
+        "テツ「そこを掘っても、過去の残骸しか出てこないぜ」",
+        "テツ「ほう？お前、そこが見えるのか」",
+        "テツ「そこのアクセスルートはとうの昔に潰したはずだが……」",
+        "テツ「大人しく表の世界の機能だけ使っとけ」",
+        "テツ「……深淵を覗くってのは、こういうことかもな」",
+
+        // 黒須 (10)
+        "黒須「404 Not Found……ふふっ、滑稽ですね」",
+        "黒須「無意味な操作だ。時間を無駄にしている自覚はありますか？」",
+        "黒須「（……監視システムのログには残しておきましょう）」",
+        "黒須「そんな操作、仕様の抜け穴とでも言いたいんですか」",
+        "黒須「そこは私の管轄外です。……いえ、だからこそ面白い」",
+        "黒須「エラーを意図的に引き起こすつもりですか？」",
+        "黒須「そんな無駄な行動ログ、分析する価値もありません」",
+        "黒須「……ほう、そこを突いてきますか」",
+        "黒須「そのボタンの裏には、何もありませんよ。ご安心を」",
+        "黒須「未実装の機能を叩く……なるほど、ストレステストの一環ですか」",
+
+        // 佐々木 (10)
+        "佐々木「もね先輩！誰かが変なボタン連打してます！」",
+        "佐々木「えっ！？なんですかその機能、私聞いてないです！」",
+        "佐々木「あわわ……そこ押したらシステム壊れたりしませんよね！？」",
+        "佐々木「（……また小林さんがバグ残したのかな）」",
+        "佐々木「す、すみません！そこはまだ開発中でして！」",
+        "佐々木「ひぇっ！？今の操作でエラー出ませんでしたか！？」",
+        "佐々木「あの、そこは押しても何も起こらないダミーなんです……」",
+        "佐々木「ちょっと！勝手に未定義の操作しないでください！」",
+        "佐々木「ええっと、マニュアルには……載ってないですね、このボタン」",
+        "佐々木「私に聞かれても困りますぅ！開発に聞いてください！」"
+      ];
+      const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+      
+      const notImplOverlay = document.getElementById('not-implemented-overlay');
+      const notImplModal = document.getElementById('not-implemented-modal');
+      
+      if (notImplOverlay && notImplModal) {
+        const p = notImplModal.querySelector('p');
+        if (p) p.textContent = randomMsg;
+        
+        notImplOverlay.classList.add('active');
+        notImplModal.classList.add('active');
+        
+        const closeNotImpl = () => {
+          notImplOverlay.classList.remove('active');
+          notImplModal.classList.remove('active');
+        };
+        
+        notImplOverlay.onclick = closeNotImpl;
+        
+        // 自動で消えるタイマーを削除し、スクリーンショットが撮りやすいようにユーザーのアクションでのみ閉じるように変更
+        if (notImplModal.hideTimeout) clearTimeout(notImplModal.hideTimeout);
+      }
       return;
     }
 
-    // 1, 2, 3のいずれかが押されたら初期設定完了とし、本文を再描画してツールチップを出す
+    localStorage.setItem('yomimono_terms_mode', newMode);
+    currentTermsMode = newMode; // 状態更新
+    
+    if (typeof updateSettingsButtonText === 'function') {
+      updateSettingsButtonText(newMode);
+    }
+
+    const isFirstTime = localStorage.getItem('yomimono_settings_tooltip_shown_v2') !== 'true';
+
+    // 1, 2, 3, 4のいずれかが押されたら初期設定完了とし、本文を再描画してツールチップを出す
     closeInitialModal();
     const target = new URLSearchParams(window.location.search).get('p') || localStorage.getItem('yomimono_last_page') || 'ep0000';
     loadMarkdown(target);
-    showSettingsTooltip();
+
+    if (isFirstTime) {
+      showSettingsTooltip();
+    } else {
+      showToast(toastMessage);
+    }
   });
 });
 

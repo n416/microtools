@@ -21,7 +21,8 @@ export function cleanMarkdown(content) {
   return cleaned.trim();
 }
 
-export function stripMarkdown(text) {
+export function stripMarkdown(text, options = {}) {
+  const { preserveGlossary = false } = options;
   let plain = text.replace(/\r\n/g, '\n'); // 正規表現の処理のために改行コードを統一
 
   // ヘッダー処理:
@@ -32,10 +33,10 @@ export function stripMarkdown(text) {
   // それ以下の見出し (###など) は単純に記号を消す
   plain = plain.replace(/^\s*#{3,}\s+/gm, '');
   // 太字 (**) やイタリック (*) を除去
-  plain = plain.replace(/(\*\*|__)(.*?)\1/g, '$2');
-  plain = plain.replace(/(\*|_)(.*?)\1/g, '$2');
+  plain = plain.replace(/(\*\*|__)([^\n]*?)\1/g, '$2');
+  plain = plain.replace(/(\*|_)([^\n]*?)\1/g, '$2');
   // 取り消し線 (~~) を除去
-  plain = plain.replace(/(~~)(.*?)\1/g, '$2');
+  plain = plain.replace(/(~~)([^\n]*?)\1/g, '$2');
   // リンク [text](url) を text に変換
   plain = plain.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
   // 画像エスケープの復元
@@ -53,13 +54,15 @@ export function stripMarkdown(text) {
   // 4つ以上連続する改行があれば3つにまとめる（見出し前後の空白行装飾を保護するため）
   plain = plain.replace(/\n{4,}/g, '\n\n\n');
 
-  // 【用語解説】セクション全体を削除する
-  // 「【用語解説】」以降、次のエピソード「第X話」「第X章」または「プロローグ」が始まるまでのテキストを消す
-  // 次のエピソードがない（ファイルの末尾）場合も考慮する
-  plain = plain.replace(/【用語解説】[\s\S]*?(?=(第[\d一二三四五六七八九十百千万]+[話章]|プロローグ|$))/g, '');
+  if (!preserveGlossary) {
+    // 【用語解説】セクション全体を削除する
+    // 「【用語解説】」以降、次のエピソード「第X話」「第X章」または「プロローグ」が始まるまでのテキストを消す
+    // 次のエピソードがない（ファイルの末尾）場合も考慮する
+    plain = plain.replace(/【用語解説】[\s\S]*?(?=(第[\d一二三四五六七八九十百千万]+[話章]|プロローグ|$))/g, '');
 
-  // 用語解説の脚注番号 （※1） などを除去（【用語解説】ブロックが消えたことによる浮遊マークの削除）
-  plain = plain.replace(/（※\d+）/g, '');
+    // 用語解説の脚注番号 （※1） などを除去（【用語解説】ブロックが消えたことによる浮遊マークの削除）
+    plain = plain.replace(/（※\d+）/g, '');
+  }
 
   // --- 自動字下げ処理 ---
   const lines = plain.split('\n');
