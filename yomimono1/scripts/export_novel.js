@@ -16,17 +16,22 @@ const purify = DOMPurify(window);
 
 // コマンドライン引数からフラグを取得
 const isNoTerms = process.argv.includes('--no-terms');
+const isSimpleTerms = process.argv.includes('--simple-terms');
 
 // ディレクトリ設定
-const distSettingsDir = isNoTerms 
-  ? path.resolve(__dirname, '../dist/export_resolved_noterms')
-  : path.resolve(__dirname, '../dist/export_resolved');
-const outputTxtPath = isNoTerms
-  ? path.resolve(__dirname, '../output_novel_noterms.txt')
-  : path.resolve(__dirname, '../output_novel.txt');
-const outputHtmlPath = isNoTerms
-  ? path.resolve(__dirname, '../output_novel_noterms.html')
-  : path.resolve(__dirname, '../output_novel.html');
+let distSettingsDir = path.resolve(__dirname, '../dist/export_resolved');
+let outputTxtPath = path.resolve(__dirname, '../output_novel.txt');
+let outputHtmlPath = path.resolve(__dirname, '../output_novel.html');
+
+if (isNoTerms) {
+  distSettingsDir = path.resolve(__dirname, '../dist/export_resolved_noterms');
+  outputTxtPath = path.resolve(__dirname, '../output_novel_noterms.txt');
+  outputHtmlPath = path.resolve(__dirname, '../output_novel_noterms.html');
+} else if (isSimpleTerms) {
+  distSettingsDir = path.resolve(__dirname, '../dist/export_resolved_simple');
+  outputTxtPath = path.resolve(__dirname, '../output_novel_simple.txt');
+  outputHtmlPath = path.resolve(__dirname, '../output_novel_simple.html');
+}
 
 
 function buildExports() {

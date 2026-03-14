@@ -8,12 +8,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const isNoTerms = process.argv.includes('--no-terms');
+const isSimpleTerms = process.argv.includes('--simple-terms');
 
 const templatePath = 'sample_format.docx';
-const inputPath = isNoTerms ? 'output_novel_noterms.txt' : 'output_novel.txt';
-const outputPath = isNoTerms ? 'output_novel_noterms.docx' : 'output_novel.docx';
+let inputPath = 'output_novel.txt';
+let outputPath = 'output_novel.docx';
 
-console.log(`Generating docx... (no-terms: ${isNoTerms})`);
+if (isNoTerms) {
+  inputPath = 'output_novel_noterms.txt';
+  outputPath = 'output_novel_noterms.docx';
+} else if (isSimpleTerms) {
+  inputPath = 'output_novel_simple.txt';
+  outputPath = 'output_novel_simple.docx';
+}
+
+console.log(`Generating docx... (no-terms: ${isNoTerms}, simple-terms: ${isSimpleTerms})`);
 
 try {
   // Read docx zip
