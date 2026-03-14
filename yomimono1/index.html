@@ -35,11 +35,16 @@
             </ul>
           </details>
         </div>
-        <div class="settings-toggle">
-          <label class="settings-label">
-            <input type="checkbox" id="toggle-terms" checked>
-            用語解説・注釈を表示する
-          </label>
+        <div class="settings-toggle" style="position: relative;">
+          <label class="settings-label">用語解説の表示設定</label>
+          <select id="setting-terms-mode" class="glass-select">
+            <option value="ignore">用語解説を表示しない</option>
+            <option value="expert" selected>用語解説（注釈）を表示</option>
+            <option value="simple">IT用語を簡単な言葉に置換</option>
+          </select>
+          <div id="settings-tooltip" class="settings-tooltip">
+            設定は後からここでも変更できます
+          </div>
         </div>
       </nav>
       <main id="content-area" class="glass-panel">
@@ -59,6 +64,47 @@
           <div id="term-modal-content-term" class="term-section"></div>
           <div id="term-modal-content-it" class="term-section"></div>
         </div>
+      </div>
+
+      <!-- 初期設定モーダル -->
+      <div id="initial-settings-overlay" class="modal-overlay"></div>
+      <div id="initial-settings-modal" class="glass-panel modal-panel" style="max-width: 400px; text-align: center;">
+        <div class="modal-content" style="padding: 30px 20px;">
+          <p style="font-size: 1.1rem; line-height: 1.6; margin-bottom: 30px;">
+            この小説は大量のIT用語が出てきます。<br><br>
+            説明を読みたくない人は<strong>１</strong><br>
+            読みたいレアな人は<strong>２</strong><br>
+            置き換えて中学3年生で読みたい人は<strong>３</strong><br>
+            を押してください。
+          </p>
+          <div class="phone-keypad">
+            <button class="keypad-btn" data-key="1">1</button>
+            <button class="keypad-btn" data-key="2">2</button>
+            <button class="keypad-btn" data-key="3">3</button>
+            <button class="keypad-btn" data-key="4">4</button>
+            <button class="keypad-btn" data-key="5">5</button>
+            <button class="keypad-btn" data-key="6">6</button>
+            <button class="keypad-btn" data-key="7">7</button>
+            <button class="keypad-btn" data-key="8">8</button>
+            <button class="keypad-btn" data-key="9">9</button>
+            <div class="keypad-spacer"></div>
+            <button class="keypad-btn" data-key="0">0</button>
+            <div class="keypad-spacer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 未実装通知モーダル -->
+      <div id="not-implemented-overlay" class="modal-overlay" style="z-index: 3000;"></div>
+      <div id="not-implemented-modal" class="glass-panel modal-panel" style="z-index: 3001; max-width: 300px; text-align: center;">
+        <div class="modal-content" style="padding: 20px;">
+          <p style="font-size: 1.1rem; margin: 0; color: #ff5555; font-weight: bold;">（現在実装中です！）</p>
+        </div>
+      </div>
+
+      <!-- 暗転・グリッチオーバーレイ -->
+      <div id="chapter-end-overlay">
+        <div class="text-glitch">FATAL ERROR</div>
       </div>
 
     </div>

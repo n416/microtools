@@ -18,6 +18,8 @@ const distSettingsDir = path.join(projectRoot, 'dist', 'settings');
 const exportSettingsDir = path.join(projectRoot, 'dist', 'export_resolved');
 // 出力先 (エクスポート用：用語解説なし)
 const exportSettingsNoTermsDir = path.join(projectRoot, 'dist', 'export_resolved_noterms');
+// 出力先 (エクスポート用：中学生モード)
+const exportSettingsSimpleDir = path.join(projectRoot, 'dist', 'export_resolved_simple');
 
 function resolveCharacters(text) {
   return text.replace(/<Char\s+role="([^"]+)"(?:\s+callrole="([^"]+)")?\s+var="([^"]+)"\s*\/>/g, (match, role, callrole, variant) => {
@@ -43,7 +45,7 @@ function resolveCharacters(text) {
   });
 }
 
-function resolveTerms(text, currentEpisode, showTerms = true) {
+function resolveTerms(text, currentEpisode, mode = 'expert') {
   const combinedDictionary = { ...ItTermDictionary, ...TermDictionary };
   const localSeen = new Set(); // ページ内で同一用語が複数回出た場合の重複防止
   const footnotes = [];
@@ -53,9 +55,13 @@ function resolveTerms(text, currentEpisode, showTerms = true) {
     const termData = combinedDictionary[id];
     if (!termData) return `[Unknown Term: ${id}]`;
 
+    if (mode === 'simple' && termData.simple_term) {
+      return termData.simple_term;
+    }
+
     const displayStr = (innerText && innerText.trim().length > 0) ? innerText : termData.term;
 
-    if (!showTerms) {
+    if (mode !== 'expert') {
       return displayStr;
     }
 
@@ -70,7 +76,7 @@ function resolveTerms(text, currentEpisode, showTerms = true) {
     }
   });
 
-  if (showTerms && footnotes.length > 0) {
+  if (mode === 'expert' && footnotes.length > 0) {
     let footnoteMarkdown = '\n\n<div class="term-footnotes">\n\n**【用語解説】**\n\n';
     footnotes.forEach(note => {
       footnoteMarkdown += `${note}  \n`;
@@ -101,6 +107,9 @@ function processMdxFilesInDist() {
   if (!fs.existsSync(exportSettingsNoTermsDir)) {
     fs.mkdirSync(exportSettingsNoTermsDir, { recursive: true });
   }
+  if (!fs.existsSync(exportSettingsSimpleDir)) {
+    fs.mkdirSync(exportSettingsSimpleDir, { recursive: true });
+  }
 
   const files = fs.readdirSync(distSettingsDir);
   let processedCount = 0;
@@ -114,11 +123,13 @@ function processMdxFilesInDist() {
         const currentEpisode = file.replace('.mdx', '');
   
         const charResolved = resolveCharacters(content);
-        const fullyResolved = resolveTerms(charResolved, currentEpisode, true);
-        const noTermsResolved = resolveTerms(charResolved, currentEpisode, false);
+        const fullyResolved = resolveTerms(charResolved, currentEpisode, 'expert');
+        const noTermsResolved = resolveTerms(charResolved, currentEpisode, 'ignore');
+        const simpleTermsResolved = resolveTerms(charResolved, currentEpisode, 'simple');
 
         const formattedFullyResolved = addSpaceAfterPunctuation(fullyResolved);
         const formattedNoTermsResolved = addSpaceAfterPunctuation(noTermsResolved);
+        const formattedSimpleResolved = addSpaceAfterPunctuation(simpleTermsResolved);
   
         // エクスポート用ディレクトリに書き出す（dist/settingsの元ファイルは維持する）
         const outPath = path.join(exportSettingsDir, file);
@@ -128,7 +139,11 @@ function processMdxFilesInDist() {
         const outPathNoTerms = path.join(exportSettingsNoTermsDir, file);
         fs.writeFileSync(outPathNoTerms, formattedNoTermsResolved, 'utf-8');
 
-        console.log(`[postbuild] Tags resolved in: ${file} (with/without terms)`);
+        // 中学生モード用のディレクトリにも書き出す
+        const outPathSimple = path.join(exportSettingsSimpleDir, file);
+        fs.writeFileSync(outPathSimple, formattedSimpleResolved, 'utf-8');
+
+        console.log(`[postbuild] Tags resolved in: ${file} (expert/ignore/simple)`);
         processedCount++;
       }
   });
