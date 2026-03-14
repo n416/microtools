@@ -17,6 +17,7 @@ const purify = DOMPurify(window);
 // コマンドライン引数からフラグを取得
 const isNoTerms = process.argv.includes('--no-terms');
 const isSimpleTerms = process.argv.includes('--simple-terms');
+const isRubyTerms = process.argv.includes('--ruby-terms');
 
 // ディレクトリ設定
 let distSettingsDir = path.resolve(__dirname, '../dist/export_resolved');
@@ -31,6 +32,10 @@ if (isNoTerms) {
   distSettingsDir = path.resolve(__dirname, '../dist/export_resolved_simple');
   outputTxtPath = path.resolve(__dirname, '../output_novel_simple.txt');
   outputHtmlPath = path.resolve(__dirname, '../output_novel_simple.html');
+} else if (isRubyTerms) {
+  distSettingsDir = path.resolve(__dirname, '../dist/export_resolved_ruby');
+  outputTxtPath = path.resolve(__dirname, '../output_novel_ruby.txt');
+  outputHtmlPath = path.resolve(__dirname, '../output_novel_ruby.html');
 }
 
 
@@ -66,13 +71,19 @@ function buildExports() {
   });
 
   // ========== txt出力 (Markdownテキスト → プレーンテキスト) ==========
-  const plainTextNovel = stripMarkdown(fullMarkdown);
+  const preserveGlossary = !isNoTerms && !isSimpleTerms && !isRubyTerms;
+  const plainTextNovel = stripMarkdown(fullMarkdown, { preserveGlossary });
   fs.writeFileSync(outputTxtPath, plainTextNovel, 'utf-8');
   console.log(`[Success] Crated Text Novel: ${outputTxtPath}`);
 
   // ========== HTML出力 ==========
   const rawHtml = marked.parse(fullMarkdown);
-  const cleanHtml = purify.sanitize(rawHtml);
+  let cleanHtml = purify.sanitize(rawHtml);
+  
+  // --ruby-terms フラグがある場合はルビ記法をHTMLルビタグに変換する
+  if (isRubyTerms) {
+    cleanHtml = cleanHtml.replace(/｜(.+?)《(.+?)》/g, '<ruby>$1<rt>$2</rt></ruby>');
+  }
   
   const htmlTemplate = `<!DOCTYPE html>
 <html lang="ja">
