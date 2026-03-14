@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 
 const isNoTerms = process.argv.includes('--no-terms');
 const isSimpleTerms = process.argv.includes('--simple-terms');
+const isRubyTerms = process.argv.includes('--ruby-terms');
 
 const templatePath = 'sample_format.docx';
 let inputPath = 'output_novel.txt';
@@ -20,9 +21,12 @@ if (isNoTerms) {
 } else if (isSimpleTerms) {
   inputPath = 'output_novel_simple.txt';
   outputPath = 'output_novel_simple.docx';
+} else if (isRubyTerms) {
+  inputPath = 'output_novel_ruby.txt';
+  outputPath = 'output_novel_ruby.docx';
 }
 
-console.log(`Generating docx... (no-terms: ${isNoTerms}, simple-terms: ${isSimpleTerms})`);
+console.log(`Generating docx... (no-terms: ${isNoTerms}, simple-terms: ${isSimpleTerms}, ruby-terms: ${isRubyTerms})`);
 
 try {
   // Read docx zip
@@ -142,19 +146,97 @@ try {
           newP.appendChild(defaultPPr.cloneNode(true));
       }
       
-      const newR = doc.createElement('w:r');
-      const newT = doc.createElement('w:t');
-      
       if (line === '') {
           // Empty line
+          const newR = doc.createElement('w:r');
+          const newT = doc.createElement('w:t');
           newT.setAttribute('xml:space', 'preserve');
           newT.appendChild(doc.createTextNode(''));
+          newR.appendChild(newT);
+          newP.appendChild(newR);
       } else {
-          newT.appendChild(doc.createTextNode(line));
+          // Parse ruby tags like ｜Base《Ruby》
+          const rubyRegex = /｜(.+?)《(.+?)》/g;
+          let match;
+          let lastIndex = 0;
+
+          while ((match = rubyRegex.exec(line)) !== null) {
+              // Add normal text before the ruby tag
+              if (match.index > lastIndex) {
+                  const preText = line.substring(lastIndex, match.index);
+                  const preR = doc.createElement('w:r');
+                  const preT = doc.createElement('w:t');
+                  preT.setAttribute('xml:space', 'preserve');
+                  preT.appendChild(doc.createTextNode(preText));
+                  preR.appendChild(preT);
+                  newP.appendChild(preR);
+              }
+
+              const baseText = match[1];
+              const rtText = match[2];
+
+              // Generate Word ruby elements
+              const rubyRun = doc.createElement('w:r'); // The outer container is typically just appended to directly, or wrapped in w:ruby
+              const wRuby = doc.createElement('w:ruby');
+
+              const wRubyPr = doc.createElement('w:rubyPr');
+              const wRubyAlign = doc.createElement('w:rubyAlign');
+              wRubyAlign.setAttribute('w:val', 'distributeSpace'); // Justify
+              const wHps = doc.createElement('w:hps');
+              wHps.setAttribute('w:val', '10'); // 5pt ruby size
+              const wHpsBaseText = doc.createElement('w:hpsBaseText');
+              wHpsBaseText.setAttribute('w:val', '21'); // 10.5pt base size
+              const wHpsRaise = doc.createElement('w:hpsRaise');
+              wHpsRaise.setAttribute('w:val', '18'); // Normal raise distance
+
+              wRubyPr.appendChild(wRubyAlign);
+              wRubyPr.appendChild(wHps);
+              wRubyPr.appendChild(wHpsRaise);
+              wRubyPr.appendChild(wHpsBaseText);
+              wRuby.appendChild(wRubyPr);
+
+              const wRt = doc.createElement('w:rt');
+              const rtR = doc.createElement('w:r');
+              const rPrRt = doc.createElement('w:rPr');
+              const rtSz = doc.createElement('w:sz');
+              rtSz.setAttribute('w:val', '10');
+              const rtSzCs = doc.createElement('w:szCs');
+              rtSzCs.setAttribute('w:val', '10');
+              rPrRt.appendChild(rtSz);
+              rPrRt.appendChild(rtSzCs);
+              rtR.appendChild(rPrRt);
+              
+              const rtT = doc.createElement('w:t');
+              rtT.appendChild(doc.createTextNode(rtText));
+              rtR.appendChild(rtT);
+              wRt.appendChild(rtR);
+              wRuby.appendChild(wRt);
+
+              const wRubyBase = doc.createElement('w:rubyBase');
+              const baseR = doc.createElement('w:r');
+              const baseT = doc.createElement('w:t');
+              baseT.appendChild(doc.createTextNode(baseText));
+              baseR.appendChild(baseT);
+              wRubyBase.appendChild(baseR);
+              wRuby.appendChild(wRubyBase);
+
+              newP.appendChild(wRuby);
+
+              lastIndex = rubyRegex.lastIndex;
+          }
+
+          // Add any remaining text
+          if (lastIndex < line.length) {
+              const postText = line.substring(lastIndex);
+              const postR = doc.createElement('w:r');
+              const postT = doc.createElement('w:t');
+              postT.setAttribute('xml:space', 'preserve');
+              postT.appendChild(doc.createTextNode(postText));
+              postR.appendChild(postT);
+              newP.appendChild(postR);
+          }
       }
       
-      newR.appendChild(newT);
-      newP.appendChild(newR);
       body.appendChild(newP);
   }
 
