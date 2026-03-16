@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MDX Character Count Analysis</title>
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <div class="admin-container">
+    <header class="admin-header">
+      <h1 class="admin-title">MDX 文字数分析 管理画面</h1>
+      <p class="admin-subtitle">元のMDXファイルと、ビルド後のMDXファイルの文字数を比較します。</p>
+    </header>
+
+    <div class="controls-section">
+      <button id="btn-fetch" class="action-btn">全ファイル再取得・分析</button>
+      <div id="status-message" class="status-message hidden"></div>
+    </div>
+
+    <section class="synopsis-section">
+      <div class="synopsis-header">
+        <h2 class="section-title">Word出力用あらすじ (非公開)</h2>
+        <button id="btn-save-synopsis" class="action-btn save-btn">あらすじを保存</button>
+      </div>
+      <textarea id="synopsis-textarea" class="synopsis-textarea" placeholder="ここにWord出力用のあらすじを入力してください..."></textarea>
+    </section>
+
+    <div class="summary-section">
+      <div class="summary-card">
+        <h3>全ファイル合算 (元MDX)</h3>
+        <p id="total-raw">0</p>
+      </div>
+      <div class="summary-card">
+        <h3>全ファイル合算 (ビルド後)</h3>
+        <p id="total-built">0</p>
+      </div>
+    </div>
+
+    <section class="analysis-section">
+      <div class="chart-container">
+        <h2 class="section-title">エピソード別 文字数 (ビルド後)</h2>
+        <div id="bar-chart" class="bar-chart">
+          <!-- 棒グラフがここに動的に追加されます -->
+        </div>
+      </div>
+
+      <div class="table-container">
+        <h2 class="section-title">詳細データ</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ファイル名</th>
+              <th>元MDX文字数</th>
+              <th>ビルド後文字数</th>
+              <th>同期（投稿）</th>
+            </tr>
+          </thead>
+          <tbody id="data-tbody">
+            <!-- テーブルデータがここに動的に追加されます -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Diff プレビュー用モーダル -->
+  <div id="diff-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>投稿前 差分プレビュー</h2>
+        <button id="btn-close-modal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="diff-modal-message" class="diff-message">サイト上のテキストと手元のテキストを比較しています...</p>
+        <div id="diff-container" class="diff-container">
+          <!-- 差分結果がここに挿入されます -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-publish" class="btn-cancel">キャンセル</button>
+        <button id="btn-confirm-publish" class="btn-confirm">この内容で投稿（上書き）する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Viteの開発サーバー特有の機能を使うため type="module" が必須 -->
+  <script type="module" src="/admin.js"></script>
+</body>
+</html>
