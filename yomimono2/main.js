@@ -84,7 +84,7 @@ function resolveTerms(text, currentEpisode) {
       footnoteMarkdown += `${note}  \n`;
     });
     footnoteMarkdown += '</div>\n\n';
-    
+
     const nextActionIndex = newText.indexOf('<div class="next-action">');
     if (nextActionIndex !== -1) {
       newText = newText.slice(0, nextActionIndex) + footnoteMarkdown + newText.slice(nextActionIndex);
@@ -169,7 +169,7 @@ async function loadMarkdown(target) {
     // --- テキストコピペボタンの生成 ---
     const copyBtnContainer = document.createElement('div');
     copyBtnContainer.className = 'copy-text-btn-wrap';
-    
+
     const copyBtn = document.createElement('button');
     copyBtn.className = 'btn-copy-text';
     copyBtn.innerHTML = `
@@ -192,7 +192,7 @@ async function loadMarkdown(target) {
       offscreen.appendChild(clone);
       document.body.appendChild(offscreen);
       let plainText = offscreen.innerText;
-      
+
       plainText = plainText
         .split('\n')
         .map(line => line.trim()) // 各行の前後の空白を削除
@@ -227,12 +227,12 @@ async function loadMarkdown(target) {
     // --- 用語の抽出と解説ボタンの生成 ---
     if (target !== 'world' && target !== 'character' && target !== 'true_character') {
       const { matchedIT, matchedNovel } = extractTermsFromText(fullyResolved, target);
-      
+
       if (matchedIT.length > 0 || matchedNovel.length > 0) {
         // ボタンを生成
         const btnContainer = document.createElement('div');
         btnContainer.className = 'term-modal-btn-wrap';
-        
+
         const termBtn = document.createElement('button');
         termBtn.className = 'btn-term-modal';
         termBtn.innerHTML = `
@@ -244,7 +244,7 @@ async function loadMarkdown(target) {
           この話の用語解説
         `;
         btnContainer.appendChild(termBtn);
-        
+
         // H1タイトルの直後、またはコンテナの先頭に挿入
         const firstH1 = markdownContainer.querySelector('h1');
         if (firstH1) {
@@ -302,10 +302,10 @@ async function loadMarkdown(target) {
         const nextTarget = e.target.dataset.next;
         const overlay = document.getElementById('chapter-end-overlay');
         const isUnlocked = localStorage.getItem('yomimono_unlocked') === 'true';
-        
+
         if (overlay && !isUnlocked) {
           overlay.classList.add('visible');
-          
+
           // 2.5秒後に画面遷移し、オーバーレイを消す
           setTimeout(() => {
             navigateTo(nextTarget);
@@ -370,7 +370,7 @@ function restoreState(target) {
   document.body.classList.remove('fake-mode');
   document.body.classList.add('true-mode');
   siteTitle.textContent = '灰の少年と、三百年の魔女';
-  siteSubtitle.innerHTML = '完全設定資料・最終完成版';
+  siteSubtitle.innerHTML = '';
 
   // サイドバーメニュー構成
   navContainer.innerHTML = `
@@ -461,7 +461,7 @@ if (btnOpenSettings) {
       initialModal.classList.add('active');
       initialOverlay.classList.add('active');
     }
-    
+
     // モバイルモードでサイドバーが開いていれば閉じる
     if (window.innerWidth <= 768) {
       closeSidebar();
@@ -498,7 +498,7 @@ function checkInitialModal() {
   const isSetupDone = localStorage.getItem('yomimono_initial_setup_done') === 'true';
   const initialModal = document.getElementById('initial-settings-modal');
   const initialOverlay = document.getElementById('initial-settings-overlay');
-  
+
   if (!isUnlocked && !isSetupDone && initialModal && initialOverlay) {
     initialModal.classList.add('active');
     initialOverlay.classList.add('active');
@@ -512,7 +512,7 @@ function checkInitialModal() {
         const originalHTML = p.innerHTML;
         // 一旦空にする
         p.innerHTML = '';
-        
+
         // 意図的な遅延を入れてからタイピング開始
         setTimeout(() => {
           let i = 0;
@@ -582,13 +582,13 @@ function showSettingsTooltip() {
   if (localStorage.getItem('yomimono_settings_tooltip_shown_v2') === 'true') {
     return;
   }
-  
+
   const originalToggle = document.querySelector('.settings-toggle');
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('mobile-overlay');
 
   if (!originalToggle) return;
-  
+
   // フラグをセットして次回以降は出さないようにする
   localStorage.setItem('yomimono_settings_tooltip_shown_v2', 'true');
 
@@ -596,15 +596,15 @@ function showSettingsTooltip() {
     // モバイルでサイドバーが閉じていたら開く
     sidebar.classList.add('sidebar-open');
     if (overlay) overlay.classList.add('active');
-    
-    setTimeout(createHighlightClone, 400); 
+
+    setTimeout(createHighlightClone, 400);
   } else {
     setTimeout(createHighlightClone, 300);
   }
 
   function createHighlightClone() {
     const rect = originalToggle.getBoundingClientRect();
-    
+
     const dimOverlay = document.createElement('div');
     dimOverlay.className = 'clone-highlight-overlay';
     // オーバーレイ自体にポインターイベントを有効にする（背景クリックで閉じられるようにする）
@@ -613,18 +613,18 @@ function showSettingsTooltip() {
 
     const clone = originalToggle.cloneNode(true);
     clone.classList.add('clone-highlight-target');
-    
+
     clone.style.position = 'fixed';
     clone.style.top = rect.top + 'px';
     clone.style.left = rect.left + 'px';
     clone.style.width = rect.width + 'px';
     clone.style.height = rect.height + 'px';
-    clone.style.margin = '0'; 
+    clone.style.margin = '0';
     // 操作阻害防止を解除して内部の閉じるボタンをクリック可能にする
-    clone.style.pointerEvents = 'auto'; 
-    
+    clone.style.pointerEvents = 'auto';
+
     const cloneTooltip = clone.querySelector('.settings-tooltip');
-    
+
     let closeTimeout;
 
     // ハイライトを閉じる処理
@@ -632,7 +632,7 @@ function showSettingsTooltip() {
       clearTimeout(closeTimeout);
       dimOverlay.classList.remove('active');
       if (cloneTooltip) cloneTooltip.classList.remove('show');
-      
+
       setTimeout(() => {
         clone.remove();
         dimOverlay.remove();
@@ -641,7 +641,7 @@ function showSettingsTooltip() {
 
     if (cloneTooltip) {
       cloneTooltip.classList.add('show');
-      
+
       // Xボタンを追加
       const closeBtn = document.createElement('button');
       closeBtn.innerHTML = '×';
@@ -656,12 +656,12 @@ function showSettingsTooltip() {
       closeBtn.style.padding = '2px 6px';
       closeBtn.style.lineHeight = '1';
       closeBtn.style.pointerEvents = 'auto';
-      
+
       closeBtn.addEventListener('click', (e) => {
         e.stopPropagation(); // 伝播を防ぐ
         closeHighlight();
       });
-      
+
       // ボタンが重ならないように余白を確保
       cloneTooltip.style.paddingRight = '30px';
       cloneTooltip.appendChild(closeBtn);
@@ -693,9 +693,9 @@ function showToast(message) {
   }
   toast.textContent = message;
   toast.classList.add('show');
-  
+
   if (toast.hideTimeout) clearTimeout(toast.hideTimeout);
-  
+
   toast.hideTimeout = setTimeout(() => {
     toast.classList.remove('show');
   }, 3000);
@@ -708,7 +708,7 @@ keypadBtns.forEach(btn => {
     const key = e.target.dataset.key;
     let newMode = null;
     let toastMessage = '';
-    
+
     if (key === '1') {
       newMode = 'ignore';
       toastMessage = '隠蔽モードが選択されました！';
@@ -723,121 +723,41 @@ keypadBtns.forEach(btn => {
       toastMessage = 'ルビモードが選択されました！';
     } else {
       const messages = [
-        // 小林 (10)
-        "小林「すみませーん！その機能、まだ実装されてませーん…！」",
-        "小林「あ、そこ押しても何も起きない仕様です！」",
-        "小林「デバッグ中なんで触らないでもらえますか！？」",
-        "小林「（……やばい、未実装メソッド呼ばれた）」",
-        "小林「えっと、その機能のリリースは来期以降の予定です」",
-        "小林「待って、そこにボタンがあるの仕様書に書いてないんだけど」",
-        "小林「現在エラーログを吐き続けているので押さないでください…」",
-        "小林「あーっ！そこはダミーのUIです！」",
-        "小林「実装漏れじゃないです、仕様です。たぶん」",
-        "小林「（誰だ今の機能のモック置いたの……俺か）」",
-        
-        // 土屋 (10)
-        "土屋「小林、そのボタンは追加要件だ。見積もり出しとけ」",
-        "土屋「意味のない操作に会社の稼働を使うな」",
-        "土屋「そこはまだ予算が確保できてないんだ。押すなよ」",
-        "土屋「未実装機能のテストなら、自分のローカル環境でやってくれ」",
-        "土屋「そんなボタンを押す暇があるなら仕様書を読め」",
-        "土屋「おい小林、この無効ボタンはいつリリース予定だ？」",
-        "土屋「そこを実装しても利益にならないから後回しだ」",
-        "土屋「押しても無駄だぞ。物理的に配線が繋がってない」",
-        "土屋「なるほど、ユーザーはこういう想定外の操作をするのか……」",
-        "土屋「（また小林が変な機能を仕込んだか……？）」",
+        // アルト
+        "アルト「おい、適当なところを押すな」",
+        "アルト「……その機能は、俺の灰じゃどうにもならないぞ」",
+        "アルト「そんな無駄な操作をして、寿命をすり減らしたいのか？」",
+        "アルト「そこはまだ、魔法の経路が繋がっていないらしい」",
+        "アルト「何を押してるんだ……？　そんな知識、俺にはないが」",
+        "アルト「悪いが、そこの機能は百年払っても動かない」",
 
-        // 天宮 (10)
-        "天宮「……仕様書にないシステムコールはやめていただけますか」",
-        "天宮「その機能はフェーズ２での対応予定です」",
-        "天宮「無効な操作です。マニュアルを読み直してください」",
-        "天宮「（……本当にこの人たちに任せて大丈夫かしら）」",
-        "天宮「不具合ですか？いえ、未実装の機能ですね」",
-        "天宮「お客様からの要件には含まれていないボタンです」",
-        "天宮「その遷移先は定義されていませんよ」",
-        "天宮「……小林さん、このボタン何のためにあるんですか？」",
-        "天宮「意味不明な操作ログが残るのでご遠慮ください」",
-        "天宮「ここはエラーハンドリングが必要ですね。起票しておきます」",
-
-        // 相馬 (10)
-        "相馬「んー、そこは権限足りてないねえ。どんまい」",
-        "相馬「あー、そこは俺もまだソース組んでないんだわ」",
-        "相馬「はいはい、未実装未実装。次いこう次」",
-        "相馬「そこ押してもコーヒーは出てこないよー」",
-        "相馬「おっ、そこ見つけちゃった？まだ空っぽだけどね」",
-        "相馬「一応ボタンの形はしてるけど、中身はVoidだよ」",
-        "相馬「まあ、気長に待っててよ。いつか動くかもね」",
-        "相馬「（……小林の奴、またTODOコメント放置してるな）」",
-        "相馬「その機能は俺の裁量じゃないから、社長に聞いてよ」",
-        "相馬「エラーは出てないでしょ？なら仕様ってことで」",
-
-        // 結衣 (10)
-        "結衣「お客さま〜、そちらのコマンドは現在品切れ中でして……」",
-        "結衣「あ、そこはスタッフ専用の画面なので入れません！」",
-        "結衣「ごめんなさい、その機能は準備中なんです」",
-        "結衣「えっと、押しても何も出ないボタン、ですか？」",
-        "結衣「それ、店長がまだ設定してないやつかもしれません」",
-        "結衣「……（不思議そうに首を傾げている）」",
-        "結衣「小林さーん！エラーが出たって言われてますけどー！」",
-        "結衣「その操作、メニューには載ってない隠しコマンドですか？」",
-        "結衣「押しても何も起きないボタン……なんだか哲学的ですね」",
-        "結衣「申し訳ありません、担当のプログラマーが現在不在で……」",
-
-        // テツ (10)
-        "テツ「おっと、そこから先は『裏』の領域だぜ」",
-        "テツ「そんなもん押しても、ただのノイズだ」",
-        "テツ「あんま深入りすんな。そこは空っぽだ」",
-        "テツ「（……素人が無闇に触るもんじゃねえな）」",
-        "テツ「悪いが、そのシステムはすでに死んでる」",
-        "テツ「そこを掘っても、過去の残骸しか出てこないぜ」",
-        "テツ「ほう？お前、そこが見えるのか」",
-        "テツ「そこのアクセスルートはとうの昔に潰したはずだが……」",
-        "テツ「大人しく表の世界の機能だけ使っとけ」",
-        "テツ「……深淵を覗くってのは、こういうことかもな」",
-
-        // 黒須 (10)
-        "黒須「404 Not Found……ふふっ、滑稽ですね」",
-        "黒須「無意味な操作だ。時間を無駄にしている自覚はありますか？」",
-        "黒須「（……監視システムのログには残しておきましょう）」",
-        "黒須「そんな操作、仕様の抜け穴とでも言いたいんですか」",
-        "黒須「そこは私の管轄外です。……いえ、だからこそ面白い」",
-        "黒須「エラーを意図的に引き起こすつもりですか？」",
-        "黒須「そんな無駄な行動ログ、分析する価値もありません」",
-        "黒須「……ほう、そこを突いてきますか」",
-        "黒須「そのボタンの裏には、何もありませんよ。ご安心を」",
-        "黒須「未実装の機能を叩く……なるほど、ストレステストの一環ですか」",
-
-        // 佐々木 (10)
-        "佐々木「もね先輩！誰かが変なボタン連打してます！」",
-        "佐々木「えっ！？なんですかその機能、私聞いてないです！」",
-        "佐々木「あわわ……そこ押したらシステム壊れたりしませんよね！？」",
-        "佐々木「（……また小林さんがバグ残したのかな）」",
-        "佐々木「す、すみません！そこはまだ開発中でして！」",
-        "佐々木「ひぇっ！？今の操作でエラー出ませんでしたか！？」",
-        "佐々木「あの、そこは押しても何も起こらないダミーなんです……」",
-        "佐々木「ちょっと！勝手に未定義の操作しないでください！」",
-        "佐々木「ええっと、マニュアルには……載ってないですね、このボタン」",
-        "佐々木「私に聞かれても困りますぅ！開発に聞いてください！」"
+        // ミア
+        "ミア「……ピッ、ピッ。無効な操作を受付ました。……なーんてね」",
+        "ミア「そこを押しても、パンケーキは出てこないわよ？」",
+        "ミア「私の魔法でも、そのボタンは直せないみたい」",
+        "ミア「エラー発生。原因は、あなたのその指」",
+        "ミア「……ねえ、遊んでないで早く本編を読んでよね」",
+        "ミア「ふふっ。そこはまだ準備中みたいね」"
       ];
       const randomMsg = messages[Math.floor(Math.random() * messages.length)];
-      
+
       const notImplOverlay = document.getElementById('not-implemented-overlay');
       const notImplModal = document.getElementById('not-implemented-modal');
-      
+
       if (notImplOverlay && notImplModal) {
         const p = notImplModal.querySelector('p');
         if (p) p.textContent = randomMsg;
-        
+
         notImplOverlay.classList.add('active');
         notImplModal.classList.add('active');
-        
+
         const closeNotImpl = () => {
           notImplOverlay.classList.remove('active');
           notImplModal.classList.remove('active');
         };
-        
+
         notImplOverlay.onclick = closeNotImpl;
-        
+
         // 自動で消えるタイマーを削除し、スクリーンショットが撮りやすいようにユーザーのアクションでのみ閉じるように変更
         if (notImplModal.hideTimeout) clearTimeout(notImplModal.hideTimeout);
       }
@@ -846,7 +766,7 @@ keypadBtns.forEach(btn => {
 
     localStorage.setItem('yomimono_terms_mode', newMode);
     currentTermsMode = newMode; // 状態更新
-    
+
     if (typeof updateSettingsButtonText === 'function') {
       updateSettingsButtonText(newMode);
     }
@@ -896,36 +816,23 @@ function extractTermsFromText(text, target) {
   const matchedIT = [];
   const matchedNovel = [];
 
-  // IT用語の抽出
+  // 専用用語（元IT用語枠）の抽出
   for (const key in ItTermDictionary) {
     const item = ItTermDictionary[key];
-    // "プロセス / バックグラウンド（通信）" のような表記を考慮し、/や（）で分割・クリーニング
     const searchWords = item.term.split(/[\/／（(]/).map(w => w.replace(/[）)]/g, '').trim()).filter(w => w.length > 0);
-    
-    // searchWords のいずれかがテキストに含まれていればヒット
     const isHit = searchWords.some(word => text.includes(word));
     if (isHit) {
       matchedIT.push(item);
     }
   }
 
-  const episodeSequence = [
-    'ep0000', 'ep0100', 'ep0200', 'ep0300', 'ep0400', 
-    'ep0500', 'ep0600', 'ep0700', 'ep0800', 'ep0900'
-  ];
-  const epIndex = episodeSequence.indexOf(target);
-  const ep5Index = episodeSequence.indexOf('ep0400'); // 旧ep0500（第5章: 第4話）
-  const allowNovelTerms = (epIndex === -1 || epIndex >= ep5Index);
-
-  // 小説用語の抽出（第5話以降のみ）
-  if (allowNovelTerms) {
-    for (const key in TermDictionary) {
-      const item = TermDictionary[key];
-      const searchWords = item.term.split(/[\/／（(]/).map(w => w.replace(/[）)]/g, '').trim()).filter(w => w.length > 0);
-      const isHit = searchWords.some(word => text.includes(word));
-      if (isHit) {
-        matchedNovel.push(item);
-      }
+  // 小説用語の抽出（制限なしで抽出）
+  for (const key in TermDictionary) {
+    const item = TermDictionary[key];
+    const searchWords = item.term.split(/[\/／（(]/).map(w => w.replace(/[）)]/g, '').trim()).filter(w => w.length > 0);
+    const isHit = searchWords.some(word => text.includes(word));
+    if (isHit) {
+      matchedNovel.push(item);
     }
   }
 
@@ -938,7 +845,7 @@ function extractTermsFromText(text, target) {
 function openTermModal(matchedIT, matchedNovel) {
   // 小説用語エリアの描画
   if (matchedNovel.length > 0) {
-    let html = '<h3 class="term-category-title">世界観・システム用語</h3>';
+    let html = '<h3 class="term-category-title">世界観・魔法用語</h3>';
     matchedNovel.forEach(item => {
       html += `
         <div class="term-item">
@@ -955,9 +862,9 @@ function openTermModal(matchedIT, matchedNovel) {
     termModalContentNovel.style.display = 'none';
   }
 
-  // IT用語エリアの描画
+  // その他の用語エリアの描画（元IT用語）
   if (matchedIT.length > 0) {
-    let html = '<h3 class="term-category-title">IT・開発専門用語</h3>';
+    let html = '<h3 class="term-category-title">その他専門用語</h3>';
     matchedIT.forEach(item => {
       html += `
         <div class="term-item">
@@ -980,7 +887,7 @@ function openTermModal(matchedIT, matchedNovel) {
 }
 
 function escapeHTML(str) {
-  return str.replace(/[&<>'"]/g, 
+  return str.replace(/[&<>'"]/g,
     tag => ({
       '&': '&amp;',
       '<': '&lt;',
