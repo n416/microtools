@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Language" content="ja" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<meta http-equiv="Content-Script-Type" content="text/javascript" />
+<title>ログイン｜みてみん</title>
+
+<meta name="GENERATOR" content="Torii Hina(birth:2008.3.3)" />
+<link rel="shortcut icon" type="image/vnd.microsoft.icon" href="/favicon.ico" />
+<link rel="icon" type="image/vnd.microsoft.icon" href="/favicon.ico" />
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css" />
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+<script type="text/javascript"><!--
+	var domain = 'mitemin.net';
+//--></script>
+<link rel="stylesheet" href="/view/css/style.css?t9varj" type="text/css"/>
+	<link rel="stylesheet" type="text/css" media="all" href="/view/css/entry.css?mwnoph" />
+<!--[if IE 6]><link rel="stylesheet" type="text/css" href="/view/css/ie6.css?mu35cu" /><![endif]-->
+<script type="text/javascript"><!--
+	var domain = 'mitemin.net';
+//--></script>
+<script type="text/javascript" src="/view/js/global.js?rpsrdb"></script>
+<script type="text/javascript" src="/view/js/function.js?n3fo56"></script>
+
+</head>
+<body>
+<div id="contents"  style="width: 950px;">
+
+	<div id="header">
+		<div id="title" style="float:left;">
+			<a href="https://mitemin.net/">
+					<img src="/view/images/title.gif?mwx1hb" alt="みてみん" width="183" height="50" border="0" id="top"/>
+			</a>
+
+		</div>
+
+		<div class="seach_form">
+			<form action="https://mitemin.net/search/search/" id="seach">
+				<table border="0" cellpadding="0" cellspacing="0" id="search_table">
+					<tr>
+						<td valign="top">
+							<input type="text" name="word" maxlength="100" style="width:300px; border:1px solid #AAAAAA;padding:3px;margin: 0;" />
+						</td>
+						<td>
+							&nbsp;&nbsp;<input alt="検索" value="検索" type="image" src="/view/images/submit_seach.gif?mu35cs" onclick="void(this.form.submit());return false;" />
+						</td>
+					</tr>
+					<tr>
+						<td align="right" colspan="2" style="padding-top: 5px;"><a href="https://mitemin.net/search/search/">すべての画像を見る</a></td>
+					</tr>
+				</table>
+			</form>
+		</div>
+		<div style="margin-top:20px;">
+							　ログインは画面右上メインメニューの「ログイン」から行ってください。
+					</div>
+
+	</div><!-- header -->
+
+	<div class="clear">　</div>
+
+			<div id="menu">
+			<div class="line">
+				 <a href="https://mitemin.net/bbs/attention/" class="myuser_menu">質問板</a> / <a href="https://mitemin.net/imageupload/input/" class="myuser_menu">画像投稿</a> / <a href="https://mitemin.net/useradd/mailinput/" class="myuser_menu">ユーザ登録</a> / <a href="https://mitemin.net/login/input/" class="myuser_menu">ログイン</a>　
+			</div>
+		</div>
+		<br />
+	<div id="content">
+	<div class="entry_form"><br />
+	<div style="padding-left: 30px;">
+	ログインしていません。<br />
+	以下からログインしてください。<br /><br />
+
+		<form action="/login/login/" id="formtable" method="post">
+		<table cellpadding="8">
+		  <tbody>
+		    <tr>
+		      <th align="right">Ｅメール：</th>
+		      <td><input size="40" type="text" name="miteminid" id="id" /></td>
+		    </tr>
+		    <tr>
+		      <th align="right">PASS：</th>
+		      <td><input size="20" type="password" name="pass" id="pass" /></td>
+		    </tr>
+		  </tbody>
+		</table>
+			<input type="hidden" name="redirectlink" value="" /><input type="hidden" name="redirecthash" value="" />
+		<input name="skip" type="checkbox" value="1" id="skip" /><label for="skip"> 次回から自動的にログイン</label>
+		<br /><br />
+		<p class="attention">ネットカフェや公共の場所など自分専用のパソコン以外では自動ログインのチェックをせず、使用後は必ずログアウトしてください。</p>
+		<input type="submit" value="LOGIN" id="login" />
+		</form>
+		<br /><a href="/login/replacepasswordinput/">⇒パスワード再発行</a>
+
+		<br /><br />
+		登録がお済みでない方は<a href="/useradd/mailinput/">こちら</a><br />
+	</div>
+	</div>
+</div>
+
+<script type="text/javascript"><!--
+$(function(){
+	$('#formtable').submit(function(event){
+		var error;
+		if(!$('#id').val().length){
+			error = 'メールアドレスを入力してください。';
+		}else if(!$('#pass').val().length){
+			error = 'パスワードを入力してください。';
+		}
+		if(error){
+			jqAlert(error, 'エラー');
+			return event.preventDefault();
+		}
+	});
+});
+//--></script>
+
+</div>
+<div class="clear">　</div>
+
+<div align="center" style="width:100%;float:none;">
+ <a href="https://blog.mitemin.net/">公式ブログ</a> | <a href="https://hinaproject.co.jp/">運営会社</a> | <a href="/kiyaku/userentry/">利用規約</a> | <a href="/faq/top/">FAQ</a> | <a href="/inquire/input/">お問い合わせ</a><br />
+みてみんへのリンクやご紹介はご自由にどうぞ。<br />
+<br />企画＆運営<br /><a href="https://hinaproject.co.jp/">HinaProject Inc.</a><br /><br /></div>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HFK9BC4V3J"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-HFK9BC4V3J');
+</script>
+
+</body>
+</html>

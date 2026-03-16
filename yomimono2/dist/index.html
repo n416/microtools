@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>灰の少年と、三百年の魔女</title>
+    <script type="module" crossorigin src="./assets/main-DheCPn9A.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/main-CtbSxyHi.css">
+  </head>
+  <body class="fake-mode">
+    <div id="app">
+      <button id="mobile-menu-btn" class="glass-btn" aria-label="メニューを開く">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <div id="mobile-overlay"></div>
+      <nav id="sidebar" class="glass-panel">
+        <div class="sidebar-header">
+          <h1 id="site-title">灰の少年と、三百年の魔女</h1>
+          <p id="site-subtitle" class="subtitle">完全設定資料・最終完成版</p>
+          <button id="btn-reset-state" class="btn-normal-prev" style="width:100%; font-size: 0.9rem; padding: 8px; margin-bottom: 20px;">初めから読み直す</button>
+        </div>
+        <div id="nav-container">
+          <details class="nav-group item-list" open>
+            <summary>マニュアル項目</summary>
+            <ul id="nav-links">
+              <li><a href="#" data-target="plot">プロット</a></li>
+              <li><a href="#" data-target="character">登場人物</a></li>
+              <li><a href="#" data-target="world">世界観設定</a></li>
+              <li><a href="#" data-target="ep0000">第一章（プロローグ）</a></li>
+            </ul>
+          </details>
+        </div>
+        <div class="settings-toggle" style="position: relative;">
+          <label class="settings-label">用語解説の表示設定</label>
+          <button id="btn-open-settings" class="glass-btn btn-open-settings" style="width: 100%; text-align: left; padding: 10px;">設定を変更する</button>
+          <div id="settings-tooltip" class="settings-tooltip">
+            設定を変更したい時は、ここから再度選べます
+          </div>
+        </div>
+      </nav>
+      <main id="content-area" class="glass-panel">
+        <div id="markdown-container">
+          <!-- Markdown content will be loaded here -->
+        </div>
+      </main>
+
+      <!-- 用語解説モーダル -->
+      <div id="term-modal-overlay" class="modal-overlay"></div>
+      <div id="term-modal" class="glass-panel modal-panel">
+        <div class="modal-header">
+          <h2>この話の用語解説</h2>
+          <button id="close-term-modal" aria-label="閉じる">×</button>
+        </div>
+        <div class="modal-content">
+          <div id="term-modal-content-term" class="term-section"></div>
+          <div id="term-modal-content-it" class="term-section"></div>
+        </div>
+      </div>
+
+      <!-- 初期設定モーダル -->
+      <div id="initial-settings-overlay" class="modal-overlay"></div>
+      <div id="initial-settings-modal" class="glass-panel modal-panel" style="max-width: 400px; text-align: center;">
+        <div class="modal-header" style="justify-content: flex-end; padding: 10px 15px; border-bottom: none;">
+          <button id="close-initial-modal" aria-label="閉じる" style="background: none; border: none; color: var(--text-color); font-size: 2rem; cursor: pointer;">×</button>
+        </div>
+        <div class="modal-content" style="padding: 0px 20px 30px;">
+          <p style="font-size: 1.1rem; line-height: 1.8; margin-bottom: 30px; text-align: left; display: inline-block;">
+            専門用語の表示モードを選択してください。<br><br>
+            <strong>[1] 隠蔽</strong>（解説非表示）<br>
+            <strong>[2] 通常</strong>（詳細な注釈）<br>
+            <strong>[3] 翻訳</strong>（平易な言葉）<br>
+            <strong>[4] ルビ</strong>（初回ルビ＋注釈）<br><br>
+            希望の番号をキーパッドから入力して下さい。<br>
+            <span style="font-size:0.9rem; color:#88b;">※未定義キーの押下もお試し下さい。</span>
+          </p>
+          <div class="phone-keypad">
+            <button class="keypad-btn" data-key="1">1</button>
+            <button class="keypad-btn" data-key="2">2</button>
+            <button class="keypad-btn" data-key="3">3</button>
+            <button class="keypad-btn" data-key="4">4</button>
+            <button class="keypad-btn" data-key="5">5</button>
+            <button class="keypad-btn" data-key="6">6</button>
+            <button class="keypad-btn" data-key="7">7</button>
+            <button class="keypad-btn" data-key="8">8</button>
+            <button class="keypad-btn" data-key="9">9</button>
+            <div class="keypad-spacer"></div>
+            <button class="keypad-btn" data-key="0">0</button>
+            <div class="keypad-spacer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 未実装通知モーダル -->
+      <div id="not-implemented-overlay" class="modal-overlay" style="z-index: 3000;"></div>
+      <div id="not-implemented-modal" class="glass-panel modal-panel" style="z-index: 3001; max-width: 300px; text-align: center;">
+        <div class="modal-content" style="padding: 20px;">
+          <p style="font-size: 1.1rem; margin: 0; color: var(--text-color); font-weight: bold;">（現在実装中です！）</p>
+        </div>
+      </div>
+
+      <!-- 暗転・グリッチオーバーレイ -->
+      <div id="chapter-end-overlay">
+        <div class="text-glitch">FATAL ERROR</div>
+      </div>
+
+    </div>
+  </body>
+</html>
