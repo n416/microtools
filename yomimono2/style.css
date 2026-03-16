@@ -1,41 +1,41 @@
 :root {
-  /* フェイクモード（デフォルト：抑圧されたオフィス風） */
-  --bg-color: #f0f2f5;
-  --text-color: #333333;
-  --accent-color: #0066cc;
-  --accent-glow: rgba(0, 102, 204, 0.2);
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(0, 0, 0, 0.1);
+  /* フェイクモード（デフォルト：古い書類風） */
+  --bg-color: #f7f3e8;
+  --text-color: #2c251e;
+  --accent-color: #8c6b3e;
+  --accent-glow: rgba(140, 107, 62, 0.2);
+  --glass-bg: rgba(245, 240, 225, 0.85);
+  --glass-border: rgba(140, 107, 62, 0.15);
   --sidebar-width: 300px;
-  --bg-gradient: linear-gradient(135deg, #e6e9f0 0%, #eef1f5 100%);
-  --h1-color: #333;
-  --active-text: #0066cc;
-  --active-bg: rgba(0, 102, 204, 0.1);
+  --bg-gradient: linear-gradient(135deg, #eee8d5 0%, #fdf6e3 100%);
+  --h1-color: #2c251e;
+  --active-text: #8c6b3e;
+  --active-bg: rgba(140, 107, 62, 0.1);
   --highlight-glow: rgba(255, 255, 255, 0.4);
   --highlight-glow-strong: rgba(255, 255, 255, 0.8);
 }
 
 body.true-mode {
-  /* トゥルーモード（本編：サイバーダーク風） */
-  --bg-color: #0f111a;
-  --text-color: #c9d1d9;
-  --accent-color: #00ffcc;
-  --accent-glow: rgba(0, 255, 204, 0.4);
-  --glass-bg: rgba(20, 25, 35, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --bg-gradient: radial-gradient(circle at 15% 50%, rgba(0, 255, 204, 0.05), transparent 25%),
-                 radial-gradient(circle at 85% 30%, rgba(200, 50, 255, 0.05), transparent 25%);
+  /* トゥルーモード（本編：深い夜間魔法の森風 / アンティーク魔導書） */
+  --bg-color: #1a1714;
+  --text-color: #dce0d9;
+  --accent-color: #cba052;
+  --accent-glow: rgba(203, 160, 82, 0.3);
+  --glass-bg: rgba(26, 23, 20, 0.7);
+  --glass-border: rgba(203, 160, 82, 0.15);
+  --bg-gradient: radial-gradient(circle at 10% 20%, rgba(203, 160, 82, 0.05), transparent 40%),
+                 radial-gradient(circle at 90% 80%, rgba(100, 120, 150, 0.05), transparent 40%);
   --h1-color: var(--accent-color);
-  --active-text: #fff;
-  --active-bg: rgba(0, 255, 204, 0.1);
+  --active-text: #f0e6d2;
+  --active-bg: rgba(203, 160, 82, 0.15);
   --highlight-glow: var(--accent-glow);
-  --highlight-glow-strong: var(--accent-glow);
+  --highlight-glow-strong: rgba(203, 160, 82, 0.5);
 }
 
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-family: 'Shippori Mincho', 'Noto Serif JP', serif;
   background-color: var(--bg-color);
   color: var(--text-color);
   background: var(--bg-gradient);
@@ -44,7 +44,7 @@ body {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  transition: background-color 0.5s ease, color 0.5s ease;
+  transition: background-color 1s ease, color 1s ease;
 }
 
 #app {
@@ -54,31 +54,23 @@ body {
   /* transition: filter 0.1s; がスタッキングコンテキストを生成している可能性があるので一旦外すか、必要時のみ付与する */
 }
 
-/* クールなハッキング＆反転エフェクト */
+/* 優雅なフェードインエフェクト（グリッチの代用） */
 body.glitching #app {
-  animation: cyber-transition 2s cubic-bezier(0.8, 0, 0.2, 1) forwards;
+  animation: magic-transition 1.5s ease-in-out forwards;
 }
 
-@keyframes cyber-transition {
+@keyframes magic-transition {
   0% { 
-    filter: blur(0px) contrast(100%);
+    filter: blur(0px) brightness(1);
     opacity: 1;
-    transform: scale(1);
   }
-  30% {
-    filter: blur(10px) contrast(200%) hue-rotate(90deg);
-    opacity: 0.5;
-    transform: scale(0.98);
-  }
-  60% {
-    filter: blur(20px) contrast(300%) invert(20%);
-    opacity: 0.1;
-    transform: scale(1.02);
+  50% {
+    filter: blur(4px) brightness(1.5);
+    opacity: 0.8;
   }
   100% {
-    filter: blur(0px) contrast(100%);
+    filter: blur(0px) brightness(1);
     opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -103,10 +95,10 @@ body.glitching #app {
 }
 
 .sidebar-header h1 {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   color: var(--accent-color);
   margin: 0 0 5px 0;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   text-shadow: 0 0 10px var(--accent-glow);
 }
 
@@ -369,7 +361,7 @@ body.true-mode .btn-glitch-next:hover {
   letter-spacing: normal;
 }
 
-/* Chapter End Overlay */
+/* Chapter End Overlay (柔らかいフェード暗転) */
 #chapter-end-overlay {
   position: fixed;
   top: 0;
@@ -377,18 +369,18 @@ body.true-mode .btn-glitch-next:hover {
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  background-color: #000;
-  color: #fff;
+  background-color: #0b0907; /* 深い暗色 */
+  color: var(--accent-color);
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 3rem;
-  font-weight: bold;
-  letter-spacing: 0.5em;
+  font-size: 2.5rem;
+  letter-spacing: 0.3em;
   opacity: 0;
   pointer-events: none;
   z-index: 9999;
-  transition: opacity 2s ease-in-out;
+  transition: opacity 2.5s ease-in-out;
+  font-family: 'Shippori Mincho', serif;
 }
 
 #chapter-end-overlay.visible {
@@ -397,16 +389,13 @@ body.true-mode .btn-glitch-next:hover {
 }
 
 #chapter-end-overlay .text-glitch {
-  animation: end-text-flicker 3s infinite alternate;
+  animation: end-text-fade 4s infinite alternate ease-in-out;
+  text-shadow: 0 0 20px rgba(203, 160, 82, 0.4);
 }
 
-@keyframes end-text-flicker {
-  0% { text-shadow: 2px 0 0 #ff003c, -2px 0 0 #00ffcc; opacity: 1; }
-  5% { text-shadow: -2px 0 0 #ff003c, 2px 0 0 #00ffcc; opacity: 0.8; }
-  10% { text-shadow: 2px 0 0 #ff003c, -2px 0 0 #00ffcc; opacity: 1; }
-  15% { opacity: 0.5; }
-  20% { opacity: 1; }
-  100% { text-shadow: 0 0 10px rgba(255,255,255,0.8); }
+@keyframes end-text-fade {
+  0% { opacity: 0.5; transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* モバイル対応（レスポンシブ） */
