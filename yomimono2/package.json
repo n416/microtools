@@ -1,0 +1,29 @@
+{
+  "name": "yomimono-wiki",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "prepare-terms": "node scripts/prepare_terms.js",
+    "predev": "npm run prepare-terms",
+    "dev": "vite",
+    "prebuild": "npm run prepare-terms",
+    "build": "vite build",
+    "postbuild": "node scripts/postbuild_mdx.js && node scripts/export_novel.js && node scripts/export_docx.js && node scripts/export_novel.js --no-terms && node scripts/export_docx.js --no-terms && node scripts/export_novel.js --simple-terms && node scripts/export_docx.js --simple-terms && node scripts/export_novel.js --ruby-terms && node scripts/export_docx.js --ruby-terms",
+    "preview": "vite preview",
+    "login": "node scripts/open_playwright_profile.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "playwright": "^1.58.2",
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.8.11",
+    "diff": "^8.0.3",
+    "dompurify": "^3.3.2",
+    "jsdom": "^28.1.0",
+    "marked": "^12.0.0",
+    "pizzip": "^3.2.0"
+  }
+}
