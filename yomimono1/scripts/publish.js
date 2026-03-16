@@ -8,7 +8,7 @@ import publishKakuyomu from './publish_kakuyomu.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const distSettingsDir = path.resolve(__dirname, '../dist/settings');
+const distSettingsDir = path.resolve(__dirname, '../dist/export_resolved_ruby');
 
 async function main() { // 引数解析
   const fileName = process.argv[2]; // This is the 'target' from original
