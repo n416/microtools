@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 const isNoTerms = process.argv.includes('--no-terms');
 const isSimpleTerms = process.argv.includes('--simple-terms');
 const isRubyTerms = process.argv.includes('--ruby-terms');
+const isRubyP2Terms = process.argv.includes('--ruby-p2-terms');
 
 const templatePath = 'sample_format.docx';
 let inputPath = 'output_novel.txt';
@@ -24,9 +25,12 @@ if (isNoTerms) {
 } else if (isRubyTerms) {
   inputPath = 'output_novel_ruby.txt';
   outputPath = 'output_novel_ruby.docx';
+} else if (isRubyP2Terms) {
+  inputPath = 'output_novel_ruby_p2.txt';
+  outputPath = 'output_novel_ruby_p2.docx';
 }
 
-console.log(`Generating docx... (no-terms: ${isNoTerms}, simple-terms: ${isSimpleTerms}, ruby-terms: ${isRubyTerms})`);
+console.log(`Generating docx... (no-terms: ${isNoTerms}, simple-terms: ${isSimpleTerms}, ruby-terms: ${isRubyTerms}, ruby-p2-terms: ${isRubyP2Terms})`);
 
 try {
   // Read docx zip
@@ -104,6 +108,57 @@ try {
       }
   }
 
+  function appendTextRun(parentP, textStr) {
+      if (!isRubyP2Terms) {
+          const r = doc.createElement('w:r');
+          const t = doc.createElement('w:t');
+          t.setAttribute('xml:space', 'preserve');
+          t.appendChild(doc.createTextNode(textStr));
+          r.appendChild(t);
+          parentP.appendChild(r);
+          return;
+      }
+
+      const tcyRegex = /(\!\!|\!\?|\?\!|\d{2})/g;
+      let tMatch;
+      let tLastIndex = 0;
+      while ((tMatch = tcyRegex.exec(textStr)) !== null) {
+          if (tMatch.index > tLastIndex) {
+              const plain = textStr.substring(tLastIndex, tMatch.index);
+              const r = doc.createElement('w:r');
+              const t = doc.createElement('w:t');
+              t.setAttribute('xml:space', 'preserve');
+              t.appendChild(doc.createTextNode(plain));
+              r.appendChild(t);
+              parentP.appendChild(r);
+          }
+          
+          const tcyText = tMatch[1];
+          const tcyR = doc.createElement('w:r');
+          const tcyRPr = doc.createElement('w:rPr');
+          const eastAsianLayout = doc.createElement('w:eastAsianLayout');
+          eastAsianLayout.setAttribute('w:id', '1');
+          eastAsianLayout.setAttribute('w:combine', '1');
+          tcyRPr.appendChild(eastAsianLayout);
+          tcyR.appendChild(tcyRPr);
+          const tcyT = doc.createElement('w:t');
+          tcyT.appendChild(doc.createTextNode(tcyText));
+          tcyR.appendChild(tcyT);
+          parentP.appendChild(tcyR);
+
+          tLastIndex = tcyRegex.lastIndex;
+      }
+      if (tLastIndex < textStr.length) {
+          const plain = textStr.substring(tLastIndex);
+          const r = doc.createElement('w:r');
+          const t = doc.createElement('w:t');
+          t.setAttribute('xml:space', 'preserve');
+          t.appendChild(doc.createTextNode(plain));
+          r.appendChild(t);
+          parentP.appendChild(r);
+      }
+  }
+
   for (let i = 0; i < lines.length; i++) {
       let line = lines[i].replace(/\r$/, '');
       
@@ -164,12 +219,7 @@ try {
               // Add normal text before the ruby tag
               if (match.index > lastIndex) {
                   const preText = line.substring(lastIndex, match.index);
-                  const preR = doc.createElement('w:r');
-                  const preT = doc.createElement('w:t');
-                  preT.setAttribute('xml:space', 'preserve');
-                  preT.appendChild(doc.createTextNode(preText));
-                  preR.appendChild(preT);
-                  newP.appendChild(preR);
+                  appendTextRun(newP, preText);
               }
 
               const baseText = match[1];
@@ -228,12 +278,7 @@ try {
           // Add any remaining text
           if (lastIndex < line.length) {
               const postText = line.substring(lastIndex);
-              const postR = doc.createElement('w:r');
-              const postT = doc.createElement('w:t');
-              postT.setAttribute('xml:space', 'preserve');
-              postT.appendChild(doc.createTextNode(postText));
-              postR.appendChild(postT);
-              newP.appendChild(postR);
+              appendTextRun(newP, postText);
           }
       }
       

@@ -5,6 +5,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 import { cleanMarkdown, stripMarkdown } from './utils_novel.js';
+import { formatForVerticalText } from './utils_vertical_format.js';
 import { sortEpisodes, episodeSequence } from '../episode_sequence.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,6 +19,7 @@ const purify = DOMPurify(window);
 const isNoTerms = process.argv.includes('--no-terms');
 const isSimpleTerms = process.argv.includes('--simple-terms');
 const isRubyTerms = process.argv.includes('--ruby-terms');
+const isRubyP2Terms = process.argv.includes('--ruby-p2-terms');
 
 // ディレクトリ設定
 let distSettingsDir = path.resolve(__dirname, '../dist/export_resolved');
@@ -36,8 +38,11 @@ if (isNoTerms) {
   distSettingsDir = path.resolve(__dirname, '../dist/export_resolved_ruby');
   outputTxtPath = path.resolve(__dirname, '../output_novel_ruby.txt');
   outputHtmlPath = path.resolve(__dirname, '../output_novel_ruby.html');
+} else if (isRubyP2Terms) {
+  distSettingsDir = path.resolve(__dirname, '../dist/export_resolved_ruby_p2');
+  outputTxtPath = path.resolve(__dirname, '../output_novel_ruby_p2.txt');
+  outputHtmlPath = path.resolve(__dirname, '../output_novel_ruby_p2.html');
 }
-
 
 function buildExports() {
   if (!fs.existsSync(distSettingsDir)) {
@@ -64,6 +69,11 @@ function buildExports() {
       chapterCounter++;
     }
 
+    if (isRubyP2Terms) {
+      // 3点リーダー（…）を縦3点リーダー（︙）に置換
+      content = content.replace(/…/g, '︙');
+    }
+
     // UIコンポーネント用HTMLタグなどを抽出除去
     const cleanedContent = cleanMarkdown(content);
     
@@ -71,8 +81,14 @@ function buildExports() {
   });
 
   // ========== txt出力 (Markdownテキスト → プレーンテキスト) ==========
-  const preserveGlossary = !isNoTerms && !isSimpleTerms && !isRubyTerms;
-  const plainTextNovel = stripMarkdown(fullMarkdown, { preserveGlossary });
+  const preserveGlossary = !isNoTerms && !isSimpleTerms && !isRubyTerms && !isRubyP2Terms;
+  let plainTextNovel = stripMarkdown(fullMarkdown, { preserveGlossary });
+
+  // --ruby-p2-terms の場合は縦書き用に全角化・漢数字変換を行う
+  if (isRubyP2Terms) {
+    plainTextNovel = formatForVerticalText(plainTextNovel);
+  }
+
   fs.writeFileSync(outputTxtPath, plainTextNovel, 'utf-8');
   console.log(`[Success] Crated Text Novel: ${outputTxtPath}`);
 
