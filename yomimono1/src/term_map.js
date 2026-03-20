@@ -48,7 +48,7 @@ export const TermFirstAppearanceMap = {
   "dithering": "ep0400",
   "anti_aliasing": "ep0400",
   "server_room": "ep0400",
-  "hardware_bug": "ep0400",
+  "hardware_bug": "ep0450",
   "overlay": "ep0500",
   "noise": "ep0500",
   "rollback": "ep0500",

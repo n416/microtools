@@ -22,6 +22,8 @@ const exportSettingsNoTermsDir = path.join(projectRoot, 'dist', 'export_resolved
 const exportSettingsSimpleDir = path.join(projectRoot, 'dist', 'export_resolved_simple');
 // 出力先 (エクスポート用：ルビモード)
 const exportSettingsRubyDir = path.join(projectRoot, 'dist', 'export_resolved_ruby');
+// 出力先 (エクスポート用：印刷用ルビモード)
+const exportSettingsRubyP2Dir = path.join(projectRoot, 'dist', 'export_resolved_ruby_p2');
 
 function resolveCharacters(text) {
   return text.replace(/<Char\s+role="([^"]+)"(?:\s+callrole="([^"]+)")?\s+var="([^"]+)"\s*\/>/g, (match, role, callrole, variant) => {
@@ -67,6 +69,19 @@ function resolveTerms(text, currentEpisode, mode = 'expert') {
       if (termData.simple_term && TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
         localSeen.add(id);
         return `｜${displayStr}《${termData.simple_term}》`;
+      }
+      localSeen.add(id);
+      return displayStr;
+    }
+
+    if (mode === 'ruby-p2') {
+      if (termData.skip_print_ruby) {
+        return displayStr;
+      }
+      const rubyText = termData.print_ruby || termData.simple_term;
+      if (rubyText && TermFirstAppearanceMap[id] === currentEpisode && !localSeen.has(id)) {
+        localSeen.add(id);
+        return `${displayStr}《${rubyText}》`;
       }
       localSeen.add(id);
       return displayStr;
@@ -124,6 +139,9 @@ function processMdxFilesInDist() {
   if (!fs.existsSync(exportSettingsRubyDir)) {
     fs.mkdirSync(exportSettingsRubyDir, { recursive: true });
   }
+  if (!fs.existsSync(exportSettingsRubyP2Dir)) {
+    fs.mkdirSync(exportSettingsRubyP2Dir, { recursive: true });
+  }
 
   const files = fs.readdirSync(distSettingsDir);
   let processedCount = 0;
@@ -141,11 +159,13 @@ function processMdxFilesInDist() {
         const noTermsResolved = resolveTerms(charResolved, currentEpisode, 'ignore');
         const simpleTermsResolved = resolveTerms(charResolved, currentEpisode, 'simple');
         const rubyTermsResolved = resolveTerms(charResolved, currentEpisode, 'ruby');
+        const rubyP2TermsResolved = resolveTerms(charResolved, currentEpisode, 'ruby-p2');
 
         const formattedFullyResolved = addSpaceAfterPunctuation(fullyResolved);
         const formattedNoTermsResolved = addSpaceAfterPunctuation(noTermsResolved);
         const formattedSimpleResolved = addSpaceAfterPunctuation(simpleTermsResolved);
         const formattedRubyResolved = addSpaceAfterPunctuation(rubyTermsResolved);
+        const formattedRubyP2Resolved = addSpaceAfterPunctuation(rubyP2TermsResolved);
   
         // エクスポート用ディレクトリに書き出す（dist/settingsの元ファイルは維持する）
         const outPath = path.join(exportSettingsDir, file);
@@ -163,7 +183,11 @@ function processMdxFilesInDist() {
         const outPathRuby = path.join(exportSettingsRubyDir, file);
         fs.writeFileSync(outPathRuby, formattedRubyResolved, 'utf-8');
 
-        console.log(`[postbuild] Tags resolved in: ${file} (expert/ignore/simple/ruby)`);
+        // 印刷用ルビモード用のディレクトリにも書き出す
+        const outPathRubyP2 = path.join(exportSettingsRubyP2Dir, file);
+        fs.writeFileSync(outPathRubyP2, formattedRubyP2Resolved, 'utf-8');
+
+        console.log(`[postbuild] Tags resolved in: ${file} (expert/ignore/simple/ruby/ruby-p2)`);
         processedCount++;
       }
   });
