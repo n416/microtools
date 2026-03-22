@@ -162,7 +162,7 @@ async function loadMarkdown(target) {
     const charResolved = resolveCharacters(markdownText);
     const fullyResolved = resolveTerms(charResolved, target);
     const formatted = addSpaceAfterPunctuation(fullyResolved);
-    const html = marked(formatted);
+    const html = marked.parse(formatted, { breaks: true });
     const cleanHtml = DOMPurify.sanitize(html);
     markdownContainer.innerHTML = cleanHtml;
 
