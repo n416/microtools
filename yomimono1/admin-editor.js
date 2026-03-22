@@ -77,6 +77,16 @@ class TagWidget extends WidgetType {
     }
   }
 
+  eq(other) {
+    return this.tagName === other.tagName &&
+           this.isClosing === other.isClosing &&
+           this.rawAttrs === other.rawAttrs;
+  }
+
+  ignoreEvent() {
+    return false;
+  }
+
   toDOM(view) {
     const span = document.createElement("span");
     span.className = "cm-tag-widget";
@@ -323,6 +333,10 @@ async function fetchRawContent() {
         updateListener,
         EditorView.lineWrapping,
         tagPlugin,
+        EditorView.atomicRanges.of(view => {
+            let plugin = view.plugin(tagPlugin);
+            return plugin ? plugin.decorations : Decoration.none;
+        }),
         povTriggerField,
         povPlugin
       ],
