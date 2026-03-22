@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.8.11",
+    "codemirror": "^6.0.2",
     "diff": "^8.0.3",
     "dompurify": "^3.3.2",
     "jsdom": "^28.1.0",

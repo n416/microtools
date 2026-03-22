@@ -13,6 +13,22 @@
       <div class="header-left">
         <a href="/admin.html" class="back-link">← 管理画面に戻る</a>
         <h1 class="editor-title" id="file-name-display">ファイル読み込み中...</h1>
+        <div class="pov-selector">
+          <label for="default-pov-select">デフォルト視点:</label>
+          <select id="default-pov-select" class="pov-select">
+            <option value="">なし（チェック無効）</option>
+            <option value="土屋">土屋</option>
+            <option value="雨宮">雨宮</option>
+            <option value="小林">小林</option>
+            <option value="鉄">鉄</option>
+            <option value="黒須">黒須</option>
+          </select>
+        </div>
+        <div class="insert-toolbar">
+          <button id="btn-insert-char" class="action-btn insert-btn">+ Char</button>
+          <button id="btn-insert-pov" class="action-btn insert-btn">+ POV</button>
+          <button id="btn-insert-term" class="action-btn insert-btn">+ Term</button>
+        </div>
       </div>
       <div class="header-right">
         <div id="status-indicator" class="status-indicator"></div>
@@ -23,7 +39,7 @@
     <main class="editor-main">
       <section class="pane edit-pane">
         <h2 class="pane-title">Markdown / HTML (編集)</h2>
-        <textarea id="markdown-input" class="editor-textarea" placeholder="ここにマークダウンを入力..."></textarea>
+        <div id="editor-container-cm" class="editor-cm-wrapper"></div>
       </section>
       
       <section class="pane preview-pane">
@@ -31,6 +47,23 @@
         <div id="preview-output" class="preview-content"></div>
       </section>
     </main>
+  </div>
+
+  <!-- Tag Edit Modal -->
+  <div id="tag-edit-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">タグの編集</h3>
+        <button id="modal-close-btn" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-attributes-container">
+        <!-- Input fields will be dynamically generated here -->
+      </div>
+      <div class="modal-footer">
+        <button id="modal-cancel-btn" class="action-btn cancel-btn">キャンセル</button>
+        <button id="modal-save-btn" class="action-btn save-btn">更新する</button>
+      </div>
+    </div>
   </div>
 
   <div id="toast-container" class="toast-container"></div>
