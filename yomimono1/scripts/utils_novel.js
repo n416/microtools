@@ -49,7 +49,7 @@ export function stripMarkdown(text, options = {}) {
   // plain = plain.replace(/^\d+\.\s+/gm, '');
   // エピソード境界用の長いダッシュ(40個)は削除し、マークダウンの水平線(3個以上)は kore.txt に合わせて '＊' へ変換
   plain = plain.replace(/^-{40,}\s*$/gm, '');
-  plain = plain.replace(/\n*^[-*_]{3,}\s*$\n*/gm, '\n\n＊\n\n');
+  plain = plain.replace(/\n*^[-*_]{3,}\s*$\n*/gm, '\n\n　　　◆\n\n');
 
   // 4つ以上連続する改行があれば3つにまとめる（見出し前後の空白行装飾を保護するため）
   plain = plain.replace(/\n{4,}/g, '\n\n\n');
