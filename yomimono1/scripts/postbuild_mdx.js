@@ -12,8 +12,8 @@ const __dirname = path.dirname(__filename);
 
 // プロジェクトのルートディレクトリ
 const projectRoot = path.join(__dirname, '..');
-// 入力元 (Viteのデフォルトのdistフォルダの下のsettings)
-const distSettingsDir = path.join(projectRoot, 'dist', 'settings');
+// 入力元 (生ソースであるpublicファルダの下のsettingsを直接読むように変更)
+const distSettingsDir = path.join(projectRoot, 'public', 'settings');
 // 出力先 (エクスポート用：用語解説あり)
 const exportSettingsDir = path.join(projectRoot, 'dist', 'export_resolved');
 // 出力先 (エクスポート用：用語解説なし)
@@ -123,7 +123,6 @@ function resolveTerms(text, currentEpisode, mode = 'expert') {
 function processMdxFilesInDist() {
   if (!fs.existsSync(distSettingsDir)) {
     console.error(`Error: Directory not found: ${distSettingsDir}`);
-    console.error('このスクリプトは "vite build" の直後にのみ実行してください。');
     process.exit(1);
   }
 
