@@ -51,7 +51,6 @@ export const TermFirstAppearanceMap = {
   "protocol": "ep0450",
   "hardware_bug": "ep0450",
   "overlay": "ep0500",
-  "rollback": "ep0500",
   "noise": "ep0500",
   "tuner": "ep0500",
   "anchor": "ep0500",
