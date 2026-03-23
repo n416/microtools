@@ -9,7 +9,7 @@
     "dev": "vite",
     "prebuild": "npm run prepare-terms",
     "build": "vite build",
-    "postbuild": "node scripts/postbuild_mdx.js && node scripts/export_novel.js && node scripts/export_docx.js && node scripts/export_novel.js --no-terms && node scripts/export_docx.js --no-terms && node scripts/export_novel.js --simple-terms && node scripts/export_docx.js --simple-terms && node scripts/export_novel.js --ruby-terms && node scripts/export_docx.js --ruby-terms && node scripts/export_novel.js --ruby-p2-terms && node scripts/export_docx.js --ruby-p2-terms",
+    "postbuild": "node scripts/postbuild_mdx.js && node scripts/export_novel.js && node scripts/export_docx.js && node scripts/export_novel.js --no-terms && node scripts/export_docx.js --no-terms && node scripts/export_novel.js --simple-terms && node scripts/export_docx.js --simple-terms && node scripts/export_novel.js --ruby-terms && node scripts/export_docx.js --ruby-terms && node scripts/export_novel.js --ruby-p2-terms && node scripts/export_docx.js --ruby-p2-terms && node scripts/postprocess_docx.js --ruby-p2-terms",
     "preview": "vite preview",
     "login": "node scripts/open_playwright_profile.js"
   },
