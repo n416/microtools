@@ -23,7 +23,7 @@ export function formatForVerticalText(text) {
   text = text.replace(/！？/g, '!?');
   text = text.replace(/？！/g, '?!');
 
-  // 単独の!と?は全角化するが、一時的に対象外マーカーへ退避
+  //単独の!と?は全角化するが、一時的に対象外マーカーへ退避
   text = text.replace(/!!/g, '@@DOUBLE_EXCL@@');
   text = text.replace(/!\?/g, '@@EXCL_QUEST@@');
   text = text.replace(/\?!/g, '@@QUEST_EXCL@@');
@@ -34,6 +34,17 @@ export function formatForVerticalText(text) {
   text = text.replace(/@@DOUBLE_EXCL@@/g, '!!');
   text = text.replace(/@@EXCL_QUEST@@/g, '!?');
   text = text.replace(/@@QUEST_EXCL@@/g, '?!');
+
+  // 2.5 縦中横の対象となる2文字の英数字混在文字列（例: 3D, 4K）の一時退避
+  let tcyAlphanumIndex = 0;
+  const tcyAlphanumMap = {};
+  text = text.replace(/(?<![0-9A-Za-z])(?:[0-9][A-Za-z]|[A-Za-z][0-9])(?![0-9A-Za-z])/g, (match) => {
+    const safeIndex = tcyAlphanumIndex.toString().split('').map(d => 'abcdefghij'[parseInt(d, 10)]).join('');
+    const placeholder = `__tcymix${safeIndex}__`;
+    tcyAlphanumMap[placeholder] = match;
+    tcyAlphanumIndex++;
+    return placeholder;
+  });
 
   // 3. 英語の表記揺れ対応（文字数や大文字小文字による寝かせ・立たせ判定）
   // 大文字1〜3文字（前後に英字が続かないもの）は全角化して立たせる（例: IT, BPM）
@@ -66,6 +77,11 @@ export function formatForVerticalText(text) {
   // 5. 場面転換タグ（単独の「＊」）の自動字下げ
   // 行に「＊」しか存在しない場合、自動的に全角スペース4個の字下げを行う（縦書きレイアウトの中央揃えの代替）
   text = text.replace(/^[ 　]*＊[ 　]*$/gm, '　　　　＊');
+
+  // 退避した縦中横用の英数字を復元
+  for (const placeholder in tcyAlphanumMap) {
+    text = text.replace(new RegExp(placeholder, 'g'), tcyAlphanumMap[placeholder]);
+  }
 
   return text;
 }
