@@ -119,7 +119,7 @@ try {
           return;
       }
 
-      const tcyRegex = /(\!\!|\!\?|\?\!|\d{2})/g;
+      const tcyRegex = /(\!\!|\!\?|\?\!|\d{2}|(?<![0-9A-Za-z])(?:[0-9][A-Za-z]|[A-Za-z][0-9])(?![0-9A-Za-z]))/g;
       let tMatch;
       let tLastIndex = 0;
       while ((tMatch = tcyRegex.exec(textStr)) !== null) {
@@ -136,9 +136,18 @@ try {
           const tcyText = tMatch[1];
           const tcyR = doc.createElement('w:r');
           const tcyRPr = doc.createElement('w:rPr');
+          
+          const rFonts = doc.createElement('w:rFonts');
+          rFonts.setAttribute('w:hint', 'eastAsia');
+          tcyRPr.appendChild(rFonts);
+
           const eastAsianLayout = doc.createElement('w:eastAsianLayout');
           eastAsianLayout.setAttribute('w:id', '1');
-          eastAsianLayout.setAttribute('w:combine', '1');
+          
+          // 2桁数字、記号（!!, !?, ?!）、混在英数字（3D等）すべてWord設定に準拠した回転＋圧縮に統一
+          eastAsianLayout.setAttribute('w:vert', '1');
+          eastAsianLayout.setAttribute('w:vertCompress', '1');
+
           tcyRPr.appendChild(eastAsianLayout);
           tcyR.appendChild(tcyRPr);
           const tcyT = doc.createElement('w:t');
