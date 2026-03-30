@@ -84,5 +84,17 @@ export const SidebarNavItems = [
   {
     "target": "ep0160",
     "title": "0160『似て非なる者たちの問答』"
+  },
+  {
+    "target": "ep0170",
+    "title": "0170『狂い咲く睡蓮と、魔女の激昂』"
+  },
+  {
+    "target": "ep0180",
+    "title": "0180『過去への術式と、帰る場所』"
+  },
+  {
+    "target": "ep0190",
+    "title": "0190『エピローグ｜灰の少年と、ただの少女』"
   }
 ];
