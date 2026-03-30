@@ -19,7 +19,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0040",
-    "title": "第04話：エリートの日常と、初めての代償"
+    "title": "第04話：特進生の日常と、初めての代償"
   },
   {
     "target": "ep0050",
