@@ -225,7 +225,7 @@ async function loadMarkdown(target) {
     }
 
     // --- 用語の抽出と解説ボタンの生成 ---
-    if (target !== 'world' && target !== 'character' && target !== 'true_character') {
+    if (target !== 'world' && target !== 'character' && target !== 'true_character' && target !== 'plot' && target !== 'lifespan_economy') {
       const { matchedIT, matchedNovel } = extractTermsFromText(fullyResolved, target);
 
       if (matchedIT.length > 0 || matchedNovel.length > 0) {
@@ -261,27 +261,42 @@ async function loadMarkdown(target) {
     }
     // ---------------------------------
 
-    // --- 前に戻るボタンの動的生成 ---
-    const navLinksArray = Array.from(document.querySelectorAll('a[data-target]'));
-    const currentIndex = navLinksArray.findIndex(link => link.dataset.target === target);
+    // --- 前に戻る・次に進むボタンの動的生成 ---
+    // targetが設定資料等でなく、短編(ep0000)でもない場合のみナビゲーションを繋ぐ
+    if (target !== 'plot' && target !== 'character' && target !== 'world' && target !== 'true_character' && target !== 'lifespan_economy' && target !== 'ep0000') {
+      let nextActionContainer = markdownContainer.querySelector('.next-action');
+      if (!nextActionContainer) {
+        nextActionContainer = document.createElement('div');
+        nextActionContainer.className = 'next-action';
+        markdownContainer.appendChild(nextActionContainer);
+      }
 
-    // 現在のページが一覧にあり、かつ最初のページ(0番目)ではない場合のみ
-    if (currentIndex > 0 && target !== 'ep0000') {
-      const prevTarget = navLinksArray[currentIndex - 1].dataset.target;
-      const nextActionContainer = markdownContainer.querySelector('.next-action');
+      const mainStoryItems = SidebarNavItems.filter(item => item.target !== 'ep0000');
+      const currentIndex = mainStoryItems.findIndex(item => item.target === target);
 
-      if (nextActionContainer) {
-        const prevBtn = document.createElement('button');
-        prevBtn.className = 'btn-normal-prev';
-        prevBtn.dataset.prev = prevTarget;
-        prevBtn.textContent = '前の話に戻る';
-
-        nextActionContainer.prepend(prevBtn);
-
-        prevBtn.addEventListener('click', (e) => {
-          const targetToLoad = e.target.dataset.prev;
-          navigateTo(targetToLoad);
-        });
+      if (currentIndex !== -1) {
+        // 前へボタン
+        if (currentIndex > 0) {
+          const prevTarget = mainStoryItems[currentIndex - 1].target;
+          const prevBtn = document.createElement('button');
+          prevBtn.className = 'btn-normal-prev';
+          prevBtn.dataset.prev = prevTarget;
+          prevBtn.textContent = '前の話に戻る';
+          nextActionContainer.prepend(prevBtn);
+          
+          prevBtn.addEventListener('click', (e) => {
+            navigateTo(e.target.dataset.prev);
+          });
+        }
+        // 次へボタン (MDX内に既存の次へボタンが無い場合のみ追加する)
+        if (currentIndex < mainStoryItems.length - 1 && !nextActionContainer.querySelector('.btn-normal-next, .btn-glitch-next')) {
+          const nextTarget = mainStoryItems[currentIndex + 1].target;
+          const nextBtn = document.createElement('button');
+          nextBtn.className = 'btn-normal-next';
+          nextBtn.dataset.next = nextTarget;
+          nextBtn.textContent = '次の話へ進む';
+          nextActionContainer.appendChild(nextBtn);
+        }
       }
     }
     // ---------------------------------
@@ -373,6 +388,14 @@ function restoreState(target) {
   siteSubtitle.innerHTML = '';
 
   // サイドバーメニュー構成
+  const shortNavLinks = SidebarNavItems.filter(item => item.target === 'ep0000').map(item => 
+    `<li><a href="#" data-target="${item.target}">${item.title}</a></li>`
+  ).join('\n          ');
+
+  const mainNavLinks = SidebarNavItems.filter(item => item.target !== 'ep0000').map(item => 
+    `<li><a href="#" data-target="${item.target}">${item.title}</a></li>`
+  ).join('\n          ');
+
   navContainer.innerHTML = `
       <details class="nav-group">
         <summary>設定資料</summary>
@@ -380,12 +403,19 @@ function restoreState(target) {
           <li><a href="#" data-target="plot">プロット</a></li>
           <li><a href="#" data-target="character">登場人物</a></li>
           <li><a href="#" data-target="world">世界観設定</a></li>
+          <li><a href="#" data-target="lifespan_economy">寿命経済（命価効率）</a></li>
         </ul>
       </details>
-      <details class="nav-group" open>
+      <details class="nav-group" ${target === 'ep0000' ? 'open' : ''}>
+        <summary>短編</summary>
+        <ul>
+          ${shortNavLinks}
+        </ul>
+      </details>
+      <details class="nav-group" ${(target !== 'ep0000' && target !== 'plot' && target !== 'character' && target !== 'world' && target !== 'true_character' && target !== 'lifespan_economy') ? 'open' : ''}>
         <summary>本編</summary>
         <ul>
-          <li><a href="#" data-target="ep0000">第一章（プロローグ）</a></li>
+          ${mainNavLinks}
         </ul>
       </details>
   `;

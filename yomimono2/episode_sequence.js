@@ -1,5 +1,12 @@
 export const episodeSequence = [
-  'ep0000'
+  'ep0000',
+  'ep0010',
+  'ep0020',
+  'ep0030',
+  'ep0040',
+  'ep0050',
+  'ep0060',
+  'ep0070'
 ];
 
 export function sortEpisodes(aName, bName) {
