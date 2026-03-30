@@ -34,6 +34,10 @@ export const SidebarNavItems = [
     "title": "第05.5話：食卓の無償の愛と、極上の作り笑い"
   },
   {
+    "target": "ep0057",
+    "title": "第05.7話：【断章】甘やかなる搾取の夜"
+  },
+  {
     "target": "ep0060",
     "title": "第06話：二十五年の対価と、化け物の烙印"
   },
@@ -60,6 +64,10 @@ export const SidebarNavItems = [
   {
     "target": "ep0100",
     "title": "0100『魔女の懺悔と、魂の還る場所』"
+  },
+  {
+    "target": "ep0105",
+    "title": "第010.5話：【断章】学園の昼休みと、忘れられた天才"
   },
   {
     "target": "ep0110",
