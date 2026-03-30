@@ -46,10 +46,10 @@ function buildExports() {
     process.exit(1);
   }
 
-  // 指定された順番に沿って存在するファイルのみを抽出
+  // 指定された順番に沿って存在するファイルのみを抽出（短編のep0000.mdxは出力から除外）
   const files = episodeSequence
     .map(basename => `${basename}.mdx`)
-    .filter(f => fs.existsSync(path.join(distSettingsDir, f)));
+    .filter(f => f !== 'ep0000.mdx' && fs.existsSync(path.join(distSettingsDir, f)));
 
   let fullMarkdown = '';
   let chapterCounter = 1;
