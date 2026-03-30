@@ -26,6 +26,10 @@ export const SidebarNavItems = [
     "title": "第05話：ささやかな奇跡の蓄積"
   },
   {
+    "target": "ep0051",
+    "title": "第05話裏：冷徹なる契約と、三百年の装甲"
+  },
+  {
     "target": "ep0052",
     "title": "第05.2話：一本の白髪と、最強の作り笑い"
   },
@@ -50,6 +54,14 @@ export const SidebarNavItems = [
     "title": "第08.7話：三百年の生徒と、初老の魔法教師"
   },
   {
+    "target": "ep0088",
+    "title": "第08.8話：極小魔力の証明と、剥き出しの敵意"
+  },
+  {
+    "target": "ep0089",
+    "title": "第08.9話：乗り越えられない欠陥と、悪魔のささやき"
+  },
+  {
     "target": "ep0090",
     "title": "第09話：命喰みの睡蓮と、論理的なぼったくり契約"
   },
@@ -58,8 +70,20 @@ export const SidebarNavItems = [
     "title": "0100『魔女の懺悔と、魂の還る場所』"
   },
   {
+    "target": "ep0105",
+    "title": "第10.5話：重なり合わない足跡と、初老の不審者"
+  },
+  {
     "target": "ep0110",
     "title": "0110『魔女の生誕祭と、チキンステーキの魔法理論』"
+  },
+  {
+    "target": "ep0115",
+    "title": "0115『時空演算の大黒板と、不器用な逆算』"
+  },
+  {
+    "target": "ep0118",
+    "title": "0118『遺物（オーパーツ）の系譜と、たったひとつの非合理な解』"
   },
   {
     "target": "ep0120",
@@ -75,7 +99,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0150",
-    "title": "0150『スラムの依頼と、魔女の詭弁』"
+    "title": "0150『単独行の破綻と、共犯者の詭弁』"
   },
   {
     "target": "ep0160",
@@ -92,5 +116,9 @@ export const SidebarNavItems = [
   {
     "target": "ep0190",
     "title": "0190『エピローグ｜灰の少年と、ただの少女』"
+  },
+  {
+    "target": "ep0200",
+    "title": "第20話（エピローグ）：魔女の私服と、温かい食卓"
   }
 ];
