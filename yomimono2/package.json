@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "sanitize-words": "node scripts/sanitize_it_words.js",
     "prepare-terms": "node scripts/prepare_terms.js",
-    "predev": "npm run prepare-terms",
+    "predev": "npm run sanitize-words && npm run prepare-terms",
     "dev": "vite",
-    "prebuild": "npm run prepare-terms",
+    "prebuild": "npm run sanitize-words && npm run prepare-terms",
     "build": "vite build",
     "postbuild": "node scripts/postbuild_mdx.js && node scripts/export_novel.js && node scripts/export_docx.js && node scripts/export_novel.js --no-terms && node scripts/export_docx.js --no-terms && node scripts/postprocess_docx.js --no-terms",
     "preview": "vite preview",
