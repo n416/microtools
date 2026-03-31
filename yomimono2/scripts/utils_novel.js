@@ -26,8 +26,8 @@ export function stripMarkdown(text, options = {}) {
   let plain = text.replace(/\r\n/g, '\n'); // 正規表現の処理のために改行コードを統一
 
   // ヘッダー処理:
-  // 大見出し (# 第X話など) は、# を消して前後に空行（出力時の見栄え調整）
-  plain = plain.replace(/^\s*#\s+(.*)$/gm, '\n\n$1\n\n');
+  // 見出しは後で確実な1行アキにするためマーカー化
+  plain = plain.replace(/^\s*#\s+(.*)$/gm, '%%%HEADER%%%$1%%%HEADER%%%');
   // 副見出し (## 1. 〇〇、## 幕間など) は、## を消して前後に空行
   plain = plain.replace(/^\s*##\s+(.*)$/gm, '\n\n$1\n\n');
   // それ以下の見出し (###など) は単純に記号を消す
@@ -53,6 +53,9 @@ export function stripMarkdown(text, options = {}) {
 
   // 4つ以上連続する改行があれば3つにまとめる（見出し前後の空白行装飾を保護するため）
   plain = plain.replace(/\n{4,}/g, '\n\n\n');
+
+  // マーカー化しておいた見出しを「確実に前後1行アキ（\\n\\n）」へ置換
+  plain = plain.replace(/\n*%%%HEADER%%%(.*?)%%%HEADER%%%\n*/g, '\n\n$1\n\n');
 
   if (!preserveGlossary) {
     // 【用語解説】セクション全体を削除する
