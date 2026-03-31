@@ -36,13 +36,7 @@
             </ul>
           </details>
         </div>
-        <div class="settings-toggle" style="position: relative;">
-          <label class="settings-label">用語解説の表示設定</label>
-          <button id="btn-open-settings" class="glass-btn btn-open-settings" style="width: 100%; text-align: left; padding: 10px;">設定を変更する</button>
-          <div id="settings-tooltip" class="settings-tooltip">
-            設定を変更したい時は、ここから再度選べます
-          </div>
-        </div>
+
       </nav>
       <main id="content-area" class="glass-panel">
         <div id="markdown-container">
@@ -50,59 +44,7 @@
         </div>
       </main>
 
-      <!-- 用語解説モーダル -->
-      <div id="term-modal-overlay" class="modal-overlay"></div>
-      <div id="term-modal" class="glass-panel modal-panel">
-        <div class="modal-header">
-          <h2>この話の用語解説</h2>
-          <button id="close-term-modal" aria-label="閉じる">×</button>
-        </div>
-        <div class="modal-content">
-          <div id="term-modal-content-term" class="term-section"></div>
-          <div id="term-modal-content-it" class="term-section"></div>
-        </div>
-      </div>
 
-      <!-- 初期設定モーダル -->
-      <div id="initial-settings-overlay" class="modal-overlay"></div>
-      <div id="initial-settings-modal" class="glass-panel modal-panel" style="max-width: 400px; text-align: center;">
-        <div class="modal-header" style="justify-content: flex-end; padding: 10px 15px; border-bottom: none;">
-          <button id="close-initial-modal" aria-label="閉じる" style="background: none; border: none; color: var(--text-color); font-size: 2rem; cursor: pointer;">×</button>
-        </div>
-        <div class="modal-content" style="padding: 0px 20px 30px;">
-          <p style="font-size: 1.1rem; line-height: 1.8; margin-bottom: 30px; text-align: left; display: inline-block;">
-            専門用語の表示モードを選択してください。<br><br>
-            <strong>[1] 隠蔽</strong>（解説非表示）<br>
-            <strong>[2] 通常</strong>（詳細な注釈）<br>
-            <strong>[3] 翻訳</strong>（平易な言葉）<br>
-            <strong>[4] ルビ</strong>（初回ルビ＋注釈）<br><br>
-            希望の番号をキーパッドから入力して下さい。<br>
-            <span style="font-size:0.9rem; color:#88b;">※未定義キーの押下もお試し下さい。</span>
-          </p>
-          <div class="phone-keypad">
-            <button class="keypad-btn" data-key="1">1</button>
-            <button class="keypad-btn" data-key="2">2</button>
-            <button class="keypad-btn" data-key="3">3</button>
-            <button class="keypad-btn" data-key="4">4</button>
-            <button class="keypad-btn" data-key="5">5</button>
-            <button class="keypad-btn" data-key="6">6</button>
-            <button class="keypad-btn" data-key="7">7</button>
-            <button class="keypad-btn" data-key="8">8</button>
-            <button class="keypad-btn" data-key="9">9</button>
-            <div class="keypad-spacer"></div>
-            <button class="keypad-btn" data-key="0">0</button>
-            <div class="keypad-spacer"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 未実装通知モーダル -->
-      <div id="not-implemented-overlay" class="modal-overlay" style="z-index: 3000;"></div>
-      <div id="not-implemented-modal" class="glass-panel modal-panel" style="z-index: 3001; max-width: 300px; text-align: center;">
-        <div class="modal-content" style="padding: 20px;">
-          <p style="font-size: 1.1rem; margin: 0; color: var(--text-color); font-weight: bold;">（現在実装中です！）</p>
-        </div>
-      </div>
 
       <!-- 暗転・グリッチオーバーレイ -->
       <div id="chapter-end-overlay">
