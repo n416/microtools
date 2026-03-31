@@ -83,7 +83,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0100",
-    "title": "第10話：魔女の懺悔"
+    "title": "第10話：魔女の苛立ち"
   },
   {
     "target": "ep0105",
@@ -107,7 +107,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0108_5",
-    "title": "第10.85話：四次元の連鎖魔法"
+    "title": "第10.85話：異常な演算"
   },
   {
     "target": "ep0109",
