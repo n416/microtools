@@ -6,6 +6,10 @@ export const SidebarNavItems = [
     "title": "灰の少年と、三百年の魔女（読切版）"
   },
   {
+    "target": "ep0005",
+    "title": "第00話：砂時計の世界と、冷徹な詐欺師"
+  },
+  {
     "target": "ep0010",
     "title": "第01話：木屑の匂いと、甘い期待"
   },
