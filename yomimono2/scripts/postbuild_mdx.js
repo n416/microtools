@@ -18,10 +18,6 @@ const distSettingsDir = path.join(projectRoot, 'dist', 'settings');
 const exportSettingsDir = path.join(projectRoot, 'dist', 'export_resolved');
 // 出力先 (エクスポート用：用語解説なし)
 const exportSettingsNoTermsDir = path.join(projectRoot, 'dist', 'export_resolved_noterms');
-// 出力先 (エクスポート用：中学生モード)
-const exportSettingsSimpleDir = path.join(projectRoot, 'dist', 'export_resolved_simple');
-// 出力先 (エクスポート用：ルビモード)
-const exportSettingsRubyDir = path.join(projectRoot, 'dist', 'export_resolved_ruby');
 
 function resolveCharacters(text) {
   return text.replace(/<Char\s+role="([^"]+)"(?:\s+callrole="([^"]+)")?\s+var="([^"]+)"\s*\/>/g, (match, role, callrole, variant) => {
@@ -118,12 +114,6 @@ function processMdxFilesInDist() {
   if (!fs.existsSync(exportSettingsNoTermsDir)) {
     fs.mkdirSync(exportSettingsNoTermsDir, { recursive: true });
   }
-  if (!fs.existsSync(exportSettingsSimpleDir)) {
-    fs.mkdirSync(exportSettingsSimpleDir, { recursive: true });
-  }
-  if (!fs.existsSync(exportSettingsRubyDir)) {
-    fs.mkdirSync(exportSettingsRubyDir, { recursive: true });
-  }
 
   const files = fs.readdirSync(distSettingsDir);
   let processedCount = 0;
@@ -139,13 +129,9 @@ function processMdxFilesInDist() {
         const charResolved = resolveCharacters(content);
         const fullyResolved = resolveTerms(charResolved, currentEpisode, 'expert');
         const noTermsResolved = resolveTerms(charResolved, currentEpisode, 'ignore');
-        const simpleTermsResolved = resolveTerms(charResolved, currentEpisode, 'simple');
-        const rubyTermsResolved = resolveTerms(charResolved, currentEpisode, 'ruby');
 
         const formattedFullyResolved = addSpaceAfterPunctuation(fullyResolved);
         const formattedNoTermsResolved = addSpaceAfterPunctuation(noTermsResolved);
-        const formattedSimpleResolved = addSpaceAfterPunctuation(simpleTermsResolved);
-        const formattedRubyResolved = addSpaceAfterPunctuation(rubyTermsResolved);
   
         // エクスポート用ディレクトリに書き出す（dist/settingsの元ファイルは維持する）
         const outPath = path.join(exportSettingsDir, file);
@@ -155,15 +141,7 @@ function processMdxFilesInDist() {
         const outPathNoTerms = path.join(exportSettingsNoTermsDir, file);
         fs.writeFileSync(outPathNoTerms, formattedNoTermsResolved, 'utf-8');
 
-        // 中学生モード用のディレクトリにも書き出す
-        const outPathSimple = path.join(exportSettingsSimpleDir, file);
-        fs.writeFileSync(outPathSimple, formattedSimpleResolved, 'utf-8');
-
-        // ルビモード用のディレクトリにも書き出す
-        const outPathRuby = path.join(exportSettingsRubyDir, file);
-        fs.writeFileSync(outPathRuby, formattedRubyResolved, 'utf-8');
-
-        console.log(`[postbuild] Tags resolved in: ${file} (expert/ignore/simple/ruby)`);
+        console.log(`[postbuild] Tags resolved in: ${file} (expert/ignore)`);
         processedCount++;
       }
   });

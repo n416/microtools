@@ -3,7 +3,7 @@
 export const TermFirstAppearanceMap = {
   "life_value_efficiency": "ep0000",
   "water_lily": "ep0000",
-  "life_value": "ep0020",
+  "life_value": "ep0005",
   "advanced_student": "ep0030",
   "conduit_performance": "ep0090",
   "space_time_magic": "ep0106",
