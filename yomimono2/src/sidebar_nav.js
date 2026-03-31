@@ -2,10 +2,6 @@
 // ここを手動で編集しても上書きされるため注意してください
 export const SidebarNavItems = [
   {
-    "target": "ep0000",
-    "title": "灰の少年と、三百年の魔女（読切版）"
-  },
-  {
     "target": "ep0005",
     "title": "第00話：冷徹なる詐欺師の砂時計"
   },
@@ -55,7 +51,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0070",
-    "title": "第07話：泥濘への家出"
+    "title": "第07話：埃濘への家出"
   },
   {
     "target": "ep0080",
@@ -95,11 +91,11 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0105_5",
-    "title": "第10.55話：計算外のバグ"
+    "title": "第10.55話：計算外の欠陥"
   },
   {
     "target": "ep0106",
-    "title": "第10.6話：泥水に咲く不格好な花"
+    "title": "第10.6話：薄暗い路地に咲く不格好な花"
   },
   {
     "target": "ep0107",
