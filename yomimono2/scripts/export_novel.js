@@ -43,16 +43,17 @@ function buildExports() {
     .sort(sortEpisodes);
 
   let fullMarkdown = '';
-  let chapterCounter = 1;
-
+  
   files.forEach(file => {
     const filePath = path.join(distSettingsDir, file);
     let content = fs.readFileSync(filePath, 'utf-8');
     
-    // エピソードタイトルの話数を連番に変換（"第X話"が含まれる見出しのみ対象）
-    if (/#\s*第[\d\.]+話/.test(content)) {
-      content = content.replace(/#\s*第[\d\.]+話/g, `# 第${chapterCounter}話`);
-      chapterCounter++;
+    // エピソードタイトルの話数を印刷時には消去する
+    content = content.replace(/^#\s*第[\d\.]+話.*$/gm, '');
+
+    // 章タグの展開（<!-- Chapter: 第一章 〇〇 --> を # 第一章 〇〇 に変換）
+    if (/<!--\s*Chapter:\s*(.*?)\s*-->/i.test(content)) {
+      content = content.replace(/<!--\s*Chapter:\s*(.*?)\s*-->/gi, '# $1');
     }
 
     // UIコンポーネント用HTMLタグなどを抽出除去
@@ -75,7 +76,7 @@ function buildExports() {
   const isSpecial = (str) => {
       if (!str) return false;
       const t = str.trim();
-      if (/^(第\d+話|プロローグ|エピローグ|幕間)/.test(t)) return true;
+      if (/^(第\d+話|第[一二三四五六七八九十百千万]+章|最終章|プロローグ|エピローグ|幕間)/.test(t)) return true;
       if (/^([＊◆◇【■▼]|POV|\[POV\])/i.test(t)) return true;
       if (/(視点|POV)/i.test(t)) return true;
       return false;

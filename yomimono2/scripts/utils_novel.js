@@ -61,7 +61,7 @@ export function stripMarkdown(text, options = {}) {
     // 【用語解説】セクション全体を削除する
     // 「【用語解説】」以降、次のエピソード「第X話」「第X章」または「プロローグ」が始まるまでのテキストを消す
     // 次のエピソードがない（ファイルの末尾）場合も考慮する
-    plain = plain.replace(/【用語解説】[\s\S]*?(?=(第[\d一二三四五六七八九十百千万]+[話章]|プロローグ|$))/g, '');
+    plain = plain.replace(/【用語解説】[\s\S]*?(?=(第[\d一二三四五六七八九十百千万]+[話章]|最終章|プロローグ|$))/g, '');
 
     // 用語解説の脚注番号 （※1） などを除去（【用語解説】ブロックが消えたことによる浮遊マークの削除）
     plain = plain.replace(/（※\d+）/g, '');
@@ -77,7 +77,7 @@ export function stripMarkdown(text, options = {}) {
     if (/^[\s　「『（〈《【〔［“‘・※＊—…\-]/.test(line)) return line;
 
     // 見出し（「第X話」や「プロローグ」）は字下げしない
-    if (/^(第\d+話|プロローグ)/.test(line)) return line;
+    if (/^(第\d+話|第[一二三四五六七八九十百千万]+章|最終章|プロローグ)/.test(line)) return line;
 
     // それ以外は全角スペースを先頭に追加
     return '　' + line;
