@@ -5,10 +5,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-import { episodeSequence } from '../episode_sequence.js';
+import { sortEpisodes } from '../episode_sequence.js';
 const settingsPath = path.join(__dirname, '..', 'public', 'settings');
 
 const firstAppearanceMap = {};
+
+const episodeSequence = fs.readdirSync(settingsPath)
+  .filter(f => f.endsWith('.mdx'))
+  .filter(f => /^ep\d+/.test(f)) // yomikiri.mdx は対象外
+  .sort(sortEpisodes)
+  .map(f => f.replace('.mdx', ''));
 
 for (const ep of episodeSequence) {
   const filePath = path.join(settingsPath, `${ep}.mdx`);

@@ -5,7 +5,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 import { cleanMarkdown, stripMarkdown } from './utils_novel.js';
-import { sortEpisodes, episodeSequence } from '../episode_sequence.js';
+import { sortEpisodes } from '../episode_sequence.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,7 +28,6 @@ if (isNoTerms) {
   outputHtmlPath = path.resolve(__dirname, '../output_novel_noterms.html');
 }
 
-
 function buildExports() {
   if (!fs.existsSync(distSettingsDir)) {
     console.error(`[Error] Directory not found: ${distSettingsDir}`);
@@ -36,10 +35,12 @@ function buildExports() {
     process.exit(1);
   }
 
-  // 指定された順番に沿って存在するファイルのみを抽出（短編のep0000.mdxは出力から除外）
-  const files = episodeSequence
-    .map(basename => `${basename}.mdx`)
-    .filter(f => f !== 'ep0000.mdx' && fs.existsSync(path.join(distSettingsDir, f)));
+  // distSettingsDir にある全てのmdxから、"ep"から始まる本編小説のみを抽出しソート
+  // (yomikiri.mdx や plot.mdx などは出力に含めない)
+  const files = fs.readdirSync(distSettingsDir)
+    .filter(file => file.endsWith('.mdx'))
+    .filter(file => /^ep\d+/.test(file))
+    .sort(sortEpisodes);
 
   let fullMarkdown = '';
   let chapterCounter = 1;

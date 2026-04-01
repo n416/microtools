@@ -1,59 +1,35 @@
-export const episodeSequence = [
-  'ep0000',
-  'ep0005',
-  'ep0010',
-  'ep0020',
-  'ep0030',
-  'ep0040',
-  'ep0040_5',
-  'ep0050',
-  'ep0050_5',
-  'ep0051',
-  'ep0052',
-  'ep0060',
-  'ep0060_5',
-  'ep0070',
-  'ep0080',
-  'ep0085',
-  'ep0085_5',
-  'ep0087',
-  'ep0088',
-  'ep0089',
-  'ep0090',
-  'ep0100',
-  'ep0105',
-  'ep0105_5',
-  'ep0106',
-  'ep0107',
-  'ep0108',
-  'ep0108_5',
-  'ep0109',
-  'ep0110',
-  'ep0115',
-  'ep0118',
-  'ep0120',
-  'ep0130',
-  'ep0140',
-  'ep0150',
-  'ep0160',
-  'ep0170',
-  'ep0180',
-  'ep0190',
-  'ep0200'
-];
-
 export function sortEpisodes(aName, bName) {
   const aClean = aName.replace(/\.mdx$/, '');
   const bClean = bName.replace(/\.mdx$/, '');
-  
-  const aIndex = episodeSequence.indexOf(aClean);
-  const bIndex = episodeSequence.indexOf(bClean);
 
-  if (aIndex !== -1 && bIndex !== -1) {
-    return aIndex - bIndex;
+  // yomikiri は常に一番最初（プロローグ・短編扱い）
+  if (aClean === 'yomikiri' && bClean !== 'yomikiri') return -1;
+  if (bClean === 'yomikiri' && aClean !== 'yomikiri') return 1;
+  if (aClean === 'yomikiri' && bClean === 'yomikiri') return 0;
+
+  // ep0010, ep0010_5 の数値を抽出するヘルパー
+  const parseEp = (name) => {
+    const match = name.match(/^ep(\d+)(_(\d+))?$/);
+    if (!match) return null; // plot, character等の設定ファイル
+    const mainNum = parseInt(match[1], 10);
+    const subNum = match[3] ? parseInt(match[3], 10) : 0;
+    return mainNum + (subNum / 100); // 10.05 のようにして比較
+  };
+
+  const aVal = parseEp(aClean);
+  const bVal = parseEp(bClean);
+
+  // 両方ともエピソード（ep〜）である場合
+  if (aVal !== null && bVal !== null) {
+    if (aVal !== bVal) {
+      return aVal - bVal;
+    }
   }
-  if (aIndex !== -1) return -1;
-  if (bIndex !== -1) return 1;
+  
+  // エピソード（ep〜）を他の設定ファイル群よりも前にする
+  if (aVal !== null) return -1;
+  if (bVal !== null) return 1;
 
-  return aName.localeCompare(bName, undefined, { numeric: true });
+  // どちらも設定ファイル等の場合は通常の文字列ソート
+  return aClean.localeCompare(bClean, undefined, { numeric: true });
 }
