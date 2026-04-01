@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { episodeSequence } from '../episode_sequence.js';
+import { sortEpisodes } from '../episode_sequence.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,16 +9,23 @@ const __dirname = path.dirname(__filename);
 const settingsPath = path.join(__dirname, '..', 'public', 'settings');
 const outputPath = path.join(__dirname, '..', 'src', 'sidebar_nav.js');
 
-
 const navItems = [];
 
-for (const ep of episodeSequence) {
-  const filePath = path.join(settingsPath, `${ep}.mdx`);
-  if (!fs.existsSync(filePath)) continue;
+// public/settings のMDXを自動抽出＆ソート
+const files = fs.readdirSync(settingsPath)
+  .filter(file => file.endsWith('.mdx'))
+  // 設定ファイル（plotなど）を除外し、yomikiriとepエピソードだけを対象にする
+  .filter(file => file === 'yomikiri.mdx' || /^ep\d+/.test(file))
+  .sort(sortEpisodes);
 
-  const content = fs.readFileSync(filePath, 'utf8');
+for (const file of files) {
+  const filePath = path.join(settingsPath, file);
+  const ep = file.replace('.mdx', '');
+  let content = fs.readFileSync(filePath, 'utf8');
+  content = content.replace(/^\uFEFF/, ''); // BOM除去
+  
   // First H1 (# Title)
-  const regex = /^#\s+(.*)$/m;
+  const regex = /^\s*#\s+(.*)$/m;
   const match = regex.exec(content);
   
   let title = ep; // fallback
