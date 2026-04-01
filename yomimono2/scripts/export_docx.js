@@ -58,7 +58,7 @@ try {
 
   let text = fs.readFileSync(inputPath, 'utf8');
   text = formatForVerticalText(text);
-  const lines = text.split('\n');
+  let lines = text.split('\n');
 
   function appendTextRun(parentP, textStr) {
       const tcyRegex = /(\!\!|\!\?|\?\!|\d{2}|(?<![0-9A-Za-z])(?:[0-9][A-Za-z]|[A-Za-z][0-9])(?![0-9A-Za-z]))/g;

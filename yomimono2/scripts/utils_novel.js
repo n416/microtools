@@ -51,10 +51,10 @@ export function stripMarkdown(text, options = {}) {
   plain = plain.replace(/^-{40,}\s*$/gm, '');
   plain = plain.replace(/\n*^[-*_]{3,}\s*$\n*/gm, '\n\n＊\n\n');
 
-  // 4つ以上連続する改行があれば3つにまとめる（見出し前後の空白行装飾を保護するため）
+  // 4つ以上連続する改行があれば3つにまとめる
   plain = plain.replace(/\n{4,}/g, '\n\n\n');
 
-  // マーカー化しておいた見出しを「確実に前後1行アキ（\\n\\n）」へ置換
+  // マーカー化しておいた見出しを「確実に前後アキ（\\n\\n）」へ置換
   plain = plain.replace(/\n*%%%HEADER%%%(.*?)%%%HEADER%%%\n*/g, '\n\n$1\n\n');
 
   if (!preserveGlossary) {
