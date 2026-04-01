@@ -7,10 +7,16 @@ import { TermDictionary } from '../src/term_dictionary.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-import { episodeSequence } from '../episode_sequence.js';
+import { sortEpisodes } from '../episode_sequence.js';
 
 const combinedDictionary = { ...ItTermDictionary, ...TermDictionary };
 const settingsPath = path.join(__dirname, '..', 'public', 'settings');
+
+const episodeSequence = fs.readdirSync(settingsPath)
+  .filter(f => f.endsWith('.mdx'))
+  .filter(f => /^ep\d+/.test(f)) // yomikiri.mdx は対象外
+  .sort(sortEpisodes)
+  .map(f => f.replace('.mdx', ''));
 
 // 検索ターゲットのリストを作成
 const allSearchWords = [];

@@ -2,6 +2,10 @@
 // ここを手動で編集しても上書きされるため注意してください
 export const SidebarNavItems = [
   {
+    "target": "yomikiri",
+    "title": "灰の少年と、三百年の魔女（読切版）"
+  },
+  {
     "target": "ep0005",
     "title": "第00話：冷徹なる詐欺師の砂時計"
   },
@@ -118,6 +122,10 @@ export const SidebarNavItems = [
     "title": "第11話：チキンステーキの魔法理論"
   },
   {
+    "target": "ep0112",
+    "title": "第11.2話：終わらない搾取の円環"
+  },
+  {
     "target": "ep0115",
     "title": "第11.5話：時空演算の大黒板"
   },
@@ -139,15 +147,15 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0150",
-    "title": "第15話：単独行の破綻"
+    "title": "第15話：氷層の下の反逆者"
   },
   {
     "target": "ep0160",
-    "title": "第16話：似て非なる者たちの問答"
+    "title": "第16話：絶対防壁の玉座"
   },
   {
     "target": "ep0170",
-    "title": "第17話：狂い咲く睡蓮"
+    "title": "第17話：魔女の全損と、睡蓮の実"
   },
   {
     "target": "ep0180",

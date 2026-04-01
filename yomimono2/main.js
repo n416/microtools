@@ -109,7 +109,7 @@ function navigateTo(target, push = true) {
   localStorage.setItem('yomimono_last_page', target);
 
   // 初回アクセスから別のページへ移動した場合、トゥルーモードを解禁する
-  if (target !== 'ep0000') {
+  if (target !== 'yomikiri') {
     localStorage.setItem('yomimono_unlocked', 'true');
   }
 
@@ -202,8 +202,8 @@ async function loadMarkdown(target) {
 
 
     // --- 前に戻る・次に進むボタンの動的生成 ---
-    // targetが設定資料等でなく、短編(ep0000)でもない場合のみナビゲーションを繋ぐ
-    if (target !== 'plot' && target !== 'character' && target !== 'world' && target !== 'true_character' && target !== 'lifespan_economy' && target !== 'ep0000') {
+    // targetが設定資料等でなく、短編(yomikiri)でもない場合のみナビゲーションを繋ぐ
+    if (target !== 'plot' && target !== 'character' && target !== 'world' && target !== 'true_character' && target !== 'lifespan_economy' && target !== 'yomikiri') {
       let nextActionContainer = markdownContainer.querySelector('.next-action');
       if (!nextActionContainer) {
         nextActionContainer = document.createElement('div');
@@ -211,7 +211,7 @@ async function loadMarkdown(target) {
         markdownContainer.appendChild(nextActionContainer);
       }
 
-      const mainStoryItems = SidebarNavItems.filter(item => item.target !== 'ep0000');
+      const mainStoryItems = SidebarNavItems.filter(item => item.target !== 'yomikiri');
       const currentIndex = mainStoryItems.findIndex(item => item.target === target);
 
       if (currentIndex !== -1) {
@@ -328,11 +328,11 @@ function restoreState(target) {
   siteSubtitle.innerHTML = '';
 
   // サイドバーメニュー構成
-  const shortNavLinks = SidebarNavItems.filter(item => item.target === 'ep0000').map(item => 
+  const shortNavLinks = SidebarNavItems.filter(item => item.target === 'yomikiri').map(item => 
     `<li><a href="#" data-target="${item.target}">${item.title}</a></li>`
   ).join('\n          ');
 
-  const mainNavLinks = SidebarNavItems.filter(item => item.target !== 'ep0000').map(item => 
+  const mainNavLinks = SidebarNavItems.filter(item => item.target !== 'yomikiri').map(item => 
     `<li><a href="#" data-target="${item.target}">${item.title}</a></li>`
   ).join('\n          ');
 
@@ -346,13 +346,13 @@ function restoreState(target) {
           <li><a href="#" data-target="lifespan_economy">寿命経済（命価効率）</a></li>
         </ul>
       </details>
-      <details class="nav-group" ${target === 'ep0000' ? 'open' : ''}>
+      <details class="nav-group" ${target === 'yomikiri' ? 'open' : ''}>
         <summary>短編</summary>
         <ul>
           ${shortNavLinks}
         </ul>
       </details>
-      <details class="nav-group" ${(target !== 'ep0000' && target !== 'plot' && target !== 'character' && target !== 'world' && target !== 'true_character' && target !== 'lifespan_economy') ? 'open' : ''}>
+      <details class="nav-group" ${(target !== 'yomikiri' && target !== 'plot' && target !== 'character' && target !== 'world' && target !== 'true_character' && target !== 'lifespan_economy') ? 'open' : ''}>
         <summary>本編</summary>
         <ul>
           ${mainNavLinks}
@@ -387,7 +387,7 @@ if (btnResetState) {
     localStorage.removeItem('yomimono_last_page');
     localStorage.removeItem('yomimono_phase');
     localStorage.removeItem('yomimono_unlocked');
-    navigateTo('ep0000');
+    navigateTo('yomikiri');
   });
 }
 
@@ -397,7 +397,7 @@ if (btnResetState) {
 function init() {
   const urlParams = new URLSearchParams(window.location.search);
   const urlTarget = urlParams.get('p');
-  const lastPage = urlTarget || localStorage.getItem('yomimono_last_page') || 'ep0000'; // 初期ページはプロローグ
+  const lastPage = urlTarget || localStorage.getItem('yomimono_last_page') || 'yomikiri'; // 初期ページはプロローグ
 
   // URLにパラメーターがない場合は localStorage の値を付与して replaceState
   if (!urlTarget) {

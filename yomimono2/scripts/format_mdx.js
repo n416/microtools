@@ -3,7 +3,7 @@ try {
   const path = require('path');
 
   const targetDir = 'c:\\Users\\shingo\\Desktop\\microtools\\yomimono2\\public\\settings';
-  const files = ['ep0000.mdx', 'world.mdx', 'character.mdx', 'plot.mdx'];
+  const files = ['yomikiri.mdx', 'world.mdx', 'character.mdx', 'plot.mdx'];
 
   function formatMdx(content) {
     const lines = content.split('\n');
