@@ -76,21 +76,37 @@ function cleanupZombies() {
     });
 });
 
-console.log(`\n[postprocess_docx] Waiting for file locks to clear...`);
-try {
-    execSync('timeout /t 2 /nobreak >nul 2>&1', { stdio: 'ignore' });
-} catch (e) {}
+let usePsScript = true;
+const envPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const match = envContent.match(/^(?:VITE_)?USE_PSSCRIPT\s*=\s*(false|0)/mi);
+    if (match) {
+        usePsScript = false;
+    }
+}
 
-console.log(`[postprocess_docx] Word COM automation started for: ${inputFilename}`);
+if (!usePsScript) {
+    console.log(`\n[postprocess_docx] USE_PSSCRIPT is disabled in .env. Skipping PowerShell Word COM automation.`);
+} else {
+    console.log(`\n[postprocess_docx] Waiting for file locks to clear...`);
+    try {
+        execSync('timeout /t 2 /nobreak >nul 2>&1', { stdio: 'ignore' });
+    } catch (e) {}
 
-try {
-    const command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -DocPath "${targetDocx}"`;
-    // Timeout added to prevent infinite invisible dialog freezes (60 seconds)
-    execSync(command, { encoding: 'utf8', stdio: 'inherit', timeout: 60000 });
-    console.log(`[postprocess_docx] Completed successfully.\n`);
-} catch (error) {
-    console.error(`[postprocess_docx] Error executing PowerShell script:`, error.message);
-    process.exitCode = 1;
-} finally {
-    cleanupZombies();
+    console.log(`[postprocess_docx] Word COM automation started for: ${inputFilename}`);
+
+    try {
+        const command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -DocPath "${targetDocx}"`;
+        // Timeout added to prevent infinite invisible dialog freezes (300 seconds / 5 minutes)
+        execSync(command, { encoding: 'utf8', stdio: 'inherit', timeout: 300000 });
+        console.log(`[postprocess_docx] Completed empty line removal successfully.\n`);
+        
+        console.log(`[postprocess_docx] All tasks completed successfully.\n`);
+    } catch (error) {
+        console.error(`[postprocess_docx] Error executing PowerShell script:`, error.message);
+        process.exitCode = 1;
+    } finally {
+        cleanupZombies();
+    }
 }

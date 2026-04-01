@@ -63,9 +63,58 @@ function buildExports() {
 
   // ========== txt出力 (Markdownテキスト → プレーンテキスト) ==========
   const preserveGlossary = !isNoTerms;
-  const plainTextNovel = stripMarkdown(fullMarkdown, { preserveGlossary });
+  let plainTextNovel = stripMarkdown(fullMarkdown, { preserveGlossary });
+  
+  // 余分な空白行の整理（常に実行される）
+  // 全角スペースのみの行を完全な空行に変換
+  plainTextNovel = plainTextNovel.replace(/^[ \t　]+$/gm, '');
+  
+  const lines = plainTextNovel.split(/\r?\n/);
+  const newLines = [];
+  
+  const isSpecial = (str) => {
+      if (!str) return false;
+      const t = str.trim();
+      if (/^(第\d+話|プロローグ|エピローグ|幕間)/.test(t)) return true;
+      if (/^([＊◆◇【■▼]|POV|\[POV\])/i.test(t)) return true;
+      if (/(視点|POV)/i.test(t)) return true;
+      return false;
+  };
+
+  let emptyCount = 0;
+  for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line === '') {
+          emptyCount++;
+          
+          // 保護対象のチェック: 前後のどちらかの行が「章見出し」や「＊」などの特殊行であれば、
+          // 1行の空行でも優先的に保護する（そのまま残す）
+          const prevStr = i > 0 ? lines[i-1] : '';
+          const nextStr = i < lines.length - 1 ? lines[i+1] : '';
+          
+          if (isSpecial(prevStr) || isSpecial(nextStr)) {
+              // 特殊行の前後なら、空行カウントを無視して1行アキを確保する
+              // ただし、既に2つ以上出力されないようにする
+              if (emptyCount <= 1) {
+                  newLines.push('');
+              }
+          }
+      } else {
+          // テキスト行が来た場合、ここまでに溜まっていた空行を精算する
+          // ルール: 1つの空行 -> 削除 (0), 2つ以上の空行 -> 1つにする
+          // ※ ただし特殊行による保護で既に newLines の末尾が空行の場合は重複させない
+          if (emptyCount >= 2) {
+              if (newLines.length > 0 && newLines[newLines.length - 1] !== '') {
+                  newLines.push('');
+              }
+          }
+          
+          newLines.push(line);
+          emptyCount = 0;
+      }
+  }
   fs.writeFileSync(outputTxtPath, plainTextNovel, 'utf-8');
-  console.log(`[Success] Crated Text Novel: ${outputTxtPath}`);
+  console.log(`[Success] Created Text Novel: ${outputTxtPath} (Empty lines optimized manually)`);
 
   // ========== HTML出力 ==========
   const rawHtml = marked.parse(fullMarkdown);

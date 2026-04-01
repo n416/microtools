@@ -103,7 +103,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0107",
-    "title": "第10.7話：三百年ぶりの体温"
+    "title": "第10.7話：夜の静寂"
   },
   {
     "target": "ep0108",
