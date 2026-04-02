@@ -155,7 +155,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0380",
-    "title": "第38話：魔女の全損と、睡蓮の実"
+    "title": "第38話：魔女の全損と、睡蓮の結晶"
   },
   {
     "target": "ep0390",

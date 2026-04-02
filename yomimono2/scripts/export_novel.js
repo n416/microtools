@@ -56,6 +56,11 @@ function buildExports() {
       content = content.replace(/<!--\s*Chapter:\s*(.*?)\s*-->/gi, '# $1');
     }
 
+    // POVコメントの削除（出力テキストには含めない）
+    if (/<!--\s*POV:\s*(.*?)\s*-->/i.test(content)) {
+      content = content.replace(/<!--\s*POV:\s*(.*?)\s*-->/gi, '');
+    }
+
     // UIコンポーネント用HTMLタグなどを抽出除去
     const cleanedContent = cleanMarkdown(content);
     
