@@ -55,7 +55,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0130",
-    "title": "第13話：埃濘への家出"
+    "title": "第13話：淀みへの家出"
   },
   {
     "target": "ep0140",
