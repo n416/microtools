@@ -47,7 +47,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0110",
-    "title": "第11話：二十五年の対価と化け物の烙印"
+    "title": "第11話：二十五年の対価と、孤独な逃亡"
   },
   {
     "target": "ep0120",
