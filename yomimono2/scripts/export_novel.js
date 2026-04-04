@@ -43,6 +43,7 @@ function buildExports() {
     .sort(sortEpisodes);
 
   let fullMarkdown = '';
+  let previousPov = null;
   
   files.forEach(file => {
     const filePath = path.join(distSettingsDir, file);
@@ -56,9 +57,20 @@ function buildExports() {
       content = content.replace(/<!--\s*Chapter:\s*(.*?)\s*-->/gi, '# $1');
     }
 
-    // POVコメントの削除（出力テキストには含めない）
-    if (/<!--\s*POV:\s*(.*?)\s*-->/i.test(content)) {
+    // POVコメントの処理
+    let currentPov = null;
+    const povMatch = content.match(/<!--\s*POV:\s*(.*?)\s*-->/i);
+    if (povMatch) {
+      currentPov = povMatch[1].trim();
       content = content.replace(/<!--\s*POV:\s*(.*?)\s*-->/gi, '');
+    }
+
+    // POVが前回と異なる場合は区切り記号を挿入する
+    if (previousPov && currentPov && previousPov !== currentPov) {
+      fullMarkdown += '\n\n　＊　＊　＊\n\n';
+    }
+    if (currentPov) {
+      previousPov = currentPov;
     }
 
     // UIコンポーネント用HTMLタグなどを抽出除去
@@ -119,7 +131,7 @@ function buildExports() {
           emptyCount = 0;
       }
   }
-  fs.writeFileSync(outputTxtPath, plainTextNovel, 'utf-8');
+  fs.writeFileSync(outputTxtPath, newLines.join('\n'), 'utf-8');
   console.log(`[Success] Created Text Novel: ${outputTxtPath} (Empty lines optimized manually)`);
 
   // ========== HTML出力 ==========
