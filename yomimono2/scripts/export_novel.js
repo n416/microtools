@@ -88,7 +88,7 @@ function buildExports() {
   plainTextNovel = plainTextNovel.replace(/^[ \t　]+$/gm, '');
   
   const lines = plainTextNovel.split(/\r?\n/);
-  const newLines = [];
+  let newLines = [];
   
   const isSpecial = (str) => {
       if (!str) return false;
@@ -119,9 +119,9 @@ function buildExports() {
           }
       } else {
           // テキスト行が来た場合、ここまでに溜まっていた空行を精算する
-          // ルール: 1つの空行 -> 削除 (0), 2つ以上の空行 -> 1つにする
+          // ルール: 1つ以上の空行 -> 1つにする
           // ※ ただし特殊行による保護で既に newLines の末尾が空行の場合は重複させない
-          if (emptyCount >= 2) {
+          if (emptyCount >= 1) {
               if (newLines.length > 0 && newLines[newLines.length - 1] !== '') {
                   newLines.push('');
               }
@@ -131,6 +131,15 @@ function buildExports() {
           emptyCount = 0;
       }
   }
+  // 新機能: .env で REMOVE_ALL_EMPTY_LINES=true の場合、全ての空行を完全に削除する
+  const envPath = path.resolve(__dirname, '../.env');
+  if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      if (/^REMOVE_ALL_EMPTY_LINES\s*=\s*(true|1)/mi.test(envContent)) {
+          newLines = newLines.filter(line => line.trim() !== '');
+      }
+  }
+
   fs.writeFileSync(outputTxtPath, newLines.join('\n'), 'utf-8');
   console.log(`[Success] Created Text Novel: ${outputTxtPath} (Empty lines optimized manually)`);
 

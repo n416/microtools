@@ -111,7 +111,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0270",
-    "title": "第27話：異常な演算"
+    "title": "第27話：演算"
   },
   {
     "target": "ep0280",
