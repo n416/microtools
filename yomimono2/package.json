@@ -23,7 +23,7 @@
     "@xmldom/xmldom": "^0.8.11",
     "diff": "^8.0.3",
     "dompurify": "^3.3.2",
-    "jsdom": "^28.1.0",
+    "jsdom": "^25.0.1",
     "marked": "^12.0.0",
     "pizzip": "^3.2.0"
   }
