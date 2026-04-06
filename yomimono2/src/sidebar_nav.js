@@ -114,6 +114,10 @@ export const SidebarNavItems = [
     "title": "第27話：演算"
   },
   {
+    "target": "ep0275",
+    "title": "第27.5話：病室の真実と魔女の視界"
+  },
+  {
     "target": "ep0280",
     "title": "第28話：魔女の視界のピント"
   },
