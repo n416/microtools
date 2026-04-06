@@ -131,6 +131,9 @@ function renderData() {
 
   let totalRawCount = 0;
   let totalBuiltCount = 0;
+  
+  let pipelineRawCount = 0;
+  let pipelineBuiltCount = 0;
 
   // グラフ描画のための最大値を計算
   const maxBuiltCount = Math.max(...state.mdxData.map(d => {
@@ -148,6 +151,13 @@ function renderData() {
 
     totalRawCount += rawCount;
     totalBuiltCount += builtCount;
+    
+    // パイプライン(エピソード)対象のみの文字数を別途集計
+    // プロットや設定資料(plot.mdx, character.mdx等)を除外するため、epから始まるファイルを対象とする
+    if (item.name.startsWith('ep')) {
+      pipelineRawCount += rawCount;
+      pipelineBuiltCount += builtCount;
+    }
 
     // -- テーブル行の生成 --
     const tr = document.createElement('tr');
@@ -262,10 +272,10 @@ function renderData() {
   });
 
   const rawTotalElem = document.getElementById('total-raw');
-  if (rawTotalElem) rawTotalElem.textContent = totalRawCount.toLocaleString();
+  if (rawTotalElem) rawTotalElem.textContent = `${pipelineRawCount.toLocaleString()} (全体 ${totalRawCount.toLocaleString()})`;
 
   const builtTotalElem = document.getElementById('total-built');
-  if (builtTotalElem) builtTotalElem.textContent = totalBuiltCount.toLocaleString();
+  if (builtTotalElem) builtTotalElem.textContent = `${pipelineBuiltCount.toLocaleString()} (全体 ${totalBuiltCount.toLocaleString()})`;
 }
 
 // イベントリスナー
