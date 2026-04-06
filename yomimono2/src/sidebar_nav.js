@@ -102,12 +102,12 @@ export const SidebarNavItems = [
     "title": "第24話：淀みの中に咲く不格好な花"
   },
   {
-    "target": "ep0250",
-    "title": "第25話：夜の静寂"
-  },
-  {
     "target": "ep0260",
     "title": "第26話：名前のない不機嫌"
+  },
+  {
+    "target": "ep0265",
+    "title": "第26.5話：終わらない搾取の円環"
   },
   {
     "target": "ep0270",
@@ -122,8 +122,8 @@ export const SidebarNavItems = [
     "title": "第29話：チキンステーキの魔法理論"
   },
   {
-    "target": "ep0300",
-    "title": "第30話：終わらない搾取の円環"
+    "target": "ep_spinoff_logan",
+    "title": "幕間：灰の降る記憶"
   },
   {
     "target": "ep0310",

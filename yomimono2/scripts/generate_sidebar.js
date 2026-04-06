@@ -15,7 +15,7 @@ const navItems = [];
 const files = fs.readdirSync(settingsPath)
   .filter(file => file.endsWith('.mdx'))
   // 設定ファイル（plotなど）を除外し、yomikiriとepエピソードだけを対象にする
-  .filter(file => file === 'yomikiri.mdx' || /^ep\d+/.test(file))
+  .filter(file => file === 'yomikiri.mdx' || /^ep\d+/.test(file) || file.startsWith('ep_spinoff'))
   .sort(sortEpisodes);
 
 for (const file of files) {
