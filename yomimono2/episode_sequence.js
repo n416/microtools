@@ -9,6 +9,8 @@ export function sortEpisodes(aName, bName) {
 
   // ep0010, ep0010_5 の数値を抽出するヘルパー
   const parseEp = (name) => {
+    if (name === 'ep_spinoff_logan') return 300.5;
+
     const match = name.match(/^ep(\d+)(_(\d+))?$/);
     if (!match) return null; // plot, character等の設定ファイル
     const mainNum = parseInt(match[1], 10);

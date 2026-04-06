@@ -39,7 +39,7 @@ function buildExports() {
   // (yomikiri.mdx や plot.mdx などは出力に含めない)
   const files = fs.readdirSync(distSettingsDir)
     .filter(file => file.endsWith('.mdx'))
-    .filter(file => /^ep\d+/.test(file))
+    .filter(file => /^ep\d+/.test(file) || file.startsWith('ep_spinoff'))
     .sort(sortEpisodes);
 
   let fullMarkdown = '';
