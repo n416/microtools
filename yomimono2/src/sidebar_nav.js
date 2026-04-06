@@ -7,7 +7,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0010",
-    "title": "第01話：冷徹なる詐欺師の砂時計"
+    "title": "第01話：冷徹なる砂時計"
   },
   {
     "target": "ep0020",
@@ -39,7 +39,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0090",
-    "title": "第09話裏：冷徹なる契約と三百年の装甲"
+    "title": "第09話：冷徹なる契約と三百年の装甲"
   },
   {
     "target": "ep0100",
@@ -99,7 +99,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0240",
-    "title": "第24話：薄暗い路地に咲く不格好な花"
+    "title": "第24話：淀みの中に咲く不格好な花"
   },
   {
     "target": "ep0250",
