@@ -6,5 +6,5 @@ export const TermFirstAppearanceMap = {
   "life_value": "ep0190",
   "water_lily": "ep0265",
   "master_key": "ep0265",
-  "magic_reduction_furnace": "ep0390"
+  "magic_reduction_furnace": "ep0320"
 };
