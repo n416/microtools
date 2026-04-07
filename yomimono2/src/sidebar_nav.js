@@ -22,6 +22,10 @@ export const SidebarNavItems = [
     "title": "第04話：祝福の腕輪が招く亀裂"
   },
   {
+    "target": "ep0045",
+    "title": "第04.5話：水色の蝶と、沈黙の腕輪"
+  },
+  {
     "target": "ep0050",
     "title": "第05話：初めての代償"
   },
@@ -46,6 +50,10 @@ export const SidebarNavItems = [
     "title": "第10話：最強の作り笑い"
   },
   {
+    "target": "ep0105",
+    "title": "第10.5話：才能の裏側と、受け継がれた自己犠牲"
+  },
+  {
     "target": "ep0110",
     "title": "第11話：二十五年の対価と、孤独な逃亡"
   },
@@ -60,6 +68,14 @@ export const SidebarNavItems = [
   {
     "target": "ep0140",
     "title": "第14話：味のしない流動食"
+  },
+  {
+    "target": "ep0142",
+    "title": "第14.2話：軋む関節と水瓶"
+  },
+  {
+    "target": "ep0145",
+    "title": "第14.5話：不要な奉仕"
   },
   {
     "target": "ep0150",
@@ -90,6 +106,18 @@ export const SidebarNavItems = [
     "title": "第21話：魔女の苛立ち"
   },
   {
+    "target": "ep0212",
+    "title": "第21.2話：最初の白髪と対価"
+  },
+  {
+    "target": "ep0215",
+    "title": "第21.5話：看板のない診療所"
+  },
+  {
+    "target": "ep0217",
+    "title": "第21.7話：加速する老化と、小さな木彫り"
+  },
+  {
     "target": "ep0220",
     "title": "第22話：重なり合わない足跡"
   },
@@ -114,8 +142,16 @@ export const SidebarNavItems = [
     "title": "第27話：演算"
   },
   {
-    "target": "ep0275",
-    "title": "第27.5話：病室の真実と魔女の視界"
+    "target": "ep0271",
+    "title": "第27.1話：病室の真実と魔女の視界"
+  },
+  {
+    "target": "ep0272",
+    "title": "第27.2話：雨漏りの小鍋と、不器用な看病"
+  },
+  {
+    "target": "ep0273",
+    "title": "第27.3話：汚れ濘の市場と、傾いた黒傘"
   },
   {
     "target": "ep0280",
@@ -170,7 +206,19 @@ export const SidebarNavItems = [
     "title": "第40話：灰の少年と、ただの少女"
   },
   {
+    "target": "ep0402",
+    "title": "第40.2話：使われない魔法の焚き火"
+  },
+  {
+    "target": "ep0405",
+    "title": "第40.5話：少女の温かな眠り"
+  },
+  {
     "target": "ep0410",
     "title": "第41話（エピローグ）：魔女の私服と温かい食卓"
+  },
+  {
+    "target": "ep0411",
+    "title": "第41.1話：黄色い睡蓮と老婆の置き土産"
   }
 ];
