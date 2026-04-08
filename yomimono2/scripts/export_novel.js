@@ -67,7 +67,13 @@ function buildExports() {
 
     // POVが前回と異なる場合は区切り記号を挿入する
     if (previousPov && currentPov && previousPov !== currentPov) {
-      fullMarkdown += '\n\n　＊　＊　＊\n\n';
+      if (currentPov === 'ミア') {
+        fullMarkdown += '\n\n　◆　◆　◆\n\n';
+      } else if (currentPov === 'アルト') {
+        fullMarkdown += '\n\n　◇　◇　◇\n\n';
+      } else {
+        fullMarkdown += '\n\n　＊　＊　＊\n\n';
+      }
     }
     if (currentPov) {
       previousPov = currentPov;

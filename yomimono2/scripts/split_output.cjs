@@ -11,8 +11,8 @@ if (!fs.existsSync(outputDir)) {
 const content = fs.readFileSync(inputFile, 'utf-8');
 
 // 「第○話」や「第○章」といった明確な切れ目が存在しない可能性があるため、
-// 視点切り替えや場面転換の「　＊　＊　＊」を基準に分割する仕組みを強化。
-const chunks = content.split('　＊　＊　＊');
+// 視点切り替えや場面転換の「　＊　＊　＊」等を基準に分割する仕組みを強化。
+const chunks = content.split(/　(?:＊　＊　＊|◆　◆　◆|◇　◇　◇)\s*/);
 let summary = '# Output Outline (Updated)\n\n';
 
 chunks.forEach((chunk, index) => {
