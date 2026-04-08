@@ -183,8 +183,23 @@ try {
       
       // Create new paragraph
       const newP = doc.createElement('w:p');
-      if (defaultPPr) {
-          newP.appendChild(defaultPPr.cloneNode(true));
+      let pPr = defaultPPr ? defaultPPr.cloneNode(true) : null;
+      
+      if (/^　?(?:＊　＊　＊|◆　◆　◆|◇　◇　◇)\s*$/.test(line)) {
+          line = line.replace(/^　/, ''); // 中央揃え時のズレを防ぐため先頭の全角スペースを削除
+          if (!pPr) pPr = doc.createElement('w:pPr');
+          let jcList = pPr.getElementsByTagName('w:jc');
+          if (jcList.length > 0) {
+              jcList[0].setAttribute('w:val', 'center');
+          } else {
+              const jc = doc.createElement('w:jc');
+              jc.setAttribute('w:val', 'center');
+              pPr.appendChild(jc);
+          }
+      }
+      
+      if (pPr) {
+          newP.appendChild(pPr);
       }
       
       if (line === '') {
