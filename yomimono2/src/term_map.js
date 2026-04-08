@@ -5,7 +5,6 @@ export const TermFirstAppearanceMap = {
   "advanced_student": "ep0070",
   "sensei": "ep0170",
   "life_value": "ep0190",
-  "water_lily": "ep0265",
   "master_key": "ep0265",
   "magic_reduction_furnace": "ep0320"
 };
