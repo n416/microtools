@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "sanitize-words": "node scripts/sanitize_it_words.js",
+    "sanitize-words": "node scripts/sanitize_it_words.js && node scripts/sanitize_madou_words.js",
     "prepare-terms": "node scripts/prepare_terms.js",
     "predev": "npm run sanitize-words && npm run prepare-terms",
     "dev": "vite",
