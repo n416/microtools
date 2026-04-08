@@ -107,7 +107,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0212",
-    "title": "第21.2話：最初の白髪と対価"
+    "title": "第21.2話：灰色の髪と命の対価"
   },
   {
     "target": "ep0215",
