@@ -87,7 +87,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0170",
-    "title": "第17話：三百年の生徒、初老の教師"
+    "title": "第17話：初老の教師と三百歳の生徒"
   },
   {
     "target": "ep0180",
