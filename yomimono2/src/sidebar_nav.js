@@ -154,6 +154,10 @@ export const SidebarNavItems = [
     "title": "第27.3話：汚れ濘の市場と、傾いた黒傘"
   },
   {
+    "target": "ep0275",
+    "title": "第27.5話：時空演算の大黒板"
+  },
+  {
     "target": "ep0280",
     "title": "第28話：魔女の視界のピント"
   },
@@ -164,10 +168,6 @@ export const SidebarNavItems = [
   {
     "target": "ep_spinoff_logan",
     "title": "幕間：灰の降る記憶"
-  },
-  {
-    "target": "ep0310",
-    "title": "第31話：時空演算の大黒板"
   },
   {
     "target": "ep0320",
