@@ -215,7 +215,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0410",
-    "title": "第41話（エピローグ）：魔女の私服と温かい食卓"
+    "title": "第41話〈エピローグ〉：魔女の私服と温かい食卓"
   },
   {
     "target": "ep0411",
