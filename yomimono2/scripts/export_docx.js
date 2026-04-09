@@ -60,7 +60,7 @@ try {
   text = formatForVerticalText(text);
   let lines = text.split('\n');
 
-  function appendTextRun(parentP, textStr) {
+  function appendTextRun(parentP, textStr, isBold = false) {
       const tcyRegex = /(\!\!|\!\?|\?\!|\d{2}|(?<![0-9A-Za-z])(?:[0-9][A-Za-z]|[A-Za-z][0-9])(?![0-9A-Za-z]))/g;
       let tMatch;
       let tLastIndex = 0;
@@ -68,6 +68,11 @@ try {
           if (tMatch.index > tLastIndex) {
               const plain = textStr.substring(tLastIndex, tMatch.index);
               const r = doc.createElement('w:r');
+              if (isBold) {
+                  const rPr = doc.createElement('w:rPr');
+                  rPr.appendChild(doc.createElement('w:b'));
+                  r.appendChild(rPr);
+              }
               const t = doc.createElement('w:t');
               t.setAttribute('xml:space', 'preserve');
               t.appendChild(doc.createTextNode(plain));
@@ -78,6 +83,10 @@ try {
           const tcyText = tMatch[1];
           const tcyR = doc.createElement('w:r');
           const tcyRPr = doc.createElement('w:rPr');
+          
+          if (isBold) {
+              tcyRPr.appendChild(doc.createElement('w:b'));
+          }
           
           const rFonts = doc.createElement('w:rFonts');
           rFonts.setAttribute('w:hint', 'eastAsia');
@@ -100,6 +109,11 @@ try {
       if (tLastIndex < textStr.length) {
           const plain = textStr.substring(tLastIndex);
           const r = doc.createElement('w:r');
+          if (isBold) {
+              const rPr = doc.createElement('w:rPr');
+              rPr.appendChild(doc.createElement('w:b'));
+              r.appendChild(rPr);
+          }
           const t = doc.createElement('w:t');
           t.setAttribute('xml:space', 'preserve');
           t.appendChild(doc.createTextNode(plain));
@@ -170,9 +184,10 @@ try {
           }
       }
       
-      // Page break logic: when we hit a new chapter, check if previous chapter had a glossary
-      // 「第X話」または「プロローグ」
-      if (/^(第\d+話|プロローグ)/.test(line)) {
+      // Page break logic & Chapter title formatting
+      const isChapterTitle = /^(?:第[一二三四五六七八九十百千万]+章|序章|終章|プロローグ|エピローグ|幕間|最終章)/.test(line);
+
+      if (isChapterTitle) {
           if (hasGlossary) {
               // insert page break
               const pbP = doc.createElement('w:p');
@@ -216,7 +231,8 @@ try {
           newR.appendChild(newT);
           newP.appendChild(newR);
       } else {
-          appendTextRun(newP, line);
+          // If it's a chapter title, pass true for bold
+          appendTextRun(newP, line, isChapterTitle);
       }
       
       body.appendChild(newP);

@@ -53,8 +53,14 @@ function buildExports() {
     content = content.replace(/^#\s*第[\d\.]+話.*$/gm, '');
 
     // 章タグの展開（<!-- Chapter: 第一章 〇〇 --> を # 第一章 〇〇 に変換）
+    let isNewChapter = false;
     if (/<!--\s*Chapter:\s*(.*?)\s*-->/i.test(content)) {
+      isNewChapter = true;
       content = content.replace(/<!--\s*Chapter:\s*(.*?)\s*-->/gi, '# $1');
+    }
+
+    if (isNewChapter) {
+      previousPov = null;
     }
 
     // POVコメントの処理と、手書きされた時間経過記号の自動処理
@@ -115,7 +121,7 @@ function buildExports() {
   const isSpecial = (str) => {
       if (!str) return false;
       const t = str.trim();
-      if (/^(第\d+話|第[一二三四五六七八九十百千万]+章|最終章|プロローグ|エピローグ|幕間)/.test(t)) return true;
+      if (/^(第\d+話|第[一二三四五六七八九十百千万]+章|序章|終章|最終章|プロローグ|エピローグ|幕間)/.test(t)) return true;
       if (/^([＊◆◇【■▼]|POV|\[POV\])/i.test(t)) return true;
       if (/(視点|POV)/i.test(t)) return true;
       return false;
