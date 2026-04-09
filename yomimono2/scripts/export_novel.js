@@ -57,23 +57,42 @@ function buildExports() {
       content = content.replace(/<!--\s*Chapter:\s*(.*?)\s*-->/gi, '# $1');
     }
 
-    // POVコメントの処理と自動区切り記号出力
-    content = content.replace(/<!--\s*POV:\s*(.*?)\s*-->/gi, (match, povName) => {
-      const currentPov = povName.trim();
-      let replacement = '';
-      
-      if (previousPov && previousPov !== currentPov) {
+    // POVコメントの処理と、手書きされた時間経過記号の自動処理
+    // 行頭にある＊の羅列、もしくはPOVタグを探して上から順に処理する
+    const povAndMarkRegex = /(?:<!--\s*POV:\s*(.*?)\s*-->)|(?:^[ 　]*[＊\*]　[＊\*]　[＊\*][ 　]*$)/gmi;
+    let currentPov = previousPov; // そのファイルの開始時点のPOV
+    
+    content = content.replace(povAndMarkRegex, (match, povName) => {
+      // 1. POVタグにマッチした場合
+      if (typeof povName === 'string') {
+        const newPov = povName.trim();
+        let replacement = '';
+        
+        if (currentPov && currentPov !== newPov) {
+          if (newPov === 'ミア') {
+            replacement = '\n\n　◆　◆　◆\n\n';
+          } else if (newPov === 'アルト') {
+            replacement = '\n\n　◇　◇　◇\n\n';
+          } else {
+            replacement = '\n\n　＊　＊　＊\n\n';
+          }
+        }
+        
+        currentPov = newPov;
+        previousPov = newPov; // グローバル状態の更新
+        return replacement; // html/txt上からはPOVタグは削除される
+      } 
+      // 2. 場面転換（手書きの ＊ ＊ ＊）にマッチした場合
+      else {
+        // 現在のPOVキャラに対応する専用記号を動的出力として上書きする
         if (currentPov === 'ミア') {
-          replacement = '\n\n　◆　◆　◆\n\n';
+          return '　◆　◆　◆';
         } else if (currentPov === 'アルト') {
-          replacement = '\n\n　◇　◇　◇\n\n';
+          return '　◇　◇　◇';
         } else {
-          replacement = '\n\n　＊　＊　＊\n\n';
+          return '　＊　＊　＊';
         }
       }
-      
-      previousPov = currentPov;
-      return replacement;
     });
 
     // UIコンポーネント用HTMLタグなどを抽出除去
