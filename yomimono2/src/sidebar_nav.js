@@ -194,6 +194,10 @@ export const SidebarNavItems = [
     "title": "第37話：絶対防壁の玉座"
   },
   {
+    "target": "ep0371",
+    "title": "第37.1話：清算"
+  },
+  {
     "target": "ep0380",
     "title": "第38話：魔女の全損と、睡蓮の結晶"
   },
