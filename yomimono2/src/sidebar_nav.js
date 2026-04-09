@@ -155,7 +155,7 @@ export const SidebarNavItems = [
   },
   {
     "target": "ep0273",
-    "title": "第27.3話：汚れ濘の市場と、傾いた黒傘"
+    "title": "第27.3話：ぬかるみの市場と、傾いた黒傘"
   },
   {
     "target": "ep0275",

@@ -47,7 +47,9 @@ const replaceRules = [
   { match: /泥まみれ/g, replace: '薄汚れ' },
   { match: /泥臭い/g, replace: '無骨な' },
   { match: /泥臭く/g, replace: '無骨に' },
-  { match: /泥濘（ぬかるみ）/g, replace: '石畳' },
+  { match: /泥濘（ぬかるみ）/g, replace: 'ぬかるみ' },
+  { match: /泥濘む/g, replace: 'ぬかるむ' },
+  { match: /泥濘/g, replace: 'ぬかるみ' },
   { match: /ドロドロの泥水の中/g, replace: '冷たい水溜まりの中' },
   { match: /顔面から泥に突っ込んだ/g, replace: '盛大に転倒した' },
   { match: /顔の泥を/g, replace: '顔の汚れを' },
@@ -66,8 +68,7 @@ const replaceRules = [
   { match: /泥沼/g, replace: '底なしの沼' },
   { match: /泥の中/g, replace: 'どん底' },
   { match: /その泥/g, replace: 'その汚れ' },
-  { match: /服の泥/g, replace: '服の汚れ' },
-  { match: /泥/g, replace: '汚れ' }
+  { match: /服の泥/g, replace: '服の汚れ' }
 ];
 
 function sanitizeDirectory() {
