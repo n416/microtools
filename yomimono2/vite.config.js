@@ -5,7 +5,8 @@ import publishPlugin from './scripts/vite_publish_plugin.js';
 export default defineConfig({
   base: './',
   server: {
-    port: 5173
+    port: 5173,
+    host: true
   },
   plugins: [
     publishPlugin()
