@@ -57,27 +57,24 @@ function buildExports() {
       content = content.replace(/<!--\s*Chapter:\s*(.*?)\s*-->/gi, '# $1');
     }
 
-    // POVコメントの処理
-    let currentPov = null;
-    const povMatch = content.match(/<!--\s*POV:\s*(.*?)\s*-->/i);
-    if (povMatch) {
-      currentPov = povMatch[1].trim();
-      content = content.replace(/<!--\s*POV:\s*(.*?)\s*-->/gi, '');
-    }
-
-    // POVが前回と異なる場合は区切り記号を挿入する
-    if (previousPov && currentPov && previousPov !== currentPov) {
-      if (currentPov === 'ミア') {
-        fullMarkdown += '\n\n　◆　◆　◆\n\n';
-      } else if (currentPov === 'アルト') {
-        fullMarkdown += '\n\n　◇　◇　◇\n\n';
-      } else {
-        fullMarkdown += '\n\n　＊　＊　＊\n\n';
+    // POVコメントの処理と自動区切り記号出力
+    content = content.replace(/<!--\s*POV:\s*(.*?)\s*-->/gi, (match, povName) => {
+      const currentPov = povName.trim();
+      let replacement = '';
+      
+      if (previousPov && previousPov !== currentPov) {
+        if (currentPov === 'ミア') {
+          replacement = '\n\n　◆　◆　◆\n\n';
+        } else if (currentPov === 'アルト') {
+          replacement = '\n\n　◇　◇　◇\n\n';
+        } else {
+          replacement = '\n\n　＊　＊　＊\n\n';
+        }
       }
-    }
-    if (currentPov) {
+      
       previousPov = currentPov;
-    }
+      return replacement;
+    });
 
     // UIコンポーネント用HTMLタグなどを抽出除去
     const cleanedContent = cleanMarkdown(content);
