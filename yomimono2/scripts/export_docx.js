@@ -118,7 +118,12 @@ try {
       if (synopsisText.trim() !== '') {
           const synopsisLines = synopsisText.split('\n');
           for (const sLine of synopsisLines) {
-              const cleanedLine = sLine.replace(/\r$/, '');
+              let cleanedLine = sLine.replace(/\r$/, '');
+              
+              if (cleanedLine !== '' && !cleanedLine.startsWith('【') && !/^[ 　\t]/.test(cleanedLine)) {
+                  cleanedLine = '　' + cleanedLine;
+              }
+
               const sP = doc.createElement('w:p');
               if (defaultPPr) sP.appendChild(defaultPPr.cloneNode(true));
               const sR = doc.createElement('w:r');
