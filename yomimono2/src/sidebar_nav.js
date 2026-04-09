@@ -138,6 +138,10 @@ export const SidebarNavItems = [
     "title": "第26.5話：終わらない搾取の円環"
   },
   {
+    "target": "ep_spinoff_logan",
+    "title": "幕間：灰の降る記憶"
+  },
+  {
     "target": "ep0270",
     "title": "第27話：演算"
   },
@@ -164,10 +168,6 @@ export const SidebarNavItems = [
   {
     "target": "ep0290",
     "title": "第29話：チキンステーキの魔法理論"
-  },
-  {
-    "target": "ep_spinoff_logan",
-    "title": "幕間：灰の降る記憶"
   },
   {
     "target": "ep0320",

@@ -9,7 +9,7 @@ export function sortEpisodes(aName, bName) {
 
   // ep0010, ep0010_5 の数値を抽出するヘルパー
   const parseEp = (name) => {
-    if (name === 'ep_spinoff_logan') return 300.5;
+    if (name === 'ep_spinoff_logan') return 265.5;
 
     const match = name.match(/^ep(\d+)(_(\d+))?$/);
     if (!match) return null; // plot, character等の設定ファイル
@@ -27,7 +27,7 @@ export function sortEpisodes(aName, bName) {
       return aVal - bVal;
     }
   }
-  
+
   // エピソード（ep〜）を他の設定ファイル群よりも前にする
   if (aVal !== null) return -1;
   if (bVal !== null) return 1;
