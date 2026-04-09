@@ -68,7 +68,8 @@ const replaceRules = [
   { match: /泥沼/g, replace: '底なしの沼' },
   { match: /泥の中/g, replace: 'どん底' },
   { match: /その泥/g, replace: 'その汚れ' },
-  { match: /服の泥/g, replace: '服の汚れ' }
+  { match: /服の泥/g, replace: '服の汚れ' },
+  { match: /泥(?!棒)/g, replace: '汚れ' }
 ];
 
 function sanitizeDirectory() {
