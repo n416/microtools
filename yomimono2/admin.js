@@ -162,6 +162,17 @@ function renderData() {
     // -- テーブル行の生成 --
     const tr = document.createElement('tr');
 
+    // チェックボックス
+    const tdCheck = document.createElement('td');
+    tdCheck.style.textAlign = 'center';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'row-checkbox';
+    checkbox.value = item.name;
+    if (!isBuiltAvailable) checkbox.disabled = true;
+    tdCheck.appendChild(checkbox);
+    tr.appendChild(tdCheck);
+
     // ファイル名
     const tdName = document.createElement('td');
     tdName.textContent = item.name;
@@ -510,6 +521,83 @@ async function saveSynopsis() {
 
 if (btnSaveSynopsis) {
   btnSaveSynopsis.addEventListener('click', saveSynopsis);
+}
+
+// --- 一括同期機能 ---
+const checkAll = document.getElementById('check-all');
+if (checkAll) {
+  checkAll.addEventListener('change', (e) => {
+    const isChecked = e.target.checked;
+    document.querySelectorAll('.row-checkbox:not(:disabled)').forEach(cb => {
+      cb.checked = isChecked;
+    });
+  });
+}
+
+const btnBulkNarou = document.getElementById('btn-bulk-narou');
+const btnBulkKakuyomu = document.getElementById('btn-bulk-kakuyomu');
+
+if (btnBulkNarou) btnBulkNarou.addEventListener('click', () => bulkSync('narou'));
+if (btnBulkKakuyomu) btnBulkKakuyomu.addEventListener('click', () => bulkSync('kakuyomu'));
+
+async function bulkSync(platform) {
+  const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+  if (checkboxes.length === 0) {
+    alert('同期するエピソードが選択されていません。');
+    return;
+  }
+  
+  if (!confirm(`チェックされた ${checkboxes.length} 件のエピソードを、「${platform === 'narou' ? '小説家になろう' : 'カクヨム'}」へ【差分確認なしで】順次上書き投稿します。\n本当によろしいですか？`)) {
+    return;
+  }
+  
+  const platformName = platform === 'narou' ? 'なろう' : 'カクヨム';
+  const btn = platform === 'narou' ? btnBulkNarou : btnBulkKakuyomu;
+  const originalText = btn.textContent;
+  
+  // 画面操作のロック
+  document.querySelectorAll('button, input').forEach(el => el.disabled = true);
+  
+  for (let i = 0; i < checkboxes.length; i++) {
+    const cb = checkboxes[i];
+    const fileName = cb.value;
+    
+    btn.textContent = `一括同期中 (${i+1}/${checkboxes.length}): ${fileName}...`;
+    showMessage('loading', `[${i+1}/${checkboxes.length}] 「${fileName}」を${platformName}へ投稿中...`);
+    
+    try {
+      // 強制上書き (dryRun: false) で直接投稿
+      const res = await fetch('/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: fileName, filename: fileName, platform: platform, dryRun: false })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+         console.error(`[bulkSync] Error on ${fileName}:`, data.error);
+         showMessage('error', `[${i+1}/${checkboxes.length}] ${fileName}でエラー: ${data.error}`);
+         await new Promise(r => setTimeout(r, 2000)); // エラー表示を少し見せる
+      } else {
+         console.log(`[bulkSync] Success: ${fileName}`);
+      }
+    } catch (e) {
+      console.error(`[bulkSync] Exception on ${fileName}:`, e);
+    }
+    
+    // サイトへの負荷制限とAPIの安定実行のため、次の実行まで2秒待機する
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  
+  showMessage('success', `一括同期が終了しました。（対象: ${checkboxes.length}件）`);
+  
+  // ロック解除
+  document.querySelectorAll('button, input').forEach(el => el.disabled = false);
+  btn.textContent = originalText;
+  if (checkAll) checkAll.checked = false;
+  
+  // 最新状態の再取得 (オプション)
+  fetchData();
 }
 
 fetchSynopsis();

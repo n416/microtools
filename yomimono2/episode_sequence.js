@@ -7,30 +7,17 @@ export function sortEpisodes(aName, bName) {
   if (bClean === 'yomikiri' && aClean !== 'yomikiri') return 1;
   if (aClean === 'yomikiri' && bClean === 'yomikiri') return 0;
 
-  // ep0010, ep0010_5 の数値を抽出するヘルパー
-  const parseEp = (name) => {
-    if (name === 'ep_spinoff_logan') return 265.5;
+  const isEpA = /^ep\d+$/.test(aClean);
+  const isEpB = /^ep\d+$/.test(bClean);
 
-    const match = name.match(/^ep(\d+)(_(\d+))?$/);
-    if (!match) return null; // plot, character等の設定ファイル
-    const mainNum = parseInt(match[1], 10);
-    const subNum = match[3] ? parseInt(match[3], 10) : 0;
-    return mainNum + (subNum / 100); // 10.05 のようにして比較
-  };
-
-  const aVal = parseEp(aClean);
-  const bVal = parseEp(bClean);
-
-  // 両方ともエピソード（ep〜）である場合
-  if (aVal !== null && bVal !== null) {
-    if (aVal !== bVal) {
-      return aVal - bVal;
-    }
+  // 両方ともエピソード（ep〜）である場合（ゼロ埋め連番なので単純な文字列比較でソート可能）
+  if (isEpA && isEpB) {
+    return aClean.localeCompare(bClean);
   }
 
   // エピソード（ep〜）を他の設定ファイル群よりも前にする
-  if (aVal !== null) return -1;
-  if (bVal !== null) return 1;
+  if (isEpA) return -1;
+  if (isEpB) return 1;
 
   // どちらも設定ファイル等の場合は通常の文字列ソート
   return aClean.localeCompare(bClean, undefined, { numeric: true });
