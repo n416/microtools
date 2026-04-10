@@ -47,9 +47,14 @@
 
       <div class="table-container">
         <h2 class="section-title">詳細データ</h2>
+        <div class="bulk-actions" style="margin-bottom: 10px; display: flex; gap: 10px;">
+          <button id="btn-bulk-narou" class="action-btn sync-btn" style="background-color: #2c7c7f; padding: 6px 12px;">チェックした項目を「なろう」へ一括同期</button>
+          <button id="btn-bulk-kakuyomu" class="action-btn sync-btn" style="background-color: #0083eb; padding: 6px 12px;">チェックした項目を「カクヨム」へ一括同期</button>
+        </div>
         <table class="data-table">
           <thead>
             <tr>
+              <th style="width: 40px; text-align: center;"><input type="checkbox" id="check-all" /></th>
               <th>ファイル名</th>
               <th>元MDX文字数</th>
               <th>ビルド後文字数</th>
