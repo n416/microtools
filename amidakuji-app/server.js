@@ -11,7 +11,7 @@ async function setupSecrets() {
   const client = new SecretManagerServiceClient();
   const projectId = 'amidakuji-app-native'; // ご自身のプロジェクトID
 
-  const secrets = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'SESSION_SECRET', 'GCS_BUCKET_NAME'];
+  const secrets = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'SESSION_SECRET', 'GCS_BUCKET_NAME', 'FIREBASE_CONFIG'];
 
   for (const secretName of secrets) {
     try {
@@ -69,6 +69,7 @@ async function startServer() {
   // Expressのapp.localsにヘルパー関数とデータを設定
   app.locals.emojiToLucide = emojiToLucide;
   app.locals.emojiMapJSON = JSON.stringify(Array.from(emojiMap.entries()));
+  app.locals.firebaseConfigJSON = process.env.FIREBASE_CONFIG || '{}';
 
   // 静的ファイルとJSONパーサーのミドルウェア
   app.use(express.static(path.join(__dirname, 'public')));
