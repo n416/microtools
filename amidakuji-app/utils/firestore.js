@@ -6,8 +6,13 @@ const storageOptions = {};
 
 // ローカル環境の場合のみ、サービスアカウントキーのファイルパスを指定する
 if (process.env.NODE_ENV !== 'production') {
-  firestoreOptions.keyFilename = './serviceAccountKey.json';
-  storageOptions.keyFilename = './serviceAccountKey.json';
+  const fs = require('fs');
+  if (fs.existsSync('./serviceAccountKey.json')) {
+    firestoreOptions.keyFilename = './serviceAccountKey.json';
+    storageOptions.keyFilename = './serviceAccountKey.json';
+  } else {
+    console.warn("⚠️ serviceAccountKey.json が見つかりません。Application Default Credentials (ADC) を使用して接続します。");
+  }
 }
 
 const firestore = new Firestore(firestoreOptions);
