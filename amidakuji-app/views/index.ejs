@@ -234,35 +234,23 @@ include('partials/_groupDashboard.ejs') %>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     // Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "***REMOVED_API_KEY***",
-      authDomain: "amidakuji-app-native.firebaseapp.com",
-      projectId: "amidakuji-app-native",
-
-      storageBucket: "amidakuji-app-native.appspot.com",
-      messagingSenderId: "482453338621",
-      appId: "1:482453338621:web:5e268f146a8d778f4e0194",
-      measurementId: "G-K205CFXBDE"
-    };
+    const firebaseConfig = JSON.parse('<%- typeof firebaseConfigJSON !== "undefined" ? firebaseConfigJSON : "{}" %>');
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
   </script>
+  <script type="application/json" id="server-data-emoji">
+    <%- (typeof emojiMapJSON !== 'undefined' && emojiMapJSON) ? emojiMapJSON : '[]' %>
+  </script>
+  <script type="application/json" id="server-data-group">
+    <%- (typeof groupData !== 'undefined' && groupData) ? groupData : 'null' %>
+  </script>
+  <script type="application/json" id="server-data-event">
+    <%- (typeof eventData !== 'undefined' && eventData) ? eventData : 'null' %>
+  </script>
   <script>
-    <% if (typeof emojiMapJSON !== 'undefined' && emojiMapJSON) { %>
-    window.emojiMapData = <%- emojiMapJSON %>;
-    <% } else { %>
-    window.emojiMapData = [];
-    <% } %>
-    <% if (typeof groupData !== 'undefined' && groupData) { %>
-    const initialGroupData = <%- groupData %>;
-    <% } else { %>
-    const initialGroupData = null;
-    <% } %>
-    <% if (typeof eventData !== 'undefined' && eventData) { %>
-    const initialEventData = <%- eventData %>;
-    <% } else { %>
-    const initialEventData = null;
-    <% } %>
+    window.emojiMapData = JSON.parse(document.getElementById('server-data-emoji').textContent || '[]');
+    const initialGroupData = JSON.parse(document.getElementById('server-data-group').textContent || 'null');
+    const initialEventData = JSON.parse(document.getElementById('server-data-event').textContent || 'null');
   </script>
   <% } %>
 </body>
