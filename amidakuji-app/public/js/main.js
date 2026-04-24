@@ -19,15 +19,28 @@ const settings = {
 const darkModeMatcher = window.matchMedia('(prefers-color-scheme: dark)');
 let tronAnimationAPI = null;
 let appInitialized = false; // 初期化済みフラグ
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (window.tutorialManager && typeof window.tutorialManager.init === 'function') {
     window.tutorialManager.init({state, router, ui});
   }
 
-  firebase.auth().onAuthStateChanged((user) => {
+  try {
+    const configRes = await fetch('/api/config');
+    const firebaseConfig = await configRes.json();
+    firebase.initializeApp(firebaseConfig);
+
+    const emojiRes = await fetch('/api/emoji-map');
+    window.emojiMapData = await emojiRes.json();
+  } catch (e) {
+    console.error('Failed to load initial config:', e);
+    document.body.innerHTML = '<div style="padding: 20px;"><h2>接続エラー</h2><p>設定の読み込みに失敗しました。</p></div>';
+    return;
+  }
+
+  firebase.auth().onAuthStateChanged(async (user) => {
     if (user && !appInitialized) {
       appInitialized = true;
-      initializeApp();
+      await initializeApp();
     }
   });
 
@@ -36,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .signInAnonymously()
     .catch((error) => {
       console.error('%c[DEBUG] Firebase匿名認証に失敗しました。', 'color: red; font-weight: bold;', error);
-      document.body.innerHTML = '<div style="padding: 20px;"><h2>接続エラー</h2><p>アプリケーションの初期化に失敗しました。時間をおいて再度お試しください。</p></div>';
+      document.body.innerHTML = `<div style="padding: 20px;"><h2>接続エラー</h2><p>アプリケーションの初期化に失敗しました。時間をおいて再度お試しください。</p><pre>${error.code}: ${error.message}</pre></div>`;
     });
 });
 
@@ -67,14 +80,18 @@ async function initializeApp() {
     tronAnimationAPI = initTronAnimation();
   }
 
-  const initialData = {
-    group: typeof initialGroupData !== 'undefined' ? initialGroupData : null,
-    event: typeof initialEventData !== 'undefined' ? initialEventData : null,
-  };
+  try {
+    const meRes = await fetch('/api/user/me', { credentials: 'include' });
+    if (meRes.ok) {
+        state.setCurrentUser(await meRes.json());
+    }
+  } catch(e) {
+    console.error('Failed to load user info:', e);
+  }
 
   await router.navigateTo(window.location.pathname + window.location.search, false);
 
-  if (state.currentUser && window.location.pathname === '/' && !initialData.group && !initialData.event) {
+  if (state.currentUser && window.location.pathname === '/') {
     await router.loadUserAndRedirect(state.currentUser.lastUsedGroupId);
   }
   lucide.createIcons();
@@ -291,8 +308,8 @@ function setupEventListeners() {
     router.navigateTo(window.location.pathname + window.location.search, false);
   });
 
-  const handleAdminLogin = () => {
-    if (confirm('これはあみだくじの運営者向けのログインです。よろしいですか？')) {
+  const handleAdminLogin = async () => {
+    if (await ui.showCustomConfirm('これはあみだくじの運営者向けのログインです。よろしいですか？')) {
       window.location.href = '/auth/google';
     }
   };
@@ -316,35 +333,35 @@ function setupEventListeners() {
     });
   if (ui.elements.deleteAccountButton)
     ui.elements.deleteAccountButton.addEventListener('click', async () => {
-      if (!confirm('本当にアカウントを削除しますか？関連する全てのデータが完全に削除され、元に戻すことはできません。')) return;
+      if (!(await ui.showCustomConfirm('本当にアカウントを削除しますか？関連する全てのデータが完全に削除され、元に戻すことはできません。'))) return;
       try {
         await api.deleteUserAccount();
-        alert('アカウントを削除しました。');
-        window.location.href = '/';
+        ui.showToast('アカウントを削除しました。');
+        setTimeout(() => window.location.href = '/', 1500);
       } catch (error) {
-        alert(error.error);
+        ui.showToast(error.error);
       }
     });
   if (ui.elements.requestAdminButton)
     ui.elements.requestAdminButton.addEventListener('click', async () => {
-      if (!confirm('システム管理者権限を申請しますか？')) return;
+      if (!(await ui.showCustomConfirm('システム管理者権限を申請しますか？'))) return;
       try {
         const result = await api.requestAdminAccess();
-        alert(result.message);
+        ui.showToast(result.message);
         ui.elements.requestAdminButton.textContent = '申請中';
         ui.elements.requestAdminButton.disabled = true;
       } catch (error) {
-        alert(`エラー: ${error.error}`);
+        ui.showToast(`エラー: ${error.error}`);
       }
     });
   if (ui.elements.stopImpersonatingButton)
     ui.elements.stopImpersonatingButton.addEventListener('click', async () => {
       try {
         await api.stopImpersonating();
-        alert('成り代わりを解除しました。ページをリロードします。');
-        window.location.href = '/admin';
+        ui.showToast('成り代わりを解除しました。ページをリロードします。');
+        setTimeout(() => window.location.href = '/admin', 1500);
       } catch (error) {
-        alert(error.error);
+        ui.showToast(error.error);
       }
     });
   if (ui.elements.adminDashboardButton) {
@@ -413,11 +430,11 @@ function setupEventListeners() {
     ui.elements.verifyPasswordButton.addEventListener('click', async () => {
       const groupId = ui.elements.verificationTargetGroupId.value;
       const password = ui.elements.groupPasswordVerifyInput.value;
-      if (!password) return alert('合言葉を入力してください。');
+      if (!password) return ui.showToast('合言葉を入力してください。');
       try {
         const result = await api.verifyGroupPassword(groupId, password);
         if (result.success) {
-          alert('認証しました！');
+          ui.showToast('認証しました！');
           ui.closeGroupPasswordModal();
           if (state.lastFailedAction) {
             await state.lastFailedAction();
@@ -425,9 +442,17 @@ function setupEventListeners() {
           }
         }
       } catch (error) {
-        alert(`エラー: ${error.error}`);
+        ui.showToast(`エラー: ${error.error}`);
       }
     });
+
+  if (ui.elements.groupPasswordVerifyInput) {
+    ui.elements.groupPasswordVerifyInput.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') {
+        ui.elements.verifyPasswordButton.click();
+      }
+    });
+  }
 
   if (ui.elements.customUrlInput)
     ui.elements.customUrlInput.addEventListener('keyup', () => {
@@ -454,20 +479,31 @@ function setupEventListeners() {
     });
 
   window.addEventListener('resize', ui.adjustBodyPadding);
+
+  let modalMousedownTarget = null;
+  window.addEventListener('mousedown', (event) => {
+    modalMousedownTarget = event.target;
+  });
+
   window.addEventListener('click', (event) => {
-    if (ui.elements.groupSettingsModal && event.target == ui.elements.groupSettingsModal) ui.closeSettingsModal();
-    if (ui.elements.profileEditModal && event.target == ui.elements.profileEditModal) ui.closeProfileEditModal();
-    if (ui.elements.passwordSetModal && event.target == ui.elements.passwordSetModal) ui.elements.passwordSetModal.style.display = 'none';
-    if (ui.elements.prizeMasterSelectModal && event.target == ui.elements.prizeMasterSelectModal) ui.closePrizeMasterSelectModal();
+    const isSameTarget = modalMousedownTarget === event.target;
+    
+    if (isSameTarget) {
+      if (ui.elements.groupSettingsModal && event.target == ui.elements.groupSettingsModal) ui.closeSettingsModal();
+      if (ui.elements.profileEditModal && event.target == ui.elements.profileEditModal) ui.closeProfileEditModal();
+      if (ui.elements.passwordSetModal && event.target == ui.elements.passwordSetModal) ui.elements.passwordSetModal.style.display = 'none';
+      if (ui.elements.prizeMasterSelectModal && event.target == ui.elements.prizeMasterSelectModal) ui.closePrizeMasterSelectModal();
+      if (ui.elements.prizeMasterModal && event.target == ui.elements.prizeMasterModal) ui.closePrizeMasterModal();
+      if (ui.elements.passwordResetRequestModal && event.target == ui.elements.passwordResetRequestModal) ui.closePasswordResetRequestModal();
+      if (ui.elements.memberEditModal && event.target == ui.elements.memberEditModal) ui.closeMemberEditModal();
+      if (ui.elements.bulkRegisterModal && event.target == ui.elements.bulkRegisterModal) ui.closeBulkRegisterModal();
+      if (ui.elements.addPrizeModal && event.target == ui.elements.addPrizeModal) ui.closeAddPrizeModal();
+      if (ui.elements.summaryModal && event.target == ui.elements.summaryModal) ui.closeSummaryModal();
+    }
+    
     if (ui.elements.groupDropdown && ui.elements.groupDropdown.style.display === 'block' && !ui.elements.groupSwitcher.contains(event.target)) {
       ui.elements.groupDropdown.style.display = 'none';
     }
-    if (ui.elements.prizeMasterModal && event.target == ui.elements.prizeMasterModal) ui.closePrizeMasterModal();
-    if (ui.elements.passwordResetRequestModal && event.target == ui.elements.passwordResetRequestModal) ui.closePasswordResetRequestModal();
-    if (ui.elements.memberEditModal && event.target == ui.elements.memberEditModal) ui.closeMemberEditModal();
-    if (ui.elements.bulkRegisterModal && event.target == ui.elements.bulkRegisterModal) ui.closeBulkRegisterModal();
-    if (ui.elements.addPrizeModal && event.target == ui.elements.addPrizeModal) ui.closeAddPrizeModal();
-    if (ui.elements.summaryModal && event.target == ui.elements.summaryModal) ui.closeSummaryModal();
     const link = event.target.closest('a');
     if (link && link.href && link.target !== '_blank') {
       const url = new URL(link.href);

@@ -2,7 +2,10 @@
   {
     "origin": [
       "http://localhost:3000",
-      "https://amidakuji-app-native.an.r.appspot.com"
+      "http://localhost:8787",
+      "http://127.0.0.1:8787",
+      "https://amidakuji-app-native.an.r.appspot.com",
+      "https://amidakuji-app.pages.dev"
     ],
     "method": [
       "GET",

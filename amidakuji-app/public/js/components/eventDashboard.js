@@ -43,8 +43,15 @@ export function renderEventList(allEvents) {
   elements.eventList.innerHTML = '';
   eventsToRender.forEach((event) => {
     const li = document.createElement('li');
-    const date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
-    const displayDate = !isNaN(date) ? date.toLocaleString() : '日付不明';
+    let date;
+    if (event.createdAt) {
+      if (typeof event.createdAt === 'string') {
+        date = new Date(event.createdAt);
+      } else if (event.createdAt._seconds || event.createdAt.seconds) {
+        date = new Date((event.createdAt._seconds || event.createdAt.seconds) * 1000);
+      }
+    }
+    const displayDate = date && !isNaN(date.getTime()) ? date.toLocaleString() : '日付不明';
     const eventName = event.eventName || '無題のイベント';
     const filledSlots = event.participants.filter((p) => p.name).length;
 

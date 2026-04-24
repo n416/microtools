@@ -8,7 +8,6 @@ import { participantPanzoom } from '../animation/setup.js';
 import * as ui from '../ui.js';
 import { clientEmojiToLucide } from '../ui.js';
 import { addFirestoreListener } from '../state.js';
-import { db } from '../firebase.js';
 import { processImage } from '../imageProcessor.js';
 
 let processedProfileIconFile = null;
@@ -229,7 +228,7 @@ export function showJoinView(eventData) {
   hideParticipantSubViews(true);
   if (elements.joinSection) elements.joinSection.style.display = 'block';
   renderSlots(eventData.participants);
-  renderPrizesForParticipant(eventData.prizes);
+  renderPrizesForParticipant(eventData.prizeSummary || eventData.prizes);
 }
 
 export async function showStaticAmidaView() {
@@ -408,7 +407,7 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
     state.setCurrentLotteryData(eventData);
 
     if (!isShare) {
-      const eventRef = db.collection('events').doc(eventId);
+      const eventRef = firebase.firestore().collection('events').doc(eventId);
 
       const unsubscribe = eventRef.onSnapshot(
         async (doc) => {
@@ -424,7 +423,16 @@ export async function initializeParticipantView(eventId, isShare, sharedParticip
             return;
           }
 
-          const remoteTimestampMs = updatedData.lastModifiedAt ? updatedData.lastModifiedAt.toMillis() : 0;
+          let remoteTimestampMs = 0;
+          if (updatedData.lastModifiedAt) {
+            if (typeof updatedData.lastModifiedAt.toMillis === 'function') {
+              remoteTimestampMs = updatedData.lastModifiedAt.toMillis();
+            } else if (updatedData.lastModifiedAt._seconds !== undefined) {
+              remoteTimestampMs = new Date(updatedData.lastModifiedAt._seconds * 1000).getTime();
+            } else {
+              remoteTimestampMs = new Date(updatedData.lastModifiedAt).getTime();
+            }
+          }
 
           let localTimestampMs = 0;
           const localLastModified = state.currentLotteryData?.lastModifiedAt;
@@ -561,10 +569,16 @@ export function initParticipantView() {
   }
 
   if (ui.elements.headerParticipantLogoutButton) {
-    ui.elements.headerParticipantLogoutButton.addEventListener('click', () => {
+    ui.elements.headerParticipantLogoutButton.addEventListener('click', async () => {
       if (state.currentGroupId) {
-        state.clearParticipantState();
-        window.location.reload();
+        try {
+          await api.clearGroupVerification();
+        } catch (error) {
+          console.error('Failed to clear group verification session:', error);
+        } finally {
+          state.clearParticipantState();
+          window.location.reload();
+        }
       }
     });
   }
