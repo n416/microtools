@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta property="og:title" content="ダイナミックあみだくじ" />
+  <meta property="og:description" content="インタラクティブなあみだくじアプリ" />
+  <meta property="og:image" content="/default-image.png" />
+  <meta property="og:type" content="website" />
+  
+  <title>ダイナミックあみだくじ</title>
+  <script type="importmap">
+    {
+        "imports": {
+            "./api.js": "/js/api.js?v=v1.0.0",
+            "./ui.js": "/js/ui.js?v=v1.0.0",
+            "./state.js": "/js/state.js?v=v1.0.0",
+            "./animation.js": "/js/animation.js?v=v1.0.0",
+            "./router.js": "/js/router.js?v=v1.0.0",
+            "./components/groupDashboard.js": "/js/components/groupDashboard.js?v=v1.0.0",
+            "./components/eventDashboard.js": "/js/components/eventDashboard.js?v=v1.0.0",
+            "./components/memberManagement.js": "/js/components/memberManagement.js?v=v1.0.0",
+            "./components/eventEdit.js": "/js/components/eventEdit.js?v=v1.0.0",
+            "./components/adminDashboard.js": "/js/components/adminDashboard.js?v=v1.0.0",
+            "./components/participantView.js": "/js/components/participantView.js?v=v1.0.0",
+            "./components/broadcast.js": "/js/components/broadcast.js?v=v1.0.0"
+        }
+    }
+  </script>
+  <link rel="stylesheet" href="/style.css?v=v1.0.0" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
+</head>
+
+<body>
+  <div id="globalLoadingMask" class="loading-mask" style="position: fixed; display: none;
+z-index: 9999;">
+    <p>読み込み中...</p>
+  </div>
+  
+  <div id="canvas-container">
+    <canvas id="grid-canvas"></canvas>
+    <canvas id="animation-canvas"></canvas>
+
+  </div>
+  <div id="header-container">
+    <div class="impersonation-banner" style="display: none; background-color: #ffeeb0; padding: 10px; text-align: center; font-weight: bold; color: #333; z-index: 1000; position: relative;">
+      <span id="impersonationBannerText">現在、別のユーザーとして操作中です。</span>
+      <button id="stopImpersonatingButton" class="button-secondary" style="margin-left: 10px; padding: 5px 10px; font-size: 0.9em; cursor: pointer;">元の管理者に戻る</button>
+    </div>
+    <header class="main-header">
+      <h1>ダイナミックあみだくじ</h1>
+      <button id="hamburger-button" aria-label="メニューを開く" aria-controls="nav-menu" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div id="nav-menu">
+        
+        <a href="/" class="button header-icon-button" id="homeButton" title="ホーム"><i data-lucide="home"></i><span>ホーム</span></a>
+
+        <div class="group-switcher-container" style="display: none;">
+          <label class="group-switcher-label">グループ選択</label>
+          <div id="groupSwitcher">
+            <button id="currentGroupName"></button>
+            <div id="groupDropdown" class="dropdown-content">
+              <ul id="switcherGroupList"></ul>
+
+              <button id="switcherCreateGroup"><i data-lucide="plus"></i> 新規グループを作成</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-dropdown" id="tutorialMenuContainer" style="display: none;">
+          <button class="button header-icon-button" id="tutorialMenuButton">
+            <i data-lucide="help-circle"></i>
+            <span>チュートリアル</span>
+            <i data-lucide="chevron-down" class="dropdown-arrow"></i>
+
+            <span class="notification-dot" style="display: none;"></span>
+          </button>
+          <div class="dropdown-content">
+            <ul id="tutorialDropdownList" class="item-list"></ul>
+            <a href="/tutorials" class="dropdown-item-link" id="viewAllTutorialsLink">すべて表示</a>
+          </div>
+        </div>
+
+        <div class="header-dropdown" id="userMenuContainer">
+          <button class="button header-icon-button" id="userMenuButton">
+            <i data-lucide="user"></i>
+
+            <span>ユーザー</span>
+            <i data-lucide="chevron-down" class="dropdown-arrow"></i>
+          </button>
+          <div class="dropdown-content">
+            <ul>
+              
+              <li><button id="adminDashboardButton">システム管理</button></li>
+              
+
+              <li><button id="logoutButton">ログアウト</button></li>
+              <li><button id="deleteAccountButton" class="delete-btn">アカウント削除</button></li>
+            </ul>
+          </div>
+        </div>
+        <div class="auth-controls">
+          <button id="loginButton">運営者ログイン</button>
+        </div>
+      </div>
+    </header>
+    <header class="participant-header" id="participantHeader" style="display: none;">
+  <div class="header-content-wrapper">
+    <div id="participant-header-logged-out" style="display: none;">
+      <div class="participant-header-actions">
+        <button id="participantDashboardButtonLoggedOut">ダッシュボード</button>
+        <button id="participantLoginButton" class="primary-action">参加者ログイン</button>
+      </div>
+    </div>
+    <div id="participant-header-logged-in" style="display: none;">
+      
+      <div id="participantWelcomeMessage">ようこそ、〇〇さん</div>
+      <div class="participant-header-actions">
+        <button id="participantDashboardButton">ダッシュボード</button>
+        <button id="participantProfileButton">プロフィール</button>
+        <button id="headerParticipantLogoutButton" class="secondary-btn">ログアウト</button>
+      </div>
+    </div>
+  </div>
+</header>
+  </div>
+  <div id="landingView" class="view-container" style="display: none;">
+    <div class="landing-container">
+  <h2>ダイナミックあみだくじへようこそ！</h2>
+  <p class="landing-subtitle">インタラクティブなあみだくじを作成して、イベントを盛り上げましょう。</p>
+
+  <div class="landing-section">
+    <h3>🎉 このサイトについて</h3>
+    <p>
+      「ダイナミックあみだくじ」は、イベントやパーティーの主催者（運営者）が、リアルタイムで結果が変化するインタラクティブなあみだくじを作成・実施するためのツールです。
+    </p>
+  </div>
+
+  <div class="landing-section">
+    <h3>運営者の方へ</h3>
+    <p>
+      Googleアカウントでログインすると、あみだくじイベントの作成やメンバー管理など、すべての機能をご利用いただけます。
+    </p>
+    <div class="controls">
+      <button id="landingLoginButton" class="primary-action">運営者ログイン (Google)</button>
+    </div>
+  </div>
+
+  <div class="landing-section participant-guide">
+    <h3>参加者の方へ</h3>
+    <p>
+      このページは運営者向けのトップページです。<br>
+      あみだくじに参加するには、イベントの主催者から共有された専用のURLにアクセスしてください。
+    </p>
+    <p class="example-url">
+      （例: https://amidakuji-app-native.an.r.appspot.com/events/xxxxxx）
+    </p>
+  </div>
+</div>
+  </div>
+  <div id="groupDashboard" class="view-container" style="display: none">
+    <h2>マイグループ一覧</h2>
+<div class="controls">
+  <div class="input-group">
+    <label for="groupNameInput" class="visually-hidden">新しいグループ名</label>
+    <input type="text" id="groupNameInput" placeholder="新しいグループ名" />
+    <button id="createGroupButton">グループ作成</button>
+  </div>
+</div>
+<ul id="groupList" class="item-list"></ul>
+<div class="controls" style="margin-top: 20px" id="requestAdminControls">
+  <button id="requestAdminButton" style="display: none">管理者権限を申請する</button>
+</div>
+  </div>
+  <div id="adminDashboard" class="view-container" style="display: none">
+    <h2>システム管理ダッシュボード</h2>
+<div class="controls">
+  <h3>管理者申請一覧</h3>
+  <ul id="pendingRequestsList" class="item-list"></ul>
+</div>
+<div class="controls">
+  <h3>ユーザー一覧</h3>
+  <div class="search-controls">
+    <input type="text" id="groupAdminSearchInput" placeholder="ユーザーIDで検索">
+    <button id="groupAdminSearchButton">検索</button>
+  </div>
+  <ul id="adminUserList" class="item-list"></ul>
+  <div class="pagination-controls" id="groupAdminPagination">
+    <button class="prev-btn" style="display: none;">前へ</button>
+    <button class="next-btn" style="display: none;">次へ</button>
+  </div>
+</div>
+<div class="controls">
+  <h3>システム管理者一覧</h3>
+  <div class="search-controls">
+    <input type="text" id="systemAdminSearchInput" placeholder="ユーザーIDで検索">
+    <button id="systemAdminSearchButton">検索</button>
+  </div>
+  <ul id="systemAdminList" class="item-list"></ul>
+  <div class="pagination-controls" id="systemAdminPagination">
+    <button class="prev-btn" style="display: none;">前へ</button>
+    <button class="next-btn" style="display: none;">次へ</button>
+  </div>
+</div>
+  </div>
+  <div id="groupEventListView" class="view-container" style="display: none">
+    <div class="event-header">
+  <button id="backToDashboardFromEventListButton" style="display: none;"></button>
+</div>
+<h2 id="groupEventListName">イベント一覧を読み込んでいます...</h2>
+<ul id="groupEventList" class="item-list"></ul>
+  </div>
+  <div id="dashboardView" class="view-container" style="display: none">
+    <h2 id="eventGroupName"></h2>
+<div id="passwordResetNotification" class="notification-banner" style="display: none;">
+  <p><span id="passwordResetCount"></span>件の合言葉リセット依頼が承認を待っています。</p>
+  <button id="showPasswordResetRequestsButton">詳細を表示</button>
+</div>
+<div class="controls">
+  <div id="userInfoDisplay" class="user-info-display"></div>
+  <button id="goToGroupSettingsButton"><i data-lucide="settings"></i> グループ設定</button>
+  <button id="goToPrizeMasterButton"><i data-lucide="trophy"></i> 賞品マスター管理</button>
+  <button id="goToMemberManagementButton"><i data-lucide="users"></i> メンバー管理</button>
+  <button id="goToCreateEventViewButton">イベント新規作成</button>
+</div>
+<div class="list-header">
+  <h3>このグループのイベント一覧</h3>
+  <div class="input-group checkbox-group">
+    <input type="checkbox" id="showStartedEvents" />
+    <label for="showStartedEvents">終了済みを表示する</label>
+  </div>
+</div>
+<ul id="eventList" class="item-list"></ul>
+  </div>
+  <div id="memberManagementView" class="view-container" style="display: none">
+    <div class="event-header">
+  <button id="backToDashboardFromMembersButton"><i data-lucide="arrow-left"></i> ダッシュボードに戻る</button>
+</div>
+<h2><span id="memberManagementGroupName"></span> のメンバー管理</h2>
+<div class="controls">
+  <div class="input-group">
+    <label for="memberSearchInput" class="visually-hidden">メンバー名で検索</label>
+    <input type="text" id="memberSearchInput" placeholder="メンバー名で検索..." />
+    <button id="addNewMemberButton" class="primary-action"><i data-lucide="plus"></i> メンバー追加</button>
+    <button id="bulkRegisterButton">一括登録</button>
+    <button id="cleanupEventsButton" class="secondary-btn" style="display: none;">過去データ修正</button>
+  </div>
+</div>
+<div id="memberList" class="item-list"></div>
+  </div>
+  <div id="eventEditView" class="view-container" style="display: none">
+    <div class="event-header">
+  <button id="backToGroupsButton"><i data-lucide="arrow-left"></i> グループダッシュボードに戻る</button>
+</div>
+<h3>イベント新規作成・編集</h3>
+<div class="controls">
+  <div class="settings-section">
+    <h4>1.
+      イベント情報</h4>
+    <div class="input-group">
+      <label for="eventNameInput">イベント名:</label>
+      <input type="text" id="eventNameInput" placeholder="（例: 忘年会2025）" />
+    </div>
+    <div id="saveStartedEventContainer" style="display: none; margin-top: 15px;">
+      <button id="saveStartedEventButton" class="primary-action">イベント名を保存する</button>
+    </div>
+    <p>現在のイベントURL: <a id="currentEventUrl" href="#" target="_blank">（未作成または未読み込み）</a></p>
+  </div>
+  <div class="settings-section">
+    <h4>2.
+      景品</h4>
+    <div class="prize-controls-header">
+      <div class="input-group prize-main-controls">
+        <button id="openAddPrizeModalButton" class="primary-action"><i data-lucide="plus"></i> 追加</button>
+        <button id="bulkAddPrizesButton">テキスト流し込み</button>
+        <button id="shufflePrizesButton" type="button"><i data-lucide="refresh-cw"></i> ランダム並び替え</button>
+        <button id="showSummaryButton">集計</button>
+      </div>
+      <div class="view-mode-switcher">
+        <button id="viewModeCard" class="view-mode-btn active" data-mode="card">カード表示</button>
+        <button id="viewModeList" class="view-mode-btn" data-mode="list">リスト表示</button>
+
+
+      </div>
+    </div>
+    <ul id="prizeCardListContainer" class="prize-card-list"></ul>
+    <div id="prizeListModeContainer" style="display: none;"></div>
+  </div>
+  <div class="settings-section">
+    <h4>3.
+      公開設定</h4>
+    <p>参加者が参加枠を選ぶ画面で、どこまで景品情報を表示するか設定します。</p>
+    <div class="input-group checkbox-group">
+      <input type="checkbox" id="displayPrizeName" checked />
+      <label for="displayPrizeName">景品名を表示する</label>
+    </div>
+    <div class="input-group checkbox-group">
+      <input type="checkbox" id="displayPrizeCount" checked />
+      <label for="displayPrizeCount">景品ごとの個数を表示する</label>
+    </div>
+    <div class="display-preview">
+      <h5>参加者への表示プレビュー</h5>
+      <ul id="prizeDisplayPreview" class="item-list"></ul>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h4>4.
+      インタラクティブ設定</h4>
+    <div class="input-group checkbox-group">
+      <input type="checkbox" id="allowDoodleModeCheckbox" />
+      <label for="allowDoodleModeCheckbox">落書きモードを許可する</label>
+    </div>
+  </div>
+
+  <div class="settings-section" id="createEventButtonContainer">
+    <button id="createEventButton" class="primary-action">この内容でイベントを作成</button>
+  </div>
+
+  <div class="settings-section" id="finalPrepSection" style="display: none;">
+    <h4>5.
+      最終準備と配信</h4>
+    <div class="final-prep-content-wrapper">
+      <div class="final-prep-overlay" style="display: none;">
+        <button id="saveForPreviewButton" class="primary-action">変更を保存してプレビューを更新</button>
+      </div>
+      <p>あみだくじの状態をプレビューし、必要に応じて調整します。</p>
+      <div class="input-group">
+        <button id="showFillSlotsModalButton"><i data-lucide="users"></i> 参加枠を埋める</button>
+        <button id="regenerateLinesButton"><i data-lucide="refresh-cw"></i> 線を再生成</button>
+        <button id="shufflePrizesBroadcastButton"><i data-lucide="gift"></i> 景品シャッフル</button>
+      </div>
+      <div class="canvas-panzoom-container" style="margin-top: 15px;">
+        <div class="panzoom-wrapper">
+          <canvas id="eventEditPreviewCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top: 20px;">
+      <a href="#" id="goToBroadcastViewButton" class="button" style="display: none;">配信画面へ進む <i data-lucide="arrow-right"></i></a>
+    </div>
+  </div>
+</div>
+  </div>
+  <div id="broadcastView" class="view-container" style="display: none">
+    <div class="broadcast-header">
+  
+  <button id="backToDashboardButton"><i data-lucide="arrow-left"></i> <span>ダッシュボードに戻る</span></button>
+
+  
+  <div class="broadcast-header-controls">
+    <button id="toggleFullscreenButton"><i data-lucide="maximize"></i> <span>表示エリアを最大化</span></button>
+    <button id="openSidebarButton"><i data-lucide="sliders-horizontal"></i> <span>設定</span></button>
+  </div>
+</div>
+<div class="broadcast-layout">
+  <p class="event-url-display">イベントURL: <a id="broadcastEventUrl" href="#" target="_blank">読み込み中...</a></p>
+  <div class="canvas-panzoom-container">
+    <div id="adminControls" class="floating-controls" style="justify-content: center; width: 100%; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+      <button id="startEventButton" class="primary-action" style="font-size: 1.5em; padding: 15px 30px;"><i data-lucide="party-popper"></i> イベント開始！</button>
+      <button id="glimpseButton">景品チラ見せ</button>
+    </div>
+    <div class="loading-mask" id="admin-loading-mask">あみだくじを生成中...</div>
+    <div class="panzoom-wrapper" id="admin-panzoom-wrapper">
+      <canvas id="adminCanvas" width="800" height="400"></canvas>
+    </div>
+  </div>
+
+  <div id="broadcastResultsContainer" class="controls" style="display: 
+none;
+width: 100%; margin-top: 20px;">
+    <ul id="broadcastResultsList" class="item-list"></ul>
+  </div>
+  <aside id="broadcastSidebar" class="broadcast-sidebar">
+    <button id="closeSidebarButton" class="close-sidebar-btn" aria-label="閉じる"><i data-lucide="x"></i></button>
+    <h4>コントロールパネル</h4>
+    <div class="broadcast-controls">
+      <div class="control-group">
+        <h5>全体進行</h5>
+        <button id="animateAllButton">全結果を再生</button>
+        <button id="advanceLineByLineButton">一段ずつ進む</button>
+      </div>
+      <div class="control-group">
+        <h5>あみだくじ操作</h5>
+      </div>
+      <div class="control-group">
+        <h5>個別演出</h5>
+        <label for="highlightUserSelect">特定ユーザー:</label>
+        <select id="highlightUserSelect"></select>
+        <button id="highlightUserButton">選択した人を表示</button>
+        <button id="revealRandomButton">ランダムに一人表示</button>
+      </div>
+    </div>
+  </aside>
+</div>
+  </div>
+  <div id="participantView" class="view-container" style="display: none">
+    <h2 id="participantEventName">イベント読み込み中...</h2>
+<div class="event-header">
+  <a href="#" id="backToGroupEventListLink" style="display: none;"><i data-lucide="arrow-left"></i> イベント一覧に戻る</a>
+</div>
+<div id="participantFlow">
+  <div id="nameEntrySection" class="controls" style="display: none">
+    <h3>イベントに参加</h3>
+    <div class="input-group">
+      <label for="nameInput" class="visually-hidden">あなたの名前</label>
+      <input type="text" id="nameInput" placeholder="あなたの名前を入力してください" />
+      <button id="confirmNameButton">OK</button>
+    </div>
+    <div id="suggestionList" class="suggestion-list"></div>
+  </div>
+  <div id="participantControlPanel" class="controls participant-dashboard" style="display: none">
+    <h3>ようこそ、<span id="welcomeName"></span> さん</h3>
+    <div class="setting-group">
+      <h4 class="setting-group-title">アカウント設定</h4>
+      <div class="setting-group-buttons">
+       <button id="editProfileButton" class="secondary-btn">プロフィール編集</button>
+        <button id="setPasswordButton" class="secondary-btn">合言葉を設定</button>
+      </div>
+    </div>
+    <div class="danger-zone">
+      <button id="participantLogoutButton" class="secondary-btn">ログアウト</button>
+      <button id="deleteMyAccountButton" class="secondary-btn danger">アカウントを削除</button>
+    </div>
+  </div>
+  <div id="otherEventsSection" class="controls" style="display: none; margin-top: 20px;">
+    <div class="list-header">
+      <h4>イベント一覧</h4>
+      <div class="input-group checkbox-group" style="margin-bottom: 0;">
+        <input type="checkbox" id="showAcknowledgedEvents" />
+        <label for="showAcknowledgedEvents">終了済みを表示する</label>
+      </div>
+    </div>
+    <ul id="otherEventsList" class="item-list"></ul>
+  </div>
+  <div id="joinSection" style="display: none">
+    <button id="backToControlPanelButton"><i data-lucide="arrow-left"></i> メニューに戻る</button>
+    <div id="prizeDisplay"></div>
+    <div class="slot-selection-container">
+      <h3>参加枠を選んでください</h3>
+      <div id="slotList"></div>
+     </div>
+    <div class="join-form">
+      <button id="joinButton" disabled>この枠で参加する</button>
+    </div>
+  </div>
+</div>
+
+<div id="staticAmidaView" class="view-container" style="display: none; text-align: center;">
+  <h3>参加登録済み</h3>
+  <p>イベント開始までお待ちください。自分の参加枠とあみだくじの線を確認できます。</p>
+  <div class="canvas-panzoom-container">
+    <div class="loading-mask" id="participant-loading-mask-static">あみだくじを生成中...</div>
+    <div class="panzoom-wrapper" id="participant-panzoom-wrapper-static">
+      <canvas id="participantCanvasStatic"></canvas>
+    </div>
+  </div>
+  <div id="doodleControls" style="display: none;">
+    <div class="doodle-mode-switcher">
+      <button id="doodleModePan" class="doodle-mode-btn active" title="移動モード"><i data-lucide="hand"></i></button>
+      <button id="doodleModeDraw" class="doodle-mode-btn" title="落書きモード"><i data-lucide="pencil"></i></button>
+      <button id="doodleModeErase" class="doodle-mode-btn" title="消しゴムモード"><i data-lucide="eraser"></i></button>
+    </div>
+    <p>隣り合った縦線の間をクリックして横線を追加し、1本だけ線を引いて運命を変えよう！</p>
+    </div>
+  <div class="controls" style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+    <button id="deleteParticipantWaitingButton" class="delete-btn">参加を取り消す</button>
+    <button id="backToDashboardFromWaitingButton">ダッシュボードに戻る</button>
+  </div>
+</div>
+
+<div id="resultSection" style="display: none">
+  <h3><i data-lucide="party-popper"></i> 結果発表 <i data-lucide="party-popper"></i></h3>
+  <div class="canvas-panzoom-container">
+    <div class="loading-mask" id="participant-loading-mask">あみだくじを生成中...</div>
+    <div class="panzoom-wrapper" id="participant-panzoom-wrapper">
+      <canvas id="participantCanvas"></canvas>
+    </div>
+  </div>
+  <p id="myResult"></p>
+  <div id="allResultsContainer"></div>
+  <button id="acknowledgeButton" class="primary-action" style="display: none; margin-top: 15px;"><i data-lucide="gift"></i> 結果を受け取る</button>
+  <button id="shareButton" style="display: none">結果をシェアする</button>
+  <button id="backToControlPanelFromResultButton" style="display: none">戻る</button>
+</div>
+
+  </div>
+  <div id="tutorialListView" class="view-container" style="display: none">
+    <h2>チュートリアル一覧</h2>
+<div class="controls">
+  <p>各チュートリアルのタイトルをクリックすると、いつでも説明を再確認できます。</p>
+</div>
+<div id="tutorial-list-container">
+</div>
+  </div>
+
+  <div id="groupSettingsModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <form onsubmit="return false;">
+      <h3>グループ設定</h3>
+      <input type="hidden" id="settingsGroupId" />
+      <div class.input-group">
+        <label for="groupNameEditInput">グループ名:</label>
+        <input type="text" id="groupNameEditInput" placeholder="グループ名" autocomplete="off" />
+      </div>
+      <div class="input-group">
+        <label for="customUrlInput">カスタムURL:</label>
+        <input type="text" id="customUrlInput" placeholder="例: my-event-2025" autocomplete="off" />
+      </div>
+      <p class="url-preview">
+        <code>/g/<span id="customUrlPreview"></span></code>
+      </p>
+      <div class="input-group">
+        <label for="groupPasswordInput">合言葉:</label>
+        <input type="password" id="groupPasswordInput" placeholder="新規設定・変更時のみ入力" autocomplete="current-password" />
+      </div>
+      <div class="input-group checkbox-group">
+        <input type="checkbox" id="noIndexCheckbox" />
+        <label for="noIndexCheckbox">検索エンジンに表示しない</label>
+      </div>
+      <div class="modal-actions">
+        <button id="deletePasswordButton" class="delete-btn action-left" style="display: none;">合言葉を削除</button>
+        <button id="saveGroupSettingsButton" class="primary-action">設定を保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+  <div id="prizeMasterModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <h3>賞品マスター管理</h3>
+
+    <div class="prize-master-form">
+      <div class="prize-master-image-dropzone">
+        <label for="addMasterPrizeImageInput">
+          <img id="addMasterPrizeImagePreview" src="" alt="プレビュー" style="display: none;">
+          <div id="addMasterPrizePlaceholder">
+            <i data-lucide="image-plus"></i>
+            <span>クリックして画像を選択</span>
+          </div>
+        </label>
+        <input type="file" id="addMasterPrizeImageInput" accept="image/*" class="visually-hidden" />
+      </div>
+      <div class="prize-master-inputs">
+        <input type="text" id="addMasterPrizeNameInput" placeholder="新しい賞品名" />
+        <div class="prize-rank-selector" data-rank="uncommon">
+          <i data-lucide="star" class="lucide-star filled" data-value="miss"></i>
+          <i data-lucide="star" class="lucide-star filled" data-value="uncommon"></i>
+          <i data-lucide="star" class="lucide-star" data-value="common"></i>
+          <i data-lucide="star" class="lucide-star" data-value="rare"></i>
+          <i data-lucide="star" class="lucide-star" data-value="epic"></i>
+        </div>
+        <button id="addMasterPrizeButton" class="primary-action">マスターに追加</button>
+      </div>
+    </div>
+    <ul id="prizeMasterList" class="item-list prize-master-list"></ul>
+  </div>
+</div>
+  <div id="passwordResetRequestModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <h3>合言葉リセット依頼</h3>
+    <ul id="passwordResetRequestList" class="item-list"></ul>
+  </div>
+</div>
+  <div id="memberEditModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <h3>メンバー編集</h3>
+    <input type="hidden" id="memberIdInput">
+    <div class="input-group">
+      <label for="memberNameEditInput">名前:</label>
+      <input type="text" id="memberNameEditInput">
+    </div>
+    <div class="input-group">
+      <label for="memberColorInput">カラー:</label>
+      <input type="color" id="memberColorInput">
+    </div>
+    <div class="modal-actions">
+      <button id="saveMemberButton" class="primary-action">保存</button>
+    </div>
+  </div>
+</div>
+  <div id="passwordSetModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <form onsubmit="return false;">
+      <h3>合言葉の設定</h3>
+      <p>合言葉を設定すると、他の人があなたのアカウントを使うのを防げます。</p>
+      <input type="text" autocomplete="username" style="display:none">
+      <div class="input-group">
+        <label for="newPasswordInput">新しい合言葉:</label>
+        <input type="password" id="newPasswordInput" placeholder="4文字以上" autocomplete="new-password" />
+      </div>
+      <div class="modal-actions">
+        <button id="deleteUserPasswordButton" class="secondary-btn danger action-left" style="display: none;">合言葉を削除する</button>
+        <button id="savePasswordButton" class="primary-action">設定する</button>
+      </div>
+    </form>
+  </div>
+</div>
+  <div id="profileEditModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <h3>プロフィール編集</h3>
+    <div class="profile-icon-container">
+      <img id="profileIconPreview" src="" alt="Profile Icon" width="100" height="100" />
+      <label for="profileIconInput" class="button">画像を変更...</label>
+      <input type="file" id="profileIconInput" accept="image/*" class="visually-hidden" />
+    </div>
+    <div class="input-group">
+      <label for="profileColorInput">テーマカラー:</label>
+      <input type="color" id="profileColorInput" />
+    </div>
+    <div class="modal-actions">
+      <button id="saveProfileButton" class="primary-action">保存する</button>
+    </div>
+  </div>
+</div>
+  <div id="prizeMasterSelectModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <h3>賞品をマスターから選択</h3>
+    <ul id="prizeMasterSelectList" class="item-list prize-master-list"></ul>
+    <div class="modal-actions">
+      <button id="addSelectedPrizesButton" class="primary-action">選択した賞品を追加</button>
+    </div>
+  </div>
+</div>
+  <div id="groupPasswordModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <form onsubmit="return false;">
+      <h3>合言葉の入力</h3>
+      <p>グループ「<strong id="verificationTargetGroupName"></strong>」へのアクセスには合言葉が必要です。</p>
+      <input type="hidden" id="verificationTargetGroupId" />
+      <input type="text" id="groupPasswordUsername" autocomplete="username" style="display:none;" />
+      <div class="input-group">
+        <label for="groupPasswordVerifyInput">合言葉:</label>
+        <input type="password" id="groupPasswordVerifyInput" autocomplete="current-password" />
+      </div>
+      <div class="modal-actions">
+        <button id="verifyPasswordButton" class="primary-action">認証</button>
+      </div>
+    </form>
+  </div>
+</div>
+  <div id="bulkRegisterModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <h3>メンバーの一括登録</h3>
+    <div id="bulk-step1-input">
+      <label for="bulkNamesTextarea">登録したいメンバーの名前を、改行・スペース・カンマ区切りでテキストエリアに貼り付けてください。</label>
+      <textarea id="bulkNamesTextarea" rows="10" placeholder="佐藤 太郎, 鈴木 一郎, ..."></textarea>
+      <div class="modal-actions">
+        <button id="analyzeBulkButton" class="primary-action">確認する</button>
+      </div>
+    </div>
+    <div id="bulk-step2-preview" style="display: none;">
+      <p>入力された名前を分析しました。内容を確認し、登録を実行してください。</p>
+      <div class="tabs">
+        <button class="tab-link active" data-tab="newRegistrationTab">新規登録</button>
+        <button class="tab-link" data-tab="potentialMatchTab">類似候補</button>
+        <button class="tab-link" data-tab="exactMatchTab">完全一致</button>
+      </div>
+      <div id="newRegistrationTab" class="tab-content active"></div>
+      <div id="potentialMatchTab" class="tab-content"></div>
+      <div id="exactMatchTab" class="tab-content"></div>
+      <div class="modal-actions">
+        <button id="finalizeBulkButton" class="primary-action" disabled>この内容で登録を実行する</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <div id="prizeBulkAddModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <h3>景品の一括登録・編集</h3>
+    <p>景品リストを編集し、「リストを更新」ボタンを押してください。</p>
+    <textarea id="prizeBulkTextarea" rows="10"></textarea>
+    <div class="modal-actions">
+      <button id="cancelBulkAddButton" class="secondary-btn">キャンセル</button>
+      <button id="clearBulkPrizesButton" class="secondary-btn action-left">クリア</button>
+      <button id="updatePrizesFromTextButton" class="primary-action">リストを更新</button>
+    </div>
+  </div>
+</div>
+  <div id="addPrizeModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <h3>景品の追加</h3>
+    <div class="input-group">
+      <label>景品名:</label>
+      <input type="text" id="newPrizeNameInput" placeholder="景品名を入力">
+    </div>
+    <div class="input-group">
+      <label>画像:</label>
+      <input type="file" id="newPrizeImageInput" accept="image/*">
+    </div>
+    <div class="prize-rank-selector" data-rank="uncommon">
+      <i data-lucide="star" class="lucide-star filled" data-value="miss"></i>
+      <i data-lucide="star" class="lucide-star filled" data-value="uncommon"></i>
+      <i data-lucide="star" class="lucide-star" data-value="common"></i>
+      <i data-lucide="star" class="lucide-star" data-value="rare"></i>
+      <i data-lucide="star" class="lucide-star" data-value="epic"></i>
+    </div>
+    <img id="newPrizeImagePreview" src="" alt="Image Preview" style="max-width: 100px; max-height: 100px; display: none;">
+    <div class="modal-actions">
+      <button id="callMasterButton" class="secondary-btn action-left">マスターから呼び出し</button>
+      <button id="addPrizeOkButton" class="primary-action">追加</button>
+    </div>
+  </div>
+</div>
+  <div id="summaryModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <h3>景品集計</h3>
+    <p>合計: <span id="totalPrizes"></span>個</p>
+    <ul id="prizeSummaryList"></ul>
+  </div>
+</div>
+  <div id="fillSlotsModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-button"><i data-lucide="x"></i></span>
+    <h3>参加枠を埋める</h3>
+    <p>現在 <strong id="emptySlotCount">0</strong> 件の空き枠があります。</p>
+    <div id="fillSlotsStep1">
+      <h4>ステップ1：未参加のアクティブメンバー</h4>
+      <ul id="unjoinedMemberList" class="item-list" style="max-height: 200px; overflow-y: auto;">
+        <li>読み込み中...</li>
+      </ul>
+      <div class="modal-actions">
+        <button id="selectMembersButton" class="primary-action">メンバーをランダム選出</button>
+      </div>
+    </div>
+    <div id="fillSlotsStep2" style="display: none;">
+      <h4>ステップ2：選出されたメンバー</h4>
+      <ul id="selectedMemberList" class="item-list"></ul>
+      <div class="modal-actions">
+        <button id="confirmFillSlotsButton" class="primary-action">このメンバーで枠を埋める</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <div id="imageCropperModal" class="modal" style="display: none;">
+  <div class="modal-content large">
+    <span class="close-button" id="cancelCropButton"><i data-lucide="x"></i></span>
+    <h3>画像の編集</h3>
+    <p>画像をドラッグして位置を調整し、ホイールで拡大・縮小してください。</p>
+    <div class="cropper-container">
+      <img id="cropperImage" src="" />
+    </div>
+    <div class="modal-actions">
+      <button id="confirmCropButton" class="primary-action">決定</button>
+    </div>
+  </div>
+</div>
+  <div id="customConfirmModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <p id="customConfirmMessage" style="margin-bottom: 24px; font-size: 16px; line-height: 1.6;"></p>
+    
+    <div id="customConfirmButtons" class="modal-actions" style="justify-content: flex-end;">
+      </div>
+  </div>
+</div>
+  <div class="settings-fab" id="settingsFab" title="設定">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.82l-.15-.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1 0-2.82l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 
+0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  </div>
+  <div class="settings-panel" id="settingsPanel">
+    <h4>表示設定</h4>
+    <div class="setting-item">
+      <label for="animationToggle">背景アニメーション</label>
+      <label class="switch">
+        <input type="checkbox" id="animationToggle">
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="setting-item theme-switcher">
+      <label>テーマ</label>
+
+      <div class="radio-group">
+        <input type="radio" id="theme-auto" name="theme" value="auto">
+        <label for="theme-auto">自動</label>
+        <input type="radio" id="theme-light" name="theme" value="light">
+        <label for="theme-light">ライト</label>
+        <input type="radio" id="theme-dark" name="theme" value="dark">
+        <label for="theme-dark">ダーク</label>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  
+  <script src="/js/tutorial/tutorialData.js?v=v1.0.0"></script>
+  <script src="/js/tutorial/tutorialUtils.js?v=v1.0.0"></script>
+  <script src="/js/tutorial/tutorialManager.js?v=v1.0.0"></script>
+  <script src="/js/tutorial/tutorialList.js?v=v1.0.0"></script>
+  <script type="module" src="/js/main.js?v=v1.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://unpkg.com/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script type="application/json" id="server-data-emoji">
+    []
+  </script>
+  <script type="application/json" id="server-data-group">
+    null
+  </script>
+  <script type="application/json" id="server-data-event">
+    null
+  </script>
+  
+  
+</body>
+
+</html>

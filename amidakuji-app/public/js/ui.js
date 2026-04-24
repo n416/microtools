@@ -214,6 +214,22 @@ export function setParticipantHeaderVisibility(visible) {
   adjustBodyPadding();
 }
 
+export function updateMetaRobots(noIndex) {
+  let meta = document.querySelector('meta[name="robots"]');
+  if (noIndex) {
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = "robots";
+      document.head.appendChild(meta);
+    }
+    meta.content = "noindex";
+  } else {
+    if (meta) {
+      meta.remove();
+    }
+  }
+}
+
 export function updateParticipantHeader(participant) {
   if (participant && participant.name) {
     elements.participantHeaderLoggedIn.style.display = 'flex';
@@ -246,8 +262,14 @@ export function updateAuthUI(user) {
   if (user && user.id) {
     let displayName = user.name;
     if (user.isImpersonating) {
-      displayName = `${user.originalUser.name} (成り代わり中: ${user.name})`;
-      if (elements.impersonationBanner) elements.impersonationBanner.style.display = 'block';
+      displayName = `${user.originalUser ? user.originalUser.name || '管理者' : '管理者'} (成り代わり中: ${user.name})`;
+      if (elements.impersonationBanner) {
+        elements.impersonationBanner.style.display = 'block';
+        const bannerText = elements.impersonationBanner.querySelector('#impersonationBannerText');
+        if (bannerText) {
+          bannerText.textContent = `現在、${user.name} (${user.email || '未設定'}) として操作中です。`;
+        }
+      }
     } else {
       if (elements.impersonationBanner) elements.impersonationBanner.style.display = 'none';
     }
@@ -259,9 +281,29 @@ export function updateAuthUI(user) {
     const isSystemAdmin = user.role === 'system_admin' && !user.isImpersonating;
     const adminButton = document.querySelector('#userMenuContainer #adminDashboardButton');
     if (adminButton) adminButton.parentElement.style.display = isSystemAdmin ? 'block' : 'none';
+
+    if (elements.requestAdminControls) {
+      if (user.role === 'user') {
+        elements.requestAdminControls.style.display = 'block';
+        if (elements.requestAdminButton) {
+          elements.requestAdminButton.style.display = 'block';
+          if (user.adminRequestStatus === 'pending') {
+            elements.requestAdminButton.textContent = '申請中';
+            elements.requestAdminButton.disabled = true;
+          } else {
+            elements.requestAdminButton.textContent = '管理者権限を申請する';
+            elements.requestAdminButton.disabled = false;
+          }
+        }
+      } else {
+        elements.requestAdminControls.style.display = 'none';
+        if (elements.requestAdminButton) elements.requestAdminButton.style.display = 'none';
+      }
+    }
   } else {
     if (elements.loginButton) elements.loginButton.style.display = 'block';
     if (userMenuContainer) userMenuContainer.style.display = 'none';
+    if (elements.requestAdminControls) elements.requestAdminControls.style.display = 'none';
   }
   adjustBodyPadding();
 }
@@ -522,46 +564,77 @@ export async function buildNewPrizesWithDataPreservation(newNames) {
 }
 
 /**
- * カスタム確認モーダルを表示します。
+ * カスタムの確認モーダルを表示します。
+ * 引数が配列の場合は複数選択肢モード（文字列を返す）、そうでない場合はOK/Cancelモード（booleanを返す）として動作します。
  * @param {string} message - モーダルに表示するメッセージ。
- * @param {string} [okText='OK'] - OKボタンのテキスト。
- * @param {string} [cancelText='キャンセル'] - キャンセルボタンのテキスト。
- * @returns {Promise<boolean>} ユーザーがOKを押した場合はtrue、それ以外はfalseを返します。
+ * @param {Array<string>|string} optionsOrOkText - 選択肢の配列、またはOKボタンのテキスト。
+ * @param {string} [cancelText='キャンセル'] - キャンセルボタンのテキスト（OK/Cancelモード時）。
+ * @returns {Promise<string|boolean|null>}
  */
-export function showCustomConfirm(message, okText = 'OK', cancelText = 'キャンセル') {
+export function showCustomConfirm(message, optionsOrOkText = 'OK', cancelText = 'キャンセル') {
   return new Promise((resolve) => {
+    const isArrayStyle = Array.isArray(optionsOrOkText);
+    const buttons = isArrayStyle ? optionsOrOkText : [optionsOrOkText];
+
     const modal = document.getElementById('customConfirmModal');
     const messageEl = document.getElementById('customConfirmMessage');
     const buttonsEl = document.getElementById('customConfirmButtons');
 
     if (!modal || !messageEl || !buttonsEl) {
-      // 万が一要素が見つからない場合は、ブラウザ標準のconfirmで代用します
-      resolve(window.confirm(message));
+      const result = window.confirm(message);
+      if (isArrayStyle) {
+        resolve(result ? buttons[0] : null);
+      } else {
+        resolve(result);
+      }
       return;
     }
 
     messageEl.textContent = message;
-    buttonsEl.innerHTML = `
-      <button id="customConfirmCancel" class="button-secondary">${cancelText}</button>
-      <button id="customConfirmOk" class="button-primary">${okText}</button>
-    `;
+    buttonsEl.innerHTML = '';
 
-    modal.style.display = 'block';
+    let cleanup = () => {};
 
-    const okButton = document.getElementById('customConfirmOk');
-    const cancelButton = document.getElementById('customConfirmCancel');
-
-    const close = (result) => {
-      modal.style.display = 'none';
-      okButton.removeEventListener('click', onOk);
-      cancelButton.removeEventListener('click', onCancel);
-      resolve(result);
+    let mousedownTarget = null;
+    const mousedownListener = (e) => {
+      mousedownTarget = e.target;
     };
 
-    const onOk = () => close(true);
-    const onCancel = () => close(false);
+    const clickListener = (e) => {
+      if (e.target === modal && mousedownTarget === modal) {
+        cleanup();
+        resolve(isArrayStyle ? null : false);
+      }
+    };
 
-    okButton.addEventListener('click', onOk, {once: true});
-    cancelButton.addEventListener('click', onCancel, {once: true});
+    cleanup = () => {
+      modal.style.display = 'none';
+      modal.removeEventListener('mousedown', mousedownListener);
+      modal.removeEventListener('click', clickListener);
+    };
+
+    buttons.forEach((btnText, index) => {
+      const button = document.createElement('button');
+      button.textContent = btnText;
+      button.className = index === 0 ? 'primary-action' : 'secondary-btn';
+      button.onclick = () => {
+        cleanup();
+        resolve(isArrayStyle ? btnText : true);
+      };
+      buttonsEl.appendChild(button);
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = cancelText;
+    cancelBtn.className = 'secondary-btn';
+    cancelBtn.onclick = () => {
+      cleanup();
+      resolve(isArrayStyle ? null : false);
+    };
+    buttonsEl.appendChild(cancelBtn);
+
+    modal.style.display = 'block';
+    modal.addEventListener('mousedown', mousedownListener);
+    modal.addEventListener('click', clickListener);
   });
 }

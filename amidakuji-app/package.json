@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev",
     "scss": "sass --watch scss:public",
     "build:css": "sass scss:public",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -13,27 +15,26 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@google-cloud/connect-firestore": "^3.0.0",
-    "@google-cloud/firestore": "^7.11.3",
-    "@google-cloud/secret-manager": "^6.1.0",
-    "@google-cloud/storage": "^7.16.0",
     "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.1",
-    "ejs": "^3.1.9",
-    "express": "^4.19.2",
-    "express-session": "^1.18.2",
     "fs-extra": "^11.3.1",
+    "hono": "^4.12.14",
     "kuromoji": "^0.1.2",
     "levenshtein": "^1.0.5",
     "lucide": "^0.542.0",
     "node-fetch": "^2.7.0",
-    "passport": "^0.7.0",
-    "passport-google-oauth20": "^2.0.0",
     "postcss": "^8.5.6",
     "postcss-scss": "^4.0.9",
     "sharp": "^0.34.3"
   },
   "devDependencies": {
-    "sass": "^1.91.0"
+    "@cloudflare/workers-types": "^4.20260423.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^25.6.0",
+    "sass": "^1.91.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.84.1"
   }
 }

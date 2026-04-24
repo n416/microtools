@@ -10,7 +10,6 @@ import { renderMemberList } from './components/memberManagement.js';
 import { renderPrizeCardList, renderPrizeListMode, renderEventForEditing } from './components/eventEdit.js';
 import { loadAdminDashboardData } from './components/adminDashboard.js';
 import { showUserDashboardView, showJoinView, showStaticAmidaView, showNameEntryView, showResultsView, hideParticipantSubViews, renderOtherEvents, initializeParticipantView } from './components/participantView.js';
-import { db } from './firebase.js';
 import { clearAnimationState } from './animation/core.js';
 
 export async function handleLoginOrRegister(eventId, name, memberId = null) {
@@ -41,7 +40,15 @@ export async function handleParticipantLogin(groupId, name, memberId = null) {
     if (error.requiresPassword) {
       const password = prompt(`「${name}」さんの合言葉を入力してください:`);
       if (password) {
-        await verifyAndLogin(null, error.memberId, password);
+        try {
+          const res2 = await api.loginOrRegisterToGroup(groupId, name, password);
+          state.saveParticipantState(res2.token, res2.memberId, res2.name);
+          const group = await api.getGroup(groupId);
+          const backUrl = group.customUrl ? `/g/${group.customUrl}/dashboard` : `/groups/${groupId}`;
+          await navigateTo(backUrl);
+        } catch (e) {
+          alert(e.error || '合言葉が違います。');
+        }
       }
     } else {
       alert(error.error || 'ログイン処理に失敗しました。');
@@ -62,6 +69,9 @@ export async function verifyAndLogin(eventId, memberId, password) {
 async function loadAndShowGroupEvents(groupId) {
   const groupData = await api.getGroup(groupId).catch(() => null);
   const groupName = groupData ? groupData.name : '不明なグループ';
+  if (groupData) {
+    ui.updateMetaRobots(groupData.noIndex);
+  }
 
   state.setCurrentGroupId(groupId);
   ui.showView('dashboardView');
@@ -275,16 +285,16 @@ async function handleRouting(initialData) {
 
   if (user) {
     const adminMatch = path.match(/\/admin/);
-    const adminGroupDashboardMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)$/);
-    const adminMemberManagementMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9]+)\/members$/);
-    const adminEventEditMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/edit$/);
-    const adminNewEventMatch = path.match(/^\/admin\/group\/([a-zA-Z0-9]+)\/event\/new$/);
-    const adminEventBroadcastMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9]+)\/broadcast$/);
+    const adminGroupDashboardMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9\-_]+)$/);
+    const adminMemberManagementMatch = path.match(/^\/admin\/groups\/([a-zA-Z0-9\-_]+)\/members$/);
+    const adminEventEditMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9\-_]+)\/edit$/);
+    const adminNewEventMatch = path.match(/^\/admin\/group\/([a-zA-Z0-9\-_]+)\/event\/new$/);
+    const adminEventBroadcastMatch = path.match(/^\/admin\/event\/([a-zA-Z0-9\-_]+)\/broadcast$/);
 
-    const eventEditMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/edit$/);
-    const newEventMatch = path.match(/^\/group\/([a-zA-Z0-9]+)\/event\/new$/);
-    const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)$/);
-    const eventBroadcastMatch = path.match(/^\/event\/([a-zA-Z0-9]+)\/broadcast$/);
+    const eventEditMatch = path.match(/^\/event\/([a-zA-Z0-9\-_]+)\/edit$/);
+    const newEventMatch = path.match(/^\/group\/([a-zA-Z0-9\-_]+)\/event\/new$/);
+    const groupDashboardMatch = path.match(/^\/groups\/([a-zA-Z0-9\-_]+)$/);
+    const eventBroadcastMatch = path.match(/^\/event\/([a-zA-Z0-9\-_]+)\/broadcast$/);
 
     if (path === '/tutorials') {
       ui.showView('tutorialListView');
@@ -388,14 +398,14 @@ async function handleRouting(initialData) {
     return;
   }
 
-  const shareMatch = path.match(/^\/share\/([a-zA-Z0-9]+)\/(.+)/);
+  const shareMatch = path.match(/^\/share\/([a-zA-Z0-9\-_]+)\/(.+)/);
   if (shareMatch) {
     const [, eventId, participantName] = shareMatch;
     await initializeParticipantView(eventId, true, decodeURIComponent(participantName));
     return;
   }
 
-  const eventMatch = path.match(/^\/events\/([a-zA-Z0-9]+)/) || path.match(/^\/g\/.+?\/([a-zA-Z0-9]+)/);
+  const eventMatch = path.match(/^\/events\/([a-zA-Z0-9\-_]+)/) || path.match(/^\/g\/.+?\/([a-zA-Z0-9\-_]+)/);
   if (eventMatch) {
     const eventId = eventMatch[1] || eventMatch[2];
     await initializeParticipantView(eventId, false, null);
@@ -412,7 +422,7 @@ async function handleRouting(initialData) {
     return;
   }
 
-  const groupIdMatch = path.match(/^\/groups\/([a-zA-Z0-9]+)\/?$/);
+  const groupIdMatch = path.match(/^\/groups\/([a-zA-Z0-9\-_]+)\/?$/);
   if (groupIdMatch) {
     if (state.currentParticipantId) {
       await initializeParticipantDashboardView(groupIdMatch[1], false);
@@ -495,6 +505,7 @@ async function initializeGroupEventListView(customUrlOrGroupId, groupData, isCus
   }
 
   if (groupData) {
+    ui.updateMetaRobots(groupData.noIndex);
     state.setCurrentGroupId(groupData.id);
     backToDashboardFromEventListButton.dataset.groupId = groupData.id;
     state.loadParticipantState();
@@ -571,6 +582,7 @@ export async function loadUserAndRedirect(lastUsedGroupId) {
     const groups = await api.getGroups();
     state.setAllUserGroups(groups);
     renderGroupList(groups);
+    ui.updateGroupSwitcher();
 
     if (groups.length > 0) {
       let targetGroup = groups.find((g) => g.id === lastUsedGroupId) || groups[0];
@@ -591,6 +603,7 @@ async function initializeParticipantDashboardView(customUrlOrGroupId, isCustomUr
 
     state.setCurrentGroupId(groupData.id);
     state.setCurrentGroupData(groupData);
+    ui.updateMetaRobots(groupData.noIndex);
     state.setParticipantEventList(events);
     state.loadParticipantState();
 

@@ -9,6 +9,7 @@ async function request(endpoint, method = 'GET', body = null, headers = {}) {
       'Content-Type': 'application/json',
       ...headers,
     },
+    credentials: 'include',
   };
   if (body) {
     options.body = JSON.stringify(body);
@@ -44,7 +45,7 @@ export const verifyGroupPassword = (groupId, password) => request(`/api/groups/$
 export const deleteGroupPassword = (groupId) => request(`/api/groups/${groupId}/password`, 'DELETE');
 export const getEventsForGroup = (groupId) => request(`/api/groups/${groupId}/events`);
 export const getEventsByCustomUrl = (customUrl) => request(`/api/groups/url/${customUrl}/events`);
-export const loginOrRegisterToGroup = (groupId, name) => request(`/api/groups/${groupId}/login-or-register`, 'POST', {name});
+export const loginOrRegisterToGroup = (groupId, name, password) => request(`/api/groups/${groupId}/login-or-register`, 'POST', {name, password});
 export const loginMemberToGroup = (groupId, memberId, password) => request(`/api/groups/${groupId}/login`, 'POST', {memberId, password});
 export const getPublicEventsForGroup = (groupId) => request(`/api/events/by-group/${groupId}`);
 export const getEvent = (id) => request(`/api/events/${id}`);
@@ -53,7 +54,7 @@ export const updateEvent = (id, eventData) => request(`/api/events/${id}`, 'PUT'
 export const copyEvent = (eventId) => request(`/api/events/${eventId}/copy`, 'POST');
 export const deleteEvent = (eventId) => request(`/api/events/${eventId}`, 'DELETE');
 export const startEvent = (eventId) => request(`/api/events/${eventId}/start`, 'POST');
-export const generateEventPrizeUploadUrl = (eventId, fileType, fileHash) => request(`/api/events/${eventId}/generate-upload-url`, 'POST', {fileType, fileHash});
+export const generateEventPrizeUploadUrl = (eventId, fileType, fileHash, groupId) => request(`/api/events/${eventId}/generate-upload-url`, 'POST', {fileType, fileHash, groupId});
 export const addDoodle = (eventId, memberId, doodle) => request(`/api/events/${eventId}/doodle`, 'POST', {memberId, doodle}, {'x-auth-token': state.currentParticipantToken});
 export const deleteDoodle = (eventId, memberId) => request(`/api/events/${eventId}/doodle`, 'DELETE', {memberId}, {'x-auth-token': state.currentParticipantToken});
 

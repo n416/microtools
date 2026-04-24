@@ -22,8 +22,18 @@ export function renderGroupList(groups) {
     li.dataset.groupName = group.name;
 
     const groupInfo = document.createElement('span');
-    const date = new Date((group.createdAt._seconds || group.createdAt.seconds) * 1000);
-    groupInfo.textContent = `${group.name} (${date.toLocaleDateString()})`;
+    
+    let date;
+    if (group.createdAt) {
+      if (typeof group.createdAt === 'string') {
+        date = new Date(group.createdAt);
+      } else if (group.createdAt._seconds || group.createdAt.seconds) {
+        date = new Date((group.createdAt._seconds || group.createdAt.seconds) * 1000);
+      }
+    }
+    
+    const dateString = date && !isNaN(date.getTime()) ? date.toLocaleDateString() : '不明な日時';
+    groupInfo.textContent = `${group.name} (${dateString})`;
     groupInfo.style.cursor = 'pointer';
 
     const settingsBtn = document.createElement('button');
@@ -76,7 +86,7 @@ export async function openGroupSettingsFor(groupId) {
 async function handleSaveSettings() {
   const groupId = ui.elements.settingsGroupId.value;
   const settingsPayload = {
-    groupName: ui.elements.groupNameEditInput.value.trim(),
+    name: ui.elements.groupNameEditInput.value.trim(),
     customUrl: ui.elements.customUrlInput.value.trim(),
     noIndex: ui.elements.noIndexCheckbox.checked,
   };

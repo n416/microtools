@@ -4,7 +4,6 @@ import * as router from '../router.js';
 import * as ui from '../ui.js';
 import {processImage} from '../imageProcessor.js';
 import {prepareStepAnimation} from '../animation.js';
-import { db } from '../firebase.js'; // ★★★ この行を修正 ★★★
 import {addFirestoreListener, clearAllFirestoreListeners} from '../state.js';
 
 const elements = {
@@ -93,8 +92,12 @@ async function handleSaveEvent(eventId, buttonToAnimate, isStartedEvent = false)
 
     const uploadedImageUrls = {};
     for (const {file, hash} of uniqueFilesToUpload) {
-      const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, file.type, hash);
-      await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
+      const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, file.type, hash, state.currentGroupId);
+      const res = await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Upload failed: ${res.status} - ${text}`);
+      }
       uploadedImageUrls[hash] = imageUrl;
     }
 
@@ -130,7 +133,8 @@ async function handleSaveEvent(eventId, buttonToAnimate, isStartedEvent = false)
     setDirty(false); // Reset dirty flag after successful save
     attachRealtimeDoodleListener(); // Re-attach listener after save
   } catch (error) {
-    alert(error.error || 'イベントの保存に失敗しました。');
+    console.error('[DEBUG] Event Update Error:', error);
+    alert(error.error || `イベントの保存に失敗しました。\n詳細: ${error.message || error}`);
   } finally {
     buttonToAnimate.disabled = false;
     buttonToAnimate.textContent = isStartedEvent ? 'イベント名を保存する' : '変更を保存してプレビューを更新';
@@ -493,7 +497,7 @@ export function closePrizeBulkAddModal() {
 
 function attachRealtimeDoodleListener() {
   if (state.currentEventId && state.currentLotteryData.allowDoodleMode) {
-    const eventRef = db.collection('events').doc(state.currentEventId);
+    const eventRef = firebase.firestore().collection('events').doc(state.currentEventId);
     const unsubscribe = eventRef.onSnapshot(async (doc) => {
       if (!doc.exists) return;
       const updatedData = doc.data();
@@ -859,8 +863,12 @@ export function initEventEdit() {
 
           for (const {file, hash} of uniqueFiles) {
             console.log(`[DEBUG] Uploading file with hash: ${hash}`);
-            const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, file.type, hash);
-            await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
+            const {signedUrl, imageUrl} = await api.generateEventPrizeUploadUrl(eventId, file.type, hash, state.currentGroupId);
+            const res = await fetch(signedUrl, {method: 'PUT', headers: {'Content-Type': file.type}, body: file});
+            if (!res.ok) {
+              const text = await res.text();
+              throw new Error(`Upload failed: ${res.status} - ${text}`);
+            }
             uploadedImageUrls[hash] = imageUrl;
             console.log(`[DEBUG] File upload SUCCESS. URL: ${imageUrl}`);
           }
@@ -908,7 +916,8 @@ export function initEventEdit() {
 
           history.pushState(null, '', `/admin/event/${eventId}/edit`);
         } catch (error) {
-          alert(error.error || 'イベントの作成に失敗しました。');
+          console.error('[DEBUG] Event Save Error:', error);
+          alert(error.error || `イベントの保存に失敗しました。\n詳細: ${error.message || error}`);
         } finally {
           elements.createEventButton.disabled = false;
           elements.createEventButton.textContent = 'この内容でイベントを作成';
@@ -1037,12 +1046,14 @@ export function initEventEdit() {
       elements.regenerateLinesButton.addEventListener('click', async (e) => {
         const doodlesExist = state.currentLotteryData && state.currentLotteryData.doodles && state.currentLotteryData.doodles.length > 0;
         let deleteDoodles = false;
-
         if (doodlesExist) {
-          const userChoice = await ui.showCustomConfirm('ユーザーによる落書きが追加されています。線を再生成する際に、これらの落書きをどうしますか？', ['落書きもリセットする', '落書きは残す']);
+          const userChoice = await ui.showCustomConfirm(
+            'ユーザーによる落書きが追加されています。線を再生成する際に、これらの落書きをどうしますか？',
+            ['落書きもリセットする', '落書きを残す']
+          );
           if (userChoice === '落書きもリセットする') {
             deleteDoodles = true;
-          } else if (userChoice === '落書きは残す') {
+          } else if (userChoice === '落書きを残す') {
             deleteDoodles = false;
           } else {
             return;
