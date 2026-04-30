@@ -1,4 +1,4 @@
-const API_BASE = 'https://nekokan2-backend.tobira-sys.workers.dev/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8787/api';
 
 export const createRoom = async (stateJson, password = '') => {
   const res = await fetch(`${API_BASE}/rooms`, {
