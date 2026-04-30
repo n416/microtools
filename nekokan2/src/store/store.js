@@ -15,6 +15,7 @@ const localStorageMiddleware = store => next => action => {
     localStorage.setItem('secondsDisplayState', JSON.stringify(state.showSeconds));
     localStorage.setItem('hideTimeState', JSON.stringify(state.hideTime));
     localStorage.setItem('alarmCheckboxesState', JSON.stringify(state.alarmSettings));
+    localStorage.setItem('timestamps', JSON.stringify(state.timestamps));
   }
   return result;
 };
