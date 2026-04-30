@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import LZString from 'lz-string';
 import { 
-  addLog, undo, redo, resetAll, pushHistory, 
-  loadFromUrl, loadFromJson, updateAlarmSettings, toggleShowSeconds, toggleHideTime 
+  loadInitialState, pushHistory, undo, redo, clearAllLogs, resetAll,
+  toggleShowSeconds, toggleHideTime, setSharedMode, loadFromUrl, loadFromJson, updateAlarmSettings 
 } from './features/nekokanSlice';
 import AreaTile from './components/AreaTile';
 import NoteCard from './components/NoteCard';
@@ -27,11 +27,11 @@ function App() {
   const [activeModal, setActiveModal] = useState(null); 
   const [modalData, setModalData] = useState(null);
 
-  // ルーム用ステート
   const [roomId, setRoomId] = useState(null);
   const [roomPassword, setRoomPassword] = useState('');
   const [isOwner, setIsOwner] = useState(false);
   const [isJoiningRoom, setIsJoiningRoom] = useState(false); // 入室処理中のフラグ
+  const [lastRoomId, setLastRoomId] = useState(localStorage.getItem('nekokan2_last_room'));
   const isInitialLoad = useRef(true);
   const isPullingRef = useRef(false);
   const lastActivityTime = useRef(Date.now());
@@ -46,8 +46,14 @@ function App() {
     const room = params.get('room');
     if (room) {
         setRoomId(room);
-        setIsOwner(!!localStorage.getItem('nekokan2_owner_' + room));
+        setLastRoomId(room);
+        localStorage.setItem('nekokan2_last_room', room);
         setIsJoiningRoom(true);
+        dispatch(setSharedMode(true));
+        
+        const isOwnerStr = localStorage.getItem('nekokan2_owner_' + room);
+        if (isOwnerStr) setIsOwner(true);
+        
         handleFetchRoom(room, '');
         return;
     }
@@ -61,6 +67,30 @@ function App() {
         window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
+
+  const leaveRoom = () => {
+      window.history.replaceState(null, '', window.location.pathname);
+      setRoomId(null);
+      setIsOwner(false);
+      setRoomPassword('');
+      dispatch(setSharedMode(false));
+      dispatch(loadInitialState());
+      showToast('プライベートモードに戻りました');
+  };
+
+  const joinLastRoom = () => {
+      if (lastRoomId) {
+          window.history.replaceState(null, '', `${window.location.pathname}?room=${lastRoomId}`);
+          setRoomId(lastRoomId);
+          setIsJoiningRoom(true);
+          dispatch(setSharedMode(true));
+          
+          const isOwnerStr = localStorage.getItem('nekokan2_owner_' + lastRoomId);
+          if (isOwnerStr) setIsOwner(true);
+          
+          handleFetchRoom(lastRoomId, '');
+      }
+  };
 
   const handleFetchRoom = async (id, pwd, silent = false) => {
       try {
@@ -207,7 +237,6 @@ function App() {
 
   return (
     <>
-      {/* Header - containerの外に出すことでレイアウト干渉を防ぐ */}
       <div className="header">
         <div className="top-left-align">
             <button className="header-btn" onClick={handleResetAll} title="全リセット"><i className="fas fa-trash"></i></button>
@@ -222,7 +251,35 @@ function App() {
               <i className="fas fa-sync-alt"></i>
             </button>
         </div>
-        <div className="title" onClick={() => setActiveModal('defaultChannel')}>NEKO-KAN 2 {roomId && !isJoiningRoom && <span style={{fontSize:'0.5em', verticalAlign:'middle'}}>(Room)</span>}</div>
+        
+        <div className="title" onClick={() => setActiveModal('defaultChannel')}>
+            NEKO-KAN 2 {roomId && !isJoiningRoom && <span style={{fontSize:'0.5em', verticalAlign:'middle'}}>(Room)</span>}
+        </div>
+
+        {roomId && (
+            <div className="top-right-align" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontSize: '0.7rem', backgroundColor: '#4ade80', color: '#fff', padding: '2px 5px', borderRadius: '3px', fontWeight: 'bold' }}>ルーム共有中</span>
+              <button 
+                onClick={leaveRoom}
+                style={{ fontSize: '0.8rem', backgroundColor: '#666', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '3px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                title="共有を解除して自分のデータに戻ります"
+              >
+                <i className="fa-solid fa-door-open"></i> <span>プライベートに戻る</span>
+              </button>
+            </div>
+        )}
+
+        {!roomId && lastRoomId && (
+            <div className="top-right-align" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <button 
+                onClick={joinLastRoom}
+                style={{ fontSize: '0.8rem', backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '3px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                title="最後に参加していた共有ルームに戻ります"
+              >
+                <i className="fa-solid fa-right-to-bracket"></i> <span>共有ルームへ戻る</span>
+              </button>
+            </div>
+        )}
       </div>
 
       {isJoiningRoom ? (
@@ -316,8 +373,11 @@ function App() {
             onToast={showToast}
             onRoomCreated={(id, pwd) => {
                setRoomId(id);
+               setLastRoomId(id);
+               localStorage.setItem('nekokan2_last_room', id);
                setRoomPassword(pwd);
                setIsOwner(true);
+               dispatch(setSharedMode(true));
                window.history.replaceState(null, '', `${window.location.pathname}?room=${id}`);
             }}
           />
