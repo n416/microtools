@@ -1,0 +1,140 @@
+/* ===============================================
+// save-load.css : セーブ/ロード機能 スタイル
+// =============================================== */
+
+/* --- オーバーレイとモーダルウィンドウの基本スタイル --- */
+#save-load-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+}
+
+#save-load-overlay.hidden {
+    display: none;
+}
+
+#save-load-modal {
+    background-color: #2a2a2e;
+    border: 1px solid #555;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- モーダルヘッダー --- */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid #555;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+.close-button:hover {
+    color: white;
+}
+
+/* --- モーダルボディ --- */
+.modal-body {
+    padding: 20px;
+}
+
+/* --- タブ切り替え --- */
+.sl-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.sl-tab-radio {
+    display: none; /* ラジオボタン自体は隠す */
+}
+
+.sl-tab-label {
+    flex: 1;
+    text-align: center;
+    padding: 10px 15px;
+    background-color: #3e3e42;
+    color: #ccc;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    user-select: none;
+}
+
+.sl-tab-label:hover {
+    background-color: #4f4f53;
+}
+
+/* 選択されているタブのスタイル */
+.sl-tab-radio:checked + .sl-tab-label {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+/* --- セーブスロット --- */
+#save-load-slots {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.sl-slot {
+    background-color: #333;
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.sl-slot:hover {
+    border-color: #888;
+    background-color: #3a3a3a;
+    transform: translateY(-2px);
+}
+
+.sl-slot-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.sl-slot-info {
+    font-size: 0.9rem;
+    color: #a0a0a0;
+}
+
+/* データがあるスロットのスタイル */
+.sl-slot.has-data .sl-slot-title {
+    color: #ffdd00;
+}
+.sl-slot.has-data .sl-slot-info {
+    color: #ccc;
+}
