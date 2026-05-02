@@ -1,0 +1,20 @@
+{
+  "name": "hitsim2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "data-selector.js",
+  "scripts": {
+    "prebuild": "node build-scripts/sanitize.js",
+    "build": "vite build",
+    "dev": "node build-scripts/sanitize.js && vite",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "sharp": "^0.34.5",
+    "vite": "^8.0.10"
+  }
+}

@@ -369,7 +369,7 @@ function setupDetailsActionButtons() {
           };
           instances.push(newInstance);
           saveInventoryEnhancements();
-          renderInventory(allInventoryItems);
+          refreshInventoryView();
         }
         clearAllSelections();
       }
@@ -878,7 +878,7 @@ function unequipItem(slotId, setId = activeSetId, doSaveAndRecalculate = true) {
     if (doSaveAndRecalculate) {
       saveInventoryEnhancements();
       saveAllEquipmentSets();
-      renderInventory(allInventoryItems);
+      refreshInventoryView();
       renderSlot(slotId, setId);
       if (setId === activeSetId || setId === comparisonSetId) {
         calculateAndRenderStats();
@@ -2895,6 +2895,9 @@ function setupAIPromptButton() {
       return;
     }
 
+    const proposalModeObj = document.querySelector('input[name="ai-proposal-mode"]:checked');
+    const proposalMode = proposalModeObj ? proposalModeObj.value : '1';
+
     aiGenerateBtn.disabled = true;
     aiGenerateBtn.textContent = '生成中...';
 
@@ -2929,9 +2932,40 @@ function setupAIPromptButton() {
         return statStrings.length > 0 ? ` [${statStrings.join(', ')}]` : '';
       }
 
+      // Helper function to apply settings filters
+      const applySettingsFilter = (item) => {
+        const alwaysShowSpecial = localStorage.getItem('setting-always-show-special') === 'true';
+        const isSpecialItem = (it) => {
+          if (!alwaysShowSpecial) return false;
+          const cat = TYPE_TO_SLOT_CATEGORY[it['タイプ']];
+          return cat === 'campanella' || cat === 'amulet';
+        };
+
+        const isAncientOnly = localStorage.getItem('setting-ancient-only') === 'true';
+        if (isAncientOnly) {
+          const targetRanks = ['古代', '伝説', 'SPECIAL'];
+          if (!targetRanks.includes(item['ランク']) && !isSpecialItem(item)) return false;
+        }
+
+        const isHideLegendary = localStorage.getItem('setting-hide-legendary') === 'true';
+        if (isHideLegendary) {
+          if (item['ランク'] === '伝説' && !isSpecialItem(item)) return false;
+        }
+
+        const selectedClasses = JSON.parse(localStorage.getItem('setting-classes')) || [];
+        if (selectedClasses.length > 0) {
+          const type = item['タイプ'];
+          const isWeapon = TYPE_TO_SLOT_CATEGORY && TYPE_TO_SLOT_CATEGORY[type] === 'weapon';
+          if (isWeapon && !selectedClasses.includes(type)) return false;
+        }
+
+        return true;
+      };
+
       // Format current equipment
       let currentEquipStr = '';
       for (const [slotId, itemData] of Object.entries(equippedItems)) {
+        if (!applySettingsFilter(itemData.item)) continue;
         const jpName = SLOT_ID_TO_JAPANESE_NAME[slotId] || slotId;
         const enchant = itemData.enchantLevel > 0 ? `+${itemData.enchantLevel}` : '';
         const statsStr = getItemStatsString(itemData.item, itemData.enchantLevel);
@@ -2941,15 +2975,19 @@ function setupAIPromptButton() {
 
       // Format set info
       let setsStr = '';
-      for (let i = 1; i <= 4; i++) {
+      for (let i = 1; i <= 1; i++) {
         const setObj = allEquipmentSets[i];
         if (!setObj || Object.keys(setObj).length === 0) continue;
-        setsStr += `  [セット${i}]\n`;
+        let setContentStr = '';
         for (const [slotId, itemData] of Object.entries(setObj)) {
+          if (!applySettingsFilter(itemData.item)) continue;
           const jpName = SLOT_ID_TO_JAPANESE_NAME[slotId] || slotId;
           const enchant = itemData.enchantLevel > 0 ? `+${itemData.enchantLevel}` : '';
           const statsStr = getItemStatsString(itemData.item, itemData.enchantLevel);
-          setsStr += `    - ${jpName}: ${itemData.item['名称']} ${enchant}${statsStr}\n`;
+          setContentStr += `    - ${jpName}: ${itemData.item['名称']} ${enchant}${statsStr}\n`;
+        }
+        if (setContentStr) {
+          setsStr += `  [セット${i}]\n` + setContentStr;
         }
       }
       if (!setsStr) setsStr = '  なし\n';
@@ -2958,6 +2996,7 @@ function setupAIPromptButton() {
       let invStr = '';
       const invItemsList = [];
       for (const item of allInventoryItems) {
+        if (!applySettingsFilter(item)) continue;
         const name = item['名称'];
         const type = item['タイプ'];
         const instances = inventoryEnhancements[name] || [];
@@ -2984,18 +3023,36 @@ function setupAIPromptButton() {
       });
 
       const itemListFormatted = [];
-      for (const item of allItems) {
-        const name = item['名称'];
-        const type = item['タイプ'];
-        const statsStr = getItemStatsString(item, 0); // show base stats
-        if (statsStr) {
-          itemListFormatted.push(`- ${name} (${type})${statsStr}`);
+      if (proposalMode === '2' || proposalMode === '3') {
+        for (const item of allItems) {
+          if (!applySettingsFilter(item)) continue;
+          const name = item['名称'];
+          const type = item['タイプ'];
+          const statsStr = getItemStatsString(item, 0); // show base stats
+          if (statsStr) {
+            itemListFormatted.push(`- ${name} (${type})${statsStr}`);
+          }
         }
       }
       let itemListStr = itemListFormatted.join('\n') || 'アイテム情報がありません';
 
+      let proposalConditionText = '';
+      if (proposalMode === '1') {
+        proposalConditionText = 'インベントリの情報（手持ちのアイテム）を最大限使って構成を作成してください。';
+      } else if (proposalMode === '2') {
+        proposalConditionText = 'インベントリの情報を最大限使いますが、3つのアイテムは全アイテム一覧から作成（新規調達）するように構成してください。';
+      } else if (proposalMode === '3') {
+        proposalConditionText = '既存のインベントリに縛られず、全アイテム一覧を最大限使って理想的な構成を作成してください。';
+      }
+
       const promptTemplate = `あなたはゲームの装備構成の専門家です。
-以下のユーザーの要望に基づいて、装備構成を３つ提案してください。
+以下のユーザーの要望と条件に基づいて、装備構成を１つ提案してください。
+
+【思考・選定プロセス】
+構成を提案する前に、以下の手順で必ず思考プロセスを出力してください。
+1. ユーザーの要望を分析し、今回の構成においてどのステータス（複数可）が重要になるかを解釈して記述してください。
+2. 該当するアイテムをリストアップし、重視すべきステータスの値が高い順にソートしてください。複数のステータスが該当する場合は、それらのステータス値の合計値が高い順にソートしてください。
+3. そのソート結果に基づいて、上位のアイテムからピックアップして構成を作成してください。
 
 【ゲームの装備構成のルール（各スロットの装着可能数）】
 - 武器 x 1
@@ -3026,14 +3083,9 @@ ${currentEquipStr}
 ${setsStr}
 ・インベントリの情報:
 ${invStr}
-・全アイテム一覧（新規調達や理想構成の検討に使用）:
-${itemListStr}
-
+${proposalMode !== '1' ? `・全アイテム一覧（新規調達や理想構成の検討に使用）:\n${itemListStr}\n` : ''}
 【提案の条件】
-以下の３つのパターンで提案を作成してください。
-1つ目は、インベントリを最大限使って構成を作成してください。
-2つ目は、インベントリを最大限使いますが、3つのアイテムは全アイテム一覧から作成（新規調達）するように構成してください。
-3つ目は、既存のインベントリに縛られず、全アイテム一覧を最大限使って理想的な構成を作成してください。`;
+${proposalConditionText}`;
 
       aiPromptOutput.value = promptTemplate;
       aiResultContainer.classList.remove('hidden');
