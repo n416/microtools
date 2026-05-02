@@ -4,6 +4,7 @@
 
 // --- グローバル定数・変数 ---
 import { DB_NAME, DB_VERSION, STORE_NAME, ENHANCEMENT_STORE_NAME, SET_BONUS_STORE_NAME } from './db-setup.js';
+import { runSimulatorTutorial, setupTutorialResetButton } from './tutorial.js';
 const INVENTORY_KEY = 'equipmentInventory_v2';
 const INVENTORY_ENHANCEMENTS_KEY = 'inventoryEnhancements_v1';
 const EQUIPMENT_SETS_KEY = 'equipmentSets_v2';
@@ -333,6 +334,10 @@ async function initializeApp() {
     setupAIPromptButton();
     setupSettingsButton();
     calculateAndRenderStats();
+
+    // チュートリアルの初期化とリセットボタン設定
+    setupTutorialResetButton('reset-tutorial-btn');
+    runSimulatorTutorial();
   } catch (error) {
     console.error('初期化中にエラーが発生しました:', error);
   }

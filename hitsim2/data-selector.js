@@ -181,6 +181,7 @@ const stringColumns = [
 
 let visibleColumns = [];
 import { DB_NAME, DB_VERSION, STORE_NAME, ENHANCEMENT_STORE_NAME, SET_BONUS_STORE_NAME } from './db-setup.js';
+import { runDataSelectorTutorial, setupTutorialResetButton } from './tutorial.js';
 const INVENTORY_KEY = 'equipmentInventory_v2';
 const FILTER_STATE_KEY = 'equipmentFilterState_v2';
 const SORT_STATE_KEY = 'equipmentSortState_v1';
@@ -253,6 +254,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
       }
     });
+
+    // チュートリアルの初期化とリセットボタン設定
+    setupTutorialResetButton('reset-tutorial-btn');
+    runDataSelectorTutorial();
   } catch (error) {
     console.error('初期化処理中にエラー:', error);
     statusDiv.textContent = `エラーが発生しました: ${error.message}`;
