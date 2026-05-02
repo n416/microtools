@@ -280,3 +280,5 @@ function saveDataToDB(itemData, enhancementData, setBonusData, config) {
     };
   });
 }
+
+window.setupDatabase = setupDatabase;

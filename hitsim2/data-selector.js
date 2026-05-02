@@ -207,7 +207,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const statusDiv = document.getElementById('status');
   try {
     statusDiv.textContent = 'データベースを準備しています...';
-    await setupDatabase();
+    await window.setupDatabase();
 
     statusDiv.textContent = '装備データを読み込んでいます...';
     allEquipment = await getAllEquipmentFromDB();
@@ -659,7 +659,7 @@ function setupUpdateButton() {
     statusDiv.textContent =
       'データベースを更新中です...（ページを閉じないでください）';
     try {
-      await setupDatabase();
+      await window.setupDatabase();
       alert('データベースの更新が完了しました。ページを再読み込みします。');
       location.reload();
     } catch (error) {
