@@ -3,9 +3,7 @@
 // ===============================================
 
 // --- グローバル定数・変数 ---
-const DB_NAME = 'GameEquipmentDB';
-const DB_VERSION = 17;
-const STORE_NAME = 'equipment';
+import { DB_NAME, DB_VERSION, STORE_NAME, ENHANCEMENT_STORE_NAME, SET_BONUS_STORE_NAME } from './db-setup.js';
 const INVENTORY_KEY = 'equipmentInventory_v2';
 const INVENTORY_ENHANCEMENTS_KEY = 'inventoryEnhancements_v1';
 const EQUIPMENT_SETS_KEY = 'equipmentSets_v2';
@@ -526,9 +524,8 @@ function openDatabase() {
       }
     };
 
-    request.onerror = (e) => {
-      reject('DBオープン失敗:', e.target.error);
-    };
+    request.onerror = (event) =>
+      reject(`DBオープンエラー: ${event.target.error}`);
     request.onsuccess = (e) => {
       db = e.target.result;
       resolve(db);
