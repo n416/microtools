@@ -132,13 +132,14 @@ function parseHitsimJson(jsonData, headers, statRates = []) {
   }).filter(item => item !== null);
 }
 
+export const DB_NAME = 'GameEquipmentDB';
+export const DB_VERSION = 18;
+export const STORE_NAME = 'equipment';
+export const ENHANCEMENT_STORE_NAME = 'enhancementData';
+export const SET_BONUS_STORE_NAME = 'setBonuses';
+
 async function setupDatabase() {
   console.log('[db-setup] setupDatabase started');
-  const DB_NAME = 'GameEquipmentDB';
-  const DB_VERSION = 17;
-  const STORE_NAME = 'equipment';
-  const ENHANCEMENT_STORE_NAME = 'enhancementData';
-  const SET_BONUS_STORE_NAME = 'setBonuses';
   const JSON_FILE_PATH = './itemdata.json';
   const SET_BONUS_JSON_PATH = './setdata.json';
   const STAT_RATES_JSON_PATH = './stat_rates.json';
@@ -202,7 +203,7 @@ async function setupDatabase() {
     console.log(`[db-setup] Parsed ${setBonusData.length} set bonuses`);
     
     console.log('[db-setup] Saving data to IndexedDB...');
-    await saveDataToDB(equipmentData, enhancementData, setBonusData, { DB_NAME, DB_VERSION, STORE_NAME, ENHANCEMENT_STORE_NAME, SET_BONUS_STORE_NAME });
+    await saveDataToDB(equipmentData, enhancementData, setBonusData);
     console.log('[db-setup] Data saved successfully to IndexedDB');
 
   } catch (error) {
@@ -211,9 +212,9 @@ async function setupDatabase() {
   }
 }
 
-function saveDataToDB(itemData, enhancementData, setBonusData, config) {
+function saveDataToDB(itemData, enhancementData, setBonusData) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(config.DB_NAME, config.DB_VERSION);
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = (event) => {
       console.error('[db-setup] DB open error:', event.target.error);
@@ -227,22 +228,22 @@ function saveDataToDB(itemData, enhancementData, setBonusData, config) {
     request.onupgradeneeded = (event) => {
       console.log('[db-setup] onupgradeneeded triggered');
       const db = event.target.result;
-      const storeNames = [config.STORE_NAME, config.ENHANCEMENT_STORE_NAME, config.SET_BONUS_STORE_NAME];
+      const storeNames = [STORE_NAME, ENHANCEMENT_STORE_NAME, SET_BONUS_STORE_NAME];
       storeNames.forEach(name => {
         if (db.objectStoreNames.contains(name)) {
           db.deleteObjectStore(name);
         }
       });
-      db.createObjectStore(config.STORE_NAME, { keyPath: '名称' });
-      db.createObjectStore(config.ENHANCEMENT_STORE_NAME, { keyPath: 'groupId' });
-      db.createObjectStore(config.SET_BONUS_STORE_NAME, { keyPath: 'setName' });
+      db.createObjectStore(STORE_NAME, { keyPath: '名称' });
+      db.createObjectStore(ENHANCEMENT_STORE_NAME, { keyPath: 'groupId' });
+      db.createObjectStore(SET_BONUS_STORE_NAME, { keyPath: 'setName' });
       console.log('[db-setup] object stores recreated');
     };
 
     request.onsuccess = (event) => {
       console.log('[db-setup] indexedDB open success');
       const db = event.target.result;
-      const transaction = db.transaction([config.STORE_NAME, config.ENHANCEMENT_STORE_NAME, config.SET_BONUS_STORE_NAME], 'readwrite');
+      const transaction = db.transaction([STORE_NAME, ENHANCEMENT_STORE_NAME, SET_BONUS_STORE_NAME], 'readwrite');
 
       transaction.oncomplete = () => {
         console.log('[db-setup] transaction oncomplete');
@@ -260,17 +261,51 @@ function saveDataToDB(itemData, enhancementData, setBonusData, config) {
 
       try {
         console.log('[db-setup] clearing stores and putting items...');
-        transaction.objectStore(config.STORE_NAME).clear();
-        itemData.forEach(item => transaction.objectStore(config.STORE_NAME).put(item));
+        transaction.objectStore(STORE_NAME).clear();
+        itemData.forEach(item => {
+          try {
+            const req = transaction.objectStore(STORE_NAME).put(item);
+            req.onerror = (e) => {
+              if (e.target.error && e.target.error.name !== 'AbortError') {
+                console.error('[db-setup] Async Error putting into STORE_NAME. item:', item, e.target.error);
+              }
+            };
+          } catch(e) {
+            console.error('[db-setup] Sync Error putting into STORE_NAME. item:', item, e);
+            throw e;
+          }
+        });
 
-        transaction.objectStore(config.ENHANCEMENT_STORE_NAME).clear();
+        transaction.objectStore(ENHANCEMENT_STORE_NAME).clear();
         for (const groupId in enhancementData) {
           if (Object.prototype.hasOwnProperty.call(enhancementData, groupId)) {
-            transaction.objectStore(config.ENHANCEMENT_STORE_NAME).put({ groupId: groupId, data: enhancementData[groupId] });
+            try {
+              const req = transaction.objectStore(ENHANCEMENT_STORE_NAME).put({ groupId: groupId, data: enhancementData[groupId] });
+              req.onerror = (e) => {
+                if (e.target.error && e.target.error.name !== 'AbortError') {
+                  console.error('[db-setup] Async Error putting into ENHANCEMENT_STORE_NAME. groupId:', groupId, e.target.error);
+                }
+              };
+            } catch(e) {
+              console.error('[db-setup] Sync Error putting into ENHANCEMENT_STORE_NAME. groupId:', groupId, e);
+              throw e;
+            }
           }
         }
-        transaction.objectStore(config.SET_BONUS_STORE_NAME).clear();
-        setBonusData.forEach(item => transaction.objectStore(config.SET_BONUS_STORE_NAME).put(item));
+        transaction.objectStore(SET_BONUS_STORE_NAME).clear();
+        setBonusData.forEach(item => {
+          try {
+            const req = transaction.objectStore(SET_BONUS_STORE_NAME).put(item);
+            req.onerror = (e) => {
+              if (e.target.error && e.target.error.name !== 'AbortError') {
+                console.error('[db-setup] Async Error putting into SET_BONUS_STORE_NAME. item:', item, e.target.error);
+              }
+            };
+          } catch(e) {
+            console.error('[db-setup] Sync Error putting into SET_BONUS_STORE_NAME. item:', item, e);
+            throw e;
+          }
+        });
 
       } catch (e) {
         console.error('[db-setup] Caught error during IndexedDB put:', e);

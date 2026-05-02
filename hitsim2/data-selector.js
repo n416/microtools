@@ -180,9 +180,7 @@ const stringColumns = [
 ];
 
 let visibleColumns = [];
-const DB_NAME = 'GameEquipmentDB';
-const DB_VERSION = 17;
-const STORE_NAME = 'equipment';
+import { DB_NAME, DB_VERSION, STORE_NAME, ENHANCEMENT_STORE_NAME, SET_BONUS_STORE_NAME } from './db-setup.js';
 const INVENTORY_KEY = 'equipmentInventory_v2';
 const FILTER_STATE_KEY = 'equipmentFilterState_v2';
 const SORT_STATE_KEY = 'equipmentSortState_v1';
@@ -481,7 +479,7 @@ function getAllEquipmentFromDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onerror = (event) =>
-      reject(`DBオープンエラー: ${event.target.errorCode}`);
+      reject(`DBオープンエラー: ${event.target.error}`);
     request.onsuccess = (event) => {
       const db = event.target.result;
       const transaction = db.transaction([STORE_NAME], 'readonly');
