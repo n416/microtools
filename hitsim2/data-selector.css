@@ -1,0 +1,385 @@
+/* ===============================================
+// data-selector.css : ダークテーマ修正版（レイアウト維持）
+// =============================================== */
+* {
+    box-sizing: border-box;
+}
+body {
+    font-family: sans-serif;
+    /* ▼配色変更▼ */
+    background-color: #333;
+    color: #eee;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%; /* 元のCSSにはありませんでしたが、レイアウト維持のため追記 */
+}
+
+th,
+td {
+    /* ▼配色変更▼ */
+    border: 1px solid #555;
+    padding: 4px 8px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+thead {
+    /* ▼配色変更▼ */
+    background-color: #3e3e42;
+}
+
+/* ▼追記▼ テーブルの縞模様とホバー色 */
+tbody tr:nth-child(even) {
+    background-color: #333;
+}
+
+tbody tr:nth-child(odd) {
+    background-color: #2a2a2e;
+}
+
+tbody tr:hover {
+    background-color: #4f4f53;
+}
+h1, h2 {
+    font-weight: normal;
+    font-size: 1.2rem;
+}
+#status {
+    margin: 1em 0;
+    font-weight: bold;
+}
+
+/* (旧フィルタスタイル削除) */
+
+/* ソート可能なヘッダーのスタイル */
+th.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 20px; /* 矢印のスペースを確保 */
+}
+
+/* ソート方向を示す矢印のスタイル */
+th.sortable::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+}
+
+th.sortable.sorted-asc::after {
+    /* ▼配色変更▼ */
+    border-bottom-color: #ccc; /* ▲ */
+}
+
+th.sortable.sorted-desc::after {
+    /* ▼配色変更▼ */
+    border-top-color: #ccc; /* ▼ */
+}
+
+/* --- 新しいフィルターUIのスタイル --- */
+#filter-controls {
+    margin-bottom: 1em;
+    padding: 1.5em;
+    background-color: #2a2a2e;
+    border: 1px solid #444;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.filter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #444;
+    padding-bottom: 15px;
+}
+
+.filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filter-label {
+    font-weight: bold;
+    color: #ffc107;
+    font-size: 1.1rem;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.text-button {
+    background: none;
+    border: none;
+    color: #00aaff;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0;
+}
+
+.text-button:hover {
+    text-decoration: underline;
+}
+
+.category-tabs {
+    display: flex;
+    gap: 10px;
+}
+
+.category-tab {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ccc;
+    padding: 8px 24px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.category-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.category-tab.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+}
+
+.pills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.filter-pill {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #aaa;
+    padding: 6px 14px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.filter-pill:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ddd;
+}
+
+.filter-pill.active {
+    background: #28a745;
+    color: white;
+    border-color: #28a745;
+    box-shadow: 0 0 8px rgba(40, 167, 69, 0.3);
+}
+
+/* --- ヘッダーとボタンのスタイル --- */
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1em;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.button-like {
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 14px;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    background-color: #6c757d;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.button-like:hover {
+    background-color: #5a6268;
+}
+
+/* チェックボックスのスタイル調整 */
+input[type="checkbox"] {
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+
+
+/* data-selector.css の末尾に追記 */
+
+/* テーブルを内包するコンテナに横スクロールを設定 */
+#table-container {
+    /* position: sticky のために overflow-x が必要 */
+    overflow-x: auto;
+}
+
+/* 固定したい列のthとtdにstickyを設定 */
+#equipment-table th:nth-child(1),
+#equipment-table td:nth-child(1),
+#equipment-table th:nth-child(2),
+#equipment-table td:nth-child(2) {
+    position: -webkit-sticky; /* Safari用 */
+    position: sticky;
+    z-index: 1; /* 他のセルより少し手前に表示 */
+}
+
+/* 1列目（チェックボックス）を左端に固定 */
+#equipment-table th:nth-child(1),
+#equipment-table td:nth-child(1) {
+    left: 0;
+    /* スクロール時に下のセルが透けないように背景色を指定 */
+    background-color: #3e3e42;
+}
+
+/* 2列目（名称）を、1列目の隣に固定 */
+#equipment-table th:nth-child(2),
+#equipment-table td:nth-child(2) {
+    /* 1列目の幅だけ左からオフセットさせる(※実際の幅に合わせて調整してください) */
+    left: 25px;
+    /* 同様に背景色を指定 */
+    background-color: #3e3e42;
+}
+
+/* 行の背景色（縞模様やホバー）が固定列にも適用されるように調整 */
+tbody tr:nth-child(odd) td:nth-child(1),
+tbody tr:nth-child(odd) td:nth-child(2) {
+    background-color: #2a2a2e;
+}
+tbody tr:hover td:nth-child(1),
+tbody tr:hover td:nth-child(2) {
+    background-color: #4f4f53;
+}
+
+/* --- 表示列設定モーダルのスタイル --- */
+#column-settings-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: none; /* 初期状態は非表示 */
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+}
+
+#column-settings-modal {
+    background-color: #2a2a2e;
+    border: 1px solid #555;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.cs-modal-header, .cs-modal-footer {
+    padding: 15px 20px;
+    flex-shrink: 0;
+}
+
+.cs-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #555;
+}
+.cs-modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+.cs-modal-header .close-button {
+    background: none; border: none; color: #ccc; font-size: 2rem;
+    cursor: pointer; padding: 0; line-height: 1;
+}
+
+.cs-modal-body {
+    padding: 10px 20px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+#column-search-input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 15px;
+    background-color: #333;
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 4px;
+}
+
+.column-group {
+    margin-bottom: 15px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 10px;
+}
+.column-group legend {
+    font-weight: bold;
+    color: #ffc107;
+    padding: 0 10px;
+}
+
+.column-group-actions {
+    margin-bottom: 10px;
+}
+.column-group-actions a {
+    color: #00aaff;
+    cursor: pointer;
+    margin-right: 15px;
+    font-size: 0.9em;
+}
+
+.column-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.column-item label {
+    display: block;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+.column-item label:hover {
+    background-color: #3e3e42;
+}
+
+.cs-modal-footer {
+    border-top: 1px solid #555;
+    text-align: right;
+}
+.cs-modal-footer .button-like {
+    margin-left: 10px;
+}

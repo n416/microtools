@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>装備シミュレータ</title>
+    <link rel="stylesheet" href="simulator.css?v=4">
+    <link rel="stylesheet" href="save-load.css">
+</head>
+
+<body>
+    <div class="header-container">
+        <h1>装備シミュレータ</h1>
+        <div class="header-buttons">
+            <button id="ai-prompt-button" class="button-like" style="background-color: #6f42c1; color: white;">🤖 AI</button>
+            <a href="data.html" id="edit-inventory-button" class="button-like">インベントリ編集</a>
+            <button id="settings-button" class="button-like" style="background-color: #555; color: white;">⚙️</button>
+        </div>
+    </div>
+    <div class="simulator-container">
+        <div id="equipment-panel">
+            <button id="share-button">共有</button>
+            <div id="sets-container" class="sets-layout-1" style="display: flex; gap: 10px;">
+                <!-- スロットのDOMはJavaScript(simulator.js)で動的に生成されます -->
+            </div>
+
+            <div id="set-controls">
+                <div id="set-switchers">
+                    <button class="set-button" data-set-id="1">1</button>
+                    <button class="set-button" data-set-id="2">2</button>
+                    <button class="set-button" data-set-id="3">3</button>
+                    <button class="set-button" data-set-id="4">4</button>
+                </div>
+                <div id="set-actions">
+                    <button id="copy-set-button" class="button-like">コピー</button>
+                    <button id="clear-set-button" class="button-like">クリア</button>
+                </div>
+                <div id="layout-controls" style="margin-top: 10px; display: flex; gap: 5px; width: 100%;">
+                    <button class="layout-button active" data-layout="1">□ 1</button>
+                    <button class="layout-button" data-layout="2">□ 2</button>
+                    <button class="layout-button" data-layout="4">□ 4</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="inventory-panel">
+            <div id="inventory-search-bar">
+                <input type="text" id="inventory-search-input" placeholder="装備名で検索...">
+                <button id="inventory-search-button">🔍</button>
+            </div>
+            <div id="inventory-tabs">
+                <button class="tab-button active" data-category="all">全て</button>
+                <button id="add-custom-tab-button" title="カスタムタブを追加">+</button>
+            </div>
+            <div id="inventory-list">
+            </div>
+        </div>
+        <div id="stats-panel"></div>
+    </div>
+
+    <div id="item-details-panel">
+        <div class="details-header">
+            <h2 id="details-item-name">アイテム詳細</h2>
+            <div id="enchant-controls">
+                <button id="enchant-down-button">-</button>
+                <span id="details-item-enchant"></span>
+                <button id="enchant-up-button">+</button>
+            </div>
+        </div>
+        <div class="details-content">
+            <img id="details-item-image" src="" alt="">
+            <div id="details-stats-list"></div>
+        </div>
+
+        <div id="details-actions" class="details-actions-container hidden">
+            <button id="details-action-set" class="button-like">セットする</button>
+            <button id="details-action-duplicate" class="button-like">複製する</button>
+            <button id="details-action-delete" class="button-like">削除する</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="db-setup.js?v=4"></script>
+    <div id="share-modal-overlay" class="hidden">
+        <div id="share-modal">
+            <p>共有されたデータがあります。<br>読み込みますか？</p>
+            <div class="modal-buttons">
+                <button id="modal-ok-button">OK</button>
+                <button id="modal-cancel-button">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="copy-modal-overlay" class="hidden">
+        <div id="copy-modal">
+            <p>どのセットからコピーしますか？</p>
+            <div id="copy-source-options" class="modal-options">
+            </div>
+            <div class="modal-buttons">
+                <button id="copy-modal-cancel-button">キャンセル</button>
+            </div>
+        </div>
+    </div>
+    <div id="generic-modal-overlay" class="hidden">
+        <div id="generic-modal">
+            <h3 id="generic-modal-title">タイトル</h3>
+            <div id="generic-modal-content">
+                <p>ここにメッセージや入力フォームが入ります。</p>
+            </div>
+            <div id="generic-modal-buttons">
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Modal -->
+    <div id="ai-modal-overlay" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 5000; display: flex; justify-content: center; align-items: center;">
+        <div id="ai-modal" style="background: #2a2a2e; padding: 20px; border-radius: 8px; border: 1px solid #555; max-width: 600px; width: 90%; color: #eee; max-height: 90vh; overflow-y: auto;">
+            <h3 style="margin-top: 0;">AIプロンプト生成</h3>
+            <p>どんな構成にしたいのか日本語で書いてください</p>
+            <textarea id="ai-config-input" style="width: 100%; box-sizing: border-box; height: 80px; margin-bottom: 10px; background: #1a1a1c; color: white; border: 1px solid #444; border-radius: 4px; padding: 8px; font-family: sans-serif;"></textarea>
+            <div style="text-align: right;">
+                <button id="ai-generate-btn" class="button-like" style="background: #007bff; color: white;">OK</button>
+                <button id="ai-close-btn" class="button-like" style="background: #555; color: white; margin-left: 10px;">閉じる</button>
+            </div>
+            <div id="ai-result-container" class="hidden" style="margin-top: 20px;">
+                <p>生成されたプロンプト:</p>
+                <textarea id="ai-prompt-output" style="width: 100%; box-sizing: border-box; height: 300px; background: #1a1a1c; color: white; border: 1px solid #444; border-radius: 4px; padding: 8px; font-family: monospace; white-space: pre-wrap;" readonly></textarea>
+                <div style="text-align: right; margin-top: 10px;">
+                    <button id="ai-copy-btn" class="button-like" style="background: #28a745; color: white;">コピー</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Settings Modal -->
+    <div id="settings-modal-overlay" class="hidden premium-modal-overlay">
+        <div id="settings-modal" class="premium-modal">
+            <div class="premium-modal-header">
+                <h2 class="premium-modal-title"><span class="icon">⚙️</span> 設定</h2>
+                <button id="settings-close-btn" class="premium-close-btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div id="settings-content" class="premium-settings-content">
+                <div class="premium-setting-card">
+                    <div class="setting-header">
+                        <div class="setting-title">
+                            <h3>古代以上のみ表示</h3>
+                            <p>古代、伝説、SPECIAL等級の装備のみをリストに表示します。</p>
+                        </div>
+                        <label class="premium-toggle">
+                            <input type="checkbox" id="setting-ancient-only">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="premium-setting-card">
+                    <div class="setting-header">
+                        <div class="setting-title">
+                            <h3>伝説は表示しない</h3>
+                            <p>伝説等級の装備をリストから除外して非表示にします。</p>
+                        </div>
+                        <label class="premium-toggle">
+                            <input type="checkbox" id="setting-hide-legendary">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="premium-setting-card">
+                    <div class="setting-header">
+                        <div class="setting-title">
+                            <h3>カンパネラとアミュレッタは全て表示する</h3>
+                            <p>装備枠を選択した際も、カンパネラとアミュレッタを暗くせずに常に表示します。</p>
+                        </div>
+                        <label class="premium-toggle">
+                            <input type="checkbox" id="setting-always-show-special">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="premium-setting-card">
+                    <div class="setting-header" style="margin-bottom: 15px;">
+                        <div class="setting-title">
+                            <h3>職選択 <span class="badge">複数選択可</span></h3>
+                            <p>選択した職業で装備可能な武器のみを表示します。</p>
+                        </div>
+                    </div>
+                    <div class="premium-pill-grid" id="setting-class-grid">
+                        <label class="premium-pill">
+                            <input type="checkbox" value="大剣">
+                            <span class="pill-content">大剣</span>
+                        </label>
+                        <label class="premium-pill">
+                            <input type="checkbox" value="鈍器">
+                            <span class="pill-content">鈍器</span>
+                        </label>
+                        <label class="premium-pill">
+                            <input type="checkbox" value="双剣">
+                            <span class="pill-content">双剣</span>
+                        </label>
+                        <label class="premium-pill">
+                            <input type="checkbox" value="杖">
+                            <span class="pill-content">杖</span>
+                        </label>
+                        <label class="premium-pill">
+                            <input type="checkbox" value="宝珠">
+                            <span class="pill-content">宝珠</span>
+                        </label>
+                        <label class="premium-pill">
+                            <input type="checkbox" value="弓">
+                            <span class="pill-content">弓</span>
+                        </label>
+                        <label class="premium-pill">
+                            <input type="checkbox" value="鎌">
+                            <span class="pill-content">鎌</span>
+                        </label>
+                        <label class="premium-pill">
+                            <input type="checkbox" value="双拳銃">
+                            <span class="pill-content">双拳銃</span>
+                        </label>
+                        <label class="premium-pill">
+                            <input type="checkbox" value="御剣">
+                            <span class="pill-content">御剣</span>
+                        </label>
+                        <label class="premium-pill">
+                            <input type="checkbox" value="拳甲">
+                            <span class="pill-content">拳甲</span>
+                        </label>
+                        <label class="premium-pill">
+                            <input type="checkbox" value="洋弓銃">
+                            <span class="pill-content">洋弓銃</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="simulator.js?v=7"></script>
+    <script src="save-load.js?v=4"></script>
+</body>
+
+</html>
