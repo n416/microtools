@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mec → ドット化 検証 (PoC)</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: sans-serif;
+      background-color: #1a1a1a;
+      color: #ddd;
+    }
+
+    h1 {
+      font-size: 18px;
+      margin: 0 0 4px;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      background: #252525;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+
+    #controls label {
+      font-size: 13px;
+    }
+
+    #controls select,
+    #controls button {
+      font-size: 13px;
+      padding: 4px 8px;
+    }
+
+    button {
+      cursor: pointer;
+      background: #3a6ea5;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+    }
+
+    button.secondary {
+      background: #555;
+    }
+
+    #status {
+      font-size: 13px;
+      color: #2ecc71;
+      min-height: 18px;
+      margin-bottom: 12px;
+      font-family: monospace;
+    }
+
+    #results {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 12px;
+      max-width: 1200px;
+    }
+
+    .cell {
+      background: #252525;
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .cell .label {
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+
+    .cell img {
+      width: 100%;
+      max-width: 256px;
+      image-rendering: pixelated;
+      background:
+        repeating-conic-gradient(#2e2e2e 0% 25%, #383838 0% 50%) 0 0 / 16px 16px;
+      border-radius: 4px;
+    }
+
+    .row-label {
+      grid-column: 1 / -1;
+      font-size: 13px;
+      color: #ccc;
+      border-bottom: 1px solid #444;
+      padding-bottom: 4px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>mec → ドット化 検証 (PoC)</h1>
+  <div class="note">
+    mecのモデルをオルソカメラで4方向レンダリングし、pixelchar の pixelate.ts と同じ処理
+    (縮小 → 背景除去 → メディアンカット減色 → パレットロック → 最近傍拡大) に通します。
+    正面のパレットを抽出して残り3方向に強制適用しています。
+  </div>
+
+  <div id="controls">
+    <button id="loadDemo">デモ機体で試す</button>
+    <button id="loadSample">AI生成サンプル機体</button>
+    <button id="loadFile" class="secondary">mecha-data.json を読込</button>
+    <input type="file" id="fileInput" accept=".json" style="display:none" />
+    <label>ドット解像度:
+      <select id="gridSize">
+        <option value="24">24</option>
+        <option value="32">32</option>
+        <option value="48" selected>48</option>
+        <option value="64">64</option>
+      </select>
+    </label>
+    <label>パレット色数:
+      <select id="paletteSize">
+        <option value="4">4</option>
+        <option value="8" selected>8</option>
+        <option value="12">12</option>
+        <option value="16">16</option>
+      </select>
+    </label>
+    <label>仰角:
+      <select id="elevation">
+        <option value="0" selected>0°</option>
+        <option value="15">15°</option>
+        <option value="30">30°</option>
+      </select>
+    </label>
+    <button id="downloadSheet" class="secondary" disabled>スプライトシートDL</button>
+  </div>
+
+  <div id="status">初期化中...</div>
+  <div id="results"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    // =================================================================
+    // pixelchar src/lib/pixelate.ts からの移植 (ロジックは同一、型注釈のみ除去)
+    // =================================================================
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    function medianCut(pixels, paletteSize) {
+      let buckets = [pixels];
+      while (buckets.length < paletteSize) {
+        let widest = -1;
+        let widestRange = -1;
+        let widestChannel = 0;
+        buckets.forEach((bucket, i) => {
+          if (bucket.length < 2) return;
+          for (let c = 0; c < 3; c++) {
+            let min = 255, max = 0;
+            for (const p of bucket) {
+              if (p[c] < min) min = p[c];
+              if (p[c] > max) max = p[c];
+            }
+            if (max - min > widestRange) {
+              widestRange = max - min;
+              widest = i;
+              widestChannel = c;
+            }
+          }
+        });
+        if (widest === -1) break;
+        const bucket = buckets[widest];
+        bucket.sort((a, b) => a[widestChannel] - b[widestChannel]);
+        const mid = Math.floor(bucket.length / 2);
+        buckets.splice(widest, 1, bucket.slice(0, mid), bucket.slice(mid));
+      }
+      return buckets
+        .filter((b) => b.length > 0)
+        .map((b) => {
+          const sum = b.reduce((acc, p) => [acc[0] + p[0], acc[1] + p[1], acc[2] + p[2]], [0, 0, 0]);
+          return [
+            Math.round(sum[0] / b.length),
+            Math.round(sum[1] / b.length),
+            Math.round(sum[2] / b.length),
+          ];
+        });
+    }
+
+    function nearestColor(palette, r, g, b) {
+      let best = palette[0];
+      let bestDist = Infinity;
+      for (const p of palette) {
+        const d = (p[0] - r) ** 2 + (p[1] - g) ** 2 + (p[2] - b) ** 2;
+        if (d < bestDist) {
+          bestDist = d;
+          best = p;
+        }
+      }
+      return best;
+    }
+
+    async function pixelate(srcDataUrl, gridSize, paletteSize, fixedPalette) {
+      const img = await loadImage(srcDataUrl);
+
+      const smallCanvas = document.createElement('canvas');
+      smallCanvas.width = gridSize;
+      smallCanvas.height = gridSize;
+      const sctx = smallCanvas.getContext('2d');
+      sctx.imageSmoothingEnabled = false;
+      sctx.drawImage(img, 0, 0, gridSize, gridSize);
+
+      const imageData = sctx.getImageData(0, 0, gridSize, gridSize);
+      const d = imageData.data;
+
+      // 背景マスク: 外周からのフラッドフィル
+      const bgR = d[0], bgG = d[1], bgB = d[2];
+      const tolerance = 15;
+      const numPixels = gridSize * gridSize;
+      const isBg = new Uint8Array(numPixels);
+      const visited = new Uint8Array(numPixels);
+      const matchesBg = (p) =>
+        Math.abs(d[p * 4] - bgR) <= tolerance &&
+        Math.abs(d[p * 4 + 1] - bgG) <= tolerance &&
+        Math.abs(d[p * 4 + 2] - bgB) <= tolerance;
+
+      const bgStack = [];
+      const trySeedBg = (p) => {
+        if (!visited[p] && matchesBg(p)) {
+          visited[p] = 1;
+          bgStack.push(p);
+        }
+      };
+      for (let x = 0; x < gridSize; x++) {
+        trySeedBg(x);
+        trySeedBg((gridSize - 1) * gridSize + x);
+      }
+      for (let y = 0; y < gridSize; y++) {
+        trySeedBg(y * gridSize);
+        trySeedBg(y * gridSize + gridSize - 1);
+      }
+      while (bgStack.length > 0) {
+        const p = bgStack.pop();
+        isBg[p] = 1;
+        const x = p % gridSize;
+        const y = (p / gridSize) | 0;
+        if (x > 0) trySeedBg(p - 1);
+        if (x < gridSize - 1) trySeedBg(p + 1);
+        if (y > 0) trySeedBg(p - gridSize);
+        if (y < gridSize - 1) trySeedBg(p + gridSize);
+      }
+
+      // 閉じた背景ポケットの除去 (脚の間など)
+      const pocketMinArea = Math.max(4, Math.round(numPixels / 500));
+      const pocketVisited = new Uint8Array(numPixels);
+      for (let p0 = 0; p0 < numPixels; p0++) {
+        if (isBg[p0] || pocketVisited[p0] || !matchesBg(p0)) continue;
+        const pocket = [];
+        const stack = [p0];
+        pocketVisited[p0] = 1;
+        while (stack.length > 0) {
+          const p = stack.pop();
+          pocket.push(p);
+          const x = p % gridSize;
+          const y = (p / gridSize) | 0;
+          const tryAdd = (r) => {
+            if (!isBg[r] && !pocketVisited[r] && matchesBg(r)) {
+              pocketVisited[r] = 1;
+              stack.push(r);
+            }
+          };
+          if (x > 0) tryAdd(p - 1);
+          if (x < gridSize - 1) tryAdd(p + 1);
+          if (y > 0) tryAdd(p - gridSize);
+          if (y < gridSize - 1) tryAdd(p + gridSize);
+        }
+        if (pocket.length >= pocketMinArea) {
+          for (const p of pocket) isBg[p] = 1;
+        }
+      }
+
+      // 減色 (fixedPalette 指定時はパレットロック)
+      const useFixed = fixedPalette !== undefined && fixedPalette.length > 0;
+      if (useFixed || paletteSize > 0) {
+        let palette;
+        if (useFixed) {
+          palette = fixedPalette;
+        } else {
+          const pixels = [];
+          for (let i = 0; i < d.length; i += 4) {
+            if (isBg[i / 4]) continue; // 3D版はレンダリング背景が既知なのでキャラ色だけで組む
+            pixels.push([d[i], d[i + 1], d[i + 2]]);
+          }
+          palette = medianCut(pixels.length > 0 ? pixels : [[0, 0, 0]], paletteSize);
+        }
+        for (let i = 0; i < d.length; i += 4) {
+          if (isBg[i / 4]) continue;
+          const [r, g, b] = nearestColor(palette, d[i], d[i + 1], d[i + 2]);
+          d[i] = r;
+          d[i + 1] = g;
+          d[i + 2] = b;
+        }
+      }
+
+      // 背景透過
+      for (let i = 0; i < d.length; i += 4) {
+        if (isBg[i / 4]) d[i + 3] = 0;
+      }
+      sctx.putImageData(imageData, 0, 0);
+
+      // 最近傍で表示用に拡大
+      const displayCanvas = document.createElement('canvas');
+      displayCanvas.width = 512;
+      displayCanvas.height = 512;
+      const dctx = displayCanvas.getContext('2d');
+      dctx.imageSmoothingEnabled = false;
+      dctx.drawImage(smallCanvas, 0, 0, 512, 512);
+
+      return {
+        small: smallCanvas.toDataURL('image/png'),
+        display: displayCanvas.toDataURL('image/png'),
+      };
+    }
+
+    async function extractPalette(smallDataUrl) {
+      const img = await loadImage(smallDataUrl);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const d = ctx.getImageData(0, 0, img.width, img.height).data;
+      const seen = new Set();
+      const palette = [];
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] < 128) continue;
+        const key = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
+        if (seen.has(key)) continue;
+        seen.add(key);
+        palette.push([d[i], d[i + 1], d[i + 2]]);
+      }
+      return palette;
+    }
+
+    async function makeSpriteSheet(smallFrames) {
+      const images = await Promise.all(smallFrames.map(loadImage));
+      const w = images[0].width;
+      const h = images[0].height;
+      const canvas = document.createElement('canvas');
+      canvas.width = w * images.length;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      images.forEach((img, i) => ctx.drawImage(img, i * w, 0));
+      return canvas.toDataURL('image/png');
+    }
+
+    // =================================================================
+    // mecシーンの読込 (SceneIo.loadFromData のレンダリングに必要な部分だけ)
+    // =================================================================
+
+    function buildMeshesFromSceneData(sceneData) {
+      const group = new THREE.Group();
+      const loader = new THREE.BufferGeometryLoader();
+      let skipped = 0;
+
+      (sceneData.objects || []).forEach((data) => {
+        let geometry;
+        const params = data.geometryParameters;
+        switch (data.geometryType) {
+          case 'ImportedOBJ':
+            skipped++;
+            return;
+          case 'Box':
+            geometry = new THREE.BoxGeometry(params?.width ?? 1, params?.height ?? 1, params?.depth ?? 1);
+            break;
+          case 'Sphere':
+            geometry = new THREE.SphereGeometry(params?.radius ?? 0.7, params?.widthSegments ?? 32, params?.heightSegments ?? 16);
+            break;
+          case 'Cone':
+            geometry = new THREE.ConeGeometry(params?.radius ?? 0.7, params?.height ?? 1.5, params?.radialSegments ?? 32);
+            break;
+          case 'Cylinder':
+            geometry = new THREE.CylinderGeometry(params?.radiusTop ?? 0.5, params?.radiusBottom ?? 0.5, params?.height ?? 1.5, params?.radialSegments ?? 32);
+            break;
+          case 'Prism': {
+            const sides = params?.radialSegments ?? data.sides ?? 6;
+            geometry = new THREE.CylinderGeometry(params?.radiusTop ?? 0.7, params?.radiusBottom ?? 0.7, params?.height ?? 1.5, sides);
+            break;
+          }
+          case 'Custom': {
+            const customGeomData = params ?? data.geometryData;
+            if (customGeomData) geometry = loader.parse(customGeomData);
+            break;
+          }
+          default:
+            return;
+        }
+        if (!geometry) return;
+
+        const materialProps = { side: THREE.DoubleSide };
+        if (data.material) {
+          materialProps.color = data.material.color;
+          // metalness=1 は環境マップ無しだと黒く潰れてパレットが死ぬため抑える
+          materialProps.metalness = Math.min(data.material.metalness ?? 0.5, 0.4);
+          materialProps.roughness = 0.6;
+          materialProps.emissive = data.material.emissive;
+          materialProps.emissiveIntensity = data.material.emissiveIntensity;
+        } else {
+          materialProps.color = data.color;
+          materialProps.metalness = 0.4;
+          materialProps.roughness = 0.6;
+        }
+        const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial(materialProps));
+        mesh.position.fromArray(data.position);
+        mesh.rotation.fromArray(data.rotation);
+        mesh.scale.fromArray(data.scale);
+        group.add(mesh);
+      });
+
+      return { group, skipped };
+    }
+
+    // =================================================================
+    // デモ機体 (プリミティブの寄せ集め、右腕を前に突き出した非対称ポーズ)
+    // =================================================================
+
+    function buildDemoRobot() {
+      const group = new THREE.Group();
+      const mat = (color, metalness = 0.3) =>
+        new THREE.MeshStandardMaterial({ color, metalness, roughness: 0.6 });
+      const add = (geo, material, x, y, z, rx = 0) => {
+        const m = new THREE.Mesh(geo, material);
+        m.position.set(x, y, z);
+        m.rotation.x = rx;
+        group.add(m);
+        return m;
+      };
+
+      const blue = mat(0x3a6ea5);
+      const gray = mat(0x7d8791);
+      const dark = mat(0x2f3a45);
+      const red = mat(0xd94f30);
+
+      add(new THREE.BoxGeometry(0.5, 0.5, 0.3), blue, 0, 0.85, 0); // 胴
+      add(new THREE.BoxGeometry(0.3, 0.16, 0.32), red, 0, 0.95, 0); // 胸アクセント
+      add(new THREE.BoxGeometry(0.28, 0.24, 0.28), gray, 0, 1.24, 0); // 頭
+      add(new THREE.BoxGeometry(0.2, 0.06, 0.02), mat(0x35e0e0, 0), 0, 1.25, 0.15); // バイザー
+      add(new THREE.SphereGeometry(0.12, 16, 8), gray, -0.34, 1.02, 0); // 左肩
+      add(new THREE.SphereGeometry(0.12, 16, 8), gray, 0.34, 1.02, 0); // 右肩
+      add(new THREE.BoxGeometry(0.13, 0.42, 0.13), dark, -0.36, 0.76, 0); // 左腕(下げ)
+      add(new THREE.BoxGeometry(0.13, 0.42, 0.13), dark, 0.36, 0.98, 0.18, -1.2); // 右腕(前へ)
+      add(new THREE.BoxGeometry(0.4, 0.18, 0.26), gray, 0, 0.52, 0); // 腰
+      add(new THREE.BoxGeometry(0.16, 0.44, 0.18), blue, -0.13, 0.28, 0); // 左脚
+      add(new THREE.BoxGeometry(0.16, 0.44, 0.18), blue, 0.13, 0.28, 0); // 右脚
+      add(new THREE.BoxGeometry(0.18, 0.1, 0.3), dark, -0.13, 0.05, 0.03); // 左足
+      add(new THREE.BoxGeometry(0.18, 0.1, 0.3), dark, 0.13, 0.05, 0.03); // 右足
+
+      return group;
+    }
+
+    // =================================================================
+    // オルソ4方向レンダリング
+    // =================================================================
+
+    const RENDER_SIZE = 512;
+    // アンチエイリアスを切るとエッジが混色せず、背景フラッドフィルと減色が安定する
+    const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+    renderer.setSize(RENDER_SIZE, RENDER_SIZE);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xff00ff); // キャラ色と被らない背景 (フラッドフィルで除去)
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    keyLight.position.set(3, 10, 8); // ライトは固定、モデル側を回す → 全方向で画面上の陰影が一致
+    scene.add(keyLight);
+
+    const pivot = new THREE.Group();
+    scene.add(pivot);
+
+    const ANGLES = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+    const ANGLE_LABELS = ['正面 (0°)', '90°', '背面 (180°)', '270°'];
+
+    function setModel(group) {
+      while (pivot.children.length > 0) pivot.remove(pivot.children[0]);
+      // モデル中心を原点に寄せて、pivot回転 = モデル中心での回転にする
+      const box = new THREE.Box3().setFromObject(group);
+      const center = box.getCenter(new THREE.Vector3());
+      group.position.set(-center.x, -center.y, -center.z);
+      pivot.add(group);
+    }
+
+    function frameCamera(elevationDeg) {
+      // 4方向すべてのバウンディングボックスの和で画角を決める → 全方向で同一スケール
+      const union = new THREE.Box3();
+      for (const a of ANGLES) {
+        pivot.rotation.y = a;
+        pivot.updateMatrixWorld(true);
+        union.union(new THREE.Box3().setFromObject(pivot));
+      }
+      pivot.rotation.y = 0;
+      const center = union.getCenter(new THREE.Vector3());
+      const size = union.getSize(new THREE.Vector3());
+      const half = Math.max(size.x, size.y, size.z) * 0.55;
+
+      const camera = new THREE.OrthographicCamera(-half, half, half, -half, 0.1, 100);
+      const dist = 10;
+      const e = (elevationDeg * Math.PI) / 180;
+      camera.position.set(center.x, center.y + dist * Math.sin(e), center.z + dist * Math.cos(e));
+      camera.lookAt(center);
+      return camera;
+    }
+
+    function renderDirections(elevationDeg) {
+      const camera = frameCamera(elevationDeg);
+      return ANGLES.map((a) => {
+        pivot.rotation.y = a;
+        pivot.updateMatrixWorld(true);
+        renderer.render(scene, camera);
+        return renderer.domElement.toDataURL('image/png');
+      });
+    }
+
+    // =================================================================
+    // UI
+    // =================================================================
+
+    const statusEl = document.getElementById('status');
+    const resultsEl = document.getElementById('results');
+    const sheetBtn = document.getElementById('downloadSheet');
+    let currentSmalls = null;
+
+    function status(msg) {
+      statusEl.textContent = msg;
+    }
+
+    async function runPipeline() {
+      if (pivot.children.length === 0) return;
+      status('レンダリング中...');
+      const gridSize = +document.getElementById('gridSize').value;
+      const paletteSize = +document.getElementById('paletteSize').value;
+      const elevation = +document.getElementById('elevation').value;
+
+      const raws = renderDirections(elevation);
+
+      status('ドット化中...');
+      const front = await pixelate(raws[0], gridSize, paletteSize);
+      const lockedPalette = await extractPalette(front.small);
+      const results = [front];
+      for (let i = 1; i < raws.length; i++) {
+        results.push(await pixelate(raws[i], gridSize, 0, lockedPalette));
+      }
+
+      resultsEl.innerHTML = '';
+      const addRow = (label) => {
+        const div = document.createElement('div');
+        div.className = 'row-label';
+        div.textContent = label;
+        resultsEl.appendChild(div);
+      };
+      const addCell = (label, src) => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.innerHTML = `<div class="label">${label}</div>`;
+        const img = document.createElement('img');
+        img.src = src;
+        cell.appendChild(img);
+        resultsEl.appendChild(cell);
+      };
+      addRow('3Dレンダリング (512px オルソ)');
+      raws.forEach((src, i) => addCell(ANGLE_LABELS[i], src));
+      addRow(`ドット化 (${gridSize}px / ${lockedPalette.length}色パレットロック)`);
+      results.forEach((r, i) => addCell(ANGLE_LABELS[i], r.display));
+
+      currentSmalls = results.map((r) => r.small);
+      sheetBtn.disabled = false;
+      status(`完了: ${gridSize}x${gridSize}px、パレット${lockedPalette.length}色 (正面から抽出し全方向に固定)`);
+    }
+
+    document.getElementById('loadDemo').addEventListener('click', () => {
+      setModel(buildDemoRobot());
+      runPipeline();
+    });
+
+    document.getElementById('loadSample').addEventListener('click', async () => {
+      try {
+        const res = await fetch('sample-mecha.json');
+        const sceneData = await res.json();
+        const { group } = buildMeshesFromSceneData(sceneData);
+        setModel(group);
+        runPipeline();
+      } catch (err) {
+        status('sample-mecha.json の読込に失敗: ' + err.message);
+      }
+    });
+
+    document.getElementById('loadFile').addEventListener('click', () =>
+      document.getElementById('fileInput').click());
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const sceneData = JSON.parse(reader.result);
+          const { group, skipped } = buildMeshesFromSceneData(sceneData);
+          if (group.children.length === 0) {
+            status('読み込めるオブジェクトがありませんでした');
+            return;
+          }
+          setModel(group);
+          if (skipped > 0) status(`注意: OBJ由来のパーツ ${skipped} 個はスキップしました`);
+          runPipeline();
+        } catch (err) {
+          status('JSONの解析に失敗: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    ['gridSize', 'paletteSize', 'elevation'].forEach((id) =>
+      document.getElementById(id).addEventListener('change', runPipeline));
+
+    sheetBtn.addEventListener('click', async () => {
+      if (!currentSmalls) return;
+      const sheet = await makeSpriteSheet(currentSmalls);
+      const a = document.createElement('a');
+      a.href = sheet;
+      a.download = 'mec-directions-sheet.png';
+      a.click();
+    });
+
+    // mecと同一オリジンで開いていれば自動保存シーンを拾う
+    const autoSave = localStorage.getItem('mechaCreatorAutoSave');
+    if (autoSave) {
+      try {
+        const { group } = buildMeshesFromSceneData(JSON.parse(autoSave));
+        if (group.children.length > 0) {
+          setModel(group);
+          status('mecの自動保存シーンを検出しました');
+          runPipeline();
+        }
+      } catch { /* 壊れていたらデモにフォールバック */ }
+    }
+    if (pivot.children.length === 0) {
+      setModel(buildDemoRobot());
+      runPipeline();
+    }
+  </script>
+</body>
+
+</html>

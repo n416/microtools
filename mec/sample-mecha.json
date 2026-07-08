@@ -1,0 +1,355 @@
+{
+  "objectCounter": 40,
+  "objects": [
+    {
+      "uuid": "p-pelvis",
+      "name": "腰",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.27, "height": 0.12, "depth": 0.16 },
+      "position": [0, 0.735, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 9082016, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": true }
+    },
+    {
+      "uuid": "p-abdomen",
+      "name": "腹",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.21, "height": 0.1, "depth": 0.14 },
+      "position": [0, 0.855, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 2830141, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-chest",
+      "name": "胸",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.3, "height": 0.2, "depth": 0.17 },
+      "position": [0, 1.015, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 3829413, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-accent",
+      "name": "胸アクセント",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.16, "height": 0.08, "depth": 0.02 },
+      "position": [0, 1.04, 0.09],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 13190198, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-head",
+      "name": "頭",
+      "geometryType": "Sphere",
+      "geometryParameters": { "radius": 0.105, "widthSegments": 20, "heightSegments": 12 },
+      "position": [0, 1.245, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 10134702, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-visor",
+      "name": "バイザー",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.15, "height": 0.045, "depth": 0.03 },
+      "position": [0, 1.25, 0.085],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 5564134, "metalness": 0.1, "emissive": 5564134, "emissiveIntensity": 0.6 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-uarm-l",
+      "name": "左上腕",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.075, "height": 0.2, "depth": 0.085 },
+      "position": [-0.215, 0.97, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 9082016, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-uarm-r",
+      "name": "右上腕",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.075, "height": 0.2, "depth": 0.085 },
+      "position": [0.215, 0.97, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 9082016, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-farm-l",
+      "name": "左前腕",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.065, "height": 0.2, "depth": 0.07 },
+      "position": [-0.215, 0.75, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 2830141, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-farm-r",
+      "name": "右前腕",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.065, "height": 0.2, "depth": 0.07 },
+      "position": [0.215, 0.75, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 2830141, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-hand-l",
+      "name": "左手",
+      "geometryType": "Sphere",
+      "geometryParameters": { "radius": 0.05, "widthSegments": 12, "heightSegments": 8 },
+      "position": [-0.215, 0.585, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 2830141, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-hand-r",
+      "name": "右手",
+      "geometryType": "Sphere",
+      "geometryParameters": { "radius": 0.05, "widthSegments": 12, "heightSegments": 8 },
+      "position": [0.215, 0.585, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 2830141, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-thigh-l",
+      "name": "左腿",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.105, "height": 0.28, "depth": 0.115 },
+      "position": [-0.09, 0.525, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 3829413, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-thigh-r",
+      "name": "右腿",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.105, "height": 0.28, "depth": 0.115 },
+      "position": [0.09, 0.525, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 3829413, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-shin-l",
+      "name": "左脛",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.085, "height": 0.26, "depth": 0.09 },
+      "position": [-0.09, 0.235, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 9082016, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-shin-r",
+      "name": "右脛",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.085, "height": 0.26, "depth": 0.09 },
+      "position": [0.09, 0.235, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 9082016, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-foot-l",
+      "name": "左足",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.1, "height": 0.08, "depth": 0.2 },
+      "position": [-0.09, 0.04, 0.03],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 2830141, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    },
+    {
+      "uuid": "p-foot-r",
+      "name": "右足",
+      "geometryType": "Box",
+      "geometryParameters": { "width": 0.1, "height": 0.08, "depth": 0.2 },
+      "position": [0.09, 0.04, 0.03],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "material": { "color": 2830141, "metalness": 0.3, "emissive": 0, "emissiveIntensity": 1 },
+      "userData": { "isPinned": false }
+    }
+  ],
+  "joints": [
+    {
+      "uuid": "j-waist",
+      "name": "腰関節",
+      "type": "sphere",
+      "position": [0, 0.8, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "parentObject": "p-pelvis",
+      "childObjects": ["p-abdomen"]
+    },
+    {
+      "uuid": "j-chest",
+      "name": "胸関節",
+      "type": "sphere",
+      "position": [0, 0.91, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "parentObject": "p-abdomen",
+      "childObjects": ["p-chest", "p-accent"]
+    },
+    {
+      "uuid": "j-neck",
+      "name": "首関節",
+      "type": "sphere",
+      "position": [0, 1.13, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "parentObject": "p-chest",
+      "childObjects": ["p-head", "p-visor"]
+    },
+    {
+      "uuid": "j-shoulder-l",
+      "name": "左肩関節",
+      "type": "sphere",
+      "position": [-0.185, 1.07, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "parentObject": "p-chest",
+      "childObjects": ["p-uarm-l"]
+    },
+    {
+      "uuid": "j-shoulder-r",
+      "name": "右肩関節",
+      "type": "sphere",
+      "position": [0.185, 1.07, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "parentObject": "p-chest",
+      "childObjects": ["p-uarm-r"]
+    },
+    {
+      "uuid": "j-elbow-l",
+      "name": "左肘関節",
+      "type": "cylinder",
+      "position": [-0.215, 0.86, 0],
+      "rotation": [0, 0, 1.5707963268],
+      "scale": [1, 1, 1],
+      "parentObject": "p-uarm-l",
+      "childObjects": ["p-farm-l"]
+    },
+    {
+      "uuid": "j-elbow-r",
+      "name": "右肘関節",
+      "type": "cylinder",
+      "position": [0.215, 0.86, 0],
+      "rotation": [0, 0, 1.5707963268],
+      "scale": [1, 1, 1],
+      "parentObject": "p-uarm-r",
+      "childObjects": ["p-farm-r"]
+    },
+    {
+      "uuid": "j-wrist-l",
+      "name": "左手首関節",
+      "type": "sphere",
+      "position": [-0.215, 0.64, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "parentObject": "p-farm-l",
+      "childObjects": ["p-hand-l"]
+    },
+    {
+      "uuid": "j-wrist-r",
+      "name": "右手首関節",
+      "type": "sphere",
+      "position": [0.215, 0.64, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "parentObject": "p-farm-r",
+      "childObjects": ["p-hand-r"]
+    },
+    {
+      "uuid": "j-hip-l",
+      "name": "左股関節",
+      "type": "sphere",
+      "position": [-0.09, 0.675, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "parentObject": "p-pelvis",
+      "childObjects": ["p-thigh-l"]
+    },
+    {
+      "uuid": "j-hip-r",
+      "name": "右股関節",
+      "type": "sphere",
+      "position": [0.09, 0.675, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "parentObject": "p-pelvis",
+      "childObjects": ["p-thigh-r"]
+    },
+    {
+      "uuid": "j-knee-l",
+      "name": "左膝関節",
+      "type": "cylinder",
+      "position": [-0.09, 0.375, 0],
+      "rotation": [0, 0, 1.5707963268],
+      "scale": [1, 1, 1],
+      "parentObject": "p-thigh-l",
+      "childObjects": ["p-shin-l"]
+    },
+    {
+      "uuid": "j-knee-r",
+      "name": "右膝関節",
+      "type": "cylinder",
+      "position": [0.09, 0.375, 0],
+      "rotation": [0, 0, 1.5707963268],
+      "scale": [1, 1, 1],
+      "parentObject": "p-thigh-r",
+      "childObjects": ["p-shin-r"]
+    },
+    {
+      "uuid": "j-ankle-l",
+      "name": "左足首関節",
+      "type": "cylinder",
+      "position": [-0.09, 0.09, 0],
+      "rotation": [0, 0, 1.5707963268],
+      "scale": [1, 1, 1],
+      "parentObject": "p-shin-l",
+      "childObjects": ["p-foot-l"]
+    },
+    {
+      "uuid": "j-ankle-r",
+      "name": "右足首関節",
+      "type": "cylinder",
+      "position": [0.09, 0.09, 0],
+      "rotation": [0, 0, 1.5707963268],
+      "scale": [1, 1, 1],
+      "parentObject": "p-shin-r",
+      "childObjects": ["p-foot-r"]
+    }
+  ]
+}
