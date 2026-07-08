@@ -30,6 +30,8 @@ export class MechaCreatorApp {
     this.gizmoHandles = [];
     this.gizmoLineMaterial = new THREE.LineBasicMaterial({color: 0xffff00, toneMapped: false, depthTest: false});
     this.objectCounter = 0;
+    // ポーズのキーフレーム化: 複数アニメーションを配列で持てる構造（現状はUIから1本のみ操作）
+    this.animations = [{name: 'アニメーション1', frames: []}];
 
     this.appState = new AppState();
     this.history = new History(this);

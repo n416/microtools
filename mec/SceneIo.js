@@ -21,7 +21,7 @@ function getVectorFromDirection(direction) {
 
 export function autoSaveScene(context) {
   const { mechaGroup, jointGroup, app } = context;
-  const sceneData = { objects: [], joints: [], objectCounter: app.objectCounter };
+  const sceneData = { objects: [], joints: [], objectCounter: app.objectCounter, animations: app.animations || [] };
 
   mechaGroup.children.forEach((mesh) => {
     if (mesh.userData.isNonSelectable) return;
@@ -263,8 +263,14 @@ export function loadFromData(context, sceneData) {
     });
   }
 
+  // アニメーション(キーフレーム)の復元。旧形式(animationsフィールド無し)のデータでも壊れないようにデフォルトを補う。
+  app.animations = Array.isArray(sceneData.animations) && sceneData.animations.length > 0
+    ? sceneData.animations
+    : [{ name: 'アニメーション1', frames: [] }];
+
   log('データ読込完了');
   history.undoStack = [];
   history.redoStack = [];
   document.dispatchEvent(new CustomEvent('connections-changed'));
+  document.dispatchEvent(new CustomEvent('animations-changed'));
 }

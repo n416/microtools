@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import * as PlacementFeatures from './PlacementFeatures.js';
 import * as JointFeatures from './JointFeatures.js';
 import { OBJLoader } from './OBJLoader.js';
+import * as AnimationFeatures from './AnimationFeatures.js';
 
 function getVectorFromDirection(direction) {
   switch (direction) {
@@ -51,6 +52,71 @@ export class UIControl {
     this.setupGhostControls();
     this.setupViewControls();
     this.setupIkConnectionBrowser();
+    this.setupAnimationControls();
+  }
+
+  setupAnimationControls() {
+    const addButton = document.getElementById('addKeyframeButton');
+    const listContainer = document.getElementById('keyframe-list');
+    const nameInput = document.getElementById('animationNameInput');
+
+    const renderList = () => {
+      const animation = AnimationFeatures.getAnimations(this.appContext)[0];
+
+      if (nameInput && document.activeElement !== nameInput) {
+        nameInput.value = animation.name;
+      }
+
+      listContainer.innerHTML = '';
+      animation.frames.forEach((_, index) => {
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.marginBottom = '2px';
+
+        const selectButton = document.createElement('button');
+        selectButton.textContent = `コマ${index + 1}`;
+        selectButton.style.flex = '1';
+        selectButton.style.textAlign = 'left';
+        selectButton.addEventListener('click', () => {
+          AnimationFeatures.restoreFrame(this.appContext, index);
+        });
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = '×';
+        deleteButton.title = 'このコマを削除';
+        deleteButton.style.marginLeft = '4px';
+        deleteButton.style.backgroundColor = '#c0392b';
+        deleteButton.style.color = 'white';
+        deleteButton.addEventListener('click', () => {
+          AnimationFeatures.deleteFrame(this.appContext, index);
+        });
+
+        row.appendChild(selectButton);
+        row.appendChild(deleteButton);
+        listContainer.appendChild(row);
+      });
+
+      if (animation.frames.length === 0) {
+        const emptyLabel = document.createElement('div');
+        emptyLabel.textContent = '(コマ未登録)';
+        emptyLabel.style.opacity = '0.6';
+        listContainer.appendChild(emptyLabel);
+      }
+    };
+
+    addButton.addEventListener('click', () => {
+      AnimationFeatures.addFrame(this.appContext);
+    });
+
+    if (nameInput) {
+      nameInput.addEventListener('change', () => {
+        AnimationFeatures.renameCurrentAnimation(this.appContext, nameInput.value);
+      });
+    }
+
+    document.addEventListener('animations-changed', renderList);
+    renderList();
   }
 
   setupIkConnectionBrowser() {
