@@ -10,6 +10,7 @@ import * as PlacementFeatures from './PlacementFeatures.js';
 import * as JointFeatures from './JointFeatures.js';
 import { OBJLoader } from './OBJLoader.js';
 import * as AnimationFeatures from './AnimationFeatures.js';
+import * as SpriteExport from './SpriteExport.js';
 
 function getVectorFromDirection(direction) {
   switch (direction) {
@@ -117,6 +118,21 @@ export class UIControl {
 
     document.addEventListener('animations-changed', renderList);
     renderList();
+
+    const exportButton = document.getElementById('exportSpriteSheetButton');
+    if (exportButton) {
+      exportButton.addEventListener('click', async () => {
+        exportButton.disabled = true;
+        try {
+          await SpriteExport.exportAndDownloadSpriteSheet(this.appContext);
+        } catch (err) {
+          this.log('スプライト書き出し中にエラーが発生しました。');
+          console.error(err);
+        } finally {
+          exportButton.disabled = false;
+        }
+      });
+    }
   }
 
   setupIkConnectionBrowser() {
