@@ -77,7 +77,11 @@ CSG結果・OBJ由来パーツも書き出せる。画角/センタリングは�
 - 出力はPNG連番 or 1枚のスプライトシート。**ドット化はここでやらず生画像を出す**
   （ドット化・パレット管理・編集はpixelchar側の責務に寄せる）
 
-### 3. pixelchar: 画像インポート
+### 3. pixelchar: 画像インポート ✅実装済み (2026-07-08)
+
+pixelchar側 `src/components/ImportPanel.tsx` + `src/lib/sheetSlicer.ts` + `src/lib/importImages.ts` として実装
+(pixelchar commit 64bf0eb)。mecの命名規則から分割数を自動検出し、シートの行=方向ごとに別アニメとして取り込む。
+パレットロック・SpriteEditor・GIF出力は既存フローがそのまま効く。当初の設計方針:
 
 - 「SDで生成」の代わりに手持ち画像(PNG連番/シート)を取り込むエントリポイントを追加
 - 既存の pixelate → パレットロック → SpriteEditor → GIF/シート出力のフローにそのまま接続
