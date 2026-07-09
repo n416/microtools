@@ -305,6 +305,44 @@
         <button id="confirmPaint" style="background-color: #2ecc71; color: white">OK (Enter)</button>
       </div>
     </div>
+    <div id="generator-operations" style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px; color: white">
+      <b>AI機体生成:</b>
+      <select id="genPreset" style="margin-left: 5px">
+        <option value="standard">標準</option>
+        <option value="heavy">重装</option>
+        <option value="slim">細身</option>
+        <option value="tankformer">戦車型</option>
+      </select>
+      <select id="genWeapon" style="margin-left: 5px" title="武器">
+        <option value="auto">武器おまかせ</option>
+        <option value="rifle">ライフル</option>
+        <option value="blade">ブレード</option>
+        <option value="none">武器なし</option>
+      </select>
+      <label for="genSeed" style="margin-left: 5px">シード:</label>
+      <input type="number" id="genSeed" value="1" min="1" style="width: 70px" />
+      <button id="generateMechaButton" style="background-color: #27ae60; color: white">生成</button>
+      <button id="genRandomButton" style="background-color: #2980b9; color: white" title="ランダムなシードで生成">🎲 ランダム</button>
+      <div style="margin-top: 5px">
+        <b>自動ポーズ:</b>
+        <select id="posePreset" style="margin-left: 5px">
+          <option value="idle">待機</option>
+          <option value="walk">歩き</option>
+          <option value="run">走る</option>
+          <option value="jumpV">縦飛び</option>
+          <option value="jumpSide">横飛び</option>
+          <option value="attack">攻撃</option>
+          <option value="aim">構え</option>
+          <option value="shoot">射撃</option>
+          <option value="slash">斬撃</option>
+          <option value="hit">被弾</option>
+          <option value="down">やられ</option>
+          <option value="flight">変形:飛行</option>
+          <option value="tank">変形:タンク</option>
+        </select>
+        <button id="generatePoseButton" style="background-color: #27ae60; color: white">コマ生成</button>
+      </div>
+    </div>
     <div id="keyframe-operations" style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px; color: white">
       <b>キーフレーム:</b>
       <span style="margin-left: 5px">
@@ -317,6 +355,7 @@
       <div id="keyframe-list" style="max-height: 150px; overflow-y: auto; margin-top: 5px; color: white"></div>
       <div style="margin-top: 5px">
         <button id="exportSpriteSheetButton" style="background-color: #16a085; color: white">スプライト書き出し</button>
+        <button id="sendToPixelcharButton" style="background-color: #8e44ad; color: white" title="pixelcharから開いた場合、シートを直接送り返します">pixelcharへ送る</button>
       </div>
     </div>
     <div style="border-top: 1px solid #555; padding-top: 5px; margin-top: 5px">

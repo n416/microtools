@@ -11,6 +11,8 @@ import * as JointFeatures from './JointFeatures.js';
 import { OBJLoader } from './OBJLoader.js';
 import * as AnimationFeatures from './AnimationFeatures.js';
 import * as SpriteExport from './SpriteExport.js';
+import * as MechaGenerator from './MechaGenerator.js';
+import * as PoseGenerator from './PoseGenerator.js';
 
 function getVectorFromDirection(direction) {
   switch (direction) {
@@ -54,6 +56,73 @@ export class UIControl {
     this.setupViewControls();
     this.setupIkConnectionBrowser();
     this.setupAnimationControls();
+    this.setupGeneratorControls();
+  }
+
+  setupGeneratorControls() {
+    const seedInput = document.getElementById('genSeed');
+    const presetSelect = document.getElementById('genPreset');
+
+    const generate = () => {
+      const seed = Math.max(1, Math.round(Number(seedInput.value)) || 1);
+      const preset = presetSelect.value;
+      const weapon = document.getElementById('genWeapon').value;
+      const data = MechaGenerator.generateMechaData({ seed, preset, weapon });
+      SceneIO.loadFromData(this.appContext, data);
+
+      // 自動ポーズの基準となる「素の立ちポーズ」を保存する
+      // (コマ復元でシーンのポーズが変わっても、ポーズ生成が二重掛けにならないように)
+      this.appContext.app.basePose = AnimationFeatures.createPoseSnapshot(this.appContext);
+
+      // 旧機体のアニメーションは新機体では意味を持たないためリセットする
+      this.appContext.app.animations = [{ name: 'アニメーション1', frames: [] }];
+      SceneIO.autoSaveScene(this.appContext);
+      document.dispatchEvent(new CustomEvent('animations-changed'));
+
+      this.log(`機体を生成しました (${MechaGenerator.PRESETS[preset].label} / シード${seed})`);
+    };
+
+    document.getElementById('generateMechaButton').addEventListener('click', generate);
+    document.getElementById('genRandomButton').addEventListener('click', () => {
+      seedInput.value = String(1 + Math.floor(Math.random() * 99999));
+      generate();
+    });
+
+    document.getElementById('generatePoseButton').addEventListener('click', () => {
+      PoseGenerator.applyPosePreset(this.appContext, document.getElementById('posePreset').value);
+    });
+
+    // pixelchar から `?handoff=<origin>` 付きで開かれた場合、スプライトシートを
+    // ファイル経由ではなく postMessage で直接送り返す
+    const sendButton = document.getElementById('sendToPixelcharButton');
+    const handoffOrigin = new URLSearchParams(window.location.search).get('handoff');
+    sendButton.addEventListener('click', async () => {
+      if (!window.opener) {
+        this.log('送信先がありません。pixelchar側の「mecで自動生成」から開いてください。');
+        return;
+      }
+      sendButton.disabled = true;
+      try {
+        const result = await SpriteExport.renderSpriteSheet(this.appContext);
+        if (!result) return;
+        window.opener.postMessage(
+          {
+            type: 'mec-sprite-sheet',
+            dataUrl: result.canvas.toDataURL('image/png'),
+            cols: result.cols,
+            rows: result.rows,
+            name: result.animationName || 'mec',
+          },
+          handoffOrigin || '*',
+        );
+        this.log('pixelcharへ送信しました。pixelcharのタブに切り替えてください。');
+      } catch (err) {
+        this.log('pixelcharへの送信中にエラーが発生しました。');
+        console.error(err);
+      } finally {
+        sendButton.disabled = false;
+      }
+    });
   }
 
   setupAnimationControls() {
