@@ -26,6 +26,10 @@ export const SidebarNavItems = [
     "title": "閑話：波打ち際のノイズと温泉の熱"
   },
   {
+    "target": "ep0430",
+    "title": "閑話：金木犀とロスト・シグナル"
+  },
+  {
     "target": "ep0450",
     "title": "幕間：ノイズだけの年越し"
   },
