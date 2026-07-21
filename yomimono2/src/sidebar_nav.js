@@ -174,6 +174,10 @@ export const SidebarNavItems = [
     "title": "第42話：道化の饒舌と、ミルフィーユ状の木肌"
   },
   {
+    "target": "ep0425",
+    "title": "第42.5話〈幕間〉：雪の降る記憶"
+  },
+  {
     "target": "ep0430",
     "title": "第43話：時空演算の大黒板"
   },
