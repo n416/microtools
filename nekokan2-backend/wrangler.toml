@@ -1,0 +1,8 @@
+name = "nekokan2-backend"
+main = "src/index.js"
+compatibility_date = "2024-04-30"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nekokan2-db"
+database_id = "ef8dca89-9f8f-4e0d-8cf5-829bdf5a56e6"
