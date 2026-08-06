@@ -283,6 +283,10 @@ h1 {
 .list-item.rank-古代-パッシブ {
     background-color: rgba(255, 204, 0, 0.1);
 }
+.list-item.rank-伝説,
+.list-item.rank-伝説-パッシブ {
+    background-color: rgba(255, 149, 0, 0.12);
+}
 
 @media (prefers-color-scheme: dark) {
     .list-header:active {
@@ -306,6 +310,10 @@ h1 {
     .list-item.rank-古代,
     .list-item.rank-古代-パッシブ {
         background-color: rgba(255, 214, 10, 0.2);
+    }
+    .list-item.rank-伝説,
+    .list-item.rank-伝説-パッシブ {
+        background-color: rgba(255, 159, 10, 0.22);
     }
 }
 /* ★修正点: ファイル末尾の余分な閉じ括弧 '}' を削除しました */

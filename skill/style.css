@@ -328,6 +328,22 @@ h1 {
   border-color: #fff59d;
 }
 
+/* 伝説 (オレンジ系) */
+.rank-伝説,
+.rank-伝説-パッシブ {
+  background-color: #ffe0b2;
+  border-color: #ffcc80;
+}
+#current-skills label.rank-伝説:hover,
+#current-skills label.rank-伝説-パッシブ:hover {
+  border-color: #ffb74d !important;
+  background-color: #f5d3a3 !important;
+}
+#unowned-transferable-skills li.rank-伝説,
+#unowned-transferable-skills li.rank-伝説-パッシブ {
+  border-color: #ffcc80;
+}
+
 /* ▲▲▲ ランク別パステルカラー ▲▲▲ */
 
 #transferable-skills p,
