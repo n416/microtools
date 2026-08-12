@@ -54,8 +54,20 @@ export const SidebarNavItems = [
     "title": "第七章：鬼之河アンダーグラウンド"
   },
   {
+    "target": "ep0750",
+    "title": "第八章：指輪と選定"
+  },
+  {
+    "target": "ep0760",
+    "title": "第九章：認識の齟齬"
+  },
+  {
+    "target": "ep0770",
+    "title": "第十章：ノイジーチューナー"
+  },
+  {
     "target": "ep0800",
-    "title": "第八章：カウンター・ノイズ"
+    "title": "第十一章：カウンター・ノイズ"
   },
   {
     "target": "ep0900",
