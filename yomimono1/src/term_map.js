@@ -61,6 +61,6 @@ export const TermFirstAppearanceMap = {
   "packet": "ep0600",
   "kinokawa": "ep0660",
   "standard_tuner": "ep0700",
-  "noisy_tuner": "ep0800",
+  "noisy_tuner": "ep0760",
   "over_standard_plan": "ep0800"
 };
